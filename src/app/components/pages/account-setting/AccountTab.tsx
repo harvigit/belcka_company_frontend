@@ -50,11 +50,11 @@ const AccountTab = () => {
                 <Avatar
                   src={
                     user?.user_image
-                      ? `${url}uploads/users/${user.user_image}`
+                      ? `${user.user_image}`
                       : "/images/logos/belcka_logo.png"
                   }
                   // src={"/images/logos/logoIcon.svg"}
-                  alt={"user1"}
+                  alt={user.first_name || ''}
                   sx={{ width: 120, height: 120, margin: "0 auto" }}
                 />
                 <Stack

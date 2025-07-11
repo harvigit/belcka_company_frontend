@@ -97,7 +97,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       setLoading(false);
       toast.success("Logged in succesfull !!");
       setTimeout(() => {
-        // router.push("/");
+        router.push("/");
       }, 300);
     } else {
       toast.error(result?.error ?? "Something went wrong");

@@ -29,7 +29,6 @@ const Profile = () => {
     setAnchorEl2(null);
   };
   const session = useSession();
-  let url = process.env.NEXT_PUBLIC_API_URL;
   const user = session?.data?.user as User & { user_role?: string | null } & {
       phone?: number | null;
     } & { user_image?: string | null } & { first_name?: string | null } & {
@@ -79,9 +78,9 @@ const Profile = () => {
         onClick={handleClick2}
       >
         <Avatar
-         src={user?.user_image ? `${url}uploads/users/${user?.user_image}` : "/images/logos/belcka_logo.png"}
+         src={user?.user_image ? `${user?.user_image}` : "/images/logos/belcka_logo.png"}
           // src={"/images/logos/belcka_logo.png"}
-          alt={"ProfileImg"}
+          alt={user.first_name || ''}
           sx={{
             width: 30,
             height: 30,
@@ -138,9 +137,9 @@ const Profile = () => {
         <Typography variant="h4">User Profile</Typography>
         <Stack direction="row" py={3} spacing={2} alignItems="center">
           <Avatar
-            src={user?.user_image ? `${url}uploads/users/${user?.user_image}` : "/images/logos/belcka_logo.png"}
+            src={user?.user_image ? `${user?.user_image}` : "/images/logos/belcka_logo.png"}
             // src={"/images/logos/logoIcon.svg"}
-            alt={"ProfileImg"}
+            alt={user?.first_name || ''}
             sx={{ width: 95, height: 95 }}
           />
           <Box>

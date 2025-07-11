@@ -64,7 +64,7 @@ const Header = () => {
       <AppBarStyled position="sticky" color="default" elevation={8}>
         <ToolbarStyled
           sx={{
-            maxWidth: isLayout === "boxed" ? "1300px" : "100%!important",
+            maxWidth: isLayout === "boxed" ? "1500px" : "100%!important",
           }}
         >
           <Box sx={{ width: lgDown ? "40px" : "auto", overflow: "hidden" }}>

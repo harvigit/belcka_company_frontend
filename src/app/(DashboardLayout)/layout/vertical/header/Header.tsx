@@ -7,23 +7,40 @@ import {
   Toolbar,
   styled,
   Stack,
+  Avatar,
+  Tooltip,
 } from "@mui/material";
 import Profile from "./Profile";
 import Search from "./Search";
 import Language from "./Language";
 import { useContext } from "react";
-import config from '@/app/context/config'
-import { IconCategory2, IconMenu2, IconMoon, IconSun, IconX } from "@tabler/icons-react";
+import config from "@/app/context/config";
+import {
+  IconCategory2,
+  IconMenu2,
+  IconMoon,
+  IconSun,
+  IconX,
+} from "@tabler/icons-react";
 import { CustomizerContext } from "@/app/context/customizerContext";
-import { useTheme } from '@mui/material/styles';
+import { useTheme } from "@mui/material/styles";
 import { useState } from "react";
-import Navigation from './Navigation';
+import Navigation from "./Navigation";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 const Header = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
-  const lgDown = useMediaQuery((theme) => theme.breakpoints.down('lg'));
+  const lgDown = useMediaQuery((theme) => theme.breakpoints.down("lg"));
 
-  const { activeMode, setActiveMode, setIsCollapse, isCollapse, isMobileSidebar, setIsMobileSidebar } = useContext(CustomizerContext);
+  const {
+    activeMode,
+    setActiveMode,
+    setIsCollapse,
+    isCollapse,
+    isMobileSidebar,
+    setIsMobileSidebar,
+  } = useContext(CustomizerContext);
   const TopbarHeight = config.topbarHeight;
 
   const theme = useTheme();
@@ -42,116 +59,140 @@ const Header = () => {
     width: "100%",
     color: theme.palette.text.primary,
     paddingLeft: "16px !important",
-    paddingRight: "16px !important"
+    paddingRight: "16px !important",
   }));
 
   const CollpaseMenubar = styled(Box)(({ theme }) => ({
-    position: 'absolute',
-    left: '4px',
-    top: '4px',
-    right: '4px',
-    padding: '7px 15px',
+    position: "absolute",
+    left: "4px",
+    top: "4px",
+    right: "4px",
+    padding: "7px 15px",
     background: theme.palette.background.paper,
     border: `1px solid ${borderColor}`,
     zIndex: 1,
-    borderRadius: '7px'
+    borderRadius: "7px",
   }));
 
   const [isVisible, setIsVisible] = useState(false);
 
-  return (
+  const session = useSession();
 
-      <AppBarStyled position="sticky" color="default">
-        <ToolbarStyled>
+  const user = session.data?.user as User & { company_name?: string | null } & {
+    company_image?: number | null;
+  };
+  return (
+    <AppBarStyled position="sticky" color="default">
+      <ToolbarStyled>
+        {/* ------------------------------------------- */}
+        {/* Toggle Button Sidebar */}
+        {/* ------------------------------------------- */}
+        <IconButton
+          color="inherit"
+          aria-label="menu"
+          onClick={() => {
+            // Toggle sidebar on both mobile and desktop based on screen size
+            if (lgUp) {
+              // For large screens, toggle between full-sidebar and mini-sidebar
+              isCollapse === "full-sidebar"
+                ? setIsCollapse("mini-sidebar")
+                : setIsCollapse("full-sidebar");
+            } else {
+              // For smaller screens, toggle mobile sidebar
+              setIsMobileSidebar(!isMobileSidebar);
+            }
+          }}
+        >
+          <IconMenu2 size="21" />
+        </IconButton>
+
+        {/* ------------------------------------------- */}
+        {/* Search Dropdown */}
+        {/* ------------------------------------------- */}
+        {lgUp ? (
+          <>
+            {" "}
+            <Search />{" "}
+          </>
+        ) : null}
+        {lgUp ? (
+          <>
+            <Navigation />
+          </>
+        ) : null}
+
+        <Box flexGrow={1} />
+        <Stack direction="row" gap={1} alignItems="center">
+          <Language />
+
           {/* ------------------------------------------- */}
-          {/* Toggle Button Sidebar */}
+          {/* Ecommerce Dropdown */}
           {/* ------------------------------------------- */}
-          <IconButton
-            color="inherit"
-            aria-label="menu"
-            onClick={() => {
-              // Toggle sidebar on both mobile and desktop based on screen size
-              if (lgUp) {
-                // For large screens, toggle between full-sidebar and mini-sidebar
-                isCollapse === "full-sidebar" ? setIsCollapse("mini-sidebar") : setIsCollapse("full-sidebar");
-              } else {
-                // For smaller screens, toggle mobile sidebar
-                setIsMobileSidebar(!isMobileSidebar);
-              }
-            }}
-          >
-            <IconMenu2 size="21" />
+          {user.company_image ? (
+            <Tooltip title={user.company_name}>
+              <Avatar
+                src={user?.company_image ? `${user.company_image}` : ""}
+                // src={"/images/logos/logoIcon.svg"}
+                alt={user.company_name || ""}
+                sx={{ width: 30, height: 30, margin: "0 auto" }}
+              />
+            </Tooltip>
+          ) : (
+            ""
+          )}
+          <IconButton color="inherit">
+            {activeMode === "light" ? (
+              <IconMoon size="21" onClick={() => setActiveMode("dark")} />
+            ) : (
+              <IconSun size="21" onClick={() => setActiveMode("light")} />
+            )}
           </IconButton>
 
-          {/* ------------------------------------------- */}
-          {/* Search Dropdown */}
-          {/* ------------------------------------------- */}
-          {lgUp ? (<>  <Search /> </>) : null}
-          {lgUp ? (
-            <>
-              <Navigation />
-            </>
+          {lgDown ? (
+            <IconButton
+              color="inherit"
+              onClick={() => setIsVisible(!isVisible)}
+            >
+              <IconCategory2 size="21" />
+            </IconButton>
           ) : null}
 
-          <Box flexGrow={1} />
-          <Stack direction="row" gap={1} alignItems="center">
-            <Language />
+          {/* ------------------------------------------- */}
+          {/* End Ecommerce Dropdown */}
+          {/* ------------------------------------------- */}
 
-            {/* ------------------------------------------- */}
-            {/* Ecommerce Dropdown */}
-            {/* ------------------------------------------- */}
+          {/* ------------------------------------------- */}
 
-            <IconButton color="inherit">
-              {activeMode === 'light' ? (
-                <IconMoon size="21" onClick={() => setActiveMode("dark")}
-                />
-              ) : (
-                <IconSun size="21" onClick={() => setActiveMode("light")}
-                />
-              )}
-            </IconButton>
+          <Box
+            mx={1}
+            sx={{
+              width: "1px",
+              backgroundColor: "rgba(0,0,0,0.1)",
+              height: "25px",
+            }}
+          />
 
-            {lgDown ? <IconButton color="inherit" onClick={() => setIsVisible(!isVisible)}>
-              <IconCategory2 size="21" />
-            </IconButton> : null}
+          <Profile />
 
-            {/* ------------------------------------------- */}
-            {/* End Ecommerce Dropdown */}
-            {/* ------------------------------------------- */}
-
-            {/* ------------------------------------------- */}
-
-            <Box
-              mx={1}
-              sx={{
-                width: "1px",
-                backgroundColor: "rgba(0,0,0,0.1)",
-                height: "25px",
-              }}
-            />
-
-            <Profile />
-
-            {isVisible && (
-              <CollpaseMenubar>
-                <Stack direction="row" justifyContent='space-between' spacing={1}>
-                  <Box display='flex' gap={1}>
-                    <Language />
-                    <Search />
-                  </Box>
-                  <IconButton
-                    color="inherit"
-                    onClick={() => setIsVisible(!isVisible)}
-                  >
-                    <IconX size="21" />
-
-                  </IconButton>
-                </Stack>
-              </CollpaseMenubar>
-            )}
-          </Stack>
-        </ToolbarStyled>
-      </AppBarStyled>
+          {isVisible && (
+            <CollpaseMenubar>
+              <Stack direction="row" justifyContent="space-between" spacing={1}>
+                <Box display="flex" gap={1}>
+                  <Language />
+                  <Search />
+                </Box>
+                <IconButton
+                  color="inherit"
+                  onClick={() => setIsVisible(!isVisible)}
+                >
+                  <IconX size="21" />
+                </IconButton>
+              </Stack>
+            </CollpaseMenubar>
+          )}
+        </Stack>
+      </ToolbarStyled>
+    </AppBarStyled>
   );
 };
 

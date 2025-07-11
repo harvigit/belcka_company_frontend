@@ -21,7 +21,7 @@ const Navigation = () => {
         {/* ------------------------------------------- */}
         <Container
           sx={{
-            maxWidth: isLayout === 'boxed' ? '1300px !important' : '100%!important',
+            maxWidth: isLayout === 'boxed' ? '1500px !important' : '100%!important',
           }}
         >
           <NavListing />
