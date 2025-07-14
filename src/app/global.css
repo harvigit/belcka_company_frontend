@@ -23,3 +23,24 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+
+.custom-day-picker {
+    --rdp-accent-color: #1976d2;
+    --rdp-background-color: #e3f2fd;
+    --rdp-selected-color: white;
+}
+
+.custom-day-picker .rdp-day_selected,
+.custom-day-picker .rdp-day_range_start,
+.custom-day-picker .rdp-day_range_end {
+    background-color: var(--rdp-accent-color) !important;
+    color: var(--rdp-selected-color) !important;
+    border-radius: 50% !important;
+}
+
+.custom-day-picker .rdp-day_range_middle {
+    background-color: var(--rdp-background-color) !important;
+    color: #000;
+    border-radius: 0 !important;
+}

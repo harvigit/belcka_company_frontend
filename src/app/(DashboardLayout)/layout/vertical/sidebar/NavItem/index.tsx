@@ -18,9 +18,6 @@ import { useTranslation } from "react-i18next";
 import { CustomizerContext } from "@/app/context/customizerContext";
 import { ItemType } from "@/app/(DashboardLayout)/types/layout/sidebar";
 
-
-
-
 export default function NavItem({
   item,
   level,

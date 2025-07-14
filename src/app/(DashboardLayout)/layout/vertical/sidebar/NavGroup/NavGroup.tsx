@@ -15,8 +15,7 @@ interface ItemType {
 
 const NavGroup = ({ item, hideMenu }: ItemType) => {
   const { isCollapse, isSidebarHover } = useContext(CustomizerContext);
-
-
+  
   const ListSubheaderStyle = styled((props: Theme | any) => (
     <ListSubheader disableSticky {...props} />
   ))(({ theme }) => ({

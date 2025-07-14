@@ -47,6 +47,12 @@ const Menuitems: NavGroup[] = [
   // },
   {
     id: uniqueId(),
+    title: "Timesheet",
+    icon: IconTicket,
+    href: "/apps/timesheet/list",
+  },
+  {
+    id: uniqueId(),
     title: "Admin",
     icon: IconSettings,
     href: "/admin-settings",

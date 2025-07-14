@@ -1,4 +1,13 @@
-import {  IconInfoCircle, IconListDetails, IconSettings, IconShieldCheck, IconTicketOff, IconUserPlus, IconUsers } from "@tabler/icons-react";
+import {
+    IconInfoCircle,
+    IconListDetails,
+    IconSettings,
+    IconShieldCheck,
+    IconTicket,
+    IconTicketOff,
+    IconUserPlus,
+    IconUsers
+} from '@tabler/icons-react';
 import { IconPaperclip } from "@tabler/icons-react";
 import {
   IconHome,
@@ -25,6 +34,12 @@ const Menuitems = [
         title: "Users",
         icon: IconUsers,
         href: "/apps/users/list",
+      },
+      {
+        id: uniqueId(),
+        title: "Timesheet",
+        icon: IconTicket,
+        href: "/apps/timesheet/list",
       },
       {
         id: uniqueId(),
