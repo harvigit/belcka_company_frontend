@@ -49,7 +49,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
     };
 
     const handleCancel = () => {
-        setTempRange({ from, to });
+        setTempRange({ from: from ?? undefined, to: to ?? undefined });
         handleClose();
     };
 
@@ -109,9 +109,8 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
                     <DayPicker
                         mode="range"
                         selected={tempRange}
-                        onSelect={(range) => setTempRange(range ?? { from: null, to: null })}
+                        onSelect={(range) => setTempRange(range ?? { from: undefined, to: undefined })}
                         numberOfMonths={1}
-                        firstDayOfWeek={1}
                         className="custom-day-picker"
                     />
 

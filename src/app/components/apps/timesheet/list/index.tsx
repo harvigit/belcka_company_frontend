@@ -280,7 +280,7 @@ const TimesheetList = () => {
                             if (value > 0 && value <= pageCount) setPage(value - 1);
                         }}
                     />
-                    <CustomSelect value={rowsPerPage} onChange={(e) => {
+                    <CustomSelect value={rowsPerPage}  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         setRowsPerPage(Number(e.target.value));
                         setPage(0);
                     }}>
