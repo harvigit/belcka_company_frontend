@@ -20,30 +20,50 @@ import { format } from 'date-fns';
 
 import 'react-day-picker/dist/style.css';
 import '../../../../global.css';
+import { AxiosResponse } from 'axios';
 
 const columnHelper = createColumnHelper();
+
+// Type definitions
+type Timesheet = {
+    user_name: string;
+    trade_name: string;
+    type: string;
+    status?: string;
+    user_thumb_image: string;
+    week_number: string;
+    start_date_month: string;
+    end_date_month: string;
+    days: Record<string, any>;
+    payable_total_hours: string;
+};
+
+type TimesheetResponse = {
+    IsSuccess: boolean;
+    info: Timesheet[];
+};
 
 const TimesheetList = () => {
     const today = new Date();
     const defaultStart = new Date(today.setDate(today.getDate() - today.getDay()));
     const defaultEnd = new Date(today.setDate(today.getDate() - today.getDay() + 6));
 
-    const [data, setData] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [open, setOpen] = useState(false);
-    const [filters, setFilters] = useState({ type: '' });
-    const [tempFilters, setTempFilters] = useState(filters);
-    const [sorting, setSorting] = useState([]);
-    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
-    const [selectedRows, setSelectedRows] = useState({});
+    const [data, setData] = useState<Timesheet[]>([]);
+    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [open, setOpen] = useState<boolean>(false);
+    const [filters, setFilters] = useState<any>({type: ''});
+    const [tempFilters, setTempFilters] = useState<any>(filters);
+    const [sorting, setSorting] = useState<any>([]);
+    const [pagination, setPagination] = useState<any>({pageIndex: 0, pageSize: 50});
+    const [selectedRows, setSelectedRows] = useState<any>({});
 
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
     const [tempStartDate, setTempStartDate] = useState<Date | null>(defaultStart);
     const [tempEndDate, setTempEndDate] = useState<Date | null>(defaultEnd);
 
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [page, setPage] = useState<number>(0);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(50);
 
     const fetchData = async (start: Date, end: Date): Promise<void> => {
         try {
@@ -51,14 +71,20 @@ const TimesheetList = () => {
                 start_date: format(start, 'dd/MM/yyyy'),
                 end_date: format(end, 'dd/MM/yyyy'),
             };
-            const response = await api.get('/timesheet/get-web', { params });
+
+            const response: AxiosResponse<TimesheetResponse> = await api.get('/timesheet/get-web', { params });
+
             if (response.data.IsSuccess) {
                 setData(response.data.info);
             } else {
                 console.error('Something went wrong!');
             }
         } catch (error) {
-            console.error('Error fetching timesheet data:', error);
+            if (error instanceof Error) {
+                console.error('Error fetching timesheet data:', error.message);
+            } else {
+                console.error('An unknown error occurred while fetching timesheet data.');
+            }
         }
     };
 
@@ -68,7 +94,7 @@ const TimesheetList = () => {
         }
     }, [startDate, endDate]);
 
-    const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
+    const handleDateRangeChange:any = (range: { from: Date | undefined; to: Date | undefined }) => {
         if (range.from && range.to) {
             setTempStartDate(range.from);
             setTempEndDate(range.to);
@@ -92,7 +118,7 @@ const TimesheetList = () => {
         });
     }, [data, searchTerm, filters]);
 
-    const formatHour = (val) => {
+    const formatHour = (val: any) => {
         const num = parseFloat(val);
         if (isNaN(num)) return '-';
         const h = Math.floor(num);
@@ -100,17 +126,17 @@ const TimesheetList = () => {
         return `${h}:${m.toString().padStart(2, '0')}`;
     };
 
-    const columns = useMemo(() => [
+    const columns: any = useMemo(() => [
         {
             id: 'select',
-            header: ({ table }) => (
+            header: ({ table }: { table: any }) => (
                 <input
                     type="checkbox"
                     checked={table.getIsAllPageRowsSelected()}
                     onChange={table.getToggleAllPageRowsSelectedHandler()}
                 />
             ),
-            cell: ({ row }) => (
+            cell: ({ row }: { row: any }) => (
                 <input
                     type="checkbox"
                     checked={row.getIsSelected()}
@@ -124,7 +150,7 @@ const TimesheetList = () => {
         columnHelper.accessor('user_name', {
             id: 'user_name',
             header: 'Name',
-            cell: (info) => {
+            cell: (info : any) => {
                 const row = info.row.original;
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
@@ -140,7 +166,7 @@ const TimesheetList = () => {
         columnHelper.accessor('week_number', {
             id: 'week_number',
             header: 'Week',
-            cell: (info) => {
+            cell: (info: any) => {
                 const row = info.row.original;
                 return (
                     <Tooltip title={`${row.start_date_month} - ${row.end_date_month}`}>
@@ -151,10 +177,10 @@ const TimesheetList = () => {
         }),
         columnHelper.accessor('type', { header: 'Type' }),
         ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) =>
-            columnHelper.accessor((row) => row.days?.[day], {
+            columnHelper.accessor((row: any) => row.days?.[day], {
                 id: day,
                 header: day,
-                cell: (info) =>
+                cell: (info: any) =>
                     <span style={{fontSize: '18px'}}>
                         {formatHour(info.getValue()) || '-'}
                     </span>
@@ -162,14 +188,14 @@ const TimesheetList = () => {
         ),
         columnHelper.accessor('payable_total_hours', {
             header: 'Payable Hours',
-            cell: (info) => 
+            cell: (info: any) => 
                 <span style={{fontSize: '18px'}}>
                   {formatHour(info.getValue()) || '-'}
                 </span>
         }),
         columnHelper.accessor('status', {
             header: 'Status',
-            cell: (info) => {
+            cell: (info: any) => {
                 const val = info.getValue();
                 if (!['Pending', 'Locked', 'Paid'].includes(val)) return '-';
                 return val;

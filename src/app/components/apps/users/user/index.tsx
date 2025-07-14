@@ -54,7 +54,7 @@ import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 
-import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
+// import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 
 dayjs.extend(customParseFormat);
 
@@ -206,10 +206,10 @@ const TablePagination = () => {
                       size={25}
                       color="#888"
                       style={{ cursor: "pointer" }}
-                      onClick={() => {
-                          setSelectedUser(data[0]);
-                          setOpenIdCard(true);
-                      }}
+                      // onClick={() => {
+                      //     setSelectedUser(data[0]);
+                      //     setOpenIdCard(true);
+                      // }}
                   />
               </Box>
             </Stack>
@@ -218,11 +218,11 @@ const TablePagination = () => {
         </BlankCard>
       </Grid>
 
-        <DigitalIDCard
-            open={openIdCard}
-            onClose={() => setOpenIdCard(false)}
-            user={selectedUser}
-        />
+        {/*<DigitalIDCard*/}
+        {/*    open={openIdCard}*/}
+        {/*    onClose={() => setOpenIdCard(false)}*/}
+        {/*    user={selectedUser}*/}
+        {/*/>*/}
     </Grid>
   );
 };
