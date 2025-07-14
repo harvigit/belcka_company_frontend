@@ -275,7 +275,7 @@ const TimesheetList = () => {
                         min="1"
                         max={pageCount}
                         defaultValue={page + 1}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             const value = Number(e.target.value);
                             if (value > 0 && value <= pageCount) setPage(value - 1);
                         }}
