@@ -13,7 +13,7 @@ const config = {
   isBorderRadius: 9,
   sidebarWidth: 270,
   miniSidebarWidth: 87,
-  topbarHeight: 100,
+  topbarHeight: 70,
 };
 
 export default config;

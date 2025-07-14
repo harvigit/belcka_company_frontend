@@ -49,6 +49,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { Avatar } from "@mui/material";
+import Link from "next/link";
 
 dayjs.extend(customParseFormat);
 
@@ -92,7 +93,6 @@ const TablePagination = () => {
     };
     fetchTrades();
   }, [api]);
-  
 
   const uniqueTeams = useMemo(
     () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],
@@ -135,6 +135,7 @@ const TablePagination = () => {
         const tradeName = info.row.original.trade_name;
         const image = row.user_image;
         const defaultImage = "/images/users/user.png";
+        const userId = row.id;
 
         return (
           <Stack direction="row" alignItems="center" spacing={2}>
@@ -144,9 +145,15 @@ const TablePagination = () => {
               sx={{ width: 36, height: 36 }}
             />
             <Box>
-              <Typography variant="h5" color="textSecondary">
-                {name ?? "-"}
-              </Typography>
+              <Link href={`/apps/users/user?user_id=${userId}`} passHref>
+                <Typography
+                  variant="h6"
+                  color="primary"
+                  sx={{ cursor: "pointer" }}
+                >
+                  {info.getValue() ?? "-"}
+                </Typography>
+              </Link>
               <Typography variant="body2" color="textSecondary">
                 {tradeName}
               </Typography>
@@ -169,16 +176,6 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row?.team_name, {
       id: "team_name",
       header: () => "Team Name",
-      cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
-          {info.getValue() ?? "-"}
-        </Typography>
-      ),
-    }),
-
-    columnHelper.accessor((row) => row?.shifts, {
-      id: "shifts",
-      header: () => "Shift",
       cell: (info) => (
         <Typography variant="h6" color="textSecondary">
           {info.getValue() ?? "-"}
@@ -211,7 +208,7 @@ const TablePagination = () => {
         return (
           <Chip
             size="small"
-            label="In active"
+            label="Not Working"
             sx={{
               backgroundColor: (theme) => theme.palette.error.light,
               color: (theme) => theme.palette.error.main,
@@ -247,15 +244,15 @@ const TablePagination = () => {
     <Box>
       {/* Render the search and table */}
       <Stack
-        mt={3}
+        mt={1}
         mr={2}
         ml={2}
-        mb={3}
+        mb={1}
         justifyContent="space-between"
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 1, sm: 2, md: 4 }}
       >
-        <Grid display="flex" gap={1}>
+        <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
             USERS ({table.getPrePaginationRowModel().rows.length})
           </Button>
@@ -358,6 +355,105 @@ const TablePagination = () => {
             </DialogActions>
           </Dialog>
         </Grid>
+        <Stack
+          gap={1}
+          p={3}
+          alignItems="center"
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            {/* <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => rerender()}
+                >
+                  Force Rerender
+                </Button> */}
+            <Typography color="textSecondary">
+              {table.getPrePaginationRowModel().rows.length} Rows
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: {
+                xs: "block",
+                sm: "flex",
+              },
+            }}
+            alignItems="center"
+            gap={1}
+          >
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Typography color="textSecondary">Page</Typography>
+              <Typography color="textSecondary" fontWeight={600}>
+                {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+              </Typography>
+            </Stack>
+            <Stack
+              direction="row"
+              alignItems="center"
+              gap={1}
+              color="textSecondary"
+            >
+              <Typography color="textSecondary">| Enteries :</Typography>
+              {/* <CustomTextField
+                  type="number"
+                  min="1"
+                  max={table.getPageCount()}
+                  defaultValue={table.getState().pagination.pageIndex + 1}
+                  onChange={(e: { target: { value: any } }) => {
+                    const page = e.target.value
+                      ? Number(e.target.value) - 1
+                      : 0;
+                    table.setPageIndex(page);
+                  }}
+                /> */}
+            </Stack>
+            <CustomSelect
+              value={table.getState().pagination.pageSize}
+              onChange={(e: { target: { value: any } }) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+            >
+              {[10, 15, 20, 25].map((pageSize) => (
+                <MenuItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </MenuItem>
+              ))}
+            </CustomSelect>
+
+            <IconButton
+              size="small"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronsLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronRight />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronsRight />
+            </IconButton>
+          </Box>
+        </Stack>
       </Stack>
       <Divider />
 
@@ -435,100 +531,6 @@ const TablePagination = () => {
             </TableContainer>
           </Box>
           <Divider />
-          <Stack
-            gap={1}
-            p={3}
-            alignItems="center"
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              {/* <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => rerender()}
-                >
-                  Force Rerender
-                </Button> */}
-              <Typography variant="body1">
-                {table.getPrePaginationRowModel().rows.length} Rows
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: {
-                  xs: "block",
-                  sm: "flex",
-                },
-              }}
-              alignItems="center"
-              gap={1}
-            >
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Typography variant="body1">Page</Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </Typography>
-              </Stack>
-              <Stack direction="row" alignItems="center" gap={1}>
-                | Go to page:
-                <CustomTextField
-                  type="number"
-                  min="1"
-                  max={table.getPageCount()}
-                  defaultValue={table.getState().pagination.pageIndex + 1}
-                  onChange={(e: { target: { value: any } }) => {
-                    const page = e.target.value
-                      ? Number(e.target.value) - 1
-                      : 0;
-                    table.setPageIndex(page);
-                  }}
-                />
-              </Stack>
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[10, 15, 20, 25].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronsLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronsRight />
-              </IconButton>
-            </Box>
-          </Stack>
         </Grid>
       </Grid>
     </Box>

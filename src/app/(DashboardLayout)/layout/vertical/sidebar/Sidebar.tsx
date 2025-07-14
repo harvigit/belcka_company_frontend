@@ -81,7 +81,7 @@ const Sidebar = () => {
               {/* Logo */}
               {/* ------------------------------------------- */}
               <Box
-                px={3}
+                px={2}
                 sx={{
                   ...(isCollapse == "mini-sidebar" && {
                     [theme.breakpoints.up("lg")]: {

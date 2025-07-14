@@ -6,7 +6,7 @@ import Link from 'next/link';
 const QuickLinks = () => {
     return (
         <>
-            <Typography variant="h5" fontWeight={600}>Quick Links</Typography>
+            {/* <Typography variant="h5" fontWeight={600}>Quick Links</Typography>
             <Stack spacing={2} mt={2}>
                 {dropdownData.pageLinks.map((pagelink, index) => (
                     <Link href={pagelink.href} key={index} className="hover-text-primary">
@@ -20,7 +20,7 @@ const QuickLinks = () => {
                         </Typography>
                     </Link>
                 ))}
-            </Stack>
+            </Stack> */}
         </>
     );
 };

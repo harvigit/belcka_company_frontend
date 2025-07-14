@@ -64,7 +64,7 @@ const Header = () => {
       <AppBarStyled position="sticky" color="default" elevation={8}>
         <ToolbarStyled
           sx={{
-            maxWidth: isLayout === "boxed" ? "1500px" : "100%!important",
+            maxWidth: isLayout === "boxed" ? "1800px" : "100%!important",
           }}
         >
           <Box sx={{ width: lgDown ? "40px" : "auto", overflow: "hidden" }}>
@@ -87,7 +87,7 @@ const Header = () => {
           {/* ------------------------------------------- */}
           {/* Search Dropdown */}
           {/* ------------------------------------------- */}
-          {lgUp ? (<>  <Search /> </>) : null}
+          {lgUp ? (<> </>) : null}
 
           <Box flexGrow={1} />
           <Stack direction="row" alignItems="center">

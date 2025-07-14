@@ -88,7 +88,7 @@ export default function Login() {
               title="Welcome to Belcka"
               subtext={
                 <Typography variant="subtitle1" color="textSecondary" mb={1}>
-                  Your Admin Dashboard
+                  {/* Your Admin Dashboard */}
                 </Typography>
               }
             />

@@ -95,9 +95,18 @@ const TablePagination = () => {
     );
   }, [data, searchTerm]);
 
-  type AllowedPaletteColor = 'primary' | 'secondary' | 'error' | 'warning' | 'success' | 'info';
+  type AllowedPaletteColor =
+    | "primary"
+    | "secondary"
+    | "error"
+    | "warning"
+    | "success"
+    | "info";
 
-  const STATUS_MAP: Record <string, { label: string; color: AllowedPaletteColor }>  = {
+  const STATUS_MAP: Record<
+    string,
+    { label: string; color: AllowedPaletteColor }
+  > = {
     pending: { label: "Pending", color: "secondary" },
     approved: { label: "Approved", color: "success" },
     rejected: { label: "Rejected", color: "error" },
@@ -111,7 +120,7 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center" spacing={2}>
           <Box>
             <Typography variant="h6" color="textSecondary">
-              { info.getValue() ?? "-" }
+              {info.getValue() ?? "-"}
             </Typography>
           </Box>
         </Stack>
@@ -123,8 +132,12 @@ const TablePagination = () => {
       cell: (info) => (
         <Stack direction="row" alignItems="center" spacing={2}>
           <Box>
-            <Typography variant="h6" color="textSecondary" sx={{ textTransform: "capitalize" }}>
-              { info.getValue() ?? "-" }
+            <Typography
+              variant="h6"
+              color="textSecondary"
+              sx={{ textTransform: "capitalize" }}
+            >
+              {info.getValue() ?? "-"}
             </Typography>
           </Box>
         </Stack>
@@ -136,7 +149,7 @@ const TablePagination = () => {
       header: () => "Requested User",
       cell: (info) => (
         <Typography variant="h6" color="textSecondary">
-          { info.getValue() ?? "-" }
+          {info.getValue() ?? "-"}
         </Typography>
       ),
     }),
@@ -146,7 +159,7 @@ const TablePagination = () => {
       header: () => "Company",
       cell: (info) => (
         <Typography variant="h6" color="textSecondary">
-          { info.getValue() ?? "-" }
+          {info.getValue() ?? "-"}
         </Typography>
       ),
     }),
@@ -156,7 +169,7 @@ const TablePagination = () => {
       header: () => "Date",
       cell: (info) => {
         const rawDate = info.getValue();
-        
+
         let date = null;
         if (typeof rawDate === "string") {
           if (rawDate.includes("/")) {
@@ -165,14 +178,16 @@ const TablePagination = () => {
             date = dayjs(rawDate);
           }
         }
-      
-        const formattedDate = date?.isValid() ? date.format("DD MMMM, YYYY") : "-";
+
+        const formattedDate = date?.isValid()
+          ? date.format("DD MMMM, YYYY")
+          : "-";
         return (
           <Typography variant="h6" color="textSecondary">
             {formattedDate}
           </Typography>
         );
-      }
+      },
     }),
 
     columnHelper.accessor((row) => row?.note, {
@@ -188,18 +203,18 @@ const TablePagination = () => {
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                maxWidth: 150, 
+                maxWidth: 150,
               }}
             >
-            <Tooltip title={info.getValue()} placement="top-start">
-              <span>{ info.getValue() ?? '-' }</span>
-            </Tooltip>
+              <Tooltip title={info.getValue()} placement="top-start">
+                <span>{info.getValue() ?? "-"}</span>
+              </Tooltip>
             </Typography>
           </Box>
         </Stack>
       ),
     }),
-    
+
     columnHelper.accessor("message", {
       header: () => "Message",
       cell: (info) => (
@@ -212,12 +227,12 @@ const TablePagination = () => {
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                maxWidth: 150, 
+                maxWidth: 150,
               }}
             >
-            <Tooltip title={info.getValue()} placement="top-start">
-              <span>{ info.getValue() ?? '-' }</span>
-            </Tooltip>
+              <Tooltip title={info.getValue()} placement="top-start">
+                <span>{info.getValue() ?? "-"}</span>
+              </Tooltip>
             </Typography>
           </Box>
         </Stack>
@@ -229,15 +244,20 @@ const TablePagination = () => {
       header: () => "Status",
       cell: (info) => {
         const value = info.getValue();
-        const status = STATUS_MAP[value] || { label: "Unknown", color: "secondary" };
-    
+        const status = STATUS_MAP[value] || {
+          label: "Unknown",
+          color: "secondary",
+        };
+
         return (
           <Chip
             size="small"
             label={status.label}
             sx={{
-              backgroundColor: (theme) => theme.palette[status.color as AllowedPaletteColor].light,
-              color: (theme) => theme.palette[status.color as AllowedPaletteColor].main,              
+              backgroundColor: (theme) =>
+                theme.palette[status.color as AllowedPaletteColor].light,
+              color: (theme) =>
+                theme.palette[status.color as AllowedPaletteColor].main,
               fontWeight: 500,
               borderRadius: "6px",
               px: 1.5,
@@ -245,7 +265,7 @@ const TablePagination = () => {
           />
         );
       },
-    })     
+    }),
   ];
 
   const table = useReactTable({
@@ -270,10 +290,10 @@ const TablePagination = () => {
     <Box>
       {/* Render the search and table */}
       <Stack
-        mt={3}
+        mt={1}
         mr={2}
         ml={2}
-        mb={3}
+        mb={1}
         justifyContent="space-between"
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 1, sm: 2, md: 4 }}
@@ -302,47 +322,6 @@ const TablePagination = () => {
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
-            {/* <Stack
-              px={3}
-              py={2}
-              direction={{ xs: "column", sm: "row" }}
-              spacing={{ xs: 1, sm: 2, md: 2 }}
-            >
-              <div className="px-1 border-b border-black">
-                <FormControlLabel
-                  label="Toggle All"
-                  control={
-                    <CustomCheckbox
-                      {...{
-                        type: "checkbox",
-                        checked: table.getIsAllColumnsVisible(),
-                        onChange: table.getToggleAllColumnsVisibilityHandler(),
-                      }}
-                    />
-                  }
-                />
-              </div>
-              {table.getAllLeafColumns().map((column) => {
-                return (
-                  <div key={column.id} className="px-1">
-                    <FormControlLabel
-                      control={
-                        <CustomCheckbox
-                          {...{
-                            type: "checkbox",
-                            checked: column.getIsVisible(),
-                            onChange: column.getToggleVisibilityHandler(),
-                          }}
-                        />
-                      }
-                      label={column.id}
-                    />
-                  </div>
-                );
-              })}
-            </Stack>
-            <Divider /> */}
-
             <TableContainer>
               <Table
                 sx={{
@@ -429,7 +408,7 @@ const TablePagination = () => {
                 >
                   Force Rerender
                 </Button> */}
-              <Typography variant="body1">
+              <Typography color="textSecondary">
                 {table.getPrePaginationRowModel().rows.length} Rows
               </Typography>
             </Box>
@@ -444,14 +423,19 @@ const TablePagination = () => {
               gap={1}
             >
               <Stack direction="row" alignItems="center" gap={1}>
-                <Typography variant="body1">Page</Typography>
-                <Typography variant="body1" fontWeight={600}>
+                <Typography color="textSecondary">Page</Typography>
+                <Typography color="textSecondary" fontWeight={600}>
                   {table.getState().pagination.pageIndex + 1} of{" "}
                   {table.getPageCount()}
                 </Typography>
               </Stack>
-              <Stack direction="row" alignItems="center" gap={1}>
-                | Go to page:
+              <Stack
+                direction="row"
+                alignItems="center"
+                gap={1}
+                color="textSecondary"
+              >
+                <Typography color="textSecondary">| Go to page :</Typography>
                 <CustomTextField
                   type="number"
                   min="1"

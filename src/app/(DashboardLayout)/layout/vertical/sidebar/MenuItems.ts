@@ -16,11 +16,6 @@ import { IconSettings } from "@tabler/icons-react";
 
 const Menuitems: NavGroup[] = [
   {
-    navlabel: true,
-    subheader: "Home",
-  },
-
-  {
     id: uniqueId(),
     title: "Dashboard",
     icon: IconChartPie,
@@ -38,18 +33,18 @@ const Menuitems: NavGroup[] = [
     icon: IconUserPlus,
     href: "/apps/teams/list",
   },
-  {
-    id: uniqueId(),
-    title: "Privacy Policy",
-    icon: IconShieldCheck,
-    href: "/privacy-policy",
-  },
-  {
-    id: uniqueId(),
-    title: "App Info",
-    icon: IconInfoCircle,
-    href: "/app-info",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Privacy Policy",
+  //   icon: IconShieldCheck,
+  //   href: "/privacy-policy",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "App Info",
+  //   icon: IconInfoCircle,
+  //   href: "/app-info",
+  // },
   {
     id: uniqueId(),
     title: "Admin",

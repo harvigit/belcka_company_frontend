@@ -32,18 +32,18 @@ const Menuitems = [
         icon: IconUserPlus,
         href: "/apps/teams/list",
       },
-      {
-        id: uniqueId(),
-        title: "Privacy Policy",
-        icon: IconShieldCheck,
-        href: "/privacy-policy",
-      },
-      {
-        id: uniqueId(),
-        title: "App Info",
-        icon: IconInfoCircle,
-        href: "/app-info",
-      },
+      // {
+      //   id: uniqueId(),
+      //   title: "Privacy Policy",
+      //   icon: IconShieldCheck,
+      //   href: "/privacy-policy",
+      // },
+      // {
+      //   id: uniqueId(),
+      //   title: "App Info",
+      //   icon: IconInfoCircle,
+      //   href: "/app-info",
+      // },
       {
         id: uniqueId(),
         title: "Admin",

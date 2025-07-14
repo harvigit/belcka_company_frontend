@@ -48,59 +48,73 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
   const resendOtp = async () => {
     try {
+      setLoading(true);
       setShowVerification(true);
-      let response = await api.post("send-otp-login", payload);
+      
+      const response = await api.post("send-otp-login", payload);
+      
       setCountdown(30);
       toast.success(response.data.message);
-      setLoading(false);
-      return;
     } catch (error: any) {
       const message =
         error?.response?.data?.message || error?.message || "Unknown error";
       toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
-
+  
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!showVerification) {
       if (phone.trim() && extension.trim()) {
-        setLoading(true);
-        let response = await api.post("send-otp-login", payload);
-        setShowVerification(true);
-        setCountdown(30);
-        toast.success(response.data.message);
-        setLoading(false);
-        return;
+        try {
+          setLoading(true);
+          const response = await api.post("send-otp-login", payload);
+          setShowVerification(true);
+          setCountdown(30);
+          toast.success(response.data.message);
+        } catch (error: any) {
+          // const message =
+          //   error?.response?.data?.message || error?.message || "Unknown error";
+          // toast.error(message);
+        } finally {
+          setLoading(false);
+        }
       } else {
         toast.error("Please enter both country code and phone number.");
-        return;
       }
+      return;
     }
 
-    // if (!otp.trim()) {
-    //   toast.error("Please enter the verification code.");
-    //   return;
-    // }
+    if (!otp.trim()) {
+      toast.error("Please enter the verification code.");
+      return;
+    }
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      extension,
-      phone,
-      otp,
-    });
+    try {
+      setLoading(true);
+      const result = await signIn("credentials", {
+        redirect: false,
+        extension,
+        phone,
+        otp,
+      });
 
-    setLoading(true);
-    if (result?.ok) {
+      if (result?.ok) {
+        toast.success("Logged in successfully!!");
+        setTimeout(() => {
+          router.push("/");
+        }, 300);
+      } else {
+        toast.error(result?.error ?? "Something went wrong");
+      }
+    } catch (err) {
+      toast.error("Login failed.");
+    } finally {
       setLoading(false);
-      toast.success("Logged in succesfull !!");
-      setTimeout(() => {
-        router.push("/");
-      }, 300);
-    } else {
-      toast.error(result?.error ?? "Something went wrong");
     }
   };
 
@@ -113,25 +127,8 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       )}
       {subtext}
 
-      <AuthSocialButtons title="Sign in with" />
-
-      <Box mt={3}>
-        <Divider>
-          <Typography
-            component="span"
-            color="textSecondary"
-            variant="h6"
-            fontWeight="400"
-            position="relative"
-            px={2}
-          >
-            or sign in with
-          </Typography>
-        </Divider>
-      </Box>
-
       <form onSubmit={handleLogin}>
-          <Box>
+        <Box>
           <CustomFormLabel htmlFor="phone">
             What&apos;s your mobile number?
           </CustomFormLabel>
@@ -140,7 +137,9 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
               select
               label="Country Code"
               value={extension}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExtension(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setExtension(e.target.value)
+              }
               sx={{ width: 150 }}
             >
               <MenuItem value="+44">🇬🇧 United Kingdom (+44)</MenuItem>
@@ -160,7 +159,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             />
           </Stack>
 
-            {/* <CustomFormLabel htmlFor="username">Username</CustomFormLabel>
+          {/* <CustomFormLabel htmlFor="username">Username</CustomFormLabel>
             <CustomTextField
               id="username"
               type="email"
@@ -172,9 +171,9 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
               }
               required
             /> */}
-          </Box>
+        </Box>
 
-          {showVerification && (
+        {showVerification && (
           <Box mt={2}>
             <CustomFormLabel htmlFor="code">
               Enter Verification Code
@@ -184,7 +183,9 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
               type=" number"
               fullWidth
               value={otp}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtp(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setOtp(e.target.value)
+              }
             />
 
             <Stack direction="row" justifyContent="space-between" mt={1}>

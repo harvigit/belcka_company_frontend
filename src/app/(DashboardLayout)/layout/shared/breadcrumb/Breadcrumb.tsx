@@ -27,7 +27,7 @@ const Breadcrumb = ({ subtitle, items, title, children }: BreadCrumbType) => (
   <Grid
     container
     sx={{
-      p: "30px 0 20px",
+      p: "0px 0 5px",
       position: "relative",
       overflow: "hidden",
     }}

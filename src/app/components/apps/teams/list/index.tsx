@@ -181,16 +181,6 @@ const TablePagination = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.shifts, {
-      id: "shifts",
-      header: () => "Shift",
-      cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
-          {info.getValue() ?? "-"}
-        </Typography>
-      ),
-    }),
-
     columnHelper.accessor((row) => row?.team_member_count, {
       id: "team_member_count",
       header: () => "Users",
@@ -237,15 +227,14 @@ const TablePagination = () => {
     <Box>
       {/* Render the search and table */}
       <Stack
-        mt={3}
+        mt={1}
         mr={2}
         ml={2}
-        mb={3}
         justifyContent="space-between"
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 1, sm: 2, md: 4 }}
       >
-        <Grid display="flex" gap={1}>
+        <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
             TEAMS ({table.getPrePaginationRowModel().rows.length})
           </Button>
@@ -270,7 +259,6 @@ const TablePagination = () => {
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
-
           <Dialog
             open={open}
             onClose={() => setOpen(false)}
@@ -349,6 +337,111 @@ const TablePagination = () => {
             </DialogActions>
           </Dialog>
         </Grid>
+        <Stack
+          gap={1}
+          p={3}
+          alignItems="center"
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            {/* <Button
+                variant="contained"
+                color="primary"
+                onClick={() => rerender()}
+              >
+                Force Rerender
+              </Button> */}
+            <Typography color="textSecondary">
+              {table.getPrePaginationRowModel().rows.length} Rows
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: {
+                xs: "block",
+                sm: "flex",
+              },
+            }}
+            alignItems="center"
+            gap={1}
+          >
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Typography color="textSecondary">Page</Typography>
+              <Typography color="textSecondary" fontWeight={600}>
+                {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+              </Typography>
+            </Stack>
+            <Stack
+              direction="row"
+              alignItems="center"
+              gap={1}
+              color="textSecondary"
+            >
+              <Typography color="textSecondary">| Enteries :</Typography>
+              {/* <CustomTextField
+                        type="number"
+                        min="1"
+                        max={table.getPageCount()}
+                        defaultValue={table.getState().pagination.pageIndex + 1}
+                        onChange={(e: { target: { value: any } }) => {
+                          const page = e.target.value
+                            ? Number(e.target.value) - 1
+                            : 0;
+                          table.setPageIndex(page);
+                        }}
+                      /> */}
+            </Stack>
+            <CustomSelect
+              value={table.getState().pagination.pageSize}
+              onChange={(e: { target: { value: any } }) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+            >
+              {[10, 15, 20, 25].map((pageSize) => (
+                <MenuItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </MenuItem>
+              ))}
+            </CustomSelect>
+
+            <IconButton
+              size="small"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronsLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronRight />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronsRight />
+            </IconButton>
+          </Box>
+        </Stack>
+      </Stack>
+      <Stack
+        justifyContent="end"
+        direction={{ xs: "column", sm: "row" }}
+        spacing={{ xs: 1, sm: 2, md: 4 }}
+      >
         <IconButton
           id="basic-button"
           aria-controls={openMenu ? "basic-menu" : undefined}
@@ -459,100 +552,6 @@ const TablePagination = () => {
             </TableContainer>
           </Box>
           <Divider />
-          <Stack
-            gap={1}
-            p={3}
-            alignItems="center"
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              {/* <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => rerender()}
-                >
-                  Force Rerender
-                </Button> */}
-              <Typography variant="body1">
-                {table.getPrePaginationRowModel().rows.length} Rows
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: {
-                  xs: "block",
-                  sm: "flex",
-                },
-              }}
-              alignItems="center"
-              gap={1}
-            >
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Typography variant="body1">Page</Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </Typography>
-              </Stack>
-              <Stack direction="row" alignItems="center" gap={1}>
-                | Go to page:
-                <CustomTextField
-                  type="number"
-                  min="1"
-                  max={table.getPageCount()}
-                  defaultValue={table.getState().pagination.pageIndex + 1}
-                  onChange={(e: { target: { value: any } }) => {
-                    const page = e.target.value
-                      ? Number(e.target.value) - 1
-                      : 0;
-                    table.setPageIndex(page);
-                  }}
-                />
-              </Stack>
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[10, 15, 20, 25].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronsLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronsRight />
-              </IconButton>
-            </Box>
-          </Stack>
         </Grid>
       </Grid>
     </Box>

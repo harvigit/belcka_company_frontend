@@ -74,7 +74,7 @@ const TablePagination = () => {
       try {
         setLoading(true);
         const res = await api.get(`team/archive-team-list`);
-        
+
         if (res.data) {
           setData(res.data.info);
           setLoading(false);
@@ -125,11 +125,7 @@ const TablePagination = () => {
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-      >
+      <Box display="flex" justifyContent="center" alignItems="center">
         <CircularProgress />
       </Box>
     );
@@ -142,10 +138,10 @@ const TablePagination = () => {
         <Typography variant="h2">Archived Teams</Typography>
       </Grid>
       <Stack
-        mt={3}
+        mt={1}
         mr={2}
         ml={2}
-        mb={3}
+        mb={1}
         justifyContent="space-between"
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 1, sm: 2, md: 4 }}
@@ -255,7 +251,14 @@ const TablePagination = () => {
             justifyContent="space-between"
           >
             <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="body1">
+              {/* <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => rerender()}
+                          >
+                            Force Rerender
+                          </Button> */}
+              <Typography color="textSecondary">
                 {table.getPrePaginationRowModel().rows.length} Rows
               </Typography>
             </Box>
@@ -270,14 +273,19 @@ const TablePagination = () => {
               gap={1}
             >
               <Stack direction="row" alignItems="center" gap={1}>
-                <Typography variant="body1">Page</Typography>
-                <Typography variant="body1" fontWeight={600}>
+                <Typography color="textSecondary">Page</Typography>
+                <Typography color="textSecondary" fontWeight={600}>
                   {table.getState().pagination.pageIndex + 1} of{" "}
                   {table.getPageCount()}
                 </Typography>
               </Stack>
-              <Stack direction="row" alignItems="center" gap={1}>
-                | Go to page:
+              <Stack
+                direction="row"
+                alignItems="center"
+                gap={1}
+                color="textSecondary"
+              >
+                <Typography color="textSecondary">| Go to page :</Typography>
                 <CustomTextField
                   type="number"
                   min="1"
