@@ -61,10 +61,11 @@ export interface TeamList {
   id: number;
   name: string;
   supervisor_name: string;
-  user_image: string;
+  supervisor_image: string;
   team_member_count: string;
   shifts: string;
   supervisor_email: string;
+  working_member_count: number;
 }
 
 const TablePagination = () => {
@@ -148,7 +149,7 @@ const TablePagination = () => {
 
         return (
           <Link href={`/apps/teams/team?team_id=${teamId}`} passHref>
-            <Typography variant="h6" color="primary" sx={{ cursor: "pointer" }}>
+            <Typography variant="h5" color="primary" sx={{ cursor: "pointer" }}>
               {info.getValue() ?? "-"}
             </Typography>
           </Link>
@@ -161,18 +162,18 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         const name = info.getValue();
-        const image = row.user_image;
+        const image = row.supervisor_image;
         const defaultImage = "/images/users/user.png";
 
         return (
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack direction="row" alignItems="center" spacing={1}>
             <Avatar
               src={image || defaultImage}
               alt={name}
               sx={{ width: 36, height: 36 }}
             />
             <Box>
-              <Typography variant="h5" color="textSecondary">
+              <Typography variant="h6" color="textSecondary">
                 {name ?? "-"}
               </Typography>
             </Box>
@@ -180,15 +181,19 @@ const TablePagination = () => {
         );
       },
     }),
-
     columnHelper.accessor((row) => row?.team_member_count, {
       id: "team_member_count",
       header: () => "Users",
-      cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
-          {`0/` + info.getValue()}
-        </Typography>
-      ),
+      cell: (info) => {
+        const row = info.row.original;
+        const users = row.working_member_count;
+
+        return (
+          <Typography variant="h6" color="textSecondary">
+            {users + `/` + info.getValue()}
+          </Typography>
+        );
+      },
     }),
   ];
 
@@ -339,19 +344,15 @@ const TablePagination = () => {
         </Grid>
         <Stack
           gap={1}
-          p={3}
+          pr={3}
+          pt={1}
+          pl={3}
+          pb={3}
           alignItems="center"
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
         >
           <Box display="flex" alignItems="center" gap={1}>
-            {/* <Button
-                variant="contained"
-                color="primary"
-                onClick={() => rerender()}
-              >
-                Force Rerender
-              </Button> */}
             <Typography color="textSecondary">
               {table.getPrePaginationRowModel().rows.length} Rows
             </Typography>
@@ -364,76 +365,70 @@ const TablePagination = () => {
               },
             }}
             alignItems="center"
-            gap={1}
           >
-            <Stack direction="row" alignItems="center" gap={1}>
+            <Stack direction="row" alignItems="center">
               <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600}>
+              <Typography color="textSecondary" fontWeight={600} ml={1}>
                 {table.getState().pagination.pageIndex + 1} of{" "}
                 {table.getPageCount()}
               </Typography>
+              <Typography color="textSecondary" ml={"3px"}>
+                {" "}
+                | Enteries :{" "}
+              </Typography>
             </Stack>
             <Stack
+              ml={"5px"}
               direction="row"
               alignItems="center"
-              gap={1}
               color="textSecondary"
             >
-              <Typography color="textSecondary">| Enteries :</Typography>
-              {/* <CustomTextField
-                        type="number"
-                        min="1"
-                        max={table.getPageCount()}
-                        defaultValue={table.getState().pagination.pageIndex + 1}
-                        onChange={(e: { target: { value: any } }) => {
-                          const page = e.target.value
-                            ? Number(e.target.value) - 1
-                            : 0;
-                          table.setPageIndex(page);
-                        }}
-                      /> */}
-            </Stack>
-            <CustomSelect
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[10, 15, 20, 25].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
+              <CustomSelect
+                value={table.getState().pagination.pageSize}
+                onChange={(e: { target: { value: any } }) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+              >
+                {[10, 50, 100, 250, 500].map((pageSize) => (
+                  <MenuItem key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </MenuItem>
+                ))}
+              </CustomSelect>
 
-            <IconButton
-              size="small"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronsLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronsRight />
-            </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <IconChevronsLeft />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <IconChevronLeft />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <IconChevronRight />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                <IconChevronsRight />
+              </IconButton>
+            </Stack>
           </Box>
         </Stack>
       </Stack>
@@ -499,7 +494,7 @@ const TablePagination = () => {
                           }}
                         >
                           <Typography
-                            variant="h6"
+                            variant="h4"
                             mb={1}
                             onClick={header.column.getToggleSortingHandler()}
                             className={

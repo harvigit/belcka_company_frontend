@@ -23,12 +23,12 @@ const Menuitems = [
     icon: IconHome,
     href: "/dashboards/",
     children: [
-      {
-        id: uniqueId(),
-        title: "Dashbaord",
-        icon: IconPoint,
-        href: "/",
-      },
+      // {
+      //   id: uniqueId(),
+      //   title: "Dashbaord",
+      //   icon: IconPoint,
+      //   href: "/",
+      // },
       {
         id: uniqueId(),
         title: "Users",
@@ -63,7 +63,7 @@ const Menuitems = [
         id: uniqueId(),
         title: "Admin",
         icon: IconSettings,
-        href: "/",
+        href: "/admin-settings",
       },
     ],
   },

@@ -44,3 +44,15 @@
     color: #000;
     border-radius: 0 !important;
 }
+
+.react-tel-input .form-control{
+    border-radius: 9px !important;
+}
+
+.react-tel-input .form-control:hover:hover {
+    border-color: #1e4db7;
+}
+
+.react-tel-input .country-list .search-box{
+    border-radius: 5px !important;
+}

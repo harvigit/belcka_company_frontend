@@ -15,12 +15,12 @@ import { IconShieldCheck } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
 
 const Menuitems: NavGroup[] = [
-  {
-    id: uniqueId(),
-    title: "Dashboard",
-    icon: IconChartPie,
-    href: "/",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Dashboard",
+  //   icon: IconChartPie,
+  //   href: "/",
+  // },
   {
     id: uniqueId(),
     title: "Users",

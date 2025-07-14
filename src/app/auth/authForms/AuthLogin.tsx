@@ -1,60 +1,46 @@
-import {
-  Box,
-  Typography,
-  FormGroup,
-  FormControlLabel,
-  Button,
-  Stack,
-  Divider,
-  MenuItem,
-} from "@mui/material";
-import Link from "next/link";
-import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
-import AuthSocialButtons from "./AuthSocialButtons";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Box, Button, Stack, Typography } from "@mui/material";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/material.css";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import toast from "react-hot-toast";
+import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
 
 const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [extension, setExtension] = useState("+44");
-  const [phone, setPhone] = useState("");
-  const [showVerification, setShowVerification] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [countdown, setCountdown] = useState(30);
-
-  const [loading, setLoading] = useState(false);
-
   const router = useRouter();
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (showVerification && countdown > 0) {
-      timer = setTimeout(() => setCountdown((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [showVerification, countdown]);
+  const [phone, setPhone] = useState("");
+  const [extension, setExtension] = useState("+91");
+  const [nationalPhone, setNationalPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
 
-  const payload = {
-    phone: String(phone).trim(),
-    extension: extension.trim(),
-  };
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const resendOtp = async () => {
     try {
       setLoading(true);
       setShowVerification(true);
-      
+
+      const payload = {
+        extension,
+        phone: nationalPhone,
+      };
+
       const response = await api.post("send-otp-login", payload);
-      
-      setCountdown(30);
       toast.success(response.data.message);
+      setCountdown(30);
     } catch (error: any) {
       const message =
         error?.response?.data?.message || error?.message || "Unknown error";
@@ -63,56 +49,53 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       setLoading(false);
     }
   };
-  
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!showVerification) {
-      if (phone.trim() && extension.trim()) {
-        try {
-          setLoading(true);
-          const response = await api.post("send-otp-login", payload);
-          setShowVerification(true);
-          setCountdown(30);
-          toast.success(response.data.message);
-        } catch (error: any) {
-          // const message =
-          //   error?.response?.data?.message || error?.message || "Unknown error";
-          // toast.error(message);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        toast.error("Please enter both country code and phone number.");
-      }
+    if (!extension || !nationalPhone) {
+      toast.error("Please enter your phone number.");
       return;
     }
 
-    if (!otp.trim()) {
-      toast.error("Please enter the verification code.");
-      return;
-    }
+    const payload = {
+      extension,
+      phone: nationalPhone,
+      otp,
+    };
 
     try {
       setLoading(true);
+
+      if (!showVerification) {
+        const response = await api.post("send-otp-login", payload);
+        toast.success(response.data.message);
+        setShowVerification(true);
+        setCountdown(30);
+        return;
+      }
+
+      if (!otp.trim()) {
+        toast.error("Please enter the verification code.");
+        return;
+      }
+
       const result = await signIn("credentials", {
-        redirect: false,
-        extension,
-        phone,
-        otp,
+        redirect: true,
+        ...payload,
+        callbackUrl:"/apps/users/list"
       });
 
       if (result?.ok) {
         toast.success("Logged in successfully!!");
-        setTimeout(() => {
-          router.push("/");
-        }, 300);
+        router.push(result.url || "/apps/users/list");
       } else {
         toast.error(result?.error ?? "Something went wrong");
       }
-    } catch (err) {
-      toast.error("Login failed.");
+    } catch (error: any) {
+      // const message =
+      //   error?.response?.data?.message || error?.message || "Login failed";
+      // toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -132,45 +115,24 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
           <CustomFormLabel htmlFor="phone">
             What&apos;s your mobile number?
           </CustomFormLabel>
-          <Stack direction="row" spacing={2} mt={2}>
-            <CustomTextField
-              select
-              label="Country Code"
-              value={extension}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setExtension(e.target.value)
-              }
-              sx={{ width: 150 }}
-            >
-              <MenuItem value="+44">🇬🇧 United Kingdom (+44)</MenuItem>
-              <MenuItem value="+91">🇮🇳 India (+91)</MenuItem>
-              <MenuItem value="+1">🇺🇸 United States of America (+1)</MenuItem>
-            </CustomTextField>
 
-            <CustomTextField
-              id="phone"
-              type="number"
-              label="Phone"
-              fullWidth
+          <Box mt={2}>
+            <PhoneInput
+              country={"in"}
               value={phone}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setPhone(e.target.value)
-              }
-            />
-          </Stack>
+              onChange={(value, country: any) => {
+                setPhone(value);
+                setExtension("+" + country.dialCode);
 
-          {/* <CustomFormLabel htmlFor="username">Username</CustomFormLabel>
-            <CustomTextField
-              id="username"
-              type="email"
-              variant="outlined"
-              fullWidth
-              value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setEmail(e.target.value)
-              }
-              required
-            /> */}
+                const numberOnly = value.replace(country.dialCode, "");
+                setNationalPhone(numberOnly);
+              }}
+              inputStyle={{ width: "100%" }}
+              containerStyle={{ width: 300 }}
+              enableSearch
+              inputProps={{ required: true }}
+            />
+          </Box>
         </Box>
 
         {showVerification && (
@@ -180,12 +142,16 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             </CustomFormLabel>
             <CustomTextField
               id="code"
-              type=" number"
+              type="number"
               fullWidth
               value={otp}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setOtp(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const value = e.target.value;
+                if (value.length <= 6) {
+                  setOtp(value);
+                }
+              }}
+              inputProps={{ maxLength: 6 }}
             />
 
             <Stack direction="row" justifyContent="space-between" mt={1}>
@@ -228,7 +194,6 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
           </Button>
         </Box>
       </form>
-
       {subtitle}
     </>
   );

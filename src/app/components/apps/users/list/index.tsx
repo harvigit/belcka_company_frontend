@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TableContainer,
   Table,
@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogContent,
   Dialog,
+  Checkbox,
 } from "@mui/material";
 import {
   flexRender,
@@ -39,6 +40,7 @@ import {
   IconChevronsRight,
   IconFilter,
   IconSearch,
+  IconTrash,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import api from "@/utils/axios";
@@ -46,12 +48,10 @@ import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
-import { Avatar } from "@mui/material";
-import Link from "next/link";
 
 dayjs.extend(customParseFormat);
+import { Avatar } from "@mui/material";
+import Link from "next/link";
 
 export interface UserList {
   id: number;
@@ -69,17 +69,11 @@ const TablePagination = () => {
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const rerender = React.useReducer(() => ({}), {})[1];
-
-  const [filters, setFilters] = useState({
-    team: "",
-    supervisor: "",
-  });
-
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const [filters, setFilters] = useState({ team: "", supervisor: "" });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
 
-  // Fetch data
   useEffect(() => {
     const fetchTrades = async () => {
       try {
@@ -92,7 +86,7 @@ const TablePagination = () => {
       }
     };
     fetchTrades();
-  }, [api]);
+  }, []);
 
   const uniqueTeams = useMemo(
     () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],
@@ -109,13 +103,10 @@ const TablePagination = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchesTeam = filters.team ? item.team_name === filters.team : true;
-
       const matchesSupervisor = filters.supervisor
         ? item.supervisor_name === filters.supervisor
         : true;
-
       const search = searchTerm.toLowerCase();
-
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.trade_name?.toLowerCase().includes(search) ||
@@ -127,43 +118,73 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<UserList>();
   const columns = [
-    columnHelper.accessor("name", {
-      header: () => "Name",
-      cell: (info) => {
-        const row = info.row.original;
-        const name = info.getValue();
-        const tradeName = info.row.original.trade_name;
-        const image = row.user_image;
+    {
+      id: "select-name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={6}>
+          <Checkbox
+            checked={
+              selectedRowIds.size === filteredData.length &&
+              filteredData.length > 0
+            }
+            indeterminate={
+              selectedRowIds.size > 0 &&
+              selectedRowIds.size < filteredData.length
+            }
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+              } else {
+                setSelectedRowIds(new Set());
+              }
+            }}
+          />
+          <Typography variant="h4">Name</Typography>
+        </Stack>
+      ),
+      cell: ({ row }: any) => {
+        const user = row.original;
         const defaultImage = "/images/users/user.png";
-        const userId = row.id;
-
         return (
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Avatar
-              src={image || defaultImage}
-              alt={name}
-              sx={{ width: 36, height: 36 }}
+          <Stack direction="row" alignItems="center" spacing={6}>
+            <Checkbox
+              checked={selectedRowIds.has(user.id)}
+              onChange={() => {
+                const newSelected = new Set(selectedRowIds);
+                if (newSelected.has(user.id)) {
+                  newSelected.delete(user.id);
+                } else {
+                  newSelected.add(user.id);
+                }
+                setSelectedRowIds(newSelected);
+              }}
             />
-            <Box>
-              <Link href={`/apps/users/user?user_id=${userId}`} passHref>
-                <Typography
-                  variant="h6"
-                  color="primary"
-                  sx={{ cursor: "pointer" }}
-                >
-                  {info.getValue() ?? "-"}
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Avatar
+                src={user.user_image || defaultImage}
+                alt={user.name}
+                sx={{ width: 36, height: 36 }}
+              />
+              <Box>
+                <Link href={`/apps/users/user?user_id=${user.id}`} passHref>
+                  <Typography
+                    variant="h5"
+                    color="primary"
+                    sx={{ cursor: "pointer" }}
+                  >
+                    {user.name ?? "-"}
+                  </Typography>
+                </Link>
+                <Typography variant="body2" color="textSecondary">
+                  {user.trade_name}
                 </Typography>
-              </Link>
-              <Typography variant="body2" color="textSecondary">
-                {tradeName}
-              </Typography>
-            </Box>
+              </Box>
+            </Stack>
           </Stack>
         );
       },
-    }),
-
-    columnHelper.accessor((row) => row?.supervisor_name, {
+    },
+    columnHelper.accessor((row) => row.supervisor_name, {
       id: "supervisor_name",
       header: () => "Supervisor",
       cell: (info) => (
@@ -172,8 +193,7 @@ const TablePagination = () => {
         </Typography>
       ),
     }),
-
-    columnHelper.accessor((row) => row?.team_name, {
+    columnHelper.accessor((row) => row.team_name, {
       id: "team_name",
       header: () => "Team Name",
       cell: (info) => (
@@ -182,30 +202,24 @@ const TablePagination = () => {
         </Typography>
       ),
     }),
-
-    columnHelper.accessor((row) => row?.status, {
+    columnHelper.accessor((row) => row.status, {
       id: "status",
       header: () => "Status",
       cell: (info) => {
         const value = info.getValue();
-
-        if (value) {
-          return (
-            <Chip
-              size="small"
-              label="Working"
-              sx={{
-                backgroundColor: (theme) => theme.palette.success.light,
-                color: (theme) => theme.palette.success.main,
-                fontWeight: 500,
-                borderRadius: "6px",
-                px: 1.5,
-              }}
-            />
-          );
-        }
-
-        return (
+        return value ? (
+          <Chip
+            size="small"
+            label="Working"
+            sx={{
+              backgroundColor: (theme) => theme.palette.success.light,
+              color: (theme) => theme.palette.success.main,
+              fontWeight: 500,
+              borderRadius: "6px",
+              px: 1.5,
+            }}
+          />
+        ) : (
           <Chip
             size="small"
             label="Not Working"
@@ -225,9 +239,7 @@ const TablePagination = () => {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: {
-      columnFilters,
-    },
+    state: { columnFilters },
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -235,16 +247,17 @@ const TablePagination = () => {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
+
+  const selectedRowIdsStr = [...selectedRowIds].join(", ");
 
   return (
     <Box>
       {/* Render the search and table */}
       <Stack
-        mt={1}
+        mt={3}
         mr={2}
         ml={2}
         mb={1}
@@ -357,19 +370,15 @@ const TablePagination = () => {
         </Grid>
         <Stack
           gap={1}
-          p={3}
+          pr={3}
+          pt={1}
+          pl={3}
+          pb={1}
           alignItems="center"
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
         >
           <Box display="flex" alignItems="center" gap={1}>
-            {/* <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => rerender()}
-                >
-                  Force Rerender
-                </Button> */}
             <Typography color="textSecondary">
               {table.getPrePaginationRowModel().rows.length} Rows
             </Typography>
@@ -382,78 +391,81 @@ const TablePagination = () => {
               },
             }}
             alignItems="center"
-            gap={1}
           >
-            <Stack direction="row" alignItems="center" gap={1}>
+            <Stack direction="row" alignItems="center">
               <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600}>
+              <Typography color="textSecondary" fontWeight={600} ml={1}>
                 {table.getState().pagination.pageIndex + 1} of{" "}
                 {table.getPageCount()}
               </Typography>
+              <Typography color="textSecondary" ml={"3px"}>
+                {" "}
+                | Enteries :{" "}
+              </Typography>
             </Stack>
             <Stack
+              ml={"5px"}
               direction="row"
               alignItems="center"
-              gap={1}
               color="textSecondary"
             >
-              <Typography color="textSecondary">| Enteries :</Typography>
-              {/* <CustomTextField
-                  type="number"
-                  min="1"
-                  max={table.getPageCount()}
-                  defaultValue={table.getState().pagination.pageIndex + 1}
-                  onChange={(e: { target: { value: any } }) => {
-                    const page = e.target.value
-                      ? Number(e.target.value) - 1
-                      : 0;
-                    table.setPageIndex(page);
-                  }}
-                /> */}
-            </Stack>
-            <CustomSelect
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[10, 15, 20, 25].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
+              <CustomSelect
+                value={table.getState().pagination.pageSize}
+                onChange={(e: { target: { value: any } }) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+              >
+                {[10, 50, 100, 250, 500].map((pageSize) => (
+                  <MenuItem key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </MenuItem>
+                ))}
+              </CustomSelect>
 
-            <IconButton
-              size="small"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronsLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronsRight />
-            </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <IconChevronsLeft />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <IconChevronLeft />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <IconChevronRight />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                <IconChevronsRight />
+              </IconButton>
+            </Stack>
           </Box>
         </Stack>
+      </Stack>
+      <Stack direction={"row-reverse"} mb={1} mr={1}>
+        {selectedRowIds.size > 0 && (
+          // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
+          <Button variant="contained" color="error">
+            <IconTrash width={18}></IconTrash>
+            Remove
+          </Button>
+        )}
       </Stack>
       <Divider />
 
@@ -462,6 +474,7 @@ const TablePagination = () => {
           <Box>
             <TableContainer>
               <Table
+                stickyHeader
                 sx={{
                   whiteSpace: "nowrap",
                 }}
@@ -478,7 +491,7 @@ const TablePagination = () => {
                           }}
                         >
                           <Typography
-                            variant="h6"
+                            variant="h4"
                             mb={1}
                             onClick={header.column.getToggleSortingHandler()}
                             className={
