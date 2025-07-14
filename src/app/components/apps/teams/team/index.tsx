@@ -24,6 +24,7 @@ import {
   Chip,
   CircularProgress,
   CardContent,
+  Checkbox,
 } from "@mui/material";
 import {
   flexRender,
@@ -41,6 +42,7 @@ import {
   IconChevronsRight,
   IconFilter,
   IconSearch,
+  IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -79,34 +81,25 @@ const TablePagination = () => {
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const rerender = React.useReducer(() => ({}), {})[1];
   const [user, setUser] = useState([]);
-
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
-  const [filters, setFilters] = useState({
-    team: "",
-    trade: "",
-  });
-
+  const [filters, setFilters] = useState({ team: "", trade: "" });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
-
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
 
-  // Fetch data
   useEffect(() => {
     const fetchTrades = async () => {
       try {
         const res = await api.get(
           `trade/get-trades?company_id=${id.company_id}`
         );
-        if (res.data) {
-          setTrade(res.data.info);
-        }
+        if (res.data) setTrade(res.data.info);
       } catch (err) {
         console.error("Failed to fetch trades", err);
       }
@@ -137,7 +130,6 @@ const TablePagination = () => {
               trade_name: user.trade_name,
             }))
           );
-
           setData(flattened);
         }
         setLoading(false);
@@ -146,7 +138,6 @@ const TablePagination = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [teamId]);
 
@@ -154,7 +145,6 @@ const TablePagination = () => {
     () => [...new Set(data.map((item) => item.name).filter(Boolean))],
     [data]
   );
-
   const trades = useMemo(
     () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
     [trade]
@@ -166,91 +156,110 @@ const TablePagination = () => {
       const matchesTrade = filters.trade
         ? item.trade_name === filters.trade
         : true;
-
       const search = searchTerm.toLowerCase();
-
       const matchesSearch = item.name?.toLowerCase().includes(search);
-
       return matchesTeam && matchesSearch && matchesTrade;
     });
   }, [data, filters, searchTerm]);
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
-    columnHelper.accessor("name", {
-      header: () => "Name",
-      cell: (info) => {
-        const row = info.row.original;
-        const name = info.getValue();
-        const image = row.image;
-        const defaultImage = "/images/users/user.png";
-
+    {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={6}>
+          <Checkbox
+            checked={
+              selectedRowIds.size === filteredData.length &&
+              filteredData.length > 0
+            }
+            indeterminate={
+              selectedRowIds.size > 0 &&
+              selectedRowIds.size < filteredData.length
+            }
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
+              } else {
+                setSelectedRowIds(new Set());
+              }
+            }}
+          />
+          <Typography variant="h4">Name</Typography>
+        </Stack>
+      ),
+      cell: ({ row }: any) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(row.index);
         return (
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Avatar
-              src={image || defaultImage}
-              alt={name}
-              sx={{ width: 36, height: 36 }}
+          <Stack direction="row" alignItems="center" spacing={6}>
+            <Checkbox
+              checked={isChecked}
+              onChange={() => {
+                const newSelected = new Set(selectedRowIds);
+                if (isChecked) {
+                  newSelected.delete(row.index);
+                } else {
+                  newSelected.add(row.index);
+                }
+                setSelectedRowIds(newSelected);
+              }}
             />
-            <Box>
-              <Typography variant="h5" color="textSecondary">
-                {name ?? "-"}
-              </Typography>
-            </Box>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Avatar
+                src={item.image || "/images/users/user.png"}
+                alt={item.name}
+                sx={{ width: 36, height: 36 }}
+              />
+              <Box>
+                <Typography variant="h5" color="textSecondary">
+                  {item.name ?? "-"}
+                </Typography>
+              </Box>
+            </Stack>
           </Stack>
         );
       },
-    }),
-
+    },
     columnHelper.accessor((row) => row?.trade_name, {
       id: "trade_name",
       header: () => "Trade",
-      cell: (info) => {
-        const row = info.row.original;
-        const trade = row.trade_name;
-
-        return (
-          <Typography variant="h5" color="textSecondary">
-            {trade ?? "-"}
-          </Typography>
-        );
-      },
+      cell: (info) => (
+        <Typography variant="h5" color="textSecondary">
+          {info.row.original.trade_name ?? "-"}
+        </Typography>
+      ),
     }),
-
     columnHelper.accessor((row) => row?.is_active, {
       id: "status",
       header: () => "Status",
       cell: (info) => {
         const value = info.getValue();
-        if (value) {
-          return (
-            <Chip
-              size="small"
-              label={"Working"}
-              sx={{
-                backgroundColor: (theme) => theme.palette.success.light,
-                color: (theme) => theme.palette.success.main,
-                fontWeight: 500,
-                borderRadius: "6px",
-                px: 1.5,
-              }}
-            />
-          );
-        } else {
-          return (
-            <Chip
-              size="small"
-              label={"Not Working"}
-              sx={{
-                backgroundColor: (theme) => theme.palette.error.light,
-                color: (theme) => theme.palette.error.main,
-                fontWeight: 500,
-                borderRadius: "6px",
-                px: 1.5,
-              }}
-            />
-          );
-        }
+        return value ? (
+          <Chip
+            size="small"
+            label="Working"
+            sx={{
+              backgroundColor: (theme) => theme.palette.success.light,
+              color: (theme) => theme.palette.success.main,
+              fontWeight: 500,
+              borderRadius: "6px",
+              px: 1.5,
+            }}
+          />
+        ) : (
+          <Chip
+            size="small"
+            label="Not Working"
+            sx={{
+              backgroundColor: (theme) => theme.palette.error.light,
+              color: (theme) => theme.palette.error.main,
+              fontWeight: 500,
+              borderRadius: "6px",
+              px: 1.5,
+            }}
+          />
+        );
       },
     }),
   ];
@@ -258,9 +267,7 @@ const TablePagination = () => {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: {
-      columnFilters,
-    },
+    state: { columnFilters },
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -268,7 +275,6 @@ const TablePagination = () => {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
@@ -285,13 +291,14 @@ const TablePagination = () => {
       </Box>
     );
   }
+
   return (
     <Grid container spacing={2}>
       {/* Render the search and table */}
       <Grid
         size={{
           xs: 12,
-          lg: 4,
+          lg: 3,
         }}
       >
         <BlankCard>
@@ -316,17 +323,6 @@ const TablePagination = () => {
               </Box>
             </Box>
             <Divider />
-            <Stack direction="row" spacing={2} py={2} alignItems="center">
-              <Box>
-                <Typography variant="h6">Email</Typography>
-              </Box>
-              <Box sx={{ ml: "auto !important" }}>
-                <Typography variant="h5" color="textSecondary">
-                  {data[0].supervisor_email ?? "-"}
-                </Typography>
-              </Box>
-            </Stack>
-            <Divider />
             <Divider />
             <Stack direction="row" spacing={2} py={2} alignItems="center">
               <Box>
@@ -345,7 +341,7 @@ const TablePagination = () => {
       <Grid
         size={{
           xs: 12,
-          lg: 8,
+          lg: 9,
         }}
       >
         <BlankCard>
@@ -354,7 +350,7 @@ const TablePagination = () => {
           </Grid>
 
           <Stack
-            mt={0}
+            mt={1}
             mr={2}
             ml={2}
             mb={0}
@@ -463,105 +459,111 @@ const TablePagination = () => {
                 </DialogActions>
               </Dialog>
             </Grid>
-          <Stack
-            gap={1}
-            p={3}
-            alignItems="center"
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              {/* <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => rerender()}
-                          >
-                            Force Rerender
-                          </Button> */}
-              <Typography color="textSecondary">
-                {table.getPrePaginationRowModel().rows.length} Rows
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: {
-                  xs: "block",
-                  sm: "flex",
-                },
-              }}
-              alignItems="center"
+            <Stack
               gap={1}
+              pr={3}
+              pt={1}
+              pl={3}
+              pb={1}
+              alignItems="center"
+              direction={{ xs: "column", sm: "row" }}
+              justifyContent="space-between"
             >
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Typography color="textSecondary">Page</Typography>
-                <Typography color="textSecondary" fontWeight={600}>
-                  {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
+              <Box display="flex" alignItems="center" gap={1}>
+                {/* <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={() => rerender()}
+                        >
+                          Force Rerender
+                        </Button> */}
+                <Typography color="textSecondary">
+                  {table.getPrePaginationRowModel().rows.length} Rows
                 </Typography>
-              </Stack>
-              <Stack
-                direction="row"
+              </Box>
+              <Box
+                sx={{
+                  display: {
+                    xs: "block",
+                    sm: "flex",
+                  },
+                }}
                 alignItems="center"
                 gap={1}
-                color="textSecondary"
               >
-                <Typography color="textSecondary">| Enteries :</Typography>
-                {/* <CustomTextField
-                            type="number"
-                            min="1"
-                            max={table.getPageCount()}
-                            defaultValue={table.getState().pagination.pageIndex + 1}
-                            onChange={(e: { target: { value: any } }) => {
-                              const page = e.target.value
-                                ? Number(e.target.value) - 1
-                                : 0;
-                              table.setPageIndex(page);
-                            }}
-                          /> */}
-              </Stack>
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[10, 15, 20, 25].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
+                <Stack direction="row" alignItems="center">
+                  <Typography color="textSecondary">Page </Typography>
+                  <Typography color="textSecondary" fontWeight={600} ml={1}>
+                    {table.getState().pagination.pageIndex + 1} of{" "}
+                    {table.getPageCount()}
+                  </Typography>
+                  <Typography color="textSecondary" ml={"3px"}>
+                    | Enteries :{" "}
+                  </Typography>
+                </Stack>
+                <Stack
+                  ml={"5px"}
+                  direction="row"
+                  alignItems="center"
+                  color="textSecondary"
+                >
+                  <CustomSelect
+                    value={table.getState().pagination.pageSize}
+                    onChange={(e: { target: { value: any } }) => {
+                      table.setPageSize(Number(e.target.value));
+                    }}
+                  >
+                    {[10, 50, 100, 250, 500].map((pageSize) => (
+                      <MenuItem key={pageSize} value={pageSize}>
+                        {pageSize}
+                      </MenuItem>
+                    ))}
+                  </CustomSelect>
 
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronsLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronsRight />
-              </IconButton>
-            </Box>
+                  <IconButton
+                    size="small"
+                    sx={{ width: "30px" }}
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <IconChevronsLeft />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    sx={{ width: "30px" }}
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <IconChevronLeft />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    sx={{ width: "30px" }}
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <IconChevronRight />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    sx={{ width: "30px" }}
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <IconChevronsRight />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </Stack>
           </Stack>
+          <Stack direction={"row-reverse"} mb={1} mr={1}>
+            {selectedRowIds.size > 0 && (
+              // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
+              <Button variant="contained" color="error">
+                <IconTrash width={18}></IconTrash>
+                Remove
+              </Button>
+            )}
           </Stack>
           <Divider />
 
@@ -570,6 +572,7 @@ const TablePagination = () => {
               <Box>
                 <TableContainer>
                   <Table
+                    stickyHeader
                     sx={{
                       whiteSpace: "nowrap",
                     }}
@@ -586,7 +589,7 @@ const TablePagination = () => {
                               }}
                             >
                               <Typography
-                                variant="h6"
+                                variant="h4"
                                 mb={1}
                                 onClick={header.column.getToggleSortingHandler()}
                                 className={

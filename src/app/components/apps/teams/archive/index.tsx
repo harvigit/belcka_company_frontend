@@ -244,68 +244,46 @@ const TablePagination = () => {
           </Box>
           <Divider />
           <Stack
-            gap={1}
-            p={3}
+          gap={1}
+          p={3}
+          alignItems="center"
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography color="textSecondary">
+              {table.getPrePaginationRowModel().rows.length} Rows
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: {
+                xs: "block",
+                sm: "flex",
+              },
+            }}
             alignItems="center"
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
           >
-            <Box display="flex" alignItems="center" gap={1}>
-              {/* <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => rerender()}
-                          >
-                            Force Rerender
-                          </Button> */}
-              <Typography color="textSecondary">
-                {table.getPrePaginationRowModel().rows.length} Rows
+            <Stack direction="row" alignItems="center" >
+              <Typography color="textSecondary">Page</Typography>
+              <Typography color="textSecondary" fontWeight={600}>
+                {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
               </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: {
-                  xs: "block",
-                  sm: "flex",
-                },
-              }}
-              alignItems="center"
-              gap={1}
-            >
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Typography color="textSecondary">Page</Typography>
-                <Typography color="textSecondary" fontWeight={600}>
-                  {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </Typography>
-              </Stack>
-              <Stack
-                direction="row"
-                alignItems="center"
-                gap={1}
-                color="textSecondary"
-              >
-                <Typography color="textSecondary">| Go to page :</Typography>
-                <CustomTextField
-                  type="number"
-                  min="1"
-                  max={table.getPageCount()}
-                  defaultValue={table.getState().pagination.pageIndex + 1}
-                  onChange={(e: { target: { value: any } }) => {
-                    const page = e.target.value
-                      ? Number(e.target.value) - 1
-                      : 0;
-                    table.setPageIndex(page);
-                  }}
-                />
-              </Stack>
+            <Typography color="textSecondary" ml={'3px'}> | Enteries : </Typography>
+            </Stack>
+            <Stack
+            ml={'5px'}
+             direction="row"
+             alignItems="center"
+             color="textSecondary">
               <CustomSelect
                 value={table.getState().pagination.pageSize}
                 onChange={(e: { target: { value: any } }) => {
                   table.setPageSize(Number(e.target.value));
                 }}
               >
-                {[10, 15, 20, 25].map((pageSize) => (
+                {[10, 50, 100, 250, 500].map((pageSize) => (
                   <MenuItem key={pageSize} value={pageSize}>
                     {pageSize}
                   </MenuItem>
@@ -314,6 +292,7 @@ const TablePagination = () => {
 
               <IconButton
                 size="small"
+                sx={{width: "30px"}}
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -321,6 +300,7 @@ const TablePagination = () => {
               </IconButton>
               <IconButton
                 size="small"
+                sx={{width: "30px"}}
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -328,6 +308,7 @@ const TablePagination = () => {
               </IconButton>
               <IconButton
                 size="small"
+                sx={{width: "30px"}}
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
@@ -335,13 +316,15 @@ const TablePagination = () => {
               </IconButton>
               <IconButton
                 size="small"
+                sx={{width: "30px"}}
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
                 <IconChevronsRight />
               </IconButton>
-            </Box>
-          </Stack>
+            </Stack>
+          </Box>
+        </Stack>
         </Grid>
       </Grid>
     </Grid>
