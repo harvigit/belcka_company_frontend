@@ -2,45 +2,40 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
+    Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
     Divider, Grid, IconButton, MenuItem, Stack, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, TextField, Typography
+    TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
 } from '@mui/material';
 import {
     IconSearch, IconFilter, IconChevronLeft, IconChevronRight,
     IconChevronsLeft, IconChevronsRight
 } from '@tabler/icons-react';
-
+import {
+    flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel,
+    getSortedRowModel, useReactTable, createColumnHelper
+} from '@tanstack/react-table';
 import api from '@/utils/axios';
-import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
-import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
-
 import { format } from 'date-fns';
+
 import 'react-day-picker/dist/style.css';
 import '../../../../global.css';
 
-const headers = [
-    'Name', 'Week', 'Type', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Payable Hours', 'Status', 'Locked',
-];
-
-const typeOptions = [
-    // { label: 'All', value: 'all' },
-    { label: 'Timesheet', value: 'T' },
-    { label: 'Pricework', value: 'P' },
-    { label: 'Expense', value: 'E' },
-];
+const columnHelper = createColumnHelper();
 
 const TimesheetList = () => {
     const today = new Date();
     const defaultStart = new Date(today.setDate(today.getDate() - today.getDay()));
     const defaultEnd = new Date(today.setDate(today.getDate() - today.getDay() + 6));
 
-    const [data, setData] = useState<any[]>([]);
+    const [data, setData] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [open, setOpen] = useState(false);
-    const [filters, setFilters] = useState({ type: '', status: '' });
+    const [filters, setFilters] = useState({ type: '' });
     const [tempFilters, setTempFilters] = useState(filters);
+    const [sorting, setSorting] = useState([]);
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+    const [selectedRows, setSelectedRows] = useState({});
 
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
@@ -73,6 +68,15 @@ const TimesheetList = () => {
         }
     }, [startDate, endDate]);
 
+    const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
+        if (range.from && range.to) {
+            setTempStartDate(range.from);
+            setTempEndDate(range.to);
+            setStartDate(range.from);
+            setEndDate(range.to);
+        }
+    };
+
     const filteredData = useMemo(() => {
         return data.filter((item) => {
             const matchesSearch =
@@ -88,111 +92,154 @@ const TimesheetList = () => {
         });
     }, [data, searchTerm, filters]);
 
-    const paginatedData = useMemo(() => {
-        const start = page * rowsPerPage;
-        return filteredData.slice(start, start + rowsPerPage);
-    }, [filteredData, page, rowsPerPage]);
-
-    const uniqueStatuses = [...new Set(data.map((item) => item.status).filter(Boolean))];
-    const pageCount = Math.ceil(filteredData.length / rowsPerPage);
-
-    const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
-        setTempStartDate(range.from);
-        setTempEndDate(range.to);
-        if (range.from && range.to) {
-            fetchData(range.from, range.to);
-        }
+    const formatHour = (val) => {
+        const num = parseFloat(val);
+        if (isNaN(num)) return '-';
+        const h = Math.floor(num);
+        const m = Math.round((num - h) * 60);
+        return `${h}:${m.toString().padStart(2, '0')}`;
     };
+
+    const columns = useMemo(() => [
+        {
+            id: 'select',
+            header: ({ table }) => (
+                <input
+                    type="checkbox"
+                    checked={table.getIsAllPageRowsSelected()}
+                    onChange={table.getToggleAllPageRowsSelectedHandler()}
+                />
+            ),
+            cell: ({ row }) => (
+                <input
+                    type="checkbox"
+                    checked={row.getIsSelected()}
+                    onChange={row.getToggleSelectedHandler()}
+                />
+            ),
+            enableSorting: false,
+            enableColumnFilter: false,
+            size: 30
+        },
+        columnHelper.accessor('user_name', {
+            id: 'user_name',
+            header: 'Name',
+            cell: (info) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
+                        <Box>
+                            <Typography fontWeight={600}>{row.user_name}</Typography>
+                            <Typography variant="caption" color="textSecondary">{row.trade_name}</Typography>
+                        </Box>
+                    </Stack>
+                );
+            }
+        }),
+        columnHelper.accessor('week_number', {
+            id: 'week_number',
+            header: 'Week',
+            cell: (info) => {
+                const row = info.row.original;
+                return (
+                    <Tooltip title={`${row.start_date_month} - ${row.end_date_month}`}>
+                        <Typography>{info.getValue()}</Typography>
+                    </Tooltip>
+                );
+            }
+        }),
+        columnHelper.accessor('type', { header: 'Type' }),
+        ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) =>
+            columnHelper.accessor((row) => row.days?.[day], {
+                id: day,
+                header: day,
+                cell: (info) =>
+                    <span style={{fontSize: '18px'}}>
+                        {formatHour(info.getValue()) || '-'}
+                    </span>
+            })
+        ),
+        columnHelper.accessor('payable_total_hours', {
+            header: 'Payable Hours',
+            cell: (info) => 
+                <span style={{fontSize: '18px'}}>
+                  {formatHour(info.getValue()) || '-'}
+                </span>
+        }),
+        columnHelper.accessor('status', {
+            header: 'Status',
+            cell: (info) => {
+                const val = info.getValue();
+                if (!['Pending', 'Locked', 'Paid'].includes(val)) return '-';
+                return val;
+            }
+        })
+    ], []);
+
+    const table = useReactTable({
+        data: filteredData,
+        columns,
+        state: {
+            sorting,
+            pagination,
+            rowSelection: selectedRows
+        },
+        onSortingChange: setSorting,
+        onPaginationChange: setPagination,
+        enableRowSelection: true,
+        onRowSelectionChange: setSelectedRows,
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getPaginationRowModel: getPaginationRowModel()
+    });
 
     return (
         <Box>
-            <Stack mt={3} mx={2} mb={3} justifyContent="space-between" direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2, md: 4 }}>
-                <Grid display="flex" gap={1} alignItems="center">
-                    <Button variant="contained" color="primary">
-                        TIMESHEETS ({filteredData.length})
-                    </Button>
+            <Stack mt={3} mx={2} mb={3} direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                <Button variant="contained" color="primary">
+                    TIMESHEETS ({filteredData.length})
+                </Button>
 
-                    {/* Date Range Picker */}
-                    <DateRangePickerBox
-                        from={tempStartDate}
-                        to={tempEndDate}
-                        onChange={handleDateRangeChange}
-                    />
+                <DateRangePickerBox
+                    from={tempStartDate}
+                    to={tempEndDate}
+                    onChange={handleDateRangeChange}
+                />
 
-                    <TextField
-                        placeholder="Search..."
-                        size="small"
-                        variant="outlined"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{ endAdornment: <IconSearch size="16" /> }}
-                    />
+                <TextField
+                    placeholder="Search..."
+                    size="small"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{ endAdornment: <IconSearch size={16} /> }}
+                />
+                <Button variant="contained" onClick={() => setOpen(true)}>
+                    <IconFilter width={18} />
+                </Button>
 
-                    {/* Filter Button */}
-                    <Button variant="contained" onClick={() => setOpen(true)}>
-                        <IconFilter width={18} />
-                    </Button>
-
-                    {/* Filter Dialog */}
-                    <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-                        <DialogTitle>Filters</DialogTitle>
-                        <DialogContent>
-                            <Stack spacing={2} mt={1}>
-                                <TextField
-                                    select
-                                    label="Type"
-                                    value={tempFilters.type}
-                                    onChange={(e) => setTempFilters({ ...tempFilters, type: e.target.value })}
-                                >
-                                    {typeOptions.map((option) => (
-                                        <MenuItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
-
-                                {/* Status Filter in Dialog */}
-                                {/*<TextField*/}
-                                {/*    select*/}
-                                {/*    label="Status"*/}
-                                {/*    value={tempFilters.status}*/}
-                                {/*    onChange={(e) => setTempFilters({ ...tempFilters, status: e.target.value })}*/}
-                                {/*>*/}
-                                {/*    <MenuItem value="">All</MenuItem>*/}
-                                {/*    {uniqueStatuses.map((status) => (*/}
-                                {/*        <MenuItem key={status} value={status}>{status}</MenuItem>*/}
-                                {/*    ))}*/}
-                                {/*</TextField>*/}
-                            </Stack>
-                        </DialogContent>
-                        <DialogActions>
-                            <Button
-                                onClick={() => {
-                                    setFilters({ type: '', status: '' });
-                                    setTempFilters({ type: '', status: '' });
-                                    setOpen(false);
-                                }}
-                                color="inherit"
-                            >
-                                Clear
-                            </Button>
-                            <Button
-                                variant="contained"
-                                onClick={() => {
-                                    setFilters(tempFilters);
-                                    setStartDate(tempStartDate);
-                                    setEndDate(tempEndDate);
-                                    if (tempStartDate && tempEndDate) {
-                                        fetchData(tempStartDate, tempEndDate);
-                                    }
-                                    setOpen(false);
-                                }}
-                            >
-                                Apply
-                            </Button>
-                        </DialogActions>
-                    </Dialog>
-                </Grid>
+                <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+                    <DialogTitle>Filters</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            fullWidth
+                            select
+                            label="Type"
+                            value={tempFilters.type}
+                            onChange={(e) => setTempFilters({ ...tempFilters, type: e.target.value })}
+                        >
+                            <MenuItem value=''>All</MenuItem>
+                            <MenuItem value='T'>Timesheet</MenuItem>
+                            <MenuItem value='P'>Pricework</MenuItem>
+                            <MenuItem value='E'>Expense</MenuItem>
+                        </TextField>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => { setFilters({ type: '' }); setTempFilters({ type: '' }); setOpen(false); }} color="inherit">Clear</Button>
+                        <Button variant="contained" onClick={() => { setFilters(tempFilters); setOpen(false); }}>Apply</Button>
+                    </DialogActions>
+                </Dialog>
             </Stack>
 
             <Divider />
@@ -201,97 +248,99 @@ const TimesheetList = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            {headers.map((header) => (
-                                <TableCell key={header} align="center">
-                                    <Typography variant="subtitle2" fontWeight={600}>
-                                        {header}
-                                    </Typography>
-                                </TableCell>
-                            ))}
+                            {table.getHeaderGroups().map((headerGroup) =>
+                                headerGroup.headers.map((header) => {
+                                    const isActive = header.column.getIsSorted();
+                                    const isAsc = header.column.getIsSorted() === 'asc';
+                                    const isSortable = header.column.getCanSort();
+                                    return (
+                                        <TableCell key={header.id} align="center" sx={{ p: 0 }}>
+                                            <Box
+                                                onClick={header.column.getToggleSortingHandler()}
+                                                sx={{
+                                                    cursor: isSortable ? 'pointer' : 'default',
+                                                    border: '2px solid transparent',
+                                                    borderRadius: '6px',
+                                                    px: 1.5,
+                                                    py: 0.75,
+                                                    fontWeight: isActive ? 600 : 500,
+                                                    color: '#000',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    '&:hover': { color: '#888' },
+                                                    '&:hover .hoverIcon': { opacity: 1 }
+                                                }}
+                                            >
+                                                <Typography variant="body2" fontWeight="inherit">
+                                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                                </Typography>
+                                                {isSortable && (
+                                                    <Box
+                                                        component="span"
+                                                        className="hoverIcon"
+                                                        ml={0.5}
+                                                        sx={{
+                                                            transition: 'opacity 0.2s',
+                                                            opacity: isActive ? 1 : 0,
+                                                            fontSize: '0.9rem',
+                                                            color: isActive ? '#000' : '#888'
+                                                        }}
+                                                    >
+                                                        {isActive ? (isAsc ? '↑' : '↓') : '↑'}
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </TableCell>
+                                    );
+                                })
+                            )}
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {paginatedData.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={headers.length} align="center">
-                                    No records found
-                                </TableCell>
+                        {table.getRowModel().rows.map((row) => (
+                            <TableRow key={row.id}>
+                                {row.getVisibleCells().map((cell) => (
+                                    <TableCell key={cell.id} align="center">
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    </TableCell>
+                                ))}
                             </TableRow>
-                        ) : (
-                            paginatedData.map((row, index) => (
-                                <TableRow key={index}>
-                                    <TableCell align="center">
-                                        <Stack direction="row" alignItems="center" spacing={2} justifyContent="center">
-                                            <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
-                                            <Box textAlign="left">
-                                                <Typography fontWeight={600}>{row.user_name}</Typography>
-                                                <Typography variant="caption" color="textSecondary">
-                                                    {row.trade_name}
-                                                </Typography>
-                                            </Box>
-                                        </Stack>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Typography>{row.week_number}</Typography>
-                                        <Typography variant="caption">{row.start_date_month} - {row.end_date_month}</Typography>
-                                    </TableCell>
-                                    <TableCell align="center">{row.type ?? '-'}</TableCell>
-                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                                        <TableCell key={day} align="center">
-                                            {row.days?.[day] ?? '-'}
-                                        </TableCell>
-                                    ))}
-                                    <TableCell align="center">{row.payable_total_hours ?? '-'}</TableCell>
-                                    <TableCell align="center">{row.status ?? '-'}</TableCell>
-                                    <TableCell align="center">{row.lockedAmount ?? '-'}</TableCell>
-                                </TableRow>
-                            ))
-                        )}
+                        ))}
                     </TableBody>
                 </Table>
             </TableContainer>
 
-            {/* Pagination */}
-            <Stack
-                gap={1}
-                p={3}
-                alignItems="center"
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-            >
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="body1">
-                        {filteredData.length} Rows
-                    </Typography>
-                </Box>
+            <Stack gap={1} p={3} alignItems="center" direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between">
+                <Typography variant="body1">{filteredData.length} Rows</Typography>
                 <Box display="flex" alignItems="center" gap={1}>
                     <Typography variant="body1">Page</Typography>
                     <Typography variant="body1" fontWeight={600}>
-                        {page + 1} of {pageCount}
+                        {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                     </Typography>
-                    | Go to page:
-                    <CustomTextField
-                        type="number"
-                        min="1"
-                        max={pageCount}
-                        defaultValue={page + 1}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            const value = Number(e.target.value);
-                            if (value > 0 && value <= pageCount) setPage(value - 1);
-                        }}
-                    />
-                    <CustomSelect value={rowsPerPage}  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        setRowsPerPage(Number(e.target.value));
-                        setPage(0);
-                    }}>
-                        {[10, 15, 25, 50].map((size) => (
+                    | Entries:
+                    <TextField
+                        select
+                        size="small"
+                        value={table.getState().pagination.pageSize}
+                        onChange={(e) => table.setPageSize(Number(e.target.value))}
+                    >
+                        {[10, 50, 100, 250, 500].map((size) => (
                             <MenuItem key={size} value={size}>{size}</MenuItem>
                         ))}
-                    </CustomSelect>
-                    <IconButton size="small" onClick={() => setPage(0)} disabled={page === 0}><IconChevronsLeft /></IconButton>
-                    <IconButton size="small" onClick={() => setPage(page - 1)} disabled={page === 0}><IconChevronLeft /></IconButton>
-                    <IconButton size="small" onClick={() => setPage(page + 1)} disabled={page >= pageCount - 1}><IconChevronRight /></IconButton>
-                    <IconButton size="small" onClick={() => setPage(pageCount - 1)} disabled={page >= pageCount - 1}><IconChevronsRight /></IconButton>
+                    </TextField>
+                    <IconButton onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
+                        <IconChevronsLeft />
+                    </IconButton>
+                    <IconButton onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                        <IconChevronLeft />
+                    </IconButton>
+                    <IconButton onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                        <IconChevronRight />
+                    </IconButton>
+                    <IconButton onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}>
+                        <IconChevronsRight />
+                    </IconButton>
                 </Box>
             </Stack>
         </Box>

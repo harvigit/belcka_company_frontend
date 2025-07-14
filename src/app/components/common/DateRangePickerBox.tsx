@@ -18,7 +18,7 @@ import "../../global.css";
 type Props = {
     from: Date | null;
     to: Date | null;
-    onChange: (range: { from: Date | null; to: Date | null }) => void;
+    onChange: (range: { from: Date | null; to: Date | null }) => (range: { from: Date | null; to: Date | null }) => void;
     onApply?: (range: { from: Date | null; to: Date | null }) => void;
 };
 
@@ -67,7 +67,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
                 variant="outlined"
                 disableRipple
                 sx={{
-                    minWidth: 250,
+                    minWidth: 230,
                     justifyContent: "space-between",
                     borderRadius: "6px",
                     color: "#555",

@@ -35,13 +35,14 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
-  IconFilter,
-  IconSearch,
-} from "@tabler/icons-react";
+    IconChevronLeft,
+    IconChevronRight,
+    IconChevronsLeft,
+    IconChevronsRight,
+    IconFilter,
+    IconMedal,
+    IconSearch,
+} from '@tabler/icons-react';
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -52,6 +53,8 @@ import { useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+
+import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 
 dayjs.extend(customParseFormat);
 
@@ -82,6 +85,9 @@ const TablePagination = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
   const [user, setUser] = useState([]);
+
+    const [openIdCard, setOpenIdCard] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<TeamList | null>(null);
 
   const searchParams = useSearchParams();
   const userId = searchParams ? searchParams.get("user_id") : "";
@@ -191,9 +197,32 @@ const TablePagination = () => {
               </Box>
             </Stack>
             <Divider />
+              <Stack direction="row" spacing={2} py={2} alignItems="center">
+              <Box>
+                <Typography variant="h6">Digital Card</Typography>
+              </Box>
+              <Box sx={{ ml: "auto !important" }}>
+                  <IconMedal
+                      size={25}
+                      color="#888"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                          setSelectedUser(data[0]);
+                          setOpenIdCard(true);
+                      }}
+                  />
+              </Box>
+            </Stack>
+            <Divider />
           </CardContent>
         </BlankCard>
       </Grid>
+
+        <DigitalIDCard
+            open={openIdCard}
+            onClose={() => setOpenIdCard(false)}
+            user={selectedUser}
+        />
     </Grid>
   );
 };
