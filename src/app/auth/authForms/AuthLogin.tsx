@@ -14,7 +14,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const router = useRouter();
 
   const [phone, setPhone] = useState("");
-  const [extension, setExtension] = useState("+91");
+  const [extension, setExtension] = useState("+44");
   const [nationalPhone, setNationalPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -81,16 +81,15 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       }
 
       const result = await signIn("credentials", {
-        redirect: true,
+        redirect: false,
         ...payload,
-        callbackUrl:"/apps/users/list"
       });
 
       if (result?.ok) {
+        router.push("/apps/users/list");
         toast.success("Logged in successfully!!");
-        router.push(result.url || "/apps/users/list");
       } else {
-        toast.error(result?.error ?? "Something went wrong");
+        toast.error(result?.error || "Login failed");
       }
     } catch (error: any) {
       // const message =
@@ -118,7 +117,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
           <Box mt={2}>
             <PhoneInput
-              country={"in"}
+              country={"gb"}
               value={phone}
               onChange={(value, country: any) => {
                 setPhone(value);
