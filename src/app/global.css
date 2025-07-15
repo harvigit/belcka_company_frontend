@@ -56,3 +56,27 @@
 .react-tel-input .country-list .search-box{
     border-radius: 5px !important;
 }
+
+.mui-1e77ocg-MuiTypography-root{
+    font-weight: 400 !important;
+}
+
+.rdp-month_caption{
+    font-weight: 400 !important;
+}
+
+.rdp-selected{
+    font-weight: 400 !important;
+}
+
+.mui-u94pcw-MuiTypography-root{
+    font-weight: 500 !important;
+}
+
+td.MuiTableCell-root.MuiTableCell-body.MuiTableCell-alignCenter.MuiTableCell-sizeMedium.mui-15qi017-MuiTableCell-root{
+    font-size: 16px !important;
+}
+
+input[type="checkbox"] {
+    transform: scale(1.4) !important;
+}

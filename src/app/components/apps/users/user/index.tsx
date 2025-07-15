@@ -54,7 +54,7 @@ import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 
-// import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
+import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 
 dayjs.extend(customParseFormat);
 
@@ -86,8 +86,8 @@ const TablePagination = () => {
   const rerender = React.useReducer(() => ({}), {})[1];
   const [user, setUser] = useState([]);
 
-    const [openIdCard, setOpenIdCard] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<TeamList | null>(null);
+  const [openIdCard, setOpenIdCard] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const searchParams = useSearchParams();
   const userId = searchParams ? searchParams.get("user_id") : "";
@@ -206,10 +206,10 @@ const TablePagination = () => {
                       size={25}
                       color="#888"
                       style={{ cursor: "pointer" }}
-                      // onClick={() => {
-                      //     setSelectedUser(data[0]);
-                      //     setOpenIdCard(true);
-                      // }}
+                      onClick={() => {
+                          setSelectedUser(data[0]);
+                          setOpenIdCard(true);
+                      }}
                   />
               </Box>
             </Stack>
@@ -217,12 +217,14 @@ const TablePagination = () => {
           </CardContent>
         </BlankCard>
       </Grid>
-
-        {/*<DigitalIDCard*/}
-        {/*    open={openIdCard}*/}
-        {/*    onClose={() => setOpenIdCard(false)}*/}
-        {/*    user={selectedUser}*/}
-        {/*/>*/}
+        
+      {openIdCard && (
+        <DigitalIDCard
+            open={openIdCard}
+            onClose={() => setOpenIdCard(false)}
+            user={selectedUser}
+        />
+      )}
     </Grid>
   );
 };

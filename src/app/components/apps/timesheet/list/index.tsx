@@ -150,12 +150,16 @@ const TimesheetList = () => {
         columnHelper.accessor('user_name', {
             id: 'user_name',
             header: 'Name',
-            cell: (info : any) => {
+            cell: (info: any) => {
                 const row = info.row.original;
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
-                        <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
-                        <Box>
+                        <Avatar
+                            src={row.user_thumb_image}
+                            alt={row.user_name}
+                            sx={{ width: 36, height: 36 }}
+                        />
+                        <Box sx={{ textAlign: 'left' }}>
                             <Typography fontWeight={600}>{row.user_name}</Typography>
                             <Typography variant="caption" color="textSecondary">{row.trade_name}</Typography>
                         </Box>
@@ -180,18 +184,12 @@ const TimesheetList = () => {
             columnHelper.accessor((row: any) => row.days?.[day], {
                 id: day,
                 header: day,
-                cell: (info: any) =>
-                    <span style={{fontSize: '18px'}}>
-                        {formatHour(info.getValue()) || '-'}
-                    </span>
+                cell: (info: any) =>formatHour(info.getValue()) || '-'
             })
         ),
         columnHelper.accessor('payable_total_hours', {
             header: 'Payable Hours',
-            cell: (info: any) => 
-                <span style={{fontSize: '18px'}}>
-                  {formatHour(info.getValue()) || '-'}
-                </span>
+            cell: (info: any) => formatHour(info.getValue()) || '-'
         }),
         columnHelper.accessor('status', {
             header: 'Status',
