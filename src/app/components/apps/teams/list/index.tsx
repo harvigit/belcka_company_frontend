@@ -54,6 +54,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import Link from "next/link";
 import { IconDotsVertical } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -274,7 +275,28 @@ const TablePagination = () => {
             fullWidth
             maxWidth="sm"
           >
-            <DialogTitle>Filters</DialogTitle>
+            <DialogTitle
+              sx={{ m: 0, position: "relative", overflow: "visible" }}
+            >
+              Filters
+              <IconButton
+                aria-label="close"
+                onClick={() => setOpen(false)}
+                size="large"
+                sx={{
+                  position: "absolute",
+                  right: 12,
+                  top: 8,
+                  color: (theme) => theme.palette.grey[900],
+                  backgroundColor: "transparent",
+                  zIndex: 10,
+                  width: 50,
+                  height: 50,
+                }}
+              >
+                <IconX size={40} style={{ width: 40, height: 40 }} />
+              </IconButton>
+            </DialogTitle>
             <DialogContent>
               <Stack spacing={2} mt={1}>
                 <TextField
@@ -331,7 +353,7 @@ const TablePagination = () => {
                 }}
                 color="inherit"
               >
-                Cancel
+                Clear
               </Button>
 
               <Button

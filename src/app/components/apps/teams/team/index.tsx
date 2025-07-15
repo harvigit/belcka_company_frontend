@@ -56,6 +56,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconChevronUp } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -118,8 +119,26 @@ const TablePagination = () => {
           `team/get-team-member-list?team_id=${teamId}`
         );
         if (res.data?.info) {
-          const flattened: TeamList[] = res.data.info.flatMap((team: any) =>
-            team.users.map((user: any) => ({
+          const flattened = res.data.info.flatMap((team: any) => {
+            if (team.users.length === 0) {
+              return [
+                {
+                  supervisor_id: team.supervisor_id,
+                  supervisor_name: team.supervisor_name,
+                  supervisor_image: team.supervisor_image,
+                  supervisor_email: team.supervisor_email,
+                  supervisor_phone: team.supervisor_phone,
+                  team_name: team.team_name,
+                  name: null,
+                  image: null,
+                  is_active: null,
+                  trade_id: null,
+                  trade_name: null,
+                },
+              ];
+            }
+
+            return team.users.map((user: any) => ({
               supervisor_id: team.supervisor_id,
               supervisor_name: team.supervisor_name,
               supervisor_image: team.supervisor_image,
@@ -131,8 +150,9 @@ const TablePagination = () => {
               is_active: user.is_active,
               trade_id: user.trade_id,
               trade_name: user.trade_name,
-            }))
-          );
+            }));
+          });
+
           setData(flattened);
         }
         setLoading(false);
@@ -312,23 +332,18 @@ const TablePagination = () => {
             <Box textAlign="center" display="flex" justifyContent="center">
               <Box>
                 <Avatar
-                  src={
-                    data[0].supervisor_image
-                      ? data[0].supervisor_image
-                      : "/images/users/user.png"
-                  }
-                  alt={"user1"}
+                  src={data[0]?.supervisor_image || "/images/users/user.png"}
+                  alt={data[0]?.supervisor_name || "user1"}
                   sx={{ width: 120, height: 120, margin: "0 auto" }}
                 />
-                <Typography variant="subtitle1" color="textSecondary" mb={1}>
-                  {data[0].supervisor_name ?? null}
-                </Typography>
                 <Typography variant="h5" mb={1}>
+                  {data[0]?.supervisor_name}
+                </Typography>
+                <Typography variant="subtitle1" color="textSecondary" mb={1}>
                   Supervisor
                 </Typography>
               </Box>
             </Box>
-            <Divider />
             <Divider />
             <Stack direction="row" spacing={2} py={2} alignItems="center">
               <Box>
@@ -336,7 +351,7 @@ const TablePagination = () => {
               </Box>
               <Box sx={{ ml: "auto !important" }}>
                 <Typography variant="h5" color="textSecondary">
-                  {data[0].supervisor_phone ?? "-"}
+                  {data[0]?.supervisor_phone || "-"}
                 </Typography>
               </Box>
             </Stack>
@@ -351,7 +366,7 @@ const TablePagination = () => {
       >
         <BlankCard>
           <Grid display="flex" gap={1} mt={2} ml={2}>
-            <Typography variant="h4">{data[0]?.team_name}</Typography>
+            <Typography variant="h3">{data[0]?.team_name}</Typography>
           </Grid>
 
           <Stack
@@ -392,7 +407,28 @@ const TablePagination = () => {
                 fullWidth
                 maxWidth="sm"
               >
-                <DialogTitle>Filters</DialogTitle>
+                <DialogTitle
+                  sx={{ m: 0, position: "relative", overflow: "visible" }}
+                >
+                  Filters
+                  <IconButton
+                    aria-label="close"
+                    onClick={() => setOpen(false)}
+                    size="large"
+                    sx={{
+                      position: "absolute",
+                      right: 12,
+                      top: 8,
+                      color: (theme) => theme.palette.grey[900],
+                      backgroundColor: "transparent",
+                      zIndex: 10,
+                      width: 50,
+                      height: 50,
+                    }}
+                  >
+                    <IconX size={40} style={{ width: 40, height: 40 }} />
+                  </IconButton>
+                </DialogTitle>
                 <DialogContent>
                   <Stack spacing={2} mt={1}>
                     <TextField
@@ -449,7 +485,7 @@ const TablePagination = () => {
                     }}
                     color="inherit"
                   >
-                    Cancel
+                    Clear
                   </Button>
 
                   <Button

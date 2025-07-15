@@ -18,7 +18,6 @@ const UserListing = () => {
   return (
     <UserProvider>
       <PageContainer title="User" description="this is User">
-        <Breadcrumb title="User" items={BCrumb} />
           {/* <CardContent> */}
             <UserList />
           {/* </CardContent> */}
