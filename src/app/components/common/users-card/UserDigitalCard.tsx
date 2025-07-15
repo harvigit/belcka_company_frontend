@@ -198,12 +198,12 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                                 TIME IS MONEY. CONTROL IT.
                             </Typography>
                         </Box>
-
-                        <Box mt={3} display="flex" justifyContent="flex-end">
-                            <Button onClick={handleDownloadPDF} variant="contained" color="primary">
-                                Save PDF
-                            </Button>
-                        </Box>
+                        
+                        {/*<Box mt={3} display="flex" justifyContent="flex-end">*/}
+                        {/*    <Button onClick={handleDownloadPDF} variant="contained" color="primary">*/}
+                        {/*        Save PDF*/}
+                        {/*    </Button>*/}
+                        {/*</Box>*/}
                     </>
                 )}
             </DialogContent>
