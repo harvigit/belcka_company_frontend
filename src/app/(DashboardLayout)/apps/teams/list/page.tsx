@@ -19,7 +19,6 @@ const TeamListing = () => {
   return (
     <TeamProvider>
       <PageContainer title="Team List" description="this is Team List">
-        <Breadcrumb title="" items={BCrumb} />
         <BlankCard>
           {/* <CardContent> */}
             <TeamList />

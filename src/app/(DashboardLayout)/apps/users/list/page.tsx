@@ -19,7 +19,6 @@ const UserListing = () => {
   return (
     <UserProvider>
       <PageContainer description="this is User List">
-        <Breadcrumb title="" items={BCrumb} />
         <BlankCard>
           <UserList />
         </BlankCard>
