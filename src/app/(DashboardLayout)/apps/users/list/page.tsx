@@ -18,8 +18,8 @@ const BCrumb = [
 const UserListing = () => {
   return (
     <UserProvider>
-      <PageContainer title="User List" description="this is User List">
-        <Breadcrumb title="User List" items={BCrumb} />
+      <PageContainer description="this is User List">
+        <Breadcrumb title="" items={BCrumb} />
         <BlankCard>
           <UserList />
         </BlankCard>

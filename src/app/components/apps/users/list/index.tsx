@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogContent,
   Dialog,
-  Checkbox,
+  Paper,
 } from "@mui/material";
 import {
   flexRender,
@@ -45,13 +45,13 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-
-dayjs.extend(customParseFormat);
 import { Avatar } from "@mui/material";
 import Link from "next/link";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+
+dayjs.extend(customParseFormat);
 
 export interface UserList {
   id: number;
@@ -76,6 +76,7 @@ const TablePagination = () => {
 
   useEffect(() => {
     const fetchTrades = async () => {
+      setLoading(true);
       try {
         const res = await api.get(`user/get-user-lists`);
         if (res.data) {
@@ -84,6 +85,7 @@ const TablePagination = () => {
       } catch (err) {
         console.error("Failed to fetch trades", err);
       }
+      setLoading(false);
     };
     fetchTrades();
   }, []);
@@ -121,8 +123,8 @@ const TablePagination = () => {
     {
       id: "select-name",
       header: () => (
-        <Stack direction="row" alignItems="center" spacing={6}>
-          <Checkbox
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <CustomCheckbox
             checked={
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
@@ -139,15 +141,17 @@ const TablePagination = () => {
               }
             }}
           />
-          <Typography variant="h4">Name</Typography>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
         </Stack>
       ),
       cell: ({ row }: any) => {
         const user = row.original;
         const defaultImage = "/images/users/user.png";
         return (
-          <Stack direction="row" alignItems="center" spacing={6}>
-            <Checkbox
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <CustomCheckbox
               checked={selectedRowIds.has(user.id)}
               onChange={() => {
                 const newSelected = new Set(selectedRowIds);
@@ -159,7 +163,7 @@ const TablePagination = () => {
                 setSelectedRowIds(newSelected);
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={4}>
               <Avatar
                 src={user.user_image || defaultImage}
                 alt={user.name}
@@ -169,13 +173,13 @@ const TablePagination = () => {
                 <Link href={`/apps/users/user?user_id=${user.id}`} passHref>
                   <Typography
                     variant="h5"
-                    color="primary"
-                    sx={{ cursor: "pointer" }}
+                    color="textPrimary"
+                    sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
                   >
                     {user.name ?? "-"}
                   </Typography>
                 </Link>
-                <Typography variant="body2" color="textSecondary">
+                <Typography color="textSecondary" variant="subtitle1">
                   {user.trade_name}
                 </Typography>
               </Box>
@@ -188,7 +192,7 @@ const TablePagination = () => {
       id: "supervisor_name",
       header: () => "Supervisor",
       cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
+        <Typography variant="h5" color="textPrimary">
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -197,7 +201,7 @@ const TablePagination = () => {
       id: "team_name",
       header: () => "Team Name",
       cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
+        <Typography variant="h5" color="textPrimary">
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -251,8 +255,6 @@ const TablePagination = () => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
-  const selectedRowIdsStr = [...selectedRowIds].join(", ");
-
   return (
     <Box>
       {/* Render the search and table */}
@@ -267,7 +269,7 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            USERS ({table.getPrePaginationRowModel().rows.length})
+            USERS ({filteredData.length})
           </Button>
           <TextField
             id="search"
@@ -290,84 +292,83 @@ const TablePagination = () => {
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
-
-          <Dialog
-            open={open}
-            onClose={() => setOpen(false)}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle>Filters</DialogTitle>
-            <DialogContent>
-              <Stack spacing={2} mt={1}>
-                <TextField
-                  select
-                  label="Team"
-                  value={tempFilters.team}
-                  onChange={(e) =>
-                    setTempFilters({ ...tempFilters, team: e.target.value })
-                  }
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {uniqueTeams.map((team) => (
-                    <MenuItem key={team} value={team}>
-                      {team}
-                    </MenuItem>
-                  ))}
-                </TextField>
-
-                <TextField
-                  select
-                  label="Supervisor"
-                  value={tempFilters.supervisor}
-                  onChange={(e) =>
-                    setTempFilters({
-                      ...tempFilters,
-                      supervisor: e.target.value,
-                    })
-                  }
-                  fullWidth
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {uniqueSupervisors.map((supervisor, i) => (
-                    <MenuItem key={i} value={supervisor}>
-                      {supervisor}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
-            </DialogContent>
-
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setTempFilters({
-                    team: "",
-                    supervisor: "",
-                  });
-                  setFilters({
-                    team: "",
-                    supervisor: "",
-                  });
-                  setOpen(false);
-                }}
-                color="inherit"
-              >
-                Cancel
-              </Button>
-
-              <Button
-                variant="contained"
-                onClick={() => {
-                  setFilters(tempFilters);
-                  setOpen(false);
-                }}
-              >
-                Apply
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Grid>
+        <Dialog
+          open={open}
+          onClose={() => setOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Filters</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} mt={1}>
+              <TextField
+                select
+                label="Team"
+                value={tempFilters.team}
+                onChange={(e) =>
+                  setTempFilters({ ...tempFilters, team: e.target.value })
+                }
+              >
+                <MenuItem value="">All</MenuItem>
+                {uniqueTeams.map((team) => (
+                  <MenuItem key={team} value={team}>
+                    {team}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField
+                select
+                label="Supervisor"
+                value={tempFilters.supervisor}
+                onChange={(e) =>
+                  setTempFilters({
+                    ...tempFilters,
+                    supervisor: e.target.value,
+                  })
+                }
+                fullWidth
+              >
+                <MenuItem value="">All</MenuItem>
+                {uniqueSupervisors.map((supervisor, i) => (
+                  <MenuItem key={i} value={supervisor}>
+                    {supervisor}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+          </DialogContent>
+
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setTempFilters({
+                  team: "",
+                  supervisor: "",
+                });
+                setFilters({
+                  team: "",
+                  supervisor: "",
+                });
+                setOpen(false);
+              }}
+              color="inherit"
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={() => {
+                setFilters(tempFilters);
+                setOpen(false);
+              }}
+            >
+              Apply
+            </Button>
+          </DialogActions>
+        </Dialog>
         <Stack
           gap={1}
           pr={3}
@@ -425,14 +426,6 @@ const TablePagination = () => {
               <IconButton
                 size="small"
                 sx={{ width: "30px" }}
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronsLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -445,14 +438,6 @@ const TablePagination = () => {
                 disabled={!table.getCanNextPage()}
               >
                 <IconChevronRight />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronsRight />
               </IconButton>
             </Stack>
           </Box>
@@ -468,58 +453,79 @@ const TablePagination = () => {
         )}
       </Stack>
       <Divider />
-
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
+            {/* Table rendering */}
             <TableContainer>
-              <Table
-                stickyHeader
-                sx={{
-                  whiteSpace: "nowrap",
-                }}
-              >
+              <Table stickyHeader>
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableCell
-                          key={header.id}
-                          sx={{
-                            width:
-                              header.column.id === "actions" ? 120 : "auto",
-                          }}
-                        >
-                          <Typography
-                            variant="h4"
-                            mb={1}
-                            onClick={header.column.getToggleSortingHandler()}
-                            className={
-                              header.column.getCanSort()
-                                ? "cursor-pointer select-none"
-                                : ""
-                            }
+                      {headerGroup.headers.map((header) => {
+                        const isActive = header.column.getIsSorted();
+                        const isAsc = header.column.getIsSorted() === "asc";
+                        const isSortable = header.column.getCanSort();
+
+                        return (
+                          <TableCell
+                            key={header.id}
+                            align="center"
+                            sx={{
+                              paddingTop: "5px",
+                              paddingBottom: "5px",
+                              width:
+                                header.column.id === "actions" ? 120 : "auto",
+                            }}
                           >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
+                            <Box
+                              onClick={header.column.getToggleSortingHandler()}
+                              p={0}
+                              sx={{
+                                cursor: isSortable ? "pointer" : "default",
+                                border: "2px solid transparent",
+                                borderRadius: "6px",
+                                display: "flex",
+                                justifyContent: "flex-start",
+                                "&:hover": { color: "#888" },
+                                "&:hover .hoverIcon": { opacity: 1 },
+                              }}
+                            >
+                              <Typography
+                                variant="subtitle2"
+                                fontWeight="inherit"
+                              >
+                                {flexRender(
                                   header.column.columnDef.header,
                                   header.getContext()
                                 )}
-                            {(() => {
-                              const sort = header.column.getIsSorted();
-                              if (sort === "asc") return " 🔼";
-                              if (sort === "desc") return " 🔽";
-                              return null;
-                            })()}
-                          </Typography>
-                        </TableCell>
-                      ))}
+                              </Typography>
+                              {isSortable && (
+                                <Box
+                                  component="span"
+                                  className="hoverIcon"
+                                  ml={0.5}
+                                  sx={{
+                                    transition: "opacity 0.2s",
+                                    opacity: isActive ? 1 : 0,
+                                    fontSize: "0.9rem",
+                                    color: isActive ? "#000" : "#888",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                                </Box>
+                              )}
+                            </Box>
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableHead>
                 <TableBody>
-                  {table.getRowModel().rows?.length > 0 ? (
+                  {table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
@@ -543,9 +549,9 @@ const TablePagination = () => {
               </Table>
             </TableContainer>
           </Box>
-          <Divider />
         </Grid>
       </Grid>
+      <Divider />
     </Box>
   );
 };

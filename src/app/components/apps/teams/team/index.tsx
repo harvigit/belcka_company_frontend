@@ -24,7 +24,6 @@ import {
   Chip,
   CircularProgress,
   CardContent,
-  Checkbox,
 } from "@mui/material";
 import {
   flexRender,
@@ -34,8 +33,10 @@ import {
   getSortedRowModel,
   useReactTable,
   createColumnHelper,
+  SortingState,
 } from "@tanstack/react-table";
 import {
+  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
@@ -46,7 +47,6 @@ import {
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
@@ -54,6 +54,8 @@ import { useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { IconChevronUp } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -92,6 +94,7 @@ const TablePagination = () => {
   const [open, setOpen] = useState(false);
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -167,8 +170,8 @@ const TablePagination = () => {
     {
       id: "name",
       header: () => (
-        <Stack direction="row" alignItems="center" spacing={6}>
-          <Checkbox
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <CustomCheckbox
             checked={
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
@@ -185,15 +188,17 @@ const TablePagination = () => {
               }
             }}
           />
-          <Typography variant="h4">Name</Typography>
+          <Typography variant="h6" color="textPrimary">
+            Name
+          </Typography>
         </Stack>
       ),
       cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
         return (
-          <Stack direction="row" alignItems="center" spacing={6}>
-            <Checkbox
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <CustomCheckbox
               checked={isChecked}
               onChange={() => {
                 const newSelected = new Set(selectedRowIds);
@@ -225,7 +230,7 @@ const TablePagination = () => {
       id: "trade_name",
       header: () => "Trade",
       cell: (info) => (
-        <Typography variant="h5" color="textSecondary">
+        <Typography variant="h5" color="body2">
           {info.row.original.trade_name ?? "-"}
         </Typography>
       ),
@@ -267,7 +272,8 @@ const TablePagination = () => {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { columnFilters },
+    state: { columnFilters, sorting },
+    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -334,7 +340,6 @@ const TablePagination = () => {
                 </Typography>
               </Box>
             </Stack>
-            <Divider />
           </CardContent>
         </BlankCard>
       </Grid>
@@ -519,15 +524,6 @@ const TablePagination = () => {
                       </MenuItem>
                     ))}
                   </CustomSelect>
-
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.setPageIndex(0)}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <IconChevronsLeft />
-                  </IconButton>
                   <IconButton
                     size="small"
                     sx={{ width: "30px" }}
@@ -543,14 +539,6 @@ const TablePagination = () => {
                     disabled={!table.getCanNextPage()}
                   >
                     <IconChevronRight />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <IconChevronsRight />
                   </IconButton>
                 </Stack>
               </Box>
@@ -571,53 +559,76 @@ const TablePagination = () => {
             <Grid size={12}>
               <Box>
                 <TableContainer>
-                  <Table
-                    stickyHeader
-                    sx={{
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <Table stickyHeader>
                     <TableHead>
                       {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableCell
-                              key={header.id}
-                              sx={{
-                                width:
-                                  header.column.id === "actions" ? 120 : "auto",
-                              }}
-                            >
-                              <Typography
-                                variant="h4"
-                                mb={1}
-                                onClick={header.column.getToggleSortingHandler()}
-                                className={
-                                  header.column.getCanSort()
-                                    ? "cursor-pointer select-none"
-                                    : ""
-                                }
+                          {headerGroup.headers.map((header) => {
+                            const isActive = header.column.getIsSorted();
+                            const isAsc = header.column.getIsSorted() === "asc";
+                            const isSortable = header.column.getCanSort();
+
+                            return (
+                              <TableCell
+                                key={header.id}
+                                align="center"
+                                sx={{
+                                  paddingTop: "10px",
+                                  paddingBottom: "10px",
+                                  width:
+                                    header.column.id === "actions"
+                                      ? 120
+                                      : "auto",
+                                }}
                               >
-                                {header.isPlaceholder
-                                  ? null
-                                  : flexRender(
+                                <Box
+                                  onClick={header.column.getToggleSortingHandler()}
+                                  p={0}
+                                  sx={{
+                                    cursor: isSortable ? "pointer" : "default",
+                                    border: "2px solid transparent",
+                                    borderRadius: "6px",
+                                    display: "flex",
+                                    justifyContent: "flex-start",
+                                    "&:hover": { color: "#888" },
+                                    "&:hover .hoverIcon": { opacity: 1 },
+                                  }}
+                                >
+                                  <Typography
+                                    variant="subtitle2"
+                                    fontWeight="inherit"
+                                  >
+                                    {flexRender(
                                       header.column.columnDef.header,
                                       header.getContext()
                                     )}
-                                {(() => {
-                                  const sort = header.column.getIsSorted();
-                                  if (sort === "asc") return " 🔼";
-                                  if (sort === "desc") return " 🔽";
-                                  return null;
-                                })()}
-                              </Typography>
-                            </TableCell>
-                          ))}
+                                  </Typography>
+                                  {isSortable && (
+                                    <Box
+                                      component="span"
+                                      className="hoverIcon"
+                                      ml={0.5}
+                                      sx={{
+                                        transition: "opacity 0.2s",
+                                        opacity: isActive ? 1 : 0,
+                                        fontSize: "0.9rem",
+                                        color: isActive ? "#000" : "#888",
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                      }}
+                                    >
+                                      {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                                    </Box>
+                                  )}
+                                </Box>
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))}
                     </TableHead>
                     <TableBody>
-                      {table.getRowModel().rows?.length > 0 ? (
+                      {table.getRowModel().rows.length ? (
                         table.getRowModel().rows.map((row) => (
                           <TableRow key={row.id}>
                             {row.getVisibleCells().map((cell) => (
