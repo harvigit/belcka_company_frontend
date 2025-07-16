@@ -587,14 +587,14 @@ const TablePagination = () => {
               </Dialog>
             </Grid>
             <Stack direction={"row-reverse"} mb={1} mr={1}>
-              <Button
+              {/* <Button
                 variant="contained"
                 color="primary"
                 startIcon={<IconPlus width={18} />}
                 onClick={handleClickOpen}
               >
                 Add User
-              </Button>
+              </Button> */}
               <Dialog
                 open={modelopen}
                 onClose={handleClose}
