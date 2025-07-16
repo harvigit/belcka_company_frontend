@@ -298,7 +298,7 @@ const TablePagination = () => {
                 sx={{ width: 36, height: 36 }}
               />
               <Box>
-                <Typography variant="h5" color="textSecondary">
+                <Typography variant="h5" color="body2">
                   {item.name ?? "-"}
                 </Typography>
               </Box>
@@ -311,7 +311,7 @@ const TablePagination = () => {
       id: "trade_name",
       header: () => "Trade",
       cell: (info) => (
-        <Typography variant="h5" color="textSecondary">
+        <Typography variant="h5" color="body2">
           {info.row.original.trade_name ?? "-"}
         </Typography>
       ),
