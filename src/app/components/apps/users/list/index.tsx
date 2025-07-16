@@ -31,6 +31,7 @@ import {
   getSortedRowModel,
   useReactTable,
   createColumnHelper,
+  SortingState,
 } from "@tanstack/react-table";
 import {
   IconChevronLeft,
@@ -70,6 +71,7 @@ const TablePagination = () => {
   const [filters, setFilters] = useState({ team: "", supervisor: "" });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -117,8 +119,8 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<UserList>();
   const columns = [
-    {
-      id: "select-name",
+    columnHelper.accessor("name", {
+      id: "name",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -143,13 +145,16 @@ const TablePagination = () => {
           </Typography>
         </Stack>
       ),
-      cell: ({ row }: any) => {
+      enableSorting: true,
+      cell: ({ row }) => {
         const user = row.original;
         const defaultImage = "/images/users/user.png";
+        const isChecked = selectedRowIds.has(user.id);
+
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
-              checked={selectedRowIds.has(user.id)}
+              checked={isChecked}
               onChange={() => {
                 const newSelected = new Set(selectedRowIds);
                 if (newSelected.has(user.id)) {
@@ -184,7 +189,7 @@ const TablePagination = () => {
           </Stack>
         );
       },
-    },
+    }),
 
     columnHelper.accessor((row) => row.team_name, {
       id: "team_name",
@@ -232,7 +237,8 @@ const TablePagination = () => {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { columnFilters },
+    state: { columnFilters, sorting },
+    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -401,8 +407,12 @@ const TablePagination = () => {
         <Grid size={12}>
           <Box>
             {/* Table rendering */}
-            <TableContainer>
-              <Table stickyHeader>
+            <TableContainer
+              sx={{
+                maxHeight: 680,
+              }}
+            >
+              <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -455,6 +465,7 @@ const TablePagination = () => {
                                     fontSize: "0.9rem",
                                     color: isActive ? "#000" : "#888",
                                     display: "flex",
+                                    alignItems: "center",
                                     justifyContent: "space-between",
                                   }}
                                 >

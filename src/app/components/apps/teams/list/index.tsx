@@ -81,7 +81,7 @@ export type TeamList = {
 export type UserList = {
   id: number;
   name: string;
-}
+};
 
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
@@ -156,8 +156,9 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
-    {
+    columnHelper.accessor("name", {
       id: "name",
+      enableSorting: true,
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -171,7 +172,7 @@ const TablePagination = () => {
             }
             onChange={(e) => {
               if (e.target.checked) {
-                setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
+                setSelectedRowIds(new Set(filteredData.map((_, i) => i)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -182,14 +183,18 @@ const TablePagination = () => {
           </Typography>
         </Stack>
       ),
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
-        const shouldHighlight = item.is_subcontractor; 
+        const shouldHighlight =
+          item.is_subcontractor === true &&
+          item.company_id !== item.subcontractor_company_id;
+
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
               checked={isChecked}
+              disabled={shouldHighlight}
               onChange={() => {
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
@@ -204,17 +209,40 @@ const TablePagination = () => {
               <Link href={`/apps/teams/team?team_id=${item.id}`} passHref>
                 <Typography
                   variant="h5"
-                  color={shouldHighlight == true && item.company_id !== item.subcontractor_company_id ? "secondary" : "textPrimary"}
+                  color={shouldHighlight ? "secondary" : "textPrimary"}
                   sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
                 >
                   {item.name ?? "-"}
                 </Typography>
               </Link>
+              {/* {shouldHighlight ? (
+                <Typography
+                  variant="h5"
+                  color="secondary"
+                  sx={{
+                    cursor: "not-allowed",
+                    opacity: 0.6,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {item.name ?? "-"}
+                </Typography>
+              ) : (
+                <Link href={`/apps/teams/team?team_id=${item.id}`} passHref>
+                  <Typography
+                    variant="h5"
+                    color="textPrimary"
+                    sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                  >
+                    {item.name ?? "-"}
+                  </Typography>
+                </Link>
+              )} */}
             </Stack>
           </Stack>
         );
       },
-    },
+    }),
 
     columnHelper.accessor((row) => row?.subcontractor_company_name, {
       id: "subcontractor_company_name",
@@ -506,8 +534,12 @@ const TablePagination = () => {
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
-            <TableContainer>
-              <Table stickyHeader>
+            <TableContainer
+              sx={{
+                maxHeight: 680,
+              }}
+            >
+              <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -560,6 +592,7 @@ const TablePagination = () => {
                                     fontSize: "0.9rem",
                                     color: isActive ? "#000" : "#888",
                                     display: "flex",
+                                    alignItems: "center",
                                     justifyContent: "space-between",
                                   }}
                                 >

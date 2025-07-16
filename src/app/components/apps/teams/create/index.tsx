@@ -9,13 +9,14 @@ import {
   MenuItem,
   Select,
   Paper,
+  Autocomplete,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import toast from "react-hot-toast";
 import { TeamContext } from "@/app/context/TeamContext";
-import { TeamList } from "../list";
+import { TeamList, UserList } from "../list";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -24,9 +25,11 @@ const CreateTeam = () => {
   const { addTeam, teams } = useContext(TeamContext);
   const router = useRouter();
   const [data, setData] = useState<TeamList[]>([]);
+  const [users, setUsers] = useState<UserList[]>([]);
+
   const [loading, setLoading] = useState<boolean>(true);
- const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null } ;
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null };
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState<any>({
@@ -40,9 +43,11 @@ const CreateTeam = () => {
     const fetchTrades = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`team/user-list?company_id=${user.company_id}`);
+        const res = await api.get(
+          `team/user-list?company_id=${user.company_id}`
+        );
         if (res.data) {
-          setData(res.data.info);
+          setUsers(res.data.info);
         }
       } catch (err) {
         console.error("Failed to fetch trades", err);
@@ -95,7 +100,7 @@ const CreateTeam = () => {
         id: 0,
         name: "",
         supervisor_id: 0,
-        team_member_ids: formData.team_member_ids.join(","),
+        team_member_ids: formData.team_member_ids?.join(","),
       });
       const message = (result as any).message;
       toast.success(message);
@@ -116,7 +121,7 @@ const CreateTeam = () => {
           justifyContent="space-between"
           mb={3}
         >
-          <Typography variant="h5">#Create</Typography>
+          <Typography variant="h5">#Create Team</Typography>
         </Stack>
         {/* <Divider /> */}
 
@@ -186,9 +191,7 @@ const CreateTeam = () => {
               fullWidth
               displayEmpty
             >
-              <MenuItem value={0} disabled>
-                Select Supervisor
-              </MenuItem>
+              <MenuItem value={0}>Select Supervisor</MenuItem>
               {data.map((users) => (
                 <MenuItem key={users.id} value={users.id}>
                   {users.name}
@@ -218,48 +221,28 @@ const CreateTeam = () => {
               sm: 9,
             }}
           >
-            <Select
+            <Autocomplete
               multiple
-              name="team_member_ids"
-              value={
-                Array.isArray(formData.team_member_ids)
-                  ? formData.team_member_ids
-                  : []
-              }
-              onChange={(e) => {
-                const { value } = e.target;
-
+              fullWidth
+              id="team_member_ids"
+              options={users}
+              value={users.filter((user) =>
+                formData.team_member_ids.includes(user.id)
+              )}
+              onChange={(event, newValue) => {
+                const selectedIds = newValue.map((user) => user.id);
                 setFormData({
                   ...formData,
-                  team_member_ids:
-                    typeof value === "string"
-                      ? value.split(",").map(Number)
-                      : value,
+                  team_member_ids: selectedIds,
                 });
               }}
-              fullWidth
-              displayEmpty
-              renderValue={(selected) => {
-                if (!Array.isArray(selected) || selected.length === 0) {
-                  return "Select Team Members";
-                }
-
-                const selectedNames = data
-                  .filter((user) => selected.includes(user.id))
-                  .map((user) => user.name);
-
-                return selectedNames.join(", ");
-              }}
-            >
-              <MenuItem disabled value="">
-                Select Team Members
-              </MenuItem>
-              {data.map((user) => (
-                <MenuItem key={user.id} value={user.id}>
-                  {user.name}
-                </MenuItem>
-              ))}
-            </Select>
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterSelectedOptions
+              renderInput={(params) => (
+                <CustomTextField {...params} placeholder="Team Members" />
+              )}
+            />
           </Grid>
 
           <Grid
