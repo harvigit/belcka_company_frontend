@@ -24,10 +24,6 @@ import {
   Chip,
   CircularProgress,
   CardContent,
-  Modal,
-  Slide,
-  FormControl,
-  InputLabel,
 } from "@mui/material";
 import {
   flexRender,
@@ -40,11 +36,8 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
   IconFilter,
   IconPlus,
   IconSearch,
@@ -60,16 +53,13 @@ import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { IconChevronUp } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
-import Link from "next/link";
-import { error } from "console";
 import toast from "react-hot-toast";
-import { Select } from "react-day-picker";
 
 dayjs.extend(customParseFormat);
 
 export interface TeamList {
+  id: number;
   supervisor_id: number;
   supervisor_name: string;
   supervisor_image: string | null;
@@ -101,9 +91,11 @@ const TablePagination = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const rerender = React.useReducer(() => ({}), {})[1];
+  const [users, setUsers] = useState<UserList[]>([]);
   const [user, setUser] = useState<UserList[]>([]);
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
+
   const [filters, setFilters] = useState({ team: "", trade: "" });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
@@ -112,6 +104,8 @@ const TablePagination = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [modelopen, setModelOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
 
   // fetch compnay trades
   useEffect(() => {
@@ -129,62 +123,77 @@ const TablePagination = () => {
   }, [api]);
 
   // fetch team member's
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(
-          `team/get-team-member-list?team_id=${teamId}`
-        );
-        if (res.data?.info) {
-          const flattened = res.data.info.flatMap((team: any) => {
-            if (team.users.length === 0) {
-              return [
-                {
-                  supervisor_id: team.supervisor_id,
-                  supervisor_name: team.supervisor_name,
-                  supervisor_image: team.supervisor_image,
-                  supervisor_email: team.supervisor_email,
-                  supervisor_phone: team.supervisor_phone,
-                  team_name: team.team_name,
-                  name: null,
-                  image: null,
-                  is_active: null,
-                  trade_id: null,
-                  trade_name: null,
-                },
-              ];
-            }
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
+      if (res.data?.info) {
+        const flattened = res.data.info.flatMap((team: any) => {
+          if (team.users.length === 0) {
+            return [
+              {
+                supervisor_id: team.supervisor_id,
+                supervisor_name: team.supervisor_name,
+                supervisor_image: team.supervisor_image,
+                supervisor_email: team.supervisor_email,
+                supervisor_phone: team.supervisor_phone,
+                team_name: team.team_name,
+                name: null,
+                image: null,
+                is_active: null,
+                trade_id: null,
+                trade_name: null,
+              },
+            ];
+          }
 
-            return team.users.map((user: any) => ({
-              supervisor_id: team.supervisor_id,
-              supervisor_name: team.supervisor_name,
-              supervisor_image: team.supervisor_image,
-              supervisor_email: team.supervisor_email,
-              supervisor_phone: team.supervisor_phone,
-              team_name: team.team_name,
-              name: user.name,
-              image: user.image,
-              is_active: user.is_active,
-              trade_id: user.trade_id,
-              trade_name: user.trade_name,
-            }));
-          });
+          return team.users.map((user: any) => ({
+            supervisor_id: team.supervisor_id,
+            supervisor_name: team.supervisor_name,
+            supervisor_image: team.supervisor_image,
+            supervisor_email: team.supervisor_email,
+            supervisor_phone: team.supervisor_phone,
+            team_name: team.team_name,
+            id: user.id,
+            name: user.name,
+            image: user.image,
+            is_active: user.is_active,
+            trade_id: user.trade_id,
+            trade_name: user.trade_name,
+          }));
+        });
 
-          setData(flattened);
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch users", err);
-        setLoading(false);
+        setData(flattened);
       }
-    };
-    fetchData();
-  }, [teamId]);
+      setLoading(false);
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+      setLoading(false);
+    }
+  };
 
-  const uniqueTrades = useMemo(
-    () => [...new Set(data.map((item) => item.name).filter(Boolean))],
-    [data]
+  const fetchUniqueUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`team/user-list?company_id=${id.company_id}`);
+      if (res.data) {
+        setUser(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUniqueUsers();
+    fetchData();
+  }, []);
+
+  const members = useMemo(
+    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
+    [users]
   );
   const trades = useMemo(
     () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
@@ -210,7 +219,7 @@ const TablePagination = () => {
       try {
         const res = await api.get(`user/get-user-lists`);
         if (res.data) {
-          setUser(res.data.info);
+          setUsers(res.data.info);
         }
       } catch (err) {
         console.error("Failed to fetch trades", err);
@@ -233,25 +242,33 @@ const TablePagination = () => {
     };
 
     try {
-      setLoading(true);
+      // setLoading(true);
       const response = await api.post(`team/add-user-to-team`, payload);
       toast.success(response.data.message);
       handleClose();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Something went wrong.");
-      handleClose();
+      // toast.error(error?.response?.data?.message || "Something went wrong.");
+      // handleClose();
     } finally {
-      setLoading(false);
+      // setLoading(false);
+      await fetchData();
     }
-    handleClose();
+    // handleClose();
   };
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
-    {
+    columnHelper.accessor("name", {
       id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+      enableSorting: true, // allow sorting
+      header: ({ column }) => (
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={4}
+          sx={{ cursor: "pointer" }}
+          onClick={column.getToggleSortingHandler()}
+        >
           <CustomCheckbox
             checked={
               selectedRowIds.size === filteredData.length &&
@@ -262,6 +279,7 @@ const TablePagination = () => {
               selectedRowIds.size < filteredData.length
             }
             onChange={(e) => {
+              if (e.stopPropagation) e.stopPropagation();
               if (e.target.checked) {
                 setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
               } else {
@@ -274,9 +292,10 @@ const TablePagination = () => {
           </Typography>
         </Stack>
       ),
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
+
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
@@ -306,7 +325,8 @@ const TablePagination = () => {
           </Stack>
         );
       },
-    },
+    }),
+
     columnHelper.accessor((row) => row?.trade_name, {
       id: "trade_name",
       header: () => "Trade",
@@ -507,7 +527,7 @@ const TablePagination = () => {
                       fullWidth
                     >
                       <MenuItem value="">Users</MenuItem>
-                      {uniqueTrades.map((name, i) => (
+                      {members.map((name, i) => (
                         <MenuItem key={i} value={name}>
                           {name}
                         </MenuItem>
@@ -567,14 +587,14 @@ const TablePagination = () => {
               </Dialog>
             </Grid>
             <Stack direction={"row-reverse"} mb={1} mr={1}>
-              {/* <Button
+              <Button
                 variant="contained"
                 color="primary"
                 startIcon={<IconPlus width={18} />}
                 onClick={handleClickOpen}
               >
                 Add User
-              </Button> */}
+              </Button>
               <Dialog
                 open={modelopen}
                 onClose={handleClose}
@@ -611,16 +631,64 @@ const TablePagination = () => {
                 </form>
               </Dialog>
               {selectedRowIds.size > 0 && (
-                // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
                 <Button
                   variant="outlined"
                   color="error"
                   startIcon={<IconTrash width={18} />}
                   sx={{ marginRight: "5px" }}
+                  onClick={() => {
+                    const selectedIds = Array.from(selectedRowIds).map(
+                      (index) => filteredData[index]?.id
+                    );
+                    setUsersToDelete(selectedIds);
+                    setConfirmOpen(true);
+                  }}
                 >
                   Remove
                 </Button>
               )}
+              <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                  <Typography>
+                    Are you sure you want to remove {usersToDelete.length} user
+                    {usersToDelete.length > 1 ? "s" : ""} from the team?
+                  </Typography>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setConfirmOpen(false)} color="inherit">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const payload = {
+                          team_id: Number(teamId),
+                          user_ids: usersToDelete.join(","),
+                        };
+                        const response = await api.post(
+                          "team/remove-users-to-team",
+                          payload
+                        );
+                        toast.success(
+                          response.data.message || "Users removed successfully"
+                        );
+                        setSelectedRowIds(new Set());
+                        await fetchData(); // Refresh the table
+                      } catch (error) {
+                        console.error("Failed to remove users", error);
+                        toast.error("Failed to remove users");
+                      } finally {
+                        setConfirmOpen(false);
+                      }
+                    }}
+                    variant="contained"
+                    color="error"
+                  >
+                    Delete
+                  </Button>
+                </DialogActions>
+              </Dialog>
             </Stack>
           </Stack>
           <Divider />
@@ -628,8 +696,12 @@ const TablePagination = () => {
           <Grid container>
             <Grid size={12}>
               <Box>
-                <TableContainer>
-                  <Table stickyHeader>
+                <TableContainer
+                  sx={{
+                    maxHeight: 600,
+                  }}
+                >
+                  <Table stickyHeader aria-label="sticky table">
                     <TableHead>
                       {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
@@ -684,6 +756,7 @@ const TablePagination = () => {
                                         fontSize: "0.9rem",
                                         color: isActive ? "#000" : "#888",
                                         display: "flex",
+                                        alignItems: "center",
                                         justifyContent: "space-between",
                                       }}
                                     >
