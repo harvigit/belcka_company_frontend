@@ -473,7 +473,7 @@ const TablePagination = () => {
         justifyContent="end"
         direction={{ xs: "column", sm: "row" }}
       >
-        <Button
+        {/* <Button
           variant="contained"
           color="primary"
           component={Link}
@@ -482,7 +482,7 @@ const TablePagination = () => {
           sx={{ marginRight: "4px" }}
         >
           Add Team
-        </Button>
+        </Button> */}
         {selectedRowIds.size > 0 && (
           // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
           <Button
