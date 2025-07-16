@@ -66,6 +66,10 @@ export type TeamList = {
   supervisor_phone: string;
   team_member_count: number;
   working_member_count: number;
+  subcontractor_company_name?: string;
+  is_subcontractor: boolean;
+  company_id: number;
+  subcontractor_company_id?: number;
   team_name: string;
   name: string;
   image?: string;
@@ -73,6 +77,11 @@ export type TeamList = {
   trade_id: number;
   trade_name: string;
 };
+
+export type UserList = {
+  id: number;
+  name: string;
+}
 
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
@@ -175,8 +184,8 @@ const TablePagination = () => {
       ),
       cell: ({ row }: any) => {
         const item = row.original;
-        const teamId = row.index;
         const isChecked = selectedRowIds.has(row.index);
+        const shouldHighlight = item.is_subcontractor; 
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
@@ -195,7 +204,7 @@ const TablePagination = () => {
               <Link href={`/apps/teams/team?team_id=${item.id}`} passHref>
                 <Typography
                   variant="h5"
-                  color="textPrimary"
+                  color={shouldHighlight == true && item.company_id !== item.subcontractor_company_id ? "secondary" : "textPrimary"}
                   sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
                 >
                   {item.name ?? "-"}
@@ -206,6 +215,18 @@ const TablePagination = () => {
         );
       },
     },
+
+    columnHelper.accessor((row) => row?.subcontractor_company_name, {
+      id: "subcontractor_company_name",
+      header: () => "Company",
+      cell: (info) => {
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {info.getValue() ?? ""}
+          </Typography>
+        );
+      },
+    }),
 
     columnHelper.accessor("supervisor_name", {
       header: () => "Supervisor",
@@ -424,7 +445,7 @@ const TablePagination = () => {
         justifyContent="end"
         direction={{ xs: "column", sm: "row" }}
       >
-        {/* <Button
+        <Button
           variant="contained"
           color="primary"
           component={Link}
@@ -433,7 +454,7 @@ const TablePagination = () => {
           sx={{ marginRight: "4px" }}
         >
           Add Team
-        </Button> */}
+        </Button>
         {selectedRowIds.size > 0 && (
           // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
           <Button
