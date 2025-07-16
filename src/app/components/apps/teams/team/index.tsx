@@ -24,6 +24,8 @@ import {
   Chip,
   CircularProgress,
   CardContent,
+  Menu,
+  ListItemIcon,
 } from "@mui/material";
 import {
   flexRender,
@@ -38,10 +40,12 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconDotsVertical,
   IconFilter,
   IconPlus,
   IconSearch,
   IconTrash,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -55,6 +59,7 @@ import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 dayjs.extend(customParseFormat);
 
@@ -93,19 +98,29 @@ const TablePagination = () => {
   const rerender = React.useReducer(() => ({}), {})[1];
   const [users, setUsers] = useState<UserList[]>([]);
   const [user, setUser] = useState<UserList[]>([]);
+
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
 
-  const [filters, setFilters] = useState({ team: "", trade: "" });
-  const [tempFilters, setTempFilters] = useState(filters);
-  const [open, setOpen] = useState(false);
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
+
+  const [filters, setFilters] = useState({ team: "", trade: "" });
+  const [tempFilters, setTempFilters] = useState(filters);
+
+  const [open, setOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
+
   const [modelopen, setModelOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const [openOtpDialog, setOpenOtpDialog] = useState(false);
+  const [otp, setOtp] = useState("");
 
   // fetch compnay trades
   useEffect(() => {
@@ -191,27 +206,6 @@ const TablePagination = () => {
     fetchData();
   }, []);
 
-  const members = useMemo(
-    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
-    [users]
-  );
-  const trades = useMemo(
-    () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
-    [trade]
-  );
-
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const matchesTeam = filters.team ? item.name === filters.team : true;
-      const matchesTrade = filters.trade
-        ? item.trade_name === filters.trade
-        : true;
-      const search = searchTerm.toLowerCase();
-      const matchesSearch = item.name?.toLowerCase().includes(search);
-      return matchesTeam && matchesSearch && matchesTrade;
-    });
-  }, [data, filters, searchTerm]);
-
   // fetch user list
   useEffect(() => {
     const fetchUsers = async () => {
@@ -242,19 +236,58 @@ const TablePagination = () => {
     };
 
     try {
-      // setLoading(true);
       const response = await api.post(`team/add-user-to-team`, payload);
       toast.success(response.data.message);
       handleClose();
     } catch (error: any) {
       // toast.error(error?.response?.data?.message || "Something went wrong.");
-      // handleClose();
     } finally {
-      // setLoading(false);
       await fetchData();
     }
-    // handleClose();
   };
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const close = () => {
+    setAnchorEl(null);
+  };
+
+  const joinCompany = async () => {
+    try {
+      const payload = {
+        otp: String(otp),
+        trade_id: Number(tempFilters.trade)
+      };
+      const response = await api.post(`company/join-company`, payload);
+      toast.success(response.data.message);
+      setOpenOtpDialog(false);
+    } catch (error: any) {
+      // toast.error(error?.response?.data?.message || "Something went wrong.");
+    } finally {
+      await fetchData();
+    }
+  };
+
+  const members = useMemo(
+    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
+    [users]
+  );
+  const trades = useMemo(
+    () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
+    [trade]
+  );
+
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const matchesTeam = filters.team ? item.name === filters.team : true;
+      const matchesTrade = filters.trade
+        ? item.trade_name === filters.trade
+        : true;
+      const search = searchTerm.toLowerCase();
+      const matchesSearch = item.name?.toLowerCase().includes(search);
+      return matchesTeam && matchesSearch && matchesTrade;
+    });
+  }, [data, filters, searchTerm]);
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
@@ -587,14 +620,114 @@ const TablePagination = () => {
               </Dialog>
             </Grid>
             <Stack direction={"row-reverse"} mb={1} mr={1}>
-              {/* <Button
+              {/* <IconButton
+                sx={{ margin: "0px" }}
+                id="basic-button"
+                aria-controls={openMenu ? "basic-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={openMenu ? "true" : undefined}
+                onClick={handleClick}
+              >
+                <IconDotsVertical width={18} />
+              </IconButton>
+              <Menu
+                id="basic-menu"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={close}
+                slotProps={{
+                  list: {
+                    "aria-labelledby": "basic-button",
+                  },
+                }}
+              >
+                <MenuItem onClick={close}>
+                  <Button
+                    color="inherit"
+                    style={{ display: "flex" }}
+                    onClick={() => setOpenOtpDialog(true)}
+                  >
+                    <ListItemIcon color="primary" sx={{ cursor: "pointer" }}>
+                      <IconUserPlus width={20} />
+                    </ListItemIcon>
+                    Join Company
+                  </Button>
+                </MenuItem>
+              </Menu> */}
+
+              <Dialog
+                open={openOtpDialog}
+                onClose={() => setOpenOtpDialog(false)}
+                fullWidth
+                maxWidth="xs"
+              >
+                <DialogTitle>Join company</DialogTitle>
+                <DialogContent>
+                  <TextField
+                  sx={{ marginBottom:"5%"}}
+                    autoFocus
+                    margin="dense"
+                    label="OTP"
+                    type="text"
+                    fullWidth
+                    inputProps={{
+                      maxLength: 6,
+                      inputMode: "numeric",
+                      pattern: "[0-9]*",
+                    }}
+                    value={otp}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^\d{0,6}$/.test(value)) {
+                        setOtp(value);
+                      }
+                    }}
+                  />
+                  <TextField
+                    select
+                    label="Trade"
+                    value={tempFilters.trade}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        trade: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="">Trades</MenuItem>
+                    {trades.map((name, i) => (
+                      <MenuItem key={i} value={name}>
+                        {name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setOpenOtpDialog(false)} color="error">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      joinCompany();
+                    }}
+                    disabled={otp.length !== 6}
+                    variant="contained"
+                    color="primary"
+                  >
+                    Submit
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              <Button
                 variant="contained"
                 color="primary"
                 startIcon={<IconPlus width={18} />}
                 onClick={handleClickOpen}
               >
                 Add User
-              </Button> */}
+              </Button>
               <Dialog
                 open={modelopen}
                 onClose={handleClose}
@@ -650,13 +783,17 @@ const TablePagination = () => {
               <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>
-                  <Typography>
+                  <Typography color="textSecondary">
                     Are you sure you want to remove {usersToDelete.length} user
                     {usersToDelete.length > 1 ? "s" : ""} from the team?
                   </Typography>
                 </DialogContent>
                 <DialogActions>
-                  <Button onClick={() => setConfirmOpen(false)} color="inherit">
+                  <Button
+                    onClick={() => setConfirmOpen(false)}
+                    variant="outlined"
+                    color="primary"
+                  >
                     Cancel
                   </Button>
                   <Button
@@ -682,7 +819,7 @@ const TablePagination = () => {
                         setConfirmOpen(false);
                       }
                     }}
-                    variant="contained"
+                    variant="outlined"
                     color="error"
                   >
                     Delete

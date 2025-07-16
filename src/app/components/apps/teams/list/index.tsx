@@ -468,66 +468,73 @@ const TablePagination = () => {
             </DialogActions>
           </Dialog>
         </Grid>
-      <Stack
-        mb={2}
-        justifyContent="end"
-        direction={{ xs: "column", sm: "row" }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          component={Link}
-          startIcon={<IconPlus width={18} />}
-          href={`/apps/teams/create`}
-          sx={{ marginRight: "4px" }}
+        <Stack
+          mb={2}
+          justifyContent="end"
+          direction={{ xs: "column", sm: "row" }}
         >
-          Add Team
-        </Button>
-        {selectedRowIds.size > 0 && (
-          // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<IconTrash width={18} />}
-          >
-            Archive
-          </Button>
-        )}
-        <IconButton
-          sx={{ margin: "0px" }}
-          id="basic-button"
-          aria-controls={openMenu ? "basic-menu" : undefined}
-          aria-haspopup="true"
-          aria-expanded={openMenu ? "true" : undefined}
-          onClick={handleClick}
-        >
-          <IconDotsVertical width={18} />
-        </IconButton>
-        <Menu
-          id="basic-menu"
-          anchorEl={anchorEl}
-          open={openMenu}
-          onClose={handleClose}
-          slotProps={{
-            list: {
-              "aria-labelledby": "basic-button",
-            },
-          }}
-        >
-          <MenuItem onClick={handleClose}>
-            <Link
-              href={`/admin-settings`}
-              passHref
-              style={{ display: "flex", color: "ActiveBorder" }}
+          {selectedRowIds.size > 0 && (
+            // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconTrash width={18} />}
             >
-              <ListItemIcon color="primary" sx={{ cursor: "pointer" }}>
+              Archive
+            </Button>
+          )}
+          <IconButton
+            sx={{ margin: "0px" }}
+            id="basic-button"
+            aria-controls={openMenu ? "basic-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={openMenu ? "true" : undefined}
+            onClick={handleClick}
+          >
+            <IconDotsVertical width={18} />
+          </IconButton>
+          <Menu
+            id="basic-menu"
+            anchorEl={anchorEl}
+            open={openMenu}
+            onClose={handleClose}
+            slotProps={{
+              list: {
+                "aria-labelledby": "basic-button",
+              },
+            }}
+          >
+            <MenuItem onClick={handleClose}>
+              <Button
+                color="inherit"
+                fullWidth
+                component={Link}
+                href="/apps/teams/create"
+                sx={{
+                  width: "100%",
+                  textTransform: "none",
+                  justifyContent: "flex-start",
+                  padding: "6px 16px",
+                }}
+              >
+                <ListItemIcon>
+                <IconPlus width={18} />
+              </ListItemIcon>
+                Add Team
+              </Button>
+            </MenuItem>
+            {/* <MenuItem
+              onClick={handleClose}
+              component={Link}
+              href="/admin-settings"
+            >
+              <ListItemIcon>
                 <IconUserMinus width={20} />
               </ListItemIcon>
-              Archived Teams
-            </Link>
-          </MenuItem>
-        </Menu>
-      </Stack>
+              <Typography variant="inherit">Archived Teams</Typography>
+            </MenuItem> */}
+          </Menu>
+        </Stack>
       </Stack>
       <Divider />
 

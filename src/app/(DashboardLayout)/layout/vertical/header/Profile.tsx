@@ -43,24 +43,6 @@ const Profile = () => {
   };
 
   const theme = useTheme();
-  const primary = theme.palette.primary.main;
-  const primarylight = theme.palette.primary.light;
-  const error = theme.palette.error.main;
-  const errorlight = theme.palette.error.light;
-  const success = theme.palette.success.main;
-  const successlight = theme.palette.success.light;
-
-  /*profile data*/
-  const profiledata = [
-    {
-      href: "/profile",
-      title: "My Profile",
-      subtitle: "Account Settings",
-      icon: <IconCurrencyDollar width="20" height="20" />,
-      color: primary,
-      lightcolor: primarylight,
-    }
-  ];
 
   return (
     <Box>
@@ -161,64 +143,6 @@ const Profile = () => {
             </Typography>
           </Box>
         </Stack>
-        <Divider />
-
-        {profiledata.map((prf) => (
-          <Box key={prf.title}>
-            <Box sx={{ py: 2, px: 0 }} className="hover-text-primary">
-              <Link href={prf.href}>
-                <Stack direction="row" spacing={2}>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    flexShrink="0"
-                    sx={{
-                      bgcolor: prf.lightcolor,
-                      color: prf.color,
-                      boxShadow: "none",
-                      minWidth: "50px",
-                      width: "45px",
-                      height: "40px",
-                      borderRadius: "10px",
-                    }}
-                  >
-                    {prf.icon}
-                  </Box>
-                  <Box>
-                    <Typography
-                      variant="h5"
-                      className="text-hover"
-                      color="textPrimary"
-                      noWrap
-                      sx={{
-                        width: "240px",
-                      }}
-                    >
-                      {prf.title}
-                    </Typography>
-                    <Typography
-                      color="textSecondary"
-                      variant="h6"
-                      sx={{
-                        width: "240px",
-                      }}
-                      noWrap
-                    >
-                      {prf.subtitle}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Link>
-            </Box>
-            <Divider
-              style={{
-                marginTop: 0,
-                marginBottom: 0,
-              }}
-            />
-          </Box>
-        ))}
 
         <Box mt={2}>
           <Button
