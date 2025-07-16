@@ -1,19 +1,18 @@
 "use client";
 import React, { createContext, useEffect, useState } from "react";
-// import { UserList } from '@/app/(DashboardLayout)/types/apps/permission';
-import { UserList } from "@/app/components/apps/users/list";
+import { TeamList } from "@/app/components/apps/teams/list";
 import useSWR from "swr";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 
 interface TeamContextType {
-  users: UserList[];
+  teams: TeamList[];
   loading: boolean;
   error: Error | null;
-//   addPermission: (permission: UserList) => Promise<void>;
-//   updatePermission: (updatedPermission: UserList) => Promise<void>;
-//   deletePermission: (permissionId: number) => Promise<void>;
+  addTeam: (newTeam: TeamList) => Promise<void>;
+  updateTeam: (updateTeam: TeamList) => Promise<void>;
+  deleteTeam: (teamId: number) => Promise<void>;
 }
 
 export const TeamContext = createContext<TeamContextType>(
@@ -26,7 +25,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null } ;
   const {
-    data: permissionData,
+    data: teamData,
     error: invoiceError,
     isLoading,
     mutate,
@@ -50,63 +49,58 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [isLoading]);
 
 //   // Add permission
-//   const addPermission = async (permission: UserList) => {
-//     try {
-//       const payload = {
-//         name: permission.name,
-//         slug: permission.slug,
-//         icon: permission.icon,
-//         description: permission.description,
-//         color: permission.color,
-//         is_admin: permission.is_admin == 1 ? true : false,
-//       };
-//       const response = await api.post(`admin/permission-add`, payload);
-
-//       await mutate();
-//       return response.data;
-//     } catch (error) {
-//      console.log(error)
-//     }
-//   };
+  const addTeam = async (team: TeamList) => {
+    try {
+      const payload = {
+        name: team.name,
+        supervisor_id: team.supervisor_id,
+        company_id: user.company_id,
+        team_member_ids: team.team_member_ids.join(","),
+      };
+      const response = await api.post(`team/add`, payload);
+      await mutate();
+      return response.data;
+    } catch (error) {
+     console.log(error)
+    }
+  };
 
 //   // Update permission
-//   const updatePermission = async (permission: UserList) => {
-//     try {
-//       const payload = {
-//         name: permission.name,
-//         slug: permission.slug,
-//         icon: permission.icon,
-//         description: permission.description,
-//         color: permission.color,
-//         is_admin: permission.is_admin == 1 ? true : false
-//       };
-//       await api.post(`admin/permission-edit/${permission.id}`, payload);
-//       await mutate();
-//     } catch (error) {
-//       console.log(error)
-//     }
-//   };
+  const updateTeam = async (team: TeamList) => {
+    try {
+      const payload = {
+        name: team.name,
+        supervisor_id: team.supervisor_id,
+        company_id: user.company_id,
+        team_member_ids: team.team_member_ids.join(","),
+      };
+      await api.post(`admin/permission-edit/${team.id}`, payload);
+      await mutate();
+    } catch (error) {
+      console.log(error)
+    }
+  };
 
 //   // Delete permission
-//   const deletePermission = async (permissionId: number) => {
-//     try {
-//       await api.delete(`admin/permission-delete/${permissionId}`);
+  const deleteTeam = async (teamId: number) => {
+    try {
+      await api.delete(`admin/permission-delete/${teamId}`);
 
-//       await mutate();
-//     } catch (error) {
-//       console.error("Error deleting permission:", error);
-//     }
-//   };
+      await mutate();
+    } catch (error) {
+      console.error("Error deleting permission:", error);
+    }
+  };
 
   return (
     <TeamContext.Provider
       value={{
-        users: permissionData || [],
+        teams: teamData || [],
         loading,
         error: invoiceError || null,
-        // addPermission,
-        // updatePermission,
-        // deletePermission,
+        addTeam,
+        updateTeam,
+        deleteTeam,
       }}
     >
       {children}

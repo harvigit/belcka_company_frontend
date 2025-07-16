@@ -24,6 +24,10 @@ import {
   Chip,
   CircularProgress,
   CardContent,
+  Modal,
+  Slide,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import {
   flexRender,
@@ -42,6 +46,7 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconFilter,
+  IconPlus,
   IconSearch,
   IconTrash,
 } from "@tabler/icons-react";
@@ -57,6 +62,10 @@ import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconChevronUp } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
+import Link from "next/link";
+import { error } from "console";
+import toast from "react-hot-toast";
+import { Select } from "react-day-picker";
 
 dayjs.extend(customParseFormat);
 
@@ -79,6 +88,11 @@ export interface TradeList {
   name: string;
 }
 
+export interface UserList {
+  id: number;
+  name: string;
+}
+
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
   const [trade, setTrade] = useState<TradeList[]>([]);
@@ -87,7 +101,7 @@ const TablePagination = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const rerender = React.useReducer(() => ({}), {})[1];
-  const [user, setUser] = useState([]);
+  const [user, setUser] = useState<UserList[]>([]);
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
   const [filters, setFilters] = useState({ team: "", trade: "" });
@@ -96,7 +110,10 @@ const TablePagination = () => {
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [modelopen, setModelOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
 
+  // fetch compnay trades
   useEffect(() => {
     const fetchTrades = async () => {
       try {
@@ -111,6 +128,7 @@ const TablePagination = () => {
     fetchTrades();
   }, [api]);
 
+  // fetch team member's
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -185,6 +203,49 @@ const TablePagination = () => {
     });
   }, [data, filters, searchTerm]);
 
+  // fetch user list
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`user/get-user-lists`);
+        if (res.data) {
+          setUser(res.data.info);
+        }
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+      setLoading(false);
+    };
+    fetchUsers();
+  }, []);
+
+  // add user to team,
+  const handleClickOpen = () => setModelOpen(true);
+  const handleClose = () => setModelOpen(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const payload = {
+      team_id: Number(teamId),
+      user_id: Number(selectedUserId),
+    };
+
+    try {
+      setLoading(true);
+      const response = await api.post(`team/add-user-to-team`, payload);
+      toast.success(response.data.message);
+      handleClose();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Something went wrong.");
+      handleClose();
+    } finally {
+      setLoading(false);
+    }
+    handleClose();
+  };
+
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
     {
@@ -250,7 +311,7 @@ const TablePagination = () => {
       id: "trade_name",
       header: () => "Trade",
       cell: (info) => (
-        <Typography variant="h5" color="body2">
+        <Typography variant="h5" color="textSecondary">
           {info.row.original.trade_name ?? "-"}
         </Typography>
       ),
@@ -299,6 +360,11 @@ const TablePagination = () => {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 50,
+      },
+    },
   });
 
   useEffect(() => {
@@ -373,7 +439,7 @@ const TablePagination = () => {
             mt={1}
             mr={2}
             ml={2}
-            mb={0}
+            mb={2}
             justifyContent="space-between"
             direction={{ xs: "column", sm: "row" }}
             spacing={{ xs: 1, sm: 2, md: 4 }}
@@ -500,94 +566,62 @@ const TablePagination = () => {
                 </DialogActions>
               </Dialog>
             </Grid>
-            <Stack
-              gap={1}
-              pr={3}
-              pt={1}
-              pl={3}
-              pb={1}
-              alignItems="center"
-              direction={{ xs: "column", sm: "row" }}
-              justifyContent="space-between"
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                {/* <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={() => rerender()}
-                        >
-                          Force Rerender
-                        </Button> */}
-                <Typography color="textSecondary">
-                  {table.getPrePaginationRowModel().rows.length} Rows
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: {
-                    xs: "block",
-                    sm: "flex",
-                  },
-                }}
-                alignItems="center"
-                gap={1}
+            <Stack direction={"row-reverse"} mb={1} mr={1}>
+              {/* <Button
+                variant="contained"
+                color="primary"
+                startIcon={<IconPlus width={18} />}
+                onClick={handleClickOpen}
               >
-                <Stack direction="row" alignItems="center">
-                  <Typography color="textSecondary">Page </Typography>
-                  <Typography color="textSecondary" fontWeight={600} ml={1}>
-                    {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </Typography>
-                  <Typography color="textSecondary" ml={"3px"}>
-                    | Enteries :{" "}
-                  </Typography>
-                </Stack>
-                <Stack
-                  ml={"5px"}
-                  direction="row"
-                  alignItems="center"
-                  color="textSecondary"
+                Add User
+              </Button> */}
+              <Dialog
+                open={modelopen}
+                onClose={handleClose}
+                keepMounted
+                fullWidth
+                maxWidth="sm"
+              >
+                <form onSubmit={handleSubmit}>
+                  <DialogTitle>Add User To Team</DialogTitle>
+                  <DialogContent dividers>
+                    <TextField
+                      select
+                      label="User"
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      fullWidth
+                    >
+                      <MenuItem value="">Users</MenuItem>
+                      {user.map((user, i) => (
+                        <MenuItem key={i} value={user.id}>
+                          {user.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={handleClose} color="error">
+                      Cancel
+                    </Button>
+                    <Button type="submit" variant="contained" color="primary">
+                      Submit
+                    </Button>
+                  </DialogActions>
+                </form>
+              </Dialog>
+              {selectedRowIds.size > 0 && (
+                // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<IconTrash width={18} />}
+                  sx={{ marginRight: "5px" }}
                 >
-                  <CustomSelect
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e: { target: { value: any } }) => {
-                      table.setPageSize(Number(e.target.value));
-                    }}
-                  >
-                    {[10, 50, 100, 250, 500].map((pageSize) => (
-                      <MenuItem key={pageSize} value={pageSize}>
-                        {pageSize}
-                      </MenuItem>
-                    ))}
-                  </CustomSelect>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <IconChevronLeft />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <IconChevronRight />
-                  </IconButton>
-                </Stack>
-              </Box>
+                  Remove
+                </Button>
+              )}
             </Stack>
-          </Stack>
-          <Stack direction={"row-reverse"} mb={1} mr={1}>
-            {selectedRowIds.size > 0 && (
-              // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
-              <Button variant="contained" color="error">
-                <IconTrash width={18}></IconTrash>
-                Remove
-              </Button>
-            )}
           </Stack>
           <Divider />
 
@@ -689,6 +723,78 @@ const TablePagination = () => {
                 </TableContainer>
               </Box>
               <Divider />
+              <Stack
+                gap={1}
+                pr={3}
+                pt={1}
+                pl={3}
+                pb={1}
+                alignItems="center"
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+              >
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography color="textSecondary">
+                    {table.getPrePaginationRowModel().rows.length} Rows
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    display: {
+                      xs: "block",
+                      sm: "flex",
+                    },
+                  }}
+                  alignItems="center"
+                  gap={1}
+                >
+                  <Stack direction="row" alignItems="center">
+                    <Typography color="textSecondary">Page </Typography>
+                    <Typography color="textSecondary" fontWeight={600} ml={1}>
+                      {table.getState().pagination.pageIndex + 1} of{" "}
+                      {table.getPageCount()}
+                    </Typography>
+                    <Typography color="textSecondary" ml={"3px"}>
+                      | Enteries :{" "}
+                    </Typography>
+                  </Stack>
+                  <Stack
+                    ml={"5px"}
+                    direction="row"
+                    alignItems="center"
+                    color="textSecondary"
+                  >
+                    <CustomSelect
+                      value={table.getState().pagination.pageSize}
+                      onChange={(e: { target: { value: any } }) => {
+                        table.setPageSize(Number(e.target.value));
+                      }}
+                    >
+                      {[50, 100, 250, 500].map((pageSize) => (
+                        <MenuItem key={pageSize} value={pageSize}>
+                          {pageSize}
+                        </MenuItem>
+                      ))}
+                    </CustomSelect>
+                    <IconButton
+                      size="small"
+                      sx={{ width: "30px" }}
+                      onClick={() => table.previousPage()}
+                      disabled={!table.getCanPreviousPage()}
+                    >
+                      <IconChevronLeft />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ width: "30px" }}
+                      onClick={() => table.nextPage()}
+                      disabled={!table.getCanNextPage()}
+                    >
+                      <IconChevronRight />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              </Stack>
             </Grid>
           </Grid>
         </BlankCard>

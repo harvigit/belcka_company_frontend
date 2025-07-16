@@ -457,7 +457,7 @@ const TimesheetList = () => {
             value={table.getState().pagination.pageSize}
             onChange={(e) => table.setPageSize(Number(e.target.value))}
           >
-            {[10, 50, 100, 250, 500].map((size) => (
+            {[50, 100, 250, 500].map((size) => (
               <MenuItem key={size} value={size}>
                 {size}
               </MenuItem>

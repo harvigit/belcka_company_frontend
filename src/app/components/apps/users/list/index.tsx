@@ -22,7 +22,6 @@ import {
   DialogTitle,
   DialogContent,
   Dialog,
-  Paper,
 } from "@mui/material";
 import {
   flexRender,
@@ -34,17 +33,13 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 import {
-  IconCactus,
   IconChevronLeft,
   IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
   IconFilter,
   IconSearch,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
@@ -190,15 +185,7 @@ const TablePagination = () => {
         );
       },
     },
-    columnHelper.accessor((row) => row.supervisor_name, {
-      id: "supervisor_name",
-      header: () => "Supervisor",
-      cell: (info) => (
-        <Typography variant="h5" color="textPrimary">
-          {info.getValue() ?? "-"}
-        </Typography>
-      ),
-    }),
+
     columnHelper.accessor((row) => row.team_name, {
       id: "team_name",
       header: () => "Team Name",
@@ -251,6 +238,11 @@ const TablePagination = () => {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 50,
+      },
+    },
   });
 
   useEffect(() => {
@@ -264,7 +256,7 @@ const TablePagination = () => {
         mt={3}
         mr={2}
         ml={2}
-        mb={1}
+        mb={2}
         justifyContent="space-between"
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 1, sm: 2, md: 4 }}
@@ -391,88 +383,18 @@ const TablePagination = () => {
             </Button>
           </DialogActions>
         </Dialog>
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={1}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600} ml={1}>
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"}>
-                {" "}
-                | Enteries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
+        <Stack direction={"row-reverse"} mb={1} mr={1}>
+          {selectedRowIds.size > 0 && (
+            // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconTrash width={18} />}
             >
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[10, 50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
+              Remove
+            </Button>
+          )}
         </Stack>
-      </Stack>
-      <Stack direction={"row-reverse"} mb={1} mr={1}>
-        {selectedRowIds.size > 0 && (
-          // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
-          <Button variant="contained" color="error">
-            <IconTrash width={18}></IconTrash>
-            Remove
-          </Button>
-        )}
       </Stack>
       <Divider />
       <Grid container spacing={3}>
@@ -574,6 +496,79 @@ const TablePagination = () => {
         </Grid>
       </Grid>
       <Divider />
+      <Stack
+        gap={1}
+        pr={3}
+        pt={1}
+        pl={3}
+        pb={1}
+        alignItems="center"
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+      >
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography color="textSecondary">
+            {table.getPrePaginationRowModel().rows.length} Rows
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: {
+              xs: "block",
+              sm: "flex",
+            },
+          }}
+          alignItems="center"
+        >
+          <Stack direction="row" alignItems="center">
+            <Typography color="textSecondary">Page</Typography>
+            <Typography color="textSecondary" fontWeight={600} ml={1}>
+              {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
+            </Typography>
+            <Typography color="textSecondary" ml={"3px"}>
+              {" "}
+              | Enteries :{" "}
+            </Typography>
+          </Stack>
+          <Stack
+            ml={"5px"}
+            direction="row"
+            alignItems="center"
+            color="textSecondary"
+          >
+            <CustomSelect
+              value={table.getState().pagination.pageSize}
+              onChange={(e: { target: { value: any } }) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+            >
+              {[50, 100, 250, 500].map((pageSize) => (
+                <MenuItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </MenuItem>
+              ))}
+            </CustomSelect>
+
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronRight />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Stack>
     </Box>
   );
 };
