@@ -43,6 +43,7 @@ import {
   IconDotsVertical,
   IconFilter,
   IconPlus,
+  IconRotate,
   IconSearch,
   IconTrash,
   IconUserPlus,
@@ -59,7 +60,6 @@ import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
-import Link from "next/link";
 
 dayjs.extend(customParseFormat);
 
@@ -70,6 +70,9 @@ export interface TeamList {
   supervisor_image: string | null;
   supervisor_email: string | null;
   supervisor_phone: string | null;
+  company_id: number;
+  subcontractor_company_id?: number;
+  is_subcontractor: boolean;
   team_name: string;
   name: string;
   image: string | null;
@@ -152,6 +155,9 @@ const TablePagination = () => {
                 supervisor_image: team.supervisor_image,
                 supervisor_email: team.supervisor_email,
                 supervisor_phone: team.supervisor_phone,
+                company_id: team.company_id,
+                subcontractor_company_id: team.subcontractor_company_id,
+                is_subcontractor: team.is_subcontractor,
                 team_name: team.team_name,
                 name: null,
                 image: null,
@@ -175,6 +181,9 @@ const TablePagination = () => {
             is_active: user.is_active,
             trade_id: user.trade_id,
             trade_name: user.trade_name,
+            is_subcontractor: team.is_subcontractor,
+            company_id: team.company_id,
+            subcontractor_company_id: team.subcontractor_company_id,
           }));
         });
 
@@ -224,7 +233,10 @@ const TablePagination = () => {
   }, []);
 
   // add user to team,
-  const handleClickOpen = () => setModelOpen(true);
+  const handleClickOpen = () => {
+    setModelOpen(true);
+    fetchUniqueUsers();
+  };
   const handleClose = () => setModelOpen(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -238,6 +250,7 @@ const TablePagination = () => {
     try {
       const response = await api.post(`team/add-user-to-team`, payload);
       toast.success(response.data.message);
+      setSelectedUserId("")
       handleClose();
     } catch (error: any) {
       // toast.error(error?.response?.data?.message || "Something went wrong.");
@@ -250,22 +263,6 @@ const TablePagination = () => {
   };
   const close = () => {
     setAnchorEl(null);
-  };
-
-  const joinCompany = async () => {
-    try {
-      const payload = {
-        otp: String(otp),
-        trade_id: Number(tempFilters.trade)
-      };
-      const response = await api.post(`company/join-company`, payload);
-      toast.success(response.data.message);
-      setOpenOtpDialog(false);
-    } catch (error: any) {
-      // toast.error(error?.response?.data?.message || "Something went wrong.");
-    } finally {
-      await fetchData();
-    }
   };
 
   const members = useMemo(
@@ -328,11 +325,14 @@ const TablePagination = () => {
       cell: ({ row }) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
-
+        const shouldHighlight =
+          item.is_subcontractor === true &&
+          item.company_id !== item.subcontractor_company_id;
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
               checked={isChecked}
+              disabled={shouldHighlight}
               onChange={() => {
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
@@ -620,114 +620,19 @@ const TablePagination = () => {
               </Dialog>
             </Grid>
             <Stack direction={"row-reverse"} mb={1} mr={1}>
-              {/* <IconButton
-                sx={{ margin: "0px" }}
-                id="basic-button"
-                aria-controls={openMenu ? "basic-menu" : undefined}
-                aria-haspopup="true"
-                aria-expanded={openMenu ? "true" : undefined}
-                onClick={handleClick}
-              >
-                <IconDotsVertical width={18} />
-              </IconButton>
-              <Menu
-                id="basic-menu"
-                anchorEl={anchorEl}
-                open={openMenu}
-                onClose={close}
-                slotProps={{
-                  list: {
-                    "aria-labelledby": "basic-button",
-                  },
-                }}
-              >
-                <MenuItem onClick={close}>
-                  <Button
-                    color="inherit"
-                    style={{ display: "flex" }}
-                    onClick={() => setOpenOtpDialog(true)}
-                  >
-                    <ListItemIcon color="primary" sx={{ cursor: "pointer" }}>
-                      <IconUserPlus width={20} />
-                    </ListItemIcon>
-                    Join Company
-                  </Button>
-                </MenuItem>
-              </Menu> */}
+              {data[0]?.is_subcontractor == true &&
+              data[0]?.company_id !==
+                data[0]?.subcontractor_company_id ? null : (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<IconPlus width={18} />}
+                  onClick={handleClickOpen}
+                >
+                  Add User
+                </Button>
+              )}
 
-              <Dialog
-                open={openOtpDialog}
-                onClose={() => setOpenOtpDialog(false)}
-                fullWidth
-                maxWidth="xs"
-              >
-                <DialogTitle>Join company</DialogTitle>
-                <DialogContent>
-                  <TextField
-                  sx={{ marginBottom:"5%"}}
-                    autoFocus
-                    margin="dense"
-                    label="OTP"
-                    type="text"
-                    fullWidth
-                    inputProps={{
-                      maxLength: 6,
-                      inputMode: "numeric",
-                      pattern: "[0-9]*",
-                    }}
-                    value={otp}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (/^\d{0,6}$/.test(value)) {
-                        setOtp(value);
-                      }
-                    }}
-                  />
-                  <TextField
-                    select
-                    label="Trade"
-                    value={tempFilters.trade}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        trade: e.target.value,
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="">Trades</MenuItem>
-                    {trades.map((name, i) => (
-                      <MenuItem key={i} value={name}>
-                        {name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={() => setOpenOtpDialog(false)} color="error">
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      joinCompany();
-                    }}
-                    disabled={otp.length !== 6}
-                    variant="contained"
-                    color="primary"
-                  >
-                    Submit
-                  </Button>
-                </DialogActions>
-              </Dialog>
-
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<IconPlus width={18} />}
-                onClick={handleClickOpen}
-              >
-                Add User
-              </Button>
               <Dialog
                 open={modelopen}
                 onClose={handleClose}

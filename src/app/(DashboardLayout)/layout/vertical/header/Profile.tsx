@@ -117,7 +117,7 @@ const Profile = () => {
         }}
       >
         <Typography variant="h4">User Profile</Typography>
-        <Stack direction="row" py={3} spacing={2} alignItems="center">
+        <Stack direction="row" py={3} pb={0} spacing={2} alignItems="center">
           <Avatar
             src={user?.user_image ? `${user?.user_image}` : "/images/logos/belcka_logo.png"}
             // src={"/images/logos/logoIcon.svg"}
@@ -128,10 +128,11 @@ const Profile = () => {
             <Typography variant="h4" color="textPrimary">
             {user?.first_name} {user?.last_name}
             </Typography>
-            <Typography variant="h6" color="textSecondary">
-              Administrator
+            <Typography variant="h6" color="textSecondary" sx={{ textTransform:"capitalize"}}>
+              {user.user_role}
             </Typography>
-            <Typography
+            
+            {user.email ? <Typography
               variant="subtitle2"
               color="textSecondary"
               display="flex"
@@ -140,7 +141,7 @@ const Profile = () => {
             >
               <IconMail width="18" height="18" />
               {user?.email}
-            </Typography>
+            </Typography> : null}
           </Box>
         </Stack>
 
