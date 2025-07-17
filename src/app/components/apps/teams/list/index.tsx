@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogContent,
   Dialog,
-  Tooltip,
   Menu,
   ListItemIcon,
   CircularProgress,
@@ -38,36 +37,51 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
   IconFilter,
-  IconInbox,
   IconSearch,
-  IconUser,
+  IconTrash,
   IconUserMinus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import Link from "next/link";
 import { IconDotsVertical } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { IconPlus } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
-export interface TeamList {
+// Correct: declare TeamList as a type
+export type TeamList = {
+  id: number;
+  team_member_ids: [];
+  supervisor_id: number;
+  supervisor_name: string;
+  supervisor_image?: string;
+  supervisor_email: string;
+  supervisor_phone: string;
+  team_member_count: number;
+  working_member_count: number;
+  subcontractor_company_name?: string;
+  is_subcontractor: boolean;
+  company_id: number;
+  subcontractor_company_id?: number;
+  team_name: string;
+  name: string;
+  image?: string;
+  is_active: boolean;
+  trade_id: number;
+  trade_name: string;
+};
+
+export type UserList = {
   id: number;
   name: string;
-  supervisor_name: string;
-  supervisor_image: string;
-  team_member_count: string;
-  shifts: string;
-  supervisor_email: string;
-  working_member_count: number;
-}
+};
 
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
@@ -76,6 +90,7 @@ const TablePagination = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
   const [user, setUser] = useState([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
 
   const [filters, setFilters] = useState({
     team: "",
@@ -141,23 +156,102 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
-    columnHelper.accessor((row) => row?.name, {
+    columnHelper.accessor("name", {
       id: "name",
-      header: () => "Team",
-      cell: (info) => {
-        const row = info.row.original;
-        const teamId = row.id;
+      enableSorting: true,
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <CustomCheckbox
+            checked={
+              selectedRowIds.size === filteredData.length &&
+              filteredData.length > 0
+            }
+            indeterminate={
+              selectedRowIds.size > 0 &&
+              selectedRowIds.size < filteredData.length
+            }
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedRowIds(new Set(filteredData.map((_, i) => i)));
+              } else {
+                setSelectedRowIds(new Set());
+              }
+            }}
+          />
+          <Typography variant="h6" color="textPrimary">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(row.index);
+        const shouldHighlight =
+          item.is_subcontractor === true &&
+          item.company_id !== item.subcontractor_company_id;
 
         return (
-          <Link href={`/apps/teams/team?team_id=${teamId}`} passHref>
-            <Typography
-              variant="h5"
-              color="textPrimary"
-              sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-            >
-              {info.getValue() ?? "-"}
-            </Typography>
-          </Link>
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <CustomCheckbox
+              checked={isChecked}
+              disabled={shouldHighlight}
+              onChange={() => {
+                const newSelected = new Set(selectedRowIds);
+                if (isChecked) {
+                  newSelected.delete(row.index);
+                } else {
+                  newSelected.add(row.index);
+                }
+                setSelectedRowIds(newSelected);
+              }}
+            />
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Link href={`/apps/teams/team?team_id=${item.id}`} passHref>
+                <Typography
+                  variant="h5"
+                  color={shouldHighlight ? "secondary" : "textPrimary"}
+                  sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                >
+                  {item.name ?? "-"}
+                </Typography>
+              </Link>
+              {/* {shouldHighlight ? (
+                <Typography
+                  variant="h5"
+                  color="secondary"
+                  sx={{
+                    cursor: "not-allowed",
+                    opacity: 0.6,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {item.name ?? "-"}
+                </Typography>
+              ) : (
+                <Link href={`/apps/teams/team?team_id=${item.id}`} passHref>
+                  <Typography
+                    variant="h5"
+                    color="textPrimary"
+                    sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                  >
+                    {item.name ?? "-"}
+                  </Typography>
+                </Link>
+              )} */}
+            </Stack>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.subcontractor_company_name, {
+      id: "subcontractor_company_name",
+      header: () => "Company",
+      cell: (info) => {
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {info.getValue() ?? ""}
+          </Typography>
         );
       },
     }),
@@ -213,6 +307,11 @@ const TablePagination = () => {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 50,
+      },
+    },
   });
 
   // Reset to first page when search term changes
@@ -240,6 +339,7 @@ const TablePagination = () => {
         mt={1}
         mr={2}
         ml={2}
+        mb={2}
         justifyContent="space-between"
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 1, sm: 2, md: 4 }}
@@ -369,124 +469,84 @@ const TablePagination = () => {
           </Dialog>
         </Grid>
         <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={3}
-          alignItems="center"
+          mb={2}
+          justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
         >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
+          {selectedRowIds.size > 0 && (
+            // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconTrash width={18} />}
+            >
+              Archive
+            </Button>
+          )}
+          <IconButton
+            sx={{ margin: "0px" }}
+            id="basic-button"
+            aria-controls={openMenu ? "basic-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={openMenu ? "true" : undefined}
+            onClick={handleClick}
+          >
+            <IconDotsVertical width={18} />
+          </IconButton>
+          <Menu
+            id="basic-menu"
+            anchorEl={anchorEl}
+            open={openMenu}
+            onClose={handleClose}
+            slotProps={{
+              list: {
+                "aria-labelledby": "basic-button",
               },
             }}
-            alignItems="center"
           >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600} ml={1}>
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"}>
-                {" "}
-                | Enteries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
+            <MenuItem onClick={handleClose}>
+              <Button
+                color="inherit"
+                fullWidth
+                component={Link}
+                href="/apps/teams/create"
+                sx={{
+                  width: "100%",
+                  textTransform: "none",
+                  justifyContent: "flex-start",
+                  padding: "6px 16px",
                 }}
               >
-                {[10, 50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
-      </Stack>
-      <Stack
-        justifyContent="end"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 2, md: 4 }}
-      >
-        <IconButton
-          id="basic-button"
-          aria-controls={openMenu ? "basic-menu" : undefined}
-          aria-haspopup="true"
-          aria-expanded={openMenu ? "true" : undefined}
-          onClick={handleClick}
-        >
-          <IconDotsVertical width={18} />
-        </IconButton>
-        <Menu
-          id="basic-menu"
-          anchorEl={anchorEl}
-          open={openMenu}
-          onClose={handleClose}
-          slotProps={{
-            list: {
-              "aria-labelledby": "basic-button",
-            },
-          }}
-        >
-          <MenuItem onClick={handleClose}>
-            <Link
-              href={`/admin-settings`}
-              passHref
-              style={{ display: "flex", color: "ActiveBorder" }}
+                <ListItemIcon>
+                <IconPlus width={18} />
+              </ListItemIcon>
+                Add Team
+              </Button>
+            </MenuItem>
+            {/* <MenuItem
+              onClick={handleClose}
+              component={Link}
+              href="/admin-settings"
             >
-              <ListItemIcon color="primary" sx={{ cursor: "pointer" }}>
+              <ListItemIcon>
                 <IconUserMinus width={20} />
               </ListItemIcon>
-              Archived Teams
-            </Link>
-          </MenuItem>
-        </Menu>
+              <Typography variant="inherit">Archived Teams</Typography>
+            </MenuItem> */}
+          </Menu>
+        </Stack>
       </Stack>
       <Divider />
 
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
-            <TableContainer>
-              <Table stickyHeader>
+            <TableContainer
+              sx={{
+                maxHeight: 680,
+              }}
+            >
+              <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -539,6 +599,7 @@ const TablePagination = () => {
                                     fontSize: "0.9rem",
                                     color: isActive ? "#000" : "#888",
                                     display: "flex",
+                                    alignItems: "center",
                                     justifyContent: "space-between",
                                   }}
                                 >
@@ -578,6 +639,78 @@ const TablePagination = () => {
             </TableContainer>
           </Box>
           <Divider />
+          <Stack
+            gap={1}
+            pr={3}
+            pt={1}
+            pl={3}
+            pb={3}
+            alignItems="center"
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography color="textSecondary">
+                {table.getPrePaginationRowModel().rows.length} Rows
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: {
+                  xs: "block",
+                  sm: "flex",
+                },
+              }}
+              alignItems="center"
+            >
+              <Stack direction="row" alignItems="center">
+                <Typography color="textSecondary">Page</Typography>
+                <Typography color="textSecondary" fontWeight={600} ml={1}>
+                  {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </Typography>
+                <Typography color="textSecondary" ml={"3px"}>
+                  {" "}
+                  | Enteries :{" "}
+                </Typography>
+              </Stack>
+              <Stack
+                ml={"5px"}
+                direction="row"
+                alignItems="center"
+                color="textSecondary"
+              >
+                <CustomSelect
+                  value={table.getState().pagination.pageSize}
+                  onChange={(e: { target: { value: any } }) => {
+                    table.setPageSize(Number(e.target.value));
+                  }}
+                >
+                  {[50, 100, 250, 500].map((pageSize) => (
+                    <MenuItem key={pageSize} value={pageSize}>
+                      {pageSize}
+                    </MenuItem>
+                  ))}
+                </CustomSelect>
+                <IconButton
+                  size="small"
+                  sx={{ width: "30px" }}
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <IconChevronLeft />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ width: "30px" }}
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <IconChevronRight />
+                </IconButton>
+              </Stack>
+            </Box>
+          </Stack>
         </Grid>
       </Grid>
     </Box>

@@ -283,7 +283,7 @@ const TablePagination = () => {
                   table.setPageSize(Number(e.target.value));
                 }}
               >
-                {[10, 50, 100, 250, 500].map((pageSize) => (
+                {[50, 100, 250, 500].map((pageSize) => (
                   <MenuItem key={pageSize} value={pageSize}>
                     {pageSize}
                   </MenuItem>

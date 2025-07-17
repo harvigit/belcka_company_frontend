@@ -24,6 +24,8 @@ import {
   Chip,
   CircularProgress,
   CardContent,
+  Menu,
+  ListItemIcon,
 } from "@mui/material";
 import {
   flexRender,
@@ -36,14 +38,14 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
+  IconDotsVertical,
   IconFilter,
+  IconPlus,
   IconSearch,
   IconTrash,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -55,12 +57,14 @@ import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { IconChevronUp } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
+import toast from "react-hot-toast";
+import Link from "next/link";
 
 dayjs.extend(customParseFormat);
 
 export interface TeamList {
+  id: number;
   supervisor_id: number;
   supervisor_name: string;
   supervisor_image: string | null;
@@ -79,6 +83,11 @@ export interface TradeList {
   name: string;
 }
 
+export interface UserList {
+  id: number;
+  name: string;
+}
+
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
   const [trade, setTrade] = useState<TradeList[]>([]);
@@ -87,16 +96,33 @@ const TablePagination = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const rerender = React.useReducer(() => ({}), {})[1];
-  const [user, setUser] = useState([]);
+  const [users, setUsers] = useState<UserList[]>([]);
+  const [user, setUser] = useState<UserList[]>([]);
+
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
-  const [filters, setFilters] = useState({ team: "", trade: "" });
-  const [tempFilters, setTempFilters] = useState(filters);
-  const [open, setOpen] = useState(false);
+
   const searchParams = useSearchParams();
   const teamId = searchParams ? searchParams.get("team_id") : "";
+
+  const [filters, setFilters] = useState({ team: "", trade: "" });
+  const [tempFilters, setTempFilters] = useState(filters);
+
+  const [open, setOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  const [modelopen, setModelOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const [openOtpDialog, setOpenOtpDialog] = useState(false);
+  const [otp, setOtp] = useState("");
+
+  // fetch compnay trades
   useEffect(() => {
     const fetchTrades = async () => {
       try {
@@ -111,62 +137,140 @@ const TablePagination = () => {
     fetchTrades();
   }, [api]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(
-          `team/get-team-member-list?team_id=${teamId}`
-        );
-        if (res.data?.info) {
-          const flattened = res.data.info.flatMap((team: any) => {
-            if (team.users.length === 0) {
-              return [
-                {
-                  supervisor_id: team.supervisor_id,
-                  supervisor_name: team.supervisor_name,
-                  supervisor_image: team.supervisor_image,
-                  supervisor_email: team.supervisor_email,
-                  supervisor_phone: team.supervisor_phone,
-                  team_name: team.team_name,
-                  name: null,
-                  image: null,
-                  is_active: null,
-                  trade_id: null,
-                  trade_name: null,
-                },
-              ];
-            }
+  // fetch team member's
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
+      if (res.data?.info) {
+        const flattened = res.data.info.flatMap((team: any) => {
+          if (team.users.length === 0) {
+            return [
+              {
+                supervisor_id: team.supervisor_id,
+                supervisor_name: team.supervisor_name,
+                supervisor_image: team.supervisor_image,
+                supervisor_email: team.supervisor_email,
+                supervisor_phone: team.supervisor_phone,
+                team_name: team.team_name,
+                name: null,
+                image: null,
+                is_active: null,
+                trade_id: null,
+                trade_name: null,
+              },
+            ];
+          }
 
-            return team.users.map((user: any) => ({
-              supervisor_id: team.supervisor_id,
-              supervisor_name: team.supervisor_name,
-              supervisor_image: team.supervisor_image,
-              supervisor_email: team.supervisor_email,
-              supervisor_phone: team.supervisor_phone,
-              team_name: team.team_name,
-              name: user.name,
-              image: user.image,
-              is_active: user.is_active,
-              trade_id: user.trade_id,
-              trade_name: user.trade_name,
-            }));
-          });
+          return team.users.map((user: any) => ({
+            supervisor_id: team.supervisor_id,
+            supervisor_name: team.supervisor_name,
+            supervisor_image: team.supervisor_image,
+            supervisor_email: team.supervisor_email,
+            supervisor_phone: team.supervisor_phone,
+            team_name: team.team_name,
+            id: user.id,
+            name: user.name,
+            image: user.image,
+            is_active: user.is_active,
+            trade_id: user.trade_id,
+            trade_name: user.trade_name,
+          }));
+        });
 
-          setData(flattened);
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch users", err);
-        setLoading(false);
+        setData(flattened);
       }
-    };
-    fetchData();
-  }, [teamId]);
+      setLoading(false);
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+      setLoading(false);
+    }
+  };
 
-  const uniqueTrades = useMemo(
-    () => [...new Set(data.map((item) => item.name).filter(Boolean))],
-    [data]
+  const fetchUniqueUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`team/user-list?company_id=${id.company_id}`);
+      if (res.data) {
+        setUser(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUniqueUsers();
+    fetchData();
+  }, []);
+
+  // fetch user list
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`user/get-user-lists`);
+        if (res.data) {
+          setUsers(res.data.info);
+        }
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+      setLoading(false);
+    };
+    fetchUsers();
+  }, []);
+
+  // add user to team,
+  const handleClickOpen = () => setModelOpen(true);
+  const handleClose = () => setModelOpen(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const payload = {
+      team_id: Number(teamId),
+      user_id: Number(selectedUserId),
+    };
+
+    try {
+      const response = await api.post(`team/add-user-to-team`, payload);
+      toast.success(response.data.message);
+      handleClose();
+    } catch (error: any) {
+      // toast.error(error?.response?.data?.message || "Something went wrong.");
+    } finally {
+      await fetchData();
+    }
+  };
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const close = () => {
+    setAnchorEl(null);
+  };
+
+  const joinCompany = async () => {
+    try {
+      const payload = {
+        otp: String(otp),
+        trade_id: Number(tempFilters.trade)
+      };
+      const response = await api.post(`company/join-company`, payload);
+      toast.success(response.data.message);
+      setOpenOtpDialog(false);
+    } catch (error: any) {
+      // toast.error(error?.response?.data?.message || "Something went wrong.");
+    } finally {
+      await fetchData();
+    }
+  };
+
+  const members = useMemo(
+    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
+    [users]
   );
   const trades = useMemo(
     () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
@@ -187,10 +291,17 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
-    {
+    columnHelper.accessor("name", {
       id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+      enableSorting: true, // allow sorting
+      header: ({ column }) => (
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={4}
+          sx={{ cursor: "pointer" }}
+          onClick={column.getToggleSortingHandler()}
+        >
           <CustomCheckbox
             checked={
               selectedRowIds.size === filteredData.length &&
@@ -201,6 +312,7 @@ const TablePagination = () => {
               selectedRowIds.size < filteredData.length
             }
             onChange={(e) => {
+              if (e.stopPropagation) e.stopPropagation();
               if (e.target.checked) {
                 setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
               } else {
@@ -213,9 +325,10 @@ const TablePagination = () => {
           </Typography>
         </Stack>
       ),
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
+
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
@@ -237,7 +350,7 @@ const TablePagination = () => {
                 sx={{ width: 36, height: 36 }}
               />
               <Box>
-                <Typography variant="h5" color="textSecondary">
+                <Typography variant="h5" color="body2">
                   {item.name ?? "-"}
                 </Typography>
               </Box>
@@ -245,7 +358,8 @@ const TablePagination = () => {
           </Stack>
         );
       },
-    },
+    }),
+
     columnHelper.accessor((row) => row?.trade_name, {
       id: "trade_name",
       header: () => "Trade",
@@ -299,6 +413,11 @@ const TablePagination = () => {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 50,
+      },
+    },
   });
 
   useEffect(() => {
@@ -373,7 +492,7 @@ const TablePagination = () => {
             mt={1}
             mr={2}
             ml={2}
-            mb={0}
+            mb={2}
             justifyContent="space-between"
             direction={{ xs: "column", sm: "row" }}
             spacing={{ xs: 1, sm: 2, md: 4 }}
@@ -441,7 +560,7 @@ const TablePagination = () => {
                       fullWidth
                     >
                       <MenuItem value="">Users</MenuItem>
-                      {uniqueTrades.map((name, i) => (
+                      {members.map((name, i) => (
                         <MenuItem key={i} value={name}>
                           {name}
                         </MenuItem>
@@ -500,102 +619,226 @@ const TablePagination = () => {
                 </DialogActions>
               </Dialog>
             </Grid>
-            <Stack
-              gap={1}
-              pr={3}
-              pt={1}
-              pl={3}
-              pb={1}
-              alignItems="center"
-              direction={{ xs: "column", sm: "row" }}
-              justifyContent="space-between"
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                {/* <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={() => rerender()}
-                        >
-                          Force Rerender
-                        </Button> */}
-                <Typography color="textSecondary">
-                  {table.getPrePaginationRowModel().rows.length} Rows
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: {
-                    xs: "block",
-                    sm: "flex",
+            <Stack direction={"row-reverse"} mb={1} mr={1}>
+              {/* <IconButton
+                sx={{ margin: "0px" }}
+                id="basic-button"
+                aria-controls={openMenu ? "basic-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={openMenu ? "true" : undefined}
+                onClick={handleClick}
+              >
+                <IconDotsVertical width={18} />
+              </IconButton>
+              <Menu
+                id="basic-menu"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={close}
+                slotProps={{
+                  list: {
+                    "aria-labelledby": "basic-button",
                   },
                 }}
-                alignItems="center"
-                gap={1}
               >
-                <Stack direction="row" alignItems="center">
-                  <Typography color="textSecondary">Page </Typography>
-                  <Typography color="textSecondary" fontWeight={600} ml={1}>
-                    {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </Typography>
-                  <Typography color="textSecondary" ml={"3px"}>
-                    | Enteries :{" "}
-                  </Typography>
-                </Stack>
-                <Stack
-                  ml={"5px"}
-                  direction="row"
-                  alignItems="center"
-                  color="textSecondary"
-                >
-                  <CustomSelect
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e: { target: { value: any } }) => {
-                      table.setPageSize(Number(e.target.value));
-                    }}
+                <MenuItem onClick={close}>
+                  <Button
+                    color="inherit"
+                    style={{ display: "flex" }}
+                    onClick={() => setOpenOtpDialog(true)}
                   >
-                    {[10, 50, 100, 250, 500].map((pageSize) => (
-                      <MenuItem key={pageSize} value={pageSize}>
-                        {pageSize}
+                    <ListItemIcon color="primary" sx={{ cursor: "pointer" }}>
+                      <IconUserPlus width={20} />
+                    </ListItemIcon>
+                    Join Company
+                  </Button>
+                </MenuItem>
+              </Menu> */}
+
+              <Dialog
+                open={openOtpDialog}
+                onClose={() => setOpenOtpDialog(false)}
+                fullWidth
+                maxWidth="xs"
+              >
+                <DialogTitle>Join company</DialogTitle>
+                <DialogContent>
+                  <TextField
+                  sx={{ marginBottom:"5%"}}
+                    autoFocus
+                    margin="dense"
+                    label="OTP"
+                    type="text"
+                    fullWidth
+                    inputProps={{
+                      maxLength: 6,
+                      inputMode: "numeric",
+                      pattern: "[0-9]*",
+                    }}
+                    value={otp}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^\d{0,6}$/.test(value)) {
+                        setOtp(value);
+                      }
+                    }}
+                  />
+                  <TextField
+                    select
+                    label="Trade"
+                    value={tempFilters.trade}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        trade: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="">Trades</MenuItem>
+                    {trades.map((name, i) => (
+                      <MenuItem key={i} value={name}>
+                        {name}
                       </MenuItem>
                     ))}
-                  </CustomSelect>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
+                  </TextField>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setOpenOtpDialog(false)} color="error">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      joinCompany();
+                    }}
+                    disabled={otp.length !== 6}
+                    variant="contained"
+                    color="primary"
                   >
-                    <IconChevronLeft />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <IconChevronRight />
-                  </IconButton>
-                </Stack>
-              </Box>
-            </Stack>
-          </Stack>
-          <Stack direction={"row-reverse"} mb={1} mr={1}>
-            {selectedRowIds.size > 0 && (
-              // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
-              <Button variant="contained" color="error">
-                <IconTrash width={18}></IconTrash>
-                Remove
+                    Submit
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<IconPlus width={18} />}
+                onClick={handleClickOpen}
+              >
+                Add User
               </Button>
-            )}
+              <Dialog
+                open={modelopen}
+                onClose={handleClose}
+                keepMounted
+                fullWidth
+                maxWidth="sm"
+              >
+                <form onSubmit={handleSubmit}>
+                  <DialogTitle>Add User To Team</DialogTitle>
+                  <DialogContent dividers>
+                    <TextField
+                      select
+                      label="User"
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      fullWidth
+                    >
+                      <MenuItem value="">Users</MenuItem>
+                      {user.map((user, i) => (
+                        <MenuItem key={i} value={user.id}>
+                          {user.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={handleClose} color="error">
+                      Cancel
+                    </Button>
+                    <Button type="submit" variant="contained" color="primary">
+                      Submit
+                    </Button>
+                  </DialogActions>
+                </form>
+              </Dialog>
+              {selectedRowIds.size > 0 && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<IconTrash width={18} />}
+                  sx={{ marginRight: "5px" }}
+                  onClick={() => {
+                    const selectedIds = Array.from(selectedRowIds).map(
+                      (index) => filteredData[index]?.id
+                    );
+                    setUsersToDelete(selectedIds);
+                    setConfirmOpen(true);
+                  }}
+                >
+                  Remove
+                </Button>
+              )}
+              <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                  <Typography color="textSecondary">
+                    Are you sure you want to remove {usersToDelete.length} user
+                    {usersToDelete.length > 1 ? "s" : ""} from the team?
+                  </Typography>
+                </DialogContent>
+                <DialogActions>
+                  <Button
+                    onClick={() => setConfirmOpen(false)}
+                    variant="outlined"
+                    color="primary"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const payload = {
+                          team_id: Number(teamId),
+                          user_ids: usersToDelete.join(","),
+                        };
+                        const response = await api.post(
+                          "team/remove-users-to-team",
+                          payload
+                        );
+                        toast.success(
+                          response.data.message || "Users removed successfully"
+                        );
+                        setSelectedRowIds(new Set());
+                        await fetchData(); // Refresh the table
+                      } catch (error) {
+                        console.error("Failed to remove users", error);
+                        toast.error("Failed to remove users");
+                      } finally {
+                        setConfirmOpen(false);
+                      }
+                    }}
+                    variant="outlined"
+                    color="error"
+                  >
+                    Delete
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </Stack>
           </Stack>
           <Divider />
 
           <Grid container>
             <Grid size={12}>
               <Box>
-                <TableContainer>
-                  <Table stickyHeader>
+                <TableContainer
+                  sx={{
+                    maxHeight: 600,
+                  }}
+                >
+                  <Table stickyHeader aria-label="sticky table">
                     <TableHead>
                       {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
@@ -650,6 +893,7 @@ const TablePagination = () => {
                                         fontSize: "0.9rem",
                                         color: isActive ? "#000" : "#888",
                                         display: "flex",
+                                        alignItems: "center",
                                         justifyContent: "space-between",
                                       }}
                                     >
@@ -689,6 +933,78 @@ const TablePagination = () => {
                 </TableContainer>
               </Box>
               <Divider />
+              <Stack
+                gap={1}
+                pr={3}
+                pt={1}
+                pl={3}
+                pb={1}
+                alignItems="center"
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+              >
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography color="textSecondary">
+                    {table.getPrePaginationRowModel().rows.length} Rows
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    display: {
+                      xs: "block",
+                      sm: "flex",
+                    },
+                  }}
+                  alignItems="center"
+                  gap={1}
+                >
+                  <Stack direction="row" alignItems="center">
+                    <Typography color="textSecondary">Page </Typography>
+                    <Typography color="textSecondary" fontWeight={600} ml={1}>
+                      {table.getState().pagination.pageIndex + 1} of{" "}
+                      {table.getPageCount()}
+                    </Typography>
+                    <Typography color="textSecondary" ml={"3px"}>
+                      | Enteries :{" "}
+                    </Typography>
+                  </Stack>
+                  <Stack
+                    ml={"5px"}
+                    direction="row"
+                    alignItems="center"
+                    color="textSecondary"
+                  >
+                    <CustomSelect
+                      value={table.getState().pagination.pageSize}
+                      onChange={(e: { target: { value: any } }) => {
+                        table.setPageSize(Number(e.target.value));
+                      }}
+                    >
+                      {[50, 100, 250, 500].map((pageSize) => (
+                        <MenuItem key={pageSize} value={pageSize}>
+                          {pageSize}
+                        </MenuItem>
+                      ))}
+                    </CustomSelect>
+                    <IconButton
+                      size="small"
+                      sx={{ width: "30px" }}
+                      onClick={() => table.previousPage()}
+                      disabled={!table.getCanPreviousPage()}
+                    >
+                      <IconChevronLeft />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ width: "30px" }}
+                      onClick={() => table.nextPage()}
+                      disabled={!table.getCanNextPage()}
+                    >
+                      <IconChevronRight />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              </Stack>
             </Grid>
           </Grid>
         </BlankCard>

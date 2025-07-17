@@ -75,7 +75,7 @@ const AdminSetting = () => {
         <BlankCard>
           <Stack direction="row">
             {/* Left Tabs */}
-            <Tabs
+            {/* <Tabs
               orientation="vertical"
               variant="scrollable"
               value={value}
@@ -87,13 +87,13 @@ const AdminSetting = () => {
                 label="Archived teams"
                 {...a11yProps(0)}
               />
-            </Tabs>
+            </Tabs> */}
 
-            <CardContent sx={{ flex: 1 }}>
+            {/* <CardContent sx={{ flex: 1 }}>
               <TabPanel value={value} index={0}>
                 <ArchiveTeams />
               </TabPanel>
-            </CardContent>
+            </CardContent> */}
           </Stack>
         </BlankCard>
         {/* </Grid> */}
