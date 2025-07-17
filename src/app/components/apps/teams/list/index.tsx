@@ -55,7 +55,6 @@ import { IconDotsVertical } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconPlus } from "@tabler/icons-react";
-import JoinCompanyDialog from "../../modals/join-company";
 import toast from "react-hot-toast";
 import { TradeList } from "../team";
 import { useSession } from "next-auth/react";
