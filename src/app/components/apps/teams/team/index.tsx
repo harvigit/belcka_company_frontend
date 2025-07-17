@@ -197,7 +197,6 @@ const TablePagination = () => {
   };
 
   const fetchUniqueUsers = async () => {
-    setLoading(true);
     try {
       const res = await api.get(`team/user-list?company_id=${id.company_id}`);
       if (res.data) {
@@ -206,7 +205,6 @@ const TablePagination = () => {
     } catch (err) {
       console.error("Failed to fetch users", err);
     } finally {
-      setLoading(false);
     }
   };
 
