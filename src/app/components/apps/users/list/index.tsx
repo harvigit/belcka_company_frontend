@@ -409,7 +409,7 @@ const TablePagination = () => {
             {/* Table rendering */}
             <TableContainer
               sx={{
-                maxHeight: 680,
+                maxHeight: 600,
               }}
             >
               <Table stickyHeader aria-label="sticky table">

@@ -33,14 +33,17 @@ import {
   getSortedRowModel,
   useReactTable,
   createColumnHelper,
+  SortingState,
 } from "@tanstack/react-table";
 import {
   IconChevronLeft,
   IconChevronRight,
   IconFilter,
+  IconRotate,
   IconSearch,
   IconTrash,
   IconUserMinus,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -52,6 +55,11 @@ import { IconDotsVertical } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconPlus } from "@tabler/icons-react";
+import JoinCompanyDialog from "../../modals/join-company";
+import toast from "react-hot-toast";
+import { TradeList } from "../team";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 dayjs.extend(customParseFormat);
 
@@ -91,6 +99,7 @@ const TablePagination = () => {
   const rerender = React.useReducer(() => ({}), {})[1];
   const [user, setUser] = useState([]);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const [filters, setFilters] = useState({
     team: "",
@@ -100,8 +109,15 @@ const TablePagination = () => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
 
+  const session = useSession();
+  const id = session.data?.user as User & { company_id?: number | null };
+
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
+  const [openOtpDialog, setOpenOtpDialog] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [tradeValue, setTradeValue] = useState("");
+
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -158,7 +174,6 @@ const TablePagination = () => {
   const columns = [
     columnHelper.accessor("name", {
       id: "name",
-      enableSorting: true,
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -178,11 +193,12 @@ const TablePagination = () => {
               }
             }}
           />
-          <Typography variant="h6" color="textPrimary">
+          <Typography variant="subtitle2" fontWeight="inherit">
             Name
           </Typography>
         </Stack>
       ),
+      enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
@@ -215,29 +231,6 @@ const TablePagination = () => {
                   {item.name ?? "-"}
                 </Typography>
               </Link>
-              {/* {shouldHighlight ? (
-                <Typography
-                  variant="h5"
-                  color="secondary"
-                  sx={{
-                    cursor: "not-allowed",
-                    opacity: 0.6,
-                    pointerEvents: "none",
-                  }}
-                >
-                  {item.name ?? "-"}
-                </Typography>
-              ) : (
-                <Link href={`/apps/teams/team?team_id=${item.id}`} passHref>
-                  <Typography
-                    variant="h5"
-                    color="textPrimary"
-                    sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-                  >
-                    {item.name ?? "-"}
-                  </Typography>
-                </Link>
-              )} */}
             </Stack>
           </Stack>
         );
@@ -299,9 +292,8 @@ const TablePagination = () => {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: {
-      columnFilters,
-    },
+    state: { columnFilters, sorting },
+    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -505,34 +497,24 @@ const TablePagination = () => {
             }}
           >
             <MenuItem onClick={handleClose}>
-              <Button
-                color="inherit"
-                fullWidth
-                component={Link}
+              <Link
+                color="body1"
                 href="/apps/teams/create"
-                sx={{
+                style={{
                   width: "100%",
+                  color: "#11142D",
                   textTransform: "none",
-                  justifyContent: "flex-start",
-                  padding: "6px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
                 }}
               >
                 <ListItemIcon>
-                <IconPlus width={18} />
-              </ListItemIcon>
+                  <IconPlus width={18} />
+                </ListItemIcon>
                 Add Team
-              </Button>
+              </Link>
             </MenuItem>
-            {/* <MenuItem
-              onClick={handleClose}
-              component={Link}
-              href="/admin-settings"
-            >
-              <ListItemIcon>
-                <IconUserMinus width={20} />
-              </ListItemIcon>
-              <Typography variant="inherit">Archived Teams</Typography>
-            </MenuItem> */}
           </Menu>
         </Stack>
       </Stack>
@@ -543,7 +525,7 @@ const TablePagination = () => {
           <Box>
             <TableContainer
               sx={{
-                maxHeight: 680,
+                maxHeight: 600,
               }}
             >
               <Table stickyHeader aria-label="sticky table">
