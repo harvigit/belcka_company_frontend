@@ -14,6 +14,7 @@ import { CalendarMonth } from "@mui/icons-material";
 
 import "react-day-picker/dist/style.css";
 import "../../global.css";
+import { enGB } from 'date-fns/locale';
 
 type Props = {
     from: Date | null;
@@ -112,6 +113,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
                         onSelect={(range) => setTempRange(range ?? { from: undefined, to: undefined })}
                         numberOfMonths={1}
                         className="custom-day-picker"
+                        locale={{ ...enGB, options: { ...enGB.options, weekStartsOn: 1 } }} 
                     />
 
                     <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2}>
