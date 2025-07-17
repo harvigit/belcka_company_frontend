@@ -284,7 +284,7 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Link href={`/apps/teams/team?team_id=${item.id}`} passHref>
+              <Link href={`/apps/teams/team?team_id=${item.team_id}`} passHref>
                 <Typography
                   variant="h5"
                   color={shouldHighlight ? "secondary" : "textPrimary"}
