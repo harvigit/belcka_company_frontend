@@ -1,10 +1,11 @@
 "use client";
 import React, { createContext, useEffect, useState } from "react";
-import { TeamList } from "@/app/components/apps/teams/list";
+
 import useSWR from "swr";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { TeamList } from "@/app/components/apps/teams/list";
 
 interface TeamContextType {
   teams: TeamList[];
@@ -12,7 +13,6 @@ interface TeamContextType {
   error: Error | null;
   addTeam: (newTeam: TeamList) => Promise<void>;
   updateTeam: (updateTeam: TeamList) => Promise<void>;
-  deleteTeam: (teamId: number) => Promise<void>;
 }
 
 export const TeamContext = createContext<TeamContextType>(
@@ -22,8 +22,8 @@ export const TeamContext = createContext<TeamContextType>(
 export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-    const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null } ;
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null };
   const {
     data: teamData,
     error: invoiceError,
@@ -48,7 +48,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(isLoading);
   }, [isLoading]);
 
-//   // Add permission
+  //   // Add permission
   const addTeam = async (team: TeamList) => {
     try {
       const payload = {
@@ -61,34 +61,24 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
       await mutate();
       return response.data;
     } catch (error) {
-     console.log(error)
+      console.log(error);
     }
   };
 
-//   // Update permission
+  //   // Update permission
   const updateTeam = async (team: TeamList) => {
     try {
       const payload = {
+        id: team.id,
         name: team.name,
         supervisor_id: team.supervisor_id,
         company_id: user.company_id,
         team_member_ids: team.team_member_ids.join(","),
       };
-      await api.post(`admin/permission-edit/${team.id}`, payload);
+      await api.put(`team/update-team`, payload);
       await mutate();
     } catch (error) {
-      console.log(error)
-    }
-  };
-
-//   // Delete permission
-  const deleteTeam = async (teamId: number) => {
-    try {
-      await api.delete(`admin/permission-delete/${teamId}`);
-
-      await mutate();
-    } catch (error) {
-      console.error("Error deleting permission:", error);
+      console.log(error);
     }
   };
 
@@ -100,7 +90,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
         error: invoiceError || null,
         addTeam,
         updateTeam,
-        deleteTeam,
+        
       }}
     >
       {children}

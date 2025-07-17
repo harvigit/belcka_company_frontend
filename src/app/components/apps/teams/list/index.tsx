@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -24,6 +24,7 @@ import {
   Menu,
   ListItemIcon,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import {
   flexRender,
@@ -42,7 +43,6 @@ import {
   IconRotate,
   IconSearch,
   IconTrash,
-  IconUserMinus,
   IconUserPlus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -55,16 +55,21 @@ import { IconDotsVertical } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconPlus } from "@tabler/icons-react";
+import JoinCompanyDialog from "../../modals/join-company";
 import toast from "react-hot-toast";
 import { TradeList } from "../team";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import GenerateCodeDialog from "../../modals/generate-code";
+import { IconEdit } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(customParseFormat);
 
 // Correct: declare TeamList as a type
 export type TeamList = {
   id: number;
+  team_id:number;
   team_member_ids: [];
   supervisor_id: number;
   supervisor_name: string;
@@ -116,6 +121,10 @@ const TablePagination = () => {
   const [openOtpDialog, setOpenOtpDialog] = useState(false);
   const [otp, setOtp] = useState("");
   const [tradeValue, setTradeValue] = useState("");
+  const [trade, setTrade] = useState<TradeList[]>([]);
+
+  const [openGenerateDialog, setOpenGenerateDialog] = useState(false);
+  const router = useRouter();
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -140,6 +149,60 @@ const TablePagination = () => {
     };
     fetchTrades();
   }, [api]);
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await api.get(
+          `trade/get-trades?company_id=${id.company_id}`
+        );
+        if (res.data) setTrade(res.data.info); // ← trade list is stored here
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+    fetchTrades();
+  }, []);
+
+  // Join company
+  const joinCompany = async (otp: string, tradeId: string) => {
+    try {
+      const payload = {
+        otp,
+        trade_id: Number(tradeId),
+      };
+      const response = await api.post(`company/join-company`, payload);
+      toast.success(response.data.message);
+      setOpenOtpDialog(false);
+      setOtp("");
+      setTradeValue("");
+    } catch (error: any) {
+      // toast.error(error?.response?.data?.message || "Something went wrong.");
+    } finally {
+    }
+  };
+
+  // generate company code
+  const handleGenerateCode = async () => {
+    try {
+      const response = await api.post(
+        `team/company-generate-code?company_id=${id.company_id}`
+      );
+      toast.success(response.data.message);
+    } catch (error) {
+      // toast.error("Failed to generate code.");
+    } finally {
+      setOpenGenerateDialog(false);
+    }
+  };
+
+  // UseCallback to memoize these functions
+  const handleEdit = useCallback(
+    (id: number) => {
+      router.push(`/apps/teams/edit/${id}`);
+    },
+    [router]
+  );
 
   const uniqueTrades = useMemo(
     () => [...new Set(data.map((item) => item.name).filter(Boolean))],
@@ -242,7 +305,7 @@ const TablePagination = () => {
       cell: (info) => {
         return (
           <Typography variant="h5" color="textPrimary">
-            {info.getValue() ?? ""}
+            {info.getValue() ?? "-"}
           </Typography>
         );
       },
@@ -272,6 +335,7 @@ const TablePagination = () => {
         );
       },
     }),
+
     columnHelper.accessor((row) => row?.team_member_count, {
       id: "team_member_count",
       header: () => "Users",
@@ -286,6 +350,25 @@ const TablePagination = () => {
         );
       },
     }),
+    // columnHelper.display({
+    //   id: "actions",
+    //   header: "Actions",
+    //   cell: ({ row }) => {
+    //     const permission = row.original;
+    //     return (
+    //       <Stack direction="row" spacing={1}>
+    //         <Tooltip title="Edit">
+    //           <IconButton
+    //             onClick={() => handleEdit(permission.team_id)}
+    //             color="primary"
+    //           >
+    //             <IconEdit size={18} />
+    //           </IconButton>
+    //         </Tooltip>
+    //       </Stack>
+    //     );
+    //   },
+    // }),
   ];
 
   const table = useReactTable({
@@ -514,7 +597,47 @@ const TablePagination = () => {
                 Add Team
               </Link>
             </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setOpenOtpDialog(true);
+                handleClose();
+              }}
+            >
+              <ListItemIcon>
+                <IconUserPlus width={18} />
+              </ListItemIcon>
+              Join Company
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setOpenGenerateDialog(true);
+                handleClose(); // close MUI menu
+              }}
+            >
+              <ListItemIcon>
+                <IconRotate width={18} />
+              </ListItemIcon>
+              Generate Code
+            </MenuItem>
           </Menu>
+
+          <GenerateCodeDialog
+            open={openGenerateDialog}
+            onClose={() => setOpenGenerateDialog(false)}
+            onConfirm={handleGenerateCode}
+          />
+
+          <JoinCompanyDialog
+            open={openOtpDialog}
+            onClose={() => setOpenOtpDialog(false)}
+            onSubmit={joinCompany}
+            otp={otp}
+            setOtp={setOtp}
+            tradeOptions={trade}
+            tradeValue={tradeValue}
+            setTradeValue={setTradeValue}
+          />
         </Stack>
       </Stack>
       <Divider />

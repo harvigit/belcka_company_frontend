@@ -60,6 +60,9 @@ import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import Link from "next/link";
+import JoinCompanyDialog from "../../modals/join-company";
+import GenerateCodeDialog from "../../modals/generate-code";
 
 dayjs.extend(customParseFormat);
 
@@ -121,6 +124,9 @@ const TablePagination = () => {
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
+  const [tradeValue, setTradeValue] = useState("");
+
+  const [openGenerateDialog, setOpenGenerateDialog] = useState(false);
 
   const [openOtpDialog, setOpenOtpDialog] = useState(false);
   const [otp, setOtp] = useState("");
@@ -271,6 +277,38 @@ const TablePagination = () => {
     () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
     [trade]
   );
+  //join company
+  const joinCompany = async () => {
+    try {
+      const payload = {
+        otp: String(otp),
+        trade_id: Number(tempFilters.trade),
+      };
+      const response = await api.post(`company/join-company`, payload);
+      toast.success(response.data.message);
+      setOpenOtpDialog(false);
+    } catch (error: any) {
+      // toast.error(error?.response?.data?.message || "Something went wrong.");
+    } finally {
+      await fetchData();
+    }
+  };
+
+  // generate company code
+  const handleGenerateCode = async () => {
+    try {
+      const payload = {
+        team_id: teamId,
+        company_id: id.company_id,
+      };
+      const response = await api.post(`team/generate-otp`, payload);
+      toast.success(response.data.message);
+    } catch (error) {
+      // toast.error("Failed to generate code.");
+    } finally {
+      setOpenGenerateDialog(false);
+    }
+  };
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -315,7 +353,7 @@ const TablePagination = () => {
               }
             }}
           />
-          <Typography variant="h6" color="textPrimary">
+          <Typography variant="subtitle2" fontWeight="inherit">
             Name
           </Typography>
         </Stack>
@@ -618,6 +656,67 @@ const TablePagination = () => {
               </Dialog>
             </Grid>
             <Stack direction={"row-reverse"} mb={1} mr={1}>
+              <IconButton
+                sx={{ margin: "0px" }}
+                id="basic-button"
+                aria-controls={openMenu ? "basic-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={openMenu ? "true" : undefined}
+                onClick={handleClick}
+              >
+                <IconDotsVertical width={18} />
+              </IconButton>
+              <Menu
+                id="basic-menu"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={close}
+                slotProps={{
+                  list: {
+                    "aria-labelledby": "basic-button",
+                  },
+                }}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setOpenOtpDialog(true);
+                    handleClose();
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconUserPlus width={18} />
+                  </ListItemIcon>
+                  Join Company
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setOpenGenerateDialog(true);
+                    handleClose();
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconRotate width={18} />
+                  </ListItemIcon>
+                  Generate Code
+                </MenuItem>
+              </Menu>
+
+              <GenerateCodeDialog
+                open={openGenerateDialog}
+                onClose={() => setOpenGenerateDialog(false)}
+                onConfirm={handleGenerateCode}
+              />
+              <JoinCompanyDialog
+                open={openOtpDialog}
+                onClose={() => setOpenOtpDialog(false)}
+                onSubmit={joinCompany}
+                otp={otp}
+                setOtp={setOtp}
+                tradeOptions={trade}
+                tradeValue={tradeValue}
+                setTradeValue={setTradeValue}
+              />
+
               {data[0]?.is_subcontractor == true &&
               data[0]?.company_id !==
                 data[0]?.subcontractor_company_id ? null : (
@@ -648,7 +747,7 @@ const TablePagination = () => {
                       onChange={(e) => setSelectedUserId(e.target.value)}
                       fullWidth
                     >
-                      <MenuItem value="">Users</MenuItem>
+                      <MenuItem value="">Select User</MenuItem>
                       {user.map((user, i) => (
                         <MenuItem key={i} value={user.id}>
                           {user.name}
