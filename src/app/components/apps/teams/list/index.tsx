@@ -66,28 +66,27 @@ import { useRouter } from "next/navigation";
 
 dayjs.extend(customParseFormat);
 
-// Correct: declare TeamList as a type
 export type TeamList = {
   id: number;
-  team_id:number;
-  team_member_ids: [];
+  team_id: number;
+  team_member_ids: number[];
   supervisor_id: number;
-  supervisor_name: string;
+  supervisor_name?: string;
   supervisor_image?: string;
-  supervisor_email: string;
-  supervisor_phone: string;
-  team_member_count: number;
-  working_member_count: number;
+  supervisor_email?: string;
+  supervisor_phone?: string;
+  team_member_count?: number;
+  working_member_count?: number;
   subcontractor_company_name?: string;
-  is_subcontractor: boolean;
-  company_id: number;
+  is_subcontractor?: boolean;
+  company_id?: number;
   subcontractor_company_id?: number;
-  team_name: string;
-  name: string;
+  team_name?: string;
+  name?: string;
   image?: string;
-  is_active: boolean;
-  trade_id: number;
-  trade_name: string;
+  is_active?: boolean;
+  trade_id?: number;
+  trade_name?: string;
 };
 
 export type UserList = {
@@ -101,7 +100,6 @@ const TablePagination = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
-  const [user, setUser] = useState([]);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -156,7 +154,7 @@ const TablePagination = () => {
         const res = await api.get(
           `trade/get-trades?company_id=${id.company_id}`
         );
-        if (res.data) setTrade(res.data.info); // ← trade list is stored here
+        if (res.data) setTrade(res.data.info);
       } catch (err) {
         console.error("Failed to fetch trades", err);
       }
@@ -182,17 +180,16 @@ const TablePagination = () => {
     }
   };
 
-  // generate company code
-  const handleGenerateCode = async () => {
+  const handleGenerateCode = async (): Promise<string> => {
     try {
       const response = await api.post(
         `team/company-generate-code?company_id=${id.company_id}`
       );
       toast.success(response.data.message);
+      return response.data.info.company_otp;
     } catch (error) {
-      // toast.error("Failed to generate code.");
-    } finally {
-      setOpenGenerateDialog(false);
+      toast.error("Failed to generate code.");
+      throw error;
     }
   };
 
@@ -350,25 +347,29 @@ const TablePagination = () => {
         );
       },
     }),
-    // columnHelper.display({
-    //   id: "actions",
-    //   header: "Actions",
-    //   cell: ({ row }) => {
-    //     const permission = row.original;
-    //     return (
-    //       <Stack direction="row" spacing={1}>
-    //         <Tooltip title="Edit">
-    //           <IconButton
-    //             onClick={() => handleEdit(permission.team_id)}
-    //             color="primary"
-    //           >
-    //             <IconEdit size={18} />
-    //           </IconButton>
-    //         </Tooltip>
-    //       </Stack>
-    //     );
-    //   },
-    // }),
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const item = row.original;
+        const subcontractor =
+          item.is_subcontractor === true &&
+          item.company_id !== item.subcontractor_company_id;
+        return (
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Edit">
+              <IconButton
+              disabled={subcontractor}
+                onClick={() => handleEdit(item.team_id)}
+                color="primary"
+              >
+                <IconEdit size={18} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        );
+      },
+    }),
   ];
 
   const table = useReactTable({
@@ -625,7 +626,7 @@ const TablePagination = () => {
           <GenerateCodeDialog
             open={openGenerateDialog}
             onClose={() => setOpenGenerateDialog(false)}
-            onConfirm={handleGenerateCode}
+            onGenerate={handleGenerateCode}
           />
 
           <JoinCompanyDialog

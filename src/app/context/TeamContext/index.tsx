@@ -73,7 +73,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
         name: team.name,
         supervisor_id: team.supervisor_id,
         company_id: user.company_id,
-        team_member_ids: team.team_member_ids.join(","),
+        team_member_ids: team.team_member_ids.join(",") ?? [],
       };
       await api.put(`team/update-team`, payload);
       await mutate();
