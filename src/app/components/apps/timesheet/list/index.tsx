@@ -226,7 +226,7 @@ const TimesheetList = () => {
                                 sx={{ width: 36, height: 36 }}
                             />
                             <Box sx={{ textAlign: 'left' }}>
-                                <Typography fontWeight={600}>{row.user_name}</Typography>
+                                <Typography>{row.user_name}</Typography>
                                 <Typography variant="caption" color="textSecondary">
                                     {row.trade_name}
                                 </Typography>
