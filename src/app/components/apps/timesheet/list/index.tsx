@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useMemo, useState} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Avatar,
     Box,
@@ -10,6 +10,7 @@ import {
     DialogContent,
     DialogTitle,
     Divider,
+    Drawer,
     Grid,
     IconButton,
     MenuItem,
@@ -31,6 +32,7 @@ import {
     IconChevronRight,
     IconChevronsLeft,
     IconChevronsRight,
+    IconX, IconArrowBack,
 } from '@tabler/icons-react';
 import {
     flexRender,
@@ -43,12 +45,12 @@ import {
 } from '@tanstack/react-table';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
-import {format} from 'date-fns';
+import { format } from 'date-fns';
+import dayjs from 'dayjs';
 
 import 'react-day-picker/dist/style.css';
 import '../../../../global.css';
-import {AxiosResponse} from 'axios';
-import {IconX} from '@tabler/icons-react';
+import { AxiosResponse } from 'axios';
 
 const columnHelper = createColumnHelper();
 
@@ -73,23 +75,19 @@ type TimesheetResponse = {
 
 const TimesheetList = () => {
     const today = new Date();
-    const defaultStart = new Date(
-        today.setDate(today.getDate() - today.getDay())
-    );
-    const defaultEnd = new Date(
-        today.setDate(today.getDate() - today.getDay() + 6)
-    );
+    const defaultStart = new Date(today);
+    defaultStart.setDate(today.getDate() - today.getDay() + 1);
+
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(today.getDate() - today.getDay() + 7);
 
     const [data, setData] = useState<Timesheet[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [open, setOpen] = useState<boolean>(false);
-    const [filters, setFilters] = useState<any>({type: ''});
+    const [filters, setFilters] = useState<any>({ type: '' });
     const [tempFilters, setTempFilters] = useState<any>(filters);
     const [sorting, setSorting] = useState<any>([]);
-    const [pagination, setPagination] = useState<any>({
-        pageIndex: 0,
-        pageSize: 50,
-    });
+    const [pagination, setPagination] = useState<any>({ pageIndex: 0, pageSize: 50 });
     const [selectedRows, setSelectedRows] = useState<any>({});
 
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
@@ -99,6 +97,8 @@ const TimesheetList = () => {
 
     const [page, setPage] = useState<number>(0);
     const [rowsPerPage, setRowsPerPage] = useState<number>(50);
+
+    const [sidebarData, setSidebarData] = useState<any>(null); // Sidebar data state
 
     const fetchData = async (start: Date, end: Date): Promise<void> => {
         try {
@@ -154,9 +154,6 @@ const TimesheetList = () => {
 
             const matchesType = filters.type ? item.type === filters.type : true;
 
-            // const matchesStatus = filters.status ? item.status === filters.status : true;
-            // return matchesSearch && matchesType && matchesStatus;
-
             return matchesSearch && matchesType;
         });
     }, [data, searchTerm, filters]);
@@ -169,18 +166,43 @@ const TimesheetList = () => {
         return `${h}:${m.toString().padStart(2, '0')}`;
     };
 
+    const fetchSidebarData = async (worklogIds: number[]) => {
+        try {
+            const res = await api.get('/timesheet/worklog-details', {
+                params: { worklog_ids: worklogIds.join(',') },
+            });
+
+            if (res.data?.IsSuccess) {
+                setSidebarData(res.data.info);
+            } else {
+                setSidebarData([]);
+            }
+        } catch (error) {
+            console.error('Failed to fetch sidebar data:', error);
+            setSidebarData([]);
+        }
+    };
+
+    // const formatTime = (seconds: number) => {
+    //     const h = Math.floor(seconds / 3600);
+    //     const m = Math.floor((seconds % 3600) / 60);
+    //     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    // };
+    //
+    // const formatHHmm = (datetime: string) => dayjs(datetime, 'DD/MM/YYYY HH:mm:ss').format('HH:mm');
+
     const columns: any = useMemo(
         () => [
             {
                 id: 'select',
-                header: ({table}: { table: any }) => (
+                header: ({ table }: { table: any }) => (
                     <input
                         type="checkbox"
                         checked={table.getIsAllPageRowsSelected()}
                         onChange={table.getToggleAllPageRowsSelectedHandler()}
                     />
                 ),
-                cell: ({row}: { row: any }) => (
+                cell: ({ row }: { row: any }) => (
                     <input
                         type="checkbox"
                         checked={row.getIsSelected()}
@@ -201,9 +223,9 @@ const TimesheetList = () => {
                             <Avatar
                                 src={row.user_thumb_image}
                                 alt={row.user_name}
-                                sx={{width: 36, height: 36}}
+                                sx={{ width: 36, height: 36 }}
                             />
-                            <Box sx={{textAlign: 'left'}}>
+                            <Box sx={{ textAlign: 'left' }}>
                                 <Typography fontWeight={600}>{row.user_name}</Typography>
                                 <Typography variant="caption" color="textSecondary">
                                     {row.trade_name}
@@ -225,12 +247,32 @@ const TimesheetList = () => {
                     );
                 },
             }),
-            columnHelper.accessor('type', {header: 'Type'}),
+            columnHelper.accessor('type', { header: 'Type' }),
             ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) =>
                 columnHelper.accessor((row: any) => row.days?.[day], {
                     id: day,
                     header: day,
-                    cell: (info: any) => formatHour(info.getValue()) || '-',
+                    cell: (info: any) => {
+                        const value = info.getValue();
+                        const row = info.row.original;
+
+                        if (value === '-' || !value) {
+                            return <div>-</div>;
+                        }
+
+                        return (
+                            <div
+                                onClick={() => {
+                                    if (Array.isArray(value.worklog_ids) && value.worklog_ids.length) {
+                                        fetchSidebarData(value.worklog_ids);
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {formatHour(value.hours)}
+                            </div>
+                        );
+                    },
                 })
             ),
             columnHelper.accessor('payable_total_hours', {
@@ -273,7 +315,7 @@ const TimesheetList = () => {
                 mt={3}
                 mx={2}
                 mb={3}
-                direction={{xs: 'column', sm: 'row'}}
+                direction={{ xs: 'column', sm: 'row' }}
                 spacing={2}
                 alignItems="center"
             >
@@ -292,10 +334,10 @@ const TimesheetList = () => {
                     size="small"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{endAdornment: <IconSearch size={16}/>}}
+                    InputProps={{ endAdornment: <IconSearch size={16} /> }}
                 />
                 <Button variant="contained" onClick={() => setOpen(true)}>
-                    <IconFilter width={18}/>
+                    <IconFilter width={18} />
                 </Button>
 
                 <Dialog
@@ -321,7 +363,7 @@ const TimesheetList = () => {
                                 height: 50,
                             }}
                         >
-                            <IconX size={40} style={{width: 40, height: 40}}/>
+                            <IconX size={40} style={{ width: 40, height: 40 }} />
                         </IconButton>
                     </DialogTitle>
                     <DialogContent>
@@ -331,7 +373,7 @@ const TimesheetList = () => {
                             label="Type"
                             value={tempFilters.type}
                             onChange={(e) =>
-                                setTempFilters({...tempFilters, type: e.target.value})
+                                setTempFilters({ ...tempFilters, type: e.target.value })
                             }
                         >
                             <MenuItem value="">All</MenuItem>
@@ -343,8 +385,8 @@ const TimesheetList = () => {
                     <DialogActions>
                         <Button
                             onClick={() => {
-                                setFilters({type: ''});
-                                setTempFilters({type: ''});
+                                setFilters({ type: '' });
+                                setTempFilters({ type: '' });
                                 setOpen(false);
                             }}
                             color="inherit"
@@ -364,9 +406,9 @@ const TimesheetList = () => {
                 </Dialog>
             </Stack>
 
-            <Divider/>
+            <Divider />
 
-            <TableContainer sx={{maxHeight: 600}}>
+            <TableContainer sx={{ maxHeight: 600 }}>
                 <Table stickyHeader>
                     <TableHead
                         sx={{
@@ -407,8 +449,8 @@ const TimesheetList = () => {
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    '&:hover': {color: '#888'},
-                                                    '&:hover .hoverIcon': {opacity: 1},
+                                                    '&:hover': { color: '#888' },
+                                                    '&:hover .hoverIcon': { opacity: 1 },
                                                 }}
                                             >
                                                 <Typography variant="body2" fontWeight="inherit">
@@ -457,7 +499,7 @@ const TimesheetList = () => {
                 gap={1}
                 p={3}
                 alignItems="center"
-                direction={{xs: 'column', sm: 'row'}}
+                direction={{ xs: 'column', sm: 'row' }}
                 justifyContent="space-between"
             >
                 <Typography variant="body1">{filteredData.length} Rows</Typography>
@@ -484,25 +526,25 @@ const TimesheetList = () => {
                         onClick={() => table.setPageIndex(0)}
                         disabled={!table.getCanPreviousPage()}
                     >
-                        <IconChevronsLeft/>
+                        <IconChevronsLeft />
                     </IconButton>
                     <IconButton
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
                     >
-                        <IconChevronLeft/>
+                        <IconChevronLeft />
                     </IconButton>
                     <IconButton
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
                     >
-                        <IconChevronRight/>
+                        <IconChevronRight />
                     </IconButton>
                     <IconButton
                         onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                         disabled={!table.getCanNextPage()}
                     >
-                        <IconChevronsRight/>
+                        <IconChevronsRight />
                     </IconButton>
                 </Box>
             </Stack>

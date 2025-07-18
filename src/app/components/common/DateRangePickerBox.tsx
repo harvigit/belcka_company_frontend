@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Button,
@@ -11,6 +11,7 @@ import {
 import { DayPicker, DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { CalendarMonth } from "@mui/icons-material";
+import { startOfWeek, endOfWeek } from 'date-fns'; // Import date-fns functions
 
 import "react-day-picker/dist/style.css";
 import "../../global.css";
@@ -24,10 +25,14 @@ type Props = {
 };
 
 const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [tempRange, setTempRange] = useState<DateRange>({
-        from: from ?? undefined,
-        to: to ?? undefined,
+        from: from ?? weekStart, 
+        to: to ?? weekEnd,
     });
 
     const open = Boolean(anchorEl);
@@ -50,7 +55,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
     };
 
     const handleCancel = () => {
-        setTempRange({ from: from ?? undefined, to: to ?? undefined });
+        setTempRange({ from: from ?? weekStart, to: to ?? weekEnd });
         handleClose();
     };
 
@@ -113,7 +118,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
                         onSelect={(range) => setTempRange(range ?? { from: undefined, to: undefined })}
                         numberOfMonths={1}
                         className="custom-day-picker"
-                        locale={{ ...enGB, options: { ...enGB.options, weekStartsOn: 1 } }} 
+                        locale={{ ...enGB, options: { ...enGB.options, weekStartsOn: 1 } }}
                     />
 
                     <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2}>
