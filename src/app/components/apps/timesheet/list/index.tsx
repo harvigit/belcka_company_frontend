@@ -662,20 +662,20 @@ const TimesheetList = () => {
                                                 
                                             </Box>
 
-                                            <IconButton size="small">
-                                                <Box
-                                                    component="span"
-                                                    sx={{
-                                                        width: 25,
-                                                        height: 25,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                    }}
-                                                >
-                                                    <IconEdit size="small" />
-                                                </Box>
-                                            </IconButton>
+                                            {/*<IconButton size="small">*/}
+                                            {/*    <Box*/}
+                                            {/*        component="span"*/}
+                                            {/*        sx={{*/}
+                                            {/*            width: 25,*/}
+                                            {/*            height: 25,*/}
+                                            {/*            display: 'flex',*/}
+                                            {/*            alignItems: 'center',*/}
+                                            {/*            justifyContent: 'center',*/}
+                                            {/*        }}*/}
+                                            {/*    >*/}
+                                            {/*        <IconEdit size="small" />*/}
+                                            {/*    </Box>*/}
+                                            {/*</IconButton>*/}
                                         </Box>
                                     );
                                 })}
