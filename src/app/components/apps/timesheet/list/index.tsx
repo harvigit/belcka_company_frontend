@@ -32,7 +32,7 @@ import {
     IconChevronRight,
     IconChevronsLeft,
     IconChevronsRight,
-    IconX, IconArrowBack,
+    IconX, IconArrowBack, IconEdit, IconArrowLeft,
 } from '@tabler/icons-react';
 import {
     flexRender,
@@ -173,24 +173,39 @@ const TimesheetList = () => {
             });
 
             if (res.data?.IsSuccess) {
-                setSidebarData(res.data.info);
+                setSidebarData({
+                    info: res.data.info || [],
+                    formattedDate: res.data.formatted_date || 0,
+                    totalMinutes: res.data.total_minutes || 0,
+                    totalBreakSeconds: res.data.total_break_seconds || 0,
+                    payableWorkSeconds: res.data.payable_work_seconds || 0,
+                });
             } else {
-                setSidebarData([]);
+                setSidebarData({
+                    info: [],
+                    formattedDate: 0,
+                    totalMinutes: 0,
+                    totalBreakSeconds: 0,
+                    payableWorkSeconds: 0,
+                });
             }
         } catch (error) {
-            console.error('Failed to fetch sidebar data:', error);
-            setSidebarData([]);
+            setSidebarData({
+                info: [],
+                formattedDate: 0,
+                totalMinutes: 0,
+                totalBreakSeconds: 0,
+                payableWorkSeconds: 0,
+            });
         }
     };
 
-    // const formatTime = (seconds: number) => {
-    //     const h = Math.floor(seconds / 3600);
-    //     const m = Math.floor((seconds % 3600) / 60);
-    //     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    // };
-    //
-    // const formatHHmm = (datetime: string) => dayjs(datetime, 'DD/MM/YYYY HH:mm:ss').format('HH:mm');
-
+    const formatTime = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    };
+    
     const columns: any = useMemo(
         () => [
             {
@@ -548,6 +563,131 @@ const TimesheetList = () => {
                     </IconButton>
                 </Box>
             </Stack>
+
+            {/* Sidebar Drawer */}
+            <Drawer
+                anchor="right"
+                open={sidebarData !== null}
+                onClose={() => setSidebarData(null)}
+                sx={{
+                    width: 350,
+                    flexShrink: 0,
+                    '& .MuiDrawer-paper': {
+                        width: 350,
+                        padding: 2,
+                        backgroundColor: '#f9f9f9',
+                    },
+                }}
+            >
+                <Box>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mt={1} mb={2}>
+                        <IconButton onClick={() => setSidebarData(null)}>
+                            <IconArrowLeft />
+                        </IconButton>
+                        
+                        <Typography variant="h6" fontWeight={700}>
+                            Work Logs
+                        </Typography>
+                    </Box>
+
+                    {Array.isArray(sidebarData?.info) && sidebarData.info.length > 0 ? (
+                        <>
+                            <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
+                                <Typography variant="h6" fontWeight={700}>
+                                    {sidebarData.formattedDate}
+                                </Typography>
+
+                                <Typography variant="h6" fontWeight={700} sx={{ color: '#000' }}>
+                                    Total: {formatTime(sidebarData.payableWorkSeconds)}
+                                </Typography>
+                            </Box>
+
+                            <Stack spacing={2}>
+                                {sidebarData.info.map((entry: any) => {
+                                    const duration = formatTime(entry.worklog_payable_work_seconds);
+
+                                    return (
+                                        <Box
+                                            key={entry.id}
+                                            display="flex"
+                                            justifyContent="space-between"
+                                            alignItems="center"
+                                            sx={{
+                                                p: 2,
+                                                borderRadius: 3,
+                                                backgroundColor: '#fff',
+                                                boxShadow: 'inset 0 0 0 rgba(0,0,0,0)',
+                                                border: '1px solid #eee',
+                                            }}
+                                        >
+                                            <Box>
+                                                <Stack direction="row" spacing={1} mb={1}>
+                                                    <Box
+                                                        sx={{
+                                                            backgroundColor: '#FF7A00',
+                                                            color: '#fff',
+                                                            borderRadius: 1,
+                                                            px: 1.2,
+                                                            py: 0.3,
+                                                            fontSize: '12px',
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        Shift
+                                                    </Box>
+                                                    <Box
+                                                        sx={{
+                                                            backgroundColor: '#C9E9FF',
+                                                            color: '#000',
+                                                            borderRadius: 1,
+                                                            px: 1.2,
+                                                            py: 0.3,
+                                                            fontSize: '12px',
+                                                            fontWeight: 500,
+                                                        }}
+                                                    >
+                                                        {entry.shift_name}
+                                                    </Box>
+                                                </Stack>
+
+                                                <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
+                                                    <Typography variant="body2" sx={{ color: '#666' }} mr={1}>
+                                                        ({entry.formatted_work_start_time} - {entry.formatted_work_end_time})
+                                                    </Typography>
+
+                                                    <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
+                                                        {duration}
+                                                    </Typography>
+                                                </Box>
+                                                
+                                            </Box>
+
+                                            <IconButton size="small">
+                                                <Box
+                                                    component="span"
+                                                    sx={{
+                                                        width: 25,
+                                                        height: 25,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                >
+                                                    <IconEdit size="small" />
+                                                </Box>
+                                            </IconButton>
+                                        </Box>
+                                    );
+                                })}
+                            </Stack>
+                        </>
+                    ) : (
+                        <Typography variant="body1" color="text.secondary" mt={2}>
+                            No work logs available.
+                        </Typography>
+                    )}
+                </Box>
+            </Drawer>
         </Box>
     );
 };
