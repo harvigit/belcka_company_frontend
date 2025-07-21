@@ -56,24 +56,9 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   };
 
   const handleCopyCode = () => {
-    const codeToCopy = code ?? "";
-
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(codeToCopy)
-        .then(() => toast.success("Code copied!"))
-        .catch((err) => {
-          console.error("Clipboard API failed:", err);
-          fallbackCopyCode(codeToCopy);
-        });
-    } else {
-      fallbackCopyCode(codeToCopy);
-    }
-  };
-
-  const fallbackCopyCode = (codeToCopy: string) => {
-    // Use the Clipboard API directly in the fallback as well
-    if (navigator.clipboard) {
+    const codeToCopy = code ?? ''; 
+  
+    if (navigator.clipboard && window.location.protocol === 'https:') {
       navigator.clipboard
         .writeText(codeToCopy)
         .then(() => {
@@ -81,24 +66,40 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
         })
         .catch((err) => {
           console.error("Clipboard API failed:", err);
-          toast.error("Failed to copy code!");
+          fallbackCopyCode(codeToCopy); 
         });
     } else {
-      const textArea = document.createElement("textarea");
-      textArea.value = codeToCopy;
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand("copy");
-        toast.success("Code copied!");
-      } catch (err) {
-        console.error("Fallback failed:", err);
-        toast.error("Failed to copy code!");
-      } finally {
-        document.body.removeChild(textArea);
-      }
+      fallbackCopyCode(codeToCopy);
     }
   };
+  
+  const fallbackCopyCode = (codeToCopy: string) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = codeToCopy;
+    textArea.setAttribute('readonly', ''); 
+    textArea.style.position = 'absolute'; 
+    textArea.style.left = '-9999px'; 
+    document.body.appendChild(textArea);
+  
+    // Select the text
+    textArea.select();
+    textArea.setSelectionRange(0, textArea.value.length); 
+  
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        toast.success("Code copied!");
+      } else {
+        toast.error("Failed to copy code (execCommand).");
+      }
+    } catch (err) {
+      console.error("Fallback failed:", err);
+      toast.error("Failed to copy code!");
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  };
+  
 
   // Start timer on code set
   useEffect(() => {
