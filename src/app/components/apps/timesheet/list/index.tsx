@@ -285,7 +285,11 @@ const TimesheetList = () => {
                 flexWrap="wrap"
             >
                 <Button variant="contained">TIMESHEETS ({filteredData.length})</Button>
-                <DateRangePickerBox from={tempStartDate} to={tempEndDate} onChange={handleDateRangeChange} />
+                <DateRangePickerBox
+                    from={tempStartDate ?? null}
+                    to={tempEndDate ?? null}
+                    onChange={handleDateRangeChange}
+                />
                 <TextField
                     placeholder="Search..."
                     size="small"
