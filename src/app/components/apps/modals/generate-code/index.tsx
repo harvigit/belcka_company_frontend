@@ -12,7 +12,6 @@ import {
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CloseIcon from "@mui/icons-material/Close";
 import toast from "react-hot-toast";
-import ClipboardJS from "clipboard"; // Import ClipboardJS
 
 interface GenerateCodeDialogProps {
   open: boolean;
@@ -29,7 +28,6 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const [resendTimer, setResendTimer] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const copyButtonRef = useRef<HTMLButtonElement | null>(null); // Reference to copy button
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -37,7 +35,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       const generatedCode = await onGenerate();
       setCode(generatedCode);
 
-      setResendTimer(15 * 60); // 15 minutes
+      setResendTimer(15 * 60); // 15 minute
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
@@ -57,33 +55,13 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     }
   };
 
-  // Function to initialize clipboard.js
-  const initializeClipboard = () => {
-    if (copyButtonRef.current) {
-      const clipboard = new ClipboardJS(copyButtonRef.current);
-
-      clipboard.on('success', () => {
-        toast.success("Code copied!");
-      });
-
-      clipboard.on('error', () => {
-        toast.error("Failed to copy code.");
-      });
-
-      // Cleanup on unmount
-      return () => clipboard.destroy();
-    }
-  };
-
   const handleCopyCode = () => {
-    const codeToCopy = code ?? '';
-
+    const codeToCopy = code ?? ''; 
+  
     if (navigator.clipboard) {
       navigator.clipboard
-        .writeText(codeToCopy)
-        .then(() => {
-          toast.success("Code copied!");
-        })
+        .writeText(codeToCopy) 
+        .then(() => toast.success("Code copied!"))
         .catch((err) => {
           console.error("Clipboard API failed:", err);
           fallbackCopyCode(codeToCopy);
@@ -92,26 +70,15 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       fallbackCopyCode(codeToCopy);
     }
   };
-
+  
   const fallbackCopyCode = (codeToCopy: string) => {
-    const textArea = document.createElement("textarea");
-    textArea.value = codeToCopy;
-    textArea.setAttribute("readonly", ""); 
-    textArea.style.position = "absolute"; 
-    textArea.style.left = "-9999px"; 
+    const textArea = document.createElement('textarea');
+    textArea.value = codeToCopy; 
     document.body.appendChild(textArea);
-
-
     textArea.select();
-    textArea.setSelectionRange(0, textArea.value.length);
-
     try {
-      const successful = document.execCommand("copy");
-      if (successful) {
-        toast.success("Code copied!");
-      } else {
-        toast.error("Failed to copy code (execCommand).");
-      }
+      document.execCommand('copy');
+      toast.success("Code copied!");
     } catch (err) {
       console.error("Fallback failed:", err);
       toast.error("Failed to copy code!");
@@ -120,7 +87,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     }
   };
 
-  // Timer for resend code
+  // Start timer on code set
   useEffect(() => {
     if (code) {
       intervalRef.current = setInterval(() => {
@@ -140,7 +107,9 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   }, [code]);
 
   const formatTimer = () => {
-    const m = Math.floor(resendTimer / 60).toString().padStart(2, "0");
+    const m = Math.floor(resendTimer / 60)
+      .toString()
+      .padStart(2, "0");
     const s = (resendTimer % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
@@ -160,6 +129,9 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
               fontSize: 24,
               fontWeight: "bold",
               display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#f5f5f5",
             }}
           >
             {digit}
@@ -212,8 +184,6 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
               startIcon={<ContentCopyIcon />}
               sx={{ mt: 2 }}
               onClick={handleCopyCode}
-              ref={copyButtonRef} 
-              data-clipboard-text={code}
             >
               Copy Code
             </Button>
