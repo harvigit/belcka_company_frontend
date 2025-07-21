@@ -236,11 +236,6 @@ const TablePagination = () => {
     fetchUsers();
   }, []);
 
-  // add user to team,
-  const handleClickOpen = () => {
-    setModelOpen(true);
-    fetchUniqueUsers();
-  };
   const handleClose = () => {
     setModelOpen(false);
   };
@@ -675,23 +670,6 @@ const TablePagination = () => {
                 onClose={close}
                 slotProps={{ list: { "aria-labelledby": "basic-button" } }}
               >
-                {!(
-                  data[0]?.is_subcontractor === true &&
-                  data[0]?.company_id !== data[0]?.subcontractor_company_id
-                ) && (
-                  <MenuItem
-                    onClick={() => {
-                      setModelOpen(true);
-                      fetchUniqueUsers();
-                      close();
-                    }}
-                  >
-                    <ListItemIcon>
-                      <IconPlus width={18} />
-                    </ListItemIcon>
-                    Add User
-                  </MenuItem>
-                )}
 
                 <MenuItem
                   onClick={() => {

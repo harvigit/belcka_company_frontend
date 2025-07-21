@@ -141,16 +141,20 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             </CustomFormLabel>
             <CustomTextField
               id="code"
-              type="number"
+              type="text"
               fullWidth
               value={otp}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const value = e.target.value;
-                if (value.length <= 6) {
+                if (/^\d{0,6}$/.test(value)) {
                   setOtp(value);
                 }
               }}
-              inputProps={{ maxLength: 6 }}
+              inputProps={{
+                maxLength: 6,
+                inputMode: "numeric",
+                pattern: "[0-9]*",
+              }}
             />
 
             <Stack direction="row" justifyContent="space-between" mt={1}>

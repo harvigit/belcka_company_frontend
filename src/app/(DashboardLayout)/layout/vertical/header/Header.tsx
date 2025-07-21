@@ -7,12 +7,10 @@ import {
   Toolbar,
   styled,
   Stack,
-  Avatar,
-  Tooltip,
 } from "@mui/material";
 import Profile from "./Profile";
 import Search from "./Search";
-import Language from "./Language";
+import Company from "./Company";
 import { useContext } from "react";
 import config from "@/app/context/config";
 import {
@@ -78,9 +76,12 @@ const Header = () => {
 
   const session = useSession();
 
-  const user = session.data?.user as User & { company_name?: string | null } & {
+  const user = session.data?.user as User & { company_id?: string | null } & {
+    company_name?: string | null;
+  } & {
     company_image?: number | null;
-  };
+  } & { id: number };
+
   return (
     <AppBarStyled position="sticky" color="default">
       <ToolbarStyled>
@@ -109,10 +110,7 @@ const Header = () => {
         {/* ------------------------------------------- */}
         {/* Search Dropdown */}
         {/* ------------------------------------------- */}
-        {lgUp ? (
-          <>
-          </>
-        ) : null}
+        {lgUp ? <></> : null}
         {lgUp ? (
           <>
             <Navigation />
@@ -121,23 +119,8 @@ const Header = () => {
 
         <Box flexGrow={1} />
         <Stack direction="row" gap={1} alignItems="center">
-          <Language />
+          <Company />
 
-          {/* ------------------------------------------- */}
-          {/* Ecommerce Dropdown */}
-          {/* ------------------------------------------- */}
-          {user.company_image ? (
-            <Tooltip title={user.company_name}>
-              <Avatar
-                src={user?.company_image ? `${user.company_image}` : ""}
-                // src={"/images/logos/logoIcon.svg"}
-                alt={user.company_name || ""}
-                sx={{ width: 30, height: 30, margin: "0 auto" }}
-              />
-            </Tooltip>
-          ) : (
-            ""
-          )}
           <IconButton color="inherit">
             {activeMode === "light" ? (
               <IconMoon size="21" onClick={() => setActiveMode("dark")} />
@@ -176,7 +159,7 @@ const Header = () => {
             <CollpaseMenubar>
               <Stack direction="row" justifyContent="space-between" spacing={1}>
                 <Box display="flex" gap={1}>
-                  <Language />
+                  <Company />
                   <Search />
                 </Box>
                 <IconButton

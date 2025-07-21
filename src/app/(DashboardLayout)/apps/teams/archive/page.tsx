@@ -19,7 +19,7 @@ const ArchiveTeamListing = () => {
   return (
     <TeamProvider>
       <PageContainer title="Archive List" description="this is Archive List">
-        <Breadcrumb title="Archive List" items={BCrumb} />
+        {/* <Breadcrumb title="Archive List" items={BCrumb} /> */}
         {/* <BlankCard> */}
           {/* <CardContent> */}
             <ArchiveList />
