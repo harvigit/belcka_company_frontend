@@ -58,7 +58,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const handleCopyCode = () => {
     const codeToCopy = code ?? ''; 
   
-    if (navigator.clipboard && window.location.protocol === 'https:') {
+    if (navigator.clipboard || window.location.protocol === 'https:'|| window.location.protocol === 'https:') {
       navigator.clipboard
         .writeText(codeToCopy)
         .then(() => {
