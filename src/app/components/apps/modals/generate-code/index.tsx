@@ -78,7 +78,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     textArea.select();
     try {
       document.execCommand('copy');
-      toast.success("Code copied!");
+      // toast.success("Code copied!");
     } catch (err) {
       console.error("Fallback failed:", err);
       toast.error("Failed to copy code!");
