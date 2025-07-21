@@ -7,7 +7,6 @@ import {
   DialogTitle,
   Button,
   TextField,
-  MenuItem,
 } from "@mui/material";
 
 interface Trade {
@@ -18,12 +17,9 @@ interface Trade {
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSubmit: (otp: string, tradeId: string) => void;
+  onSubmit: (otp: string) => void;
   otp: string;
   setOtp: (otp: string) => void;
-  tradeOptions: Trade[];
-  tradeValue: string;
-  setTradeValue: (value: string) => void;
 }
 
 const JoinCompanyDialog: React.FC<Props> = ({
@@ -32,11 +28,8 @@ const JoinCompanyDialog: React.FC<Props> = ({
   onSubmit,
   otp,
   setOtp,
-  tradeOptions,
-  tradeValue,
-  setTradeValue,
 }) => {
-  const isDisabled = !(otp.length === 6 && tradeValue);
+  const isDisabled = !(otp.length === 6 );
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
@@ -62,28 +55,13 @@ const JoinCompanyDialog: React.FC<Props> = ({
             }
           }}
         />
-        <TextField
-          select
-          label="Trade"
-          value={tradeValue}
-          onChange={(e) => setTradeValue(e.target.value)}
-          fullWidth
-          required
-        >
-          <MenuItem value="">Trades</MenuItem>
-          {tradeOptions.map((trade) => (
-            <MenuItem key={trade.trade_id} value={trade.trade_id}>
-              {trade.name}
-            </MenuItem>
-          ))}
-        </TextField>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="error">
           Cancel
         </Button>
         <Button
-          onClick={() => onSubmit(otp, tradeValue)}
+          onClick={() => onSubmit(otp)}
           disabled={isDisabled}
           variant="contained"
           color="primary"

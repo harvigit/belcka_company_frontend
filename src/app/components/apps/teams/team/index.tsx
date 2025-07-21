@@ -274,14 +274,15 @@ const TablePagination = () => {
     () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
     [trade]
   );
-  //join company
+  //Add team to company
   const joinCompany = async () => {
     try {
       const payload = {
-        otp: String(otp),
-        trade_id: Number(tempFilters.trade),
+        code: String(otp),
+        team_id: Number(teamId),
+        company_id: Number(id.company_id)
       };
-      const response = await api.post(`company/join-company`, payload);
+      const response = await api.post(`company/add-team-to-company`, payload);
       toast.success(response.data.message);
       setOpenOtpDialog(false);
     } catch (error: any) {
@@ -707,9 +708,6 @@ const TablePagination = () => {
                 onSubmit={joinCompany}
                 otp={otp}
                 setOtp={setOtp}
-                tradeOptions={trade}
-                tradeValue={tradeValue}
-                setTradeValue={setTradeValue}
               />
               {/* add User to team */}
               <Dialog

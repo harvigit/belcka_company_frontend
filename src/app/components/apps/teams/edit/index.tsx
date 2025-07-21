@@ -272,7 +272,7 @@ const EditTeamPage = () => {
             htmlFor="bl-name"
             sx={{ mt: 0, mb: { xs: "-10px", sm: 0 } }}
           >
-            Team Member's
+            Team Member&apos;s
           </CustomFormLabel>
         </Grid>
 
