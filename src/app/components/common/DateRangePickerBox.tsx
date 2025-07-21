@@ -11,7 +11,7 @@ import {
 import { DayPicker, DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { CalendarMonth } from "@mui/icons-material";
-import { startOfWeek, endOfWeek } from 'date-fns'; // Import date-fns functions
+import { startOfWeek, endOfWeek } from 'date-fns';
 
 import "react-day-picker/dist/style.css";
 import "../../global.css";
@@ -20,7 +20,7 @@ import { enGB } from 'date-fns/locale';
 type Props = {
     from: Date | null;
     to: Date | null;
-    onChange: (range: { from: Date | null; to: Date | null }) => (range: { from: Date | null; to: Date | null }) => void;
+    onChange: (range: { from: Date | null; to: Date | null }) => void;
     onApply?: (range: { from: Date | null; to: Date | null }) => void;
 };
 
@@ -31,7 +31,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [tempRange, setTempRange] = useState<DateRange>({
-        from: from ?? weekStart, 
+        from: from ?? weekStart,
         to: to ?? weekEnd,
     });
 
@@ -65,6 +65,13 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
         }
         return "Select Date Range";
     };
+
+    useEffect(() => {
+        setTempRange({
+            from: from ?? weekStart,
+            to: to ?? weekEnd,
+        });
+    }, [from, to]);
 
     return (
         <>

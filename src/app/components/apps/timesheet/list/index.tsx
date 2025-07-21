@@ -286,8 +286,8 @@ const TimesheetList = () => {
             >
                 <Button variant="contained">TIMESHEETS ({filteredData.length})</Button>
                 <DateRangePickerBox
-                    from={tempStartDate ?? null}
-                    to={tempEndDate ?? null}
+                    from={startDate}
+                    to={endDate}
                     onChange={handleDateRangeChange}
                 />
                 <TextField
@@ -356,16 +356,70 @@ const TimesheetList = () => {
 
             <Divider />
 
+            {/* Data Table */}
             <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
                 <Table stickyHeader>
                     <TableHead>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => (
-                                    <TableCell key={header.id} align="center">
-                                        {flexRender(header.column.columnDef.header, header.getContext())}
-                                    </TableCell>
-                                ))}
+                                {headerGroup.headers.map((header) => {
+                                    const isActive = header.column.getIsSorted();
+                                    const isAsc = header.column.getIsSorted() === 'asc';
+                                    const isSortable = header.column.getCanSort();
+                                    return (
+                                        <TableCell
+                                            key={header.id}
+                                            align="center"
+                                            sx={{
+                                                position: 'sticky',
+                                                top: 0,
+                                                zIndex: 11,
+                                                backgroundColor: '#fff',
+                                                p: 0,
+                                            }}
+                                        >
+                                            <Box
+                                                onClick={header.column.getToggleSortingHandler()}
+                                                sx={{
+                                                    cursor: isSortable ? 'pointer' : 'default',
+                                                    border: '2px solid transparent',
+                                                    borderRadius: '6px',
+                                                    px: 1.5,
+                                                    py: 0.75,
+                                                    fontWeight: isActive ? 600 : 500,
+                                                    color: '#000',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    '&:hover': { color: '#888' },
+                                                    '&:hover .hoverIcon': { opacity: 1 },
+                                                }}
+                                            >
+                                                <Typography variant="body2" fontWeight="inherit">
+                                                    {flexRender(
+                                                        header.column.columnDef.header,
+                                                        header.getContext()
+                                                    )}
+                                                </Typography>
+                                                {isSortable && (
+                                                    <Box
+                                                        component="span"
+                                                        className="hoverIcon"
+                                                        ml={0.5}
+                                                        sx={{
+                                                            transition: 'opacity 0.2s',
+                                                            opacity: isActive ? 1 : 0,
+                                                            fontSize: '0.9rem',
+                                                            color: isActive ? '#000' : '#888',
+                                                        }}
+                                                    >
+                                                        {isActive ? (isAsc ? '↑' : '↓') : '↑'}
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </TableCell>
+                                    );
+                                })}
                             </TableRow>
                         ))}
                     </TableHead>
@@ -383,7 +437,61 @@ const TimesheetList = () => {
                 </Table>
             </TableContainer>
 
-            {/* Drawer */}
+            {/* Pagination and Rows Info */}
+            <Stack
+                gap={1}
+                p={3}
+                alignItems="center"
+                direction={{ xs: 'column', sm: 'row' }}
+                justifyContent="space-between"
+            >
+                <Typography variant="body1">{filteredData.length} Rows</Typography>
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="body1">Page</Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                        {table.getState().pagination.pageIndex + 1} of{' '}
+                        {table.getPageCount()}
+                    </Typography>
+                    | Entries:
+                    <TextField
+                        select
+                        size="small"
+                        value={table.getState().pagination.pageSize}
+                        onChange={(e) => table.setPageSize(Number(e.target.value))}
+                    >
+                        {[10, 50, 100, 250, 500].map((size) => (
+                            <MenuItem key={size} value={size}>
+                                {size}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    <IconButton
+                        onClick={() => table.setPageIndex(0)}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        <IconChevronsLeft />
+                    </IconButton>
+                    <IconButton
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        <IconChevronLeft />
+                    </IconButton>
+                    <IconButton
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        <IconChevronRight />
+                    </IconButton>
+                    <IconButton
+                        onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        <IconChevronsRight />
+                    </IconButton>
+                </Box>
+            </Stack>
+
             <Drawer
                 anchor="right"
                 open={sidebarData !== null}
