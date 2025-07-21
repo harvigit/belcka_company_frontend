@@ -24,6 +24,7 @@ import {
     TextField,
     Tooltip,
     Typography,
+    useMediaQuery,
 } from '@mui/material';
 import {
     IconSearch,
@@ -32,7 +33,7 @@ import {
     IconChevronRight,
     IconChevronsLeft,
     IconChevronsRight,
-    IconX, IconArrowBack, IconEdit, IconArrowLeft,
+    IconX, IconArrowLeft,
 } from '@tabler/icons-react';
 import {
     flexRender,
@@ -46,7 +47,6 @@ import {
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import { format } from 'date-fns';
-import dayjs from 'dayjs';
 
 import 'react-day-picker/dist/style.css';
 import '../../../../global.css';
@@ -54,7 +54,6 @@ import { AxiosResponse } from 'axios';
 
 const columnHelper = createColumnHelper();
 
-// Type definitions
 type Timesheet = {
     user_name: string;
     trade_name: string;
@@ -89,16 +88,13 @@ const TimesheetList = () => {
     const [sorting, setSorting] = useState<any>([]);
     const [pagination, setPagination] = useState<any>({ pageIndex: 0, pageSize: 50 });
     const [selectedRows, setSelectedRows] = useState<any>({});
-
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
     const [tempStartDate, setTempStartDate] = useState<Date | null>(defaultStart);
     const [tempEndDate, setTempEndDate] = useState<Date | null>(defaultEnd);
+    const [sidebarData, setSidebarData] = useState<any>(null);
 
-    const [page, setPage] = useState<number>(0);
-    const [rowsPerPage, setRowsPerPage] = useState<number>(50);
-
-    const [sidebarData, setSidebarData] = useState<any>(null); // Sidebar data state
+    const isMobile = useMediaQuery('(max-width:600px)');
 
     const fetchData = async (start: Date, end: Date): Promise<void> => {
         try {
@@ -107,37 +103,21 @@ const TimesheetList = () => {
                 end_date: format(end, 'dd/MM/yyyy'),
             };
 
-            const response: AxiosResponse<TimesheetResponse> = await api.get(
-                '/timesheet/get-web',
-                {params}
-            );
+            const response: AxiosResponse<TimesheetResponse> = await api.get('/timesheet/get-web', { params });
 
             if (response.data.IsSuccess) {
                 setData(response.data.info);
-            } else {
-                console.error('Something went wrong!');
             }
         } catch (error) {
-            if (error instanceof Error) {
-                console.error('Error fetching timesheet data:', error.message);
-            } else {
-                console.error(
-                    'An unknown error occurred while fetching timesheet data.'
-                );
-            }
+            console.error('Error fetching timesheet data');
         }
     };
 
     useEffect(() => {
-        if (startDate && endDate) {
-            fetchData(startDate, endDate);
-        }
+        if (startDate && endDate) fetchData(startDate, endDate);
     }, [startDate, endDate]);
 
-    const handleDateRangeChange: any = (range: {
-        from: Date | undefined;
-        to: Date | undefined;
-    }) => {
+    const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
         if (range.from && range.to) {
             setTempStartDate(range.from);
             setTempEndDate(range.to);
@@ -151,9 +131,7 @@ const TimesheetList = () => {
             const matchesSearch =
                 item.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.trade_name?.toLowerCase().includes(searchTerm.toLowerCase());
-
             const matchesType = filters.type ? item.type === filters.type : true;
-
             return matchesSearch && matchesType;
         });
     }, [data, searchTerm, filters]);
@@ -179,33 +157,16 @@ const TimesheetList = () => {
                     totalMinutes: res.data.total_minutes || 0,
                     totalBreakSeconds: res.data.total_break_seconds || 0,
                     payableWorkSeconds: res.data.payable_work_seconds || 0,
+                    payableHours: res.data.payable_hours || 0,
                 });
             } else {
-                setSidebarData({
-                    info: [],
-                    formattedDate: 0,
-                    totalMinutes: 0,
-                    totalBreakSeconds: 0,
-                    payableWorkSeconds: 0,
-                });
+                setSidebarData(null);
             }
-        } catch (error) {
-            setSidebarData({
-                info: [],
-                formattedDate: 0,
-                totalMinutes: 0,
-                totalBreakSeconds: 0,
-                payableWorkSeconds: 0,
-            });
+        } catch {
+            setSidebarData(null);
         }
     };
 
-    const formatTime = (seconds: number) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    };
-    
     const columns: any = useMemo(
         () => [
             {
@@ -225,24 +186,18 @@ const TimesheetList = () => {
                     />
                 ),
                 enableSorting: false,
-                enableColumnFilter: false,
                 size: 30,
             },
             columnHelper.accessor('user_name', {
-                id: 'user_name',
                 header: 'Name',
                 cell: (info: any) => {
                     const row = info.row.original;
                     return (
                         <Stack direction="row" alignItems="center" spacing={2}>
-                            <Avatar
-                                src={row.user_thumb_image}
-                                alt={row.user_name}
-                                sx={{ width: 36, height: 36 }}
-                            />
-                            <Box sx={{ textAlign: 'left' }}>
+                            <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
+                            <Box textAlign="left">
                                 <Typography>{row.user_name}</Typography>
-                                <Typography variant="caption" color="textSecondary">
+                                <Typography variant="caption" color="text.secondary">
                                     {row.trade_name}
                                 </Typography>
                             </Box>
@@ -251,7 +206,6 @@ const TimesheetList = () => {
                 },
             }),
             columnHelper.accessor('week_number', {
-                id: 'week_number',
                 header: 'Week',
                 cell: (info: any) => {
                     const row = info.row.original;
@@ -270,11 +224,7 @@ const TimesheetList = () => {
                     cell: (info: any) => {
                         const value = info.getValue();
                         const row = info.row.original;
-
-                        if (value === '-' || !value) {
-                            return <div>-</div>;
-                        }
-
+                        if (value === '-' || !value) return <div>-</div>;
                         return (
                             <div
                                 onClick={() => {
@@ -298,8 +248,7 @@ const TimesheetList = () => {
                 header: 'Status',
                 cell: (info: any) => {
                     const val = info.getValue();
-                    if (!['Pending', 'Locked', 'Paid'].includes(val)) return '-';
-                    return val;
+                    return ['Pending', 'Locked', 'Paid'].includes(val) ? val : '-';
                 },
             }),
         ],
@@ -331,19 +280,12 @@ const TimesheetList = () => {
                 mx={2}
                 mb={3}
                 direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
+                spacing={{ xs: 1.5, sm: 2 }}
                 alignItems="center"
+                flexWrap="wrap"
             >
-                <Button variant="contained" color="primary">
-                    TIMESHEETS ({filteredData.length})
-                </Button>
-
-                <DateRangePickerBox
-                    from={tempStartDate}
-                    to={tempEndDate}
-                    onChange={handleDateRangeChange}
-                />
-
+                <Button variant="contained">TIMESHEETS ({filteredData.length})</Button>
+                <DateRangePickerBox from={tempStartDate} to={tempEndDate} onChange={handleDateRangeChange} />
                 <TextField
                     placeholder="Search..."
                     size="small"
@@ -354,145 +296,72 @@ const TimesheetList = () => {
                 <Button variant="contained" onClick={() => setOpen(true)}>
                     <IconFilter width={18} />
                 </Button>
-
-                <Dialog
-                    open={open}
-                    onClose={() => setOpen(false)}
-                    fullWidth
-                    maxWidth="sm"
-                >
-                    <DialogTitle sx={{m: 0, position: 'relative', overflow: 'visible'}}>
-                        Filters
-                        <IconButton
-                            aria-label="close"
-                            onClick={() => setOpen(false)}
-                            size="large"
-                            sx={{
-                                position: 'absolute',
-                                right: 12,
-                                top: 8,
-                                color: (theme) => theme.palette.grey[900],
-                                backgroundColor: 'transparent',
-                                zIndex: 10,
-                                width: 50,
-                                height: 50,
-                            }}
-                        >
-                            <IconX size={40} style={{ width: 40, height: 40 }} />
-                        </IconButton>
-                    </DialogTitle>
-                    <DialogContent>
-                        <TextField
-                            fullWidth
-                            select
-                            label="Type"
-                            value={tempFilters.type}
-                            onChange={(e) =>
-                                setTempFilters({ ...tempFilters, type: e.target.value })
-                            }
-                        >
-                            <MenuItem value="">All</MenuItem>
-                            <MenuItem value="T">Timesheet</MenuItem>
-                            <MenuItem value="P">Pricework</MenuItem>
-                            <MenuItem value="E">Expense</MenuItem>
-                        </TextField>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button
-                            onClick={() => {
-                                setFilters({ type: '' });
-                                setTempFilters({ type: '' });
-                                setOpen(false);
-                            }}
-                            color="inherit"
-                        >
-                            Clear
-                        </Button>
-                        <Button
-                            variant="contained"
-                            onClick={() => {
-                                setFilters(tempFilters);
-                                setOpen(false);
-                            }}
-                        >
-                            Apply
-                        </Button>
-                    </DialogActions>
-                </Dialog>
             </Stack>
+
+            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" fullScreen={isMobile}>
+                <DialogTitle>
+                    Filters
+                    <IconButton
+                        onClick={() => setOpen(false)}
+                        sx={{
+                            position: 'absolute',
+                            right: 12,
+                            top: 8,
+                            backgroundColor: 'transparent',
+                        }}
+                    >
+                        <IconX size={40} />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <TextField
+                        fullWidth
+                        select
+                        label="Type"
+                        value={tempFilters.type}
+                        onChange={(e) => setTempFilters({ ...tempFilters, type: e.target.value })}
+                    >
+                        <MenuItem value="">All</MenuItem>
+                        <MenuItem value="T">Timesheet</MenuItem>
+                        <MenuItem value="P">Pricework</MenuItem>
+                        <MenuItem value="E">Expense</MenuItem>
+                    </TextField>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => {
+                            setFilters({ type: '' });
+                            setTempFilters({ type: '' });
+                            setOpen(false);
+                        }}
+                        color="inherit"
+                    >
+                        Clear
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            setFilters(tempFilters);
+                            setOpen(false);
+                        }}
+                    >
+                        Apply
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Divider />
 
-            <TableContainer sx={{ maxHeight: 600 }}>
+            <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
                 <Table stickyHeader>
-                    <TableHead
-                        sx={{
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 10,
-                            backgroundColor: '#fff',
-                        }}
-                    >
+                    <TableHead>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    const isActive = header.column.getIsSorted();
-                                    const isAsc = header.column.getIsSorted() === 'asc';
-                                    const isSortable = header.column.getCanSort();
-                                    return (
-                                        <TableCell
-                                            key={header.id}
-                                            align="center"
-                                            sx={{
-                                                position: 'sticky',
-                                                top: 0,
-                                                zIndex: 11,
-                                                backgroundColor: '#fff',
-                                                p: 0,
-                                            }}
-                                        >
-                                            <Box
-                                                onClick={header.column.getToggleSortingHandler()}
-                                                sx={{
-                                                    cursor: isSortable ? 'pointer' : 'default',
-                                                    border: '2px solid transparent',
-                                                    borderRadius: '6px',
-                                                    px: 1.5,
-                                                    py: 0.75,
-                                                    fontWeight: isActive ? 600 : 500,
-                                                    color: '#000',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    '&:hover': { color: '#888' },
-                                                    '&:hover .hoverIcon': { opacity: 1 },
-                                                }}
-                                            >
-                                                <Typography variant="body2" fontWeight="inherit">
-                                                    {flexRender(
-                                                        header.column.columnDef.header,
-                                                        header.getContext()
-                                                    )}
-                                                </Typography>
-                                                {isSortable && (
-                                                    <Box
-                                                        component="span"
-                                                        className="hoverIcon"
-                                                        ml={0.5}
-                                                        sx={{
-                                                            transition: 'opacity 0.2s',
-                                                            opacity: isActive ? 1 : 0,
-                                                            fontSize: '0.9rem',
-                                                            color: isActive ? '#000' : '#888',
-                                                        }}
-                                                    >
-                                                        {isActive ? (isAsc ? '↑' : '↓') : '↑'}
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        </TableCell>
-                                    );
-                                })}
+                                {headerGroup.headers.map((header) => (
+                                    <TableCell key={header.id} align="center">
+                                        {flexRender(header.column.columnDef.header, header.getContext())}
+                                    </TableCell>
+                                ))}
                             </TableRow>
                         ))}
                     </TableHead>
@@ -510,61 +379,7 @@ const TimesheetList = () => {
                 </Table>
             </TableContainer>
 
-            <Stack
-                gap={1}
-                p={3}
-                alignItems="center"
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-            >
-                <Typography variant="body1">{filteredData.length} Rows</Typography>
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="body1">Page</Typography>
-                    <Typography variant="body1" fontWeight={600}>
-                        {table.getState().pagination.pageIndex + 1} of{' '}
-                        {table.getPageCount()}
-                    </Typography>
-                    | Entries:
-                    <TextField
-                        select
-                        size="small"
-                        value={table.getState().pagination.pageSize}
-                        onChange={(e) => table.setPageSize(Number(e.target.value))}
-                    >
-                        {[10, 50, 100, 250, 500].map((size) => (
-                            <MenuItem key={size} value={size}>
-                                {size}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <IconButton
-                        onClick={() => table.setPageIndex(0)}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <IconChevronsLeft />
-                    </IconButton>
-                    <IconButton
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <IconChevronLeft />
-                    </IconButton>
-                    <IconButton
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <IconChevronRight />
-                    </IconButton>
-                    <IconButton
-                        onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <IconChevronsRight />
-                    </IconButton>
-                </Box>
-            </Stack>
-
-            {/* Sidebar Drawer */}
+            {/* Drawer */}
             <Drawer
                 anchor="right"
                 open={sidebarData !== null}
@@ -584,7 +399,7 @@ const TimesheetList = () => {
                         <IconButton onClick={() => setSidebarData(null)}>
                             <IconArrowLeft />
                         </IconButton>
-                        
+
                         <Typography variant="h6" fontWeight={700}>
                             Work Logs
                         </Typography>
@@ -598,68 +413,71 @@ const TimesheetList = () => {
                                 </Typography>
 
                                 <Typography variant="h6" fontWeight={700} sx={{ color: '#000' }}>
-                                    Total: {formatTime(sidebarData.payableWorkSeconds)}
+                                    Total: {formatHour(sidebarData.payableHours)} H
                                 </Typography>
                             </Box>
 
                             <Stack spacing={2}>
                                 {sidebarData.info.map((entry: any) => {
-                                    const duration = formatTime(entry.worklog_payable_work_seconds);
+                                    const duration = formatHour(entry.worklog_payable_hours);
 
                                     return (
                                         <Box
                                             key={entry.id}
-                                            display="flex"
-                                            justifyContent="space-between"
-                                            alignItems="center"
                                             sx={{
+                                                position: 'relative',
                                                 p: 2,
                                                 borderRadius: 3,
                                                 backgroundColor: '#fff',
-                                                boxShadow: 'inset 0 0 0 rgba(0,0,0,0)',
                                                 border: '1px solid #eee',
                                             }}
                                         >
-                                            <Box>
-                                                <Stack direction="row" spacing={1} mb={1}>
-                                                    <Box
-                                                        sx={{
-                                                            backgroundColor: '#FF7A00',
-                                                            color: '#fff',
-                                                            borderRadius: 1,
-                                                            px: 1.2,
-                                                            py: 0.3,
-                                                            fontSize: '12px',
-                                                            fontWeight: 600,
-                                                        }}
-                                                    >
-                                                        Shift
-                                                    </Box>
-                                                    <Box
-                                                        sx={{
-                                                            backgroundColor: '#C9E9FF',
-                                                            color: '#000',
-                                                            borderRadius: 1,
-                                                            px: 1.2,
-                                                            py: 0.3,
-                                                            fontSize: '12px',
-                                                            fontWeight: 500,
-                                                        }}
-                                                    >
-                                                        {entry.shift_name}
-                                                    </Box>
-                                                </Stack>
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: -10,
+                                                    left: 16,
+                                                    backgroundColor: '#FF7A00',
+                                                    border: '1px solid #FF7A00',
+                                                    color: '#fff',
+                                                    fontSize: '11px',
+                                                    fontWeight: 600,
+                                                    px: 1,
+                                                    py: 0.2,
+                                                    borderRadius: '999px',
+                                                }}
+                                            >
+                                                {entry.shift_name}
+                                            </Box>
 
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: -10,
+                                                    left: 100,
+                                                    backgroundColor: '#009DFF',
+                                                    border: '1px solid #009DFF',
+                                                    color: '#fff',
+                                                    fontSize: '11px',
+                                                    fontWeight: 600,
+                                                    px: 1,
+                                                    py: 0.2,
+                                                    borderRadius: '999px',
+                                                }}
+                                            >
+                                                {entry.team_name}
+                                            </Box>
+
+                                            <Box mt={2}>
                                                 <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
                                                     <Typography variant="body2" sx={{ color: '#666' }} mr={1}>
                                                         ({entry.formatted_work_start_time} - {entry.formatted_work_end_time})
                                                     </Typography>
 
                                                     <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
-                                                        {duration}
+                                                        {duration} H
                                                     </Typography>
                                                 </Box>
-                                                
                                             </Box>
 
                                             {/*<IconButton size="small">*/}
