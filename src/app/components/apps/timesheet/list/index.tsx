@@ -117,17 +117,14 @@ const TimesheetList = () => {
         if (startDate && endDate) fetchData(startDate, endDate);
     }, [startDate, endDate]);
 
-    const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
-        return (range: { from: Date | null; to: Date | null }) => {
-            if (range.from && range.to) {
-                setTempStartDate(range.from);
-                setTempEndDate(range.to);
-                setStartDate(range.from);
-                setEndDate(range.to);
-            }
-        };
+    const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
+        if (range.from && range.to) {
+            setTempStartDate(range.from);
+            setTempEndDate(range.to);
+            setStartDate(range.from);
+            setEndDate(range.to);
+        }
     };
-
 
     const filteredData = useMemo(() => {
         return data.filter((item) => {
