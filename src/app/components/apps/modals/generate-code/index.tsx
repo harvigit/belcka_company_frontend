@@ -56,21 +56,37 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   };
 
   const handleCopyCode = () => {
-    if (code && navigator.clipboard) {
+    const codeToCopy = code ?? ''; 
+  
+    if (navigator.clipboard) {
       navigator.clipboard
-        .writeText(code)
-        .then(() => {
-          toast.success("Code copied!");
-        })
+        .writeText(codeToCopy) 
+        .then(() => toast.success("Code copied!"))
         .catch((err) => {
-          console.error("Failed to copy text: ", err);
-          toast.error("Failed to copy code!");
+          console.error("Clipboard API failed:", err);
+          fallbackCopyCode(codeToCopy);
         });
     } else {
-      toast.error("Clipboard API not supported or code is empty.");
+      fallbackCopyCode(codeToCopy);
     }
   };
-
+  
+  const fallbackCopyCode = (codeToCopy: string) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = codeToCopy; 
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      toast.success("Code copied!");
+    } catch (err) {
+      console.error("Fallback failed:", err);
+      toast.error("Failed to copy code!");
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  };
+  
   // Start timer on code set
   useEffect(() => {
     if (code) {
