@@ -241,7 +241,9 @@ const TablePagination = () => {
     setModelOpen(true);
     fetchUniqueUsers();
   };
-  const handleClose = () => setModelOpen(false);
+  const handleClose = () => {
+    setModelOpen(false);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -254,7 +256,7 @@ const TablePagination = () => {
     try {
       const response = await api.post(`team/add-user-to-team`, payload);
       toast.success(response.data.message);
-      setSelectedUserId("")
+      setSelectedUserId("");
       handleClose();
     } catch (error: any) {
       // toast.error(error?.response?.data?.message || "Something went wrong.");
@@ -295,7 +297,7 @@ const TablePagination = () => {
   };
 
   // generate company code
-  const handleGenerateCode = async () => {
+  const handleGenerateCode = async (): Promise<string> => {
     try {
       const payload = {
         team_id: teamId,
@@ -303,10 +305,10 @@ const TablePagination = () => {
       };
       const response = await api.post(`team/generate-otp`, payload);
       toast.success(response.data.message);
+      return response.data.info.company_otp;
     } catch (error) {
-      // toast.error("Failed to generate code.");
-    } finally {
-      setOpenGenerateDialog(false);
+      toast.error("Failed to generate code.");
+      throw error;
     }
   };
 
@@ -671,16 +673,30 @@ const TablePagination = () => {
                 anchorEl={anchorEl}
                 open={openMenu}
                 onClose={close}
-                slotProps={{
-                  list: {
-                    "aria-labelledby": "basic-button",
-                  },
-                }}
+                slotProps={{ list: { "aria-labelledby": "basic-button" } }}
               >
+                {!(
+                  data[0]?.is_subcontractor === true &&
+                  data[0]?.company_id !== data[0]?.subcontractor_company_id
+                ) && (
+                  <MenuItem
+                    onClick={() => {
+                      setModelOpen(true);
+                      fetchUniqueUsers();
+                      close();
+                    }}
+                  >
+                    <ListItemIcon>
+                      <IconPlus width={18} />
+                    </ListItemIcon>
+                    Add User
+                  </MenuItem>
+                )}
+
                 <MenuItem
                   onClick={() => {
                     setOpenOtpDialog(true);
-                    handleClose();
+                    close();
                   }}
                 >
                   <ListItemIcon>
@@ -688,6 +704,7 @@ const TablePagination = () => {
                   </ListItemIcon>
                   Join Company
                 </MenuItem>
+
                 <MenuItem
                   onClick={() => {
                     setOpenGenerateDialog(true);
@@ -704,7 +721,7 @@ const TablePagination = () => {
               <GenerateCodeDialog
                 open={openGenerateDialog}
                 onClose={() => setOpenGenerateDialog(false)}
-                onConfirm={handleGenerateCode}
+                onGenerate={handleGenerateCode}
               />
               <JoinCompanyDialog
                 open={openOtpDialog}
@@ -716,20 +733,7 @@ const TablePagination = () => {
                 tradeValue={tradeValue}
                 setTradeValue={setTradeValue}
               />
-
-              {data[0]?.is_subcontractor == true &&
-              data[0]?.company_id !==
-                data[0]?.subcontractor_company_id ? null : (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<IconPlus width={18} />}
-                  onClick={handleClickOpen}
-                >
-                  Add User
-                </Button>
-              )}
-
+              {/* add User to team */}
               <Dialog
                 open={modelopen}
                 onClose={handleClose}
@@ -765,6 +769,7 @@ const TablePagination = () => {
                   </DialogActions>
                 </form>
               </Dialog>
+
               {selectedRowIds.size > 0 && (
                 <Button
                   variant="outlined"
