@@ -117,7 +117,7 @@ const TimesheetList = () => {
         if (startDate && endDate) fetchData(startDate, endDate);
     }, [startDate, endDate]);
 
-    const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
+    const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (range.from && range.to) {
             setTempStartDate(range.from);
             setTempEndDate(range.to);
