@@ -14,11 +14,12 @@ const Logo = () => {
 
   const LinkStyled = styled(Link)(() => ({
     height: TopbarHeight,
-    width: isCollapse == "mini-sidebar" && !isSidebarHover ? "50px" : "150px",
+    width: isCollapse == "mini-sidebar" && !isSidebarHover ? "65px" : "150px",
     overflow: "hidden",
     display: "block",
     marginBottom: "10px",
-    marginTop:'5px'
+    marginTop:'5px',
+    marginLeft:"-5px"
   }));
 
   if (activeDir === "ltr") {
@@ -29,7 +30,7 @@ const Logo = () => {
             src={"/images/logos/belcka.png"}
             alt="logo"
             height={TopbarHeight}
-            width={117}
+            width={150}
             priority
           />
         ) : (
@@ -37,7 +38,7 @@ const Logo = () => {
             src={"/images/logos/belcka.png"}
             alt="logo"
             height={TopbarHeight}
-            width={117}
+            width={150}
             priority
           />
         )}
@@ -52,7 +53,7 @@ const Logo = () => {
           src={"/images/logos/belcka.png"}
           alt="logo"
           height={TopbarHeight}
-          width={117}
+          width={150}
           priority
         />
       ) : (
@@ -60,7 +61,7 @@ const Logo = () => {
           src={"/images/logos/belcka.png"}
           alt="logo"
           height={TopbarHeight}
-          width={117}
+          width={150}
           priority
         />
       )}
