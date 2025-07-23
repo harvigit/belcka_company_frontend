@@ -32,7 +32,7 @@ export const authOptions: NextAuthOptions = {
             );
           }
 
-          const token = data.info.api_token;
+          const token = data.info.authToken;
 
           const companyRes = await fetch(`${api}company/active-company`, {
             headers: {

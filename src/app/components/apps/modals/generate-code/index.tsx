@@ -35,7 +35,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       const generatedCode = await onGenerate();
       setCode(generatedCode);
 
-      setResendTimer(15* 60); // 15 minute
+      setResendTimer(15 * 60); // 15 minute
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
@@ -56,9 +56,34 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   };
 
   const handleCopyCode = () => {
-    if (code) {
-      navigator.clipboard.writeText(code);
+    const codeToCopy = code ?? ''; 
+  
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(codeToCopy) 
+        .then(() => toast.success("Code copied!"))
+        .catch((err) => {
+          console.error("Clipboard API failed:", err);
+          fallbackCopyCode(codeToCopy);
+        });
+    } else {
+      fallbackCopyCode(codeToCopy);
+    }
+  };
+  
+  const fallbackCopyCode = (codeToCopy: string) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = codeToCopy; 
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
       toast.success("Code copied!");
+    } catch (err) {
+      console.error("Fallback failed:", err);
+      toast.error("Failed to copy code!");
+    } finally {
+      document.body.removeChild(textArea);
     }
   };
 

@@ -162,24 +162,6 @@ const TablePagination = () => {
     fetchTrades();
   }, []);
 
-  // Join company
-  const joinCompany = async (otp: string, tradeId: string) => {
-    try {
-      const payload = {
-        otp,
-        trade_id: Number(tradeId),
-      };
-      const response = await api.post(`company/join-company`, payload);
-      toast.success(response.data.message);
-      setOpenOtpDialog(false);
-      setOtp("");
-      setTradeValue("");
-    } catch (error: any) {
-      // toast.error(error?.response?.data?.message || "Something went wrong.");
-    } finally {
-    }
-  };
-
   const handleGenerateCode = async (): Promise<string> => {
     try {
       const response = await api.post(
@@ -598,18 +580,6 @@ const TablePagination = () => {
                 Add Team
               </Link>
             </MenuItem>
-
-            <MenuItem
-              onClick={() => {
-                setOpenOtpDialog(true);
-                handleClose();
-              }}
-            >
-              <ListItemIcon>
-                <IconUserPlus width={18} />
-              </ListItemIcon>
-              Join Company
-            </MenuItem>
             <MenuItem
               onClick={() => {
                 setOpenGenerateDialog(true);
@@ -629,16 +599,6 @@ const TablePagination = () => {
             onGenerate={handleGenerateCode}
           />
 
-          <JoinCompanyDialog
-            open={openOtpDialog}
-            onClose={() => setOpenOtpDialog(false)}
-            onSubmit={joinCompany}
-            otp={otp}
-            setOtp={setOtp}
-            tradeOptions={trade}
-            tradeValue={tradeValue}
-            setTradeValue={setTradeValue}
-          />
         </Stack>
       </Stack>
       <Divider />
