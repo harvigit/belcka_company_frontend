@@ -8,19 +8,29 @@ import dayjs from 'dayjs';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import api from '@/utils/axios';
 import { AxiosResponse } from 'axios';
+import { Dispatch, SetStateAction } from 'react';
 
 type ShiftEdit = {
     IsSuccess: boolean;
+    message?: string;
 };
 
-const ShiftEditPopover = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, selectedWorklog }) => {
-    
-    const [startTime, setStartTime] = useState(null);
-    const [endTime, setEndTime] = useState(null);
+interface ShiftEditPopoverProps {
+    popoverOpen: boolean;
+    setPopoverOpen: Dispatch<SetStateAction<boolean>>;
+    setSelectedWorklog: Dispatch<SetStateAction<any>>;
+    selectedWorklog: any;
+}
+
+
+const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, selectedWorklog }) => {
+
+    const [startTime, setStartTime] = useState<string | null>(null);
+    const [endTime, setEndTime] = useState<string | null>(null);
 
     const [note, setNote] = useState('');
-    const [errorMessage, setErrorMessage] = useState(null);
-    const [successMessage, setSuccessMessage] = useState(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
 
@@ -31,20 +41,27 @@ const ShiftEditPopover = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, sel
         }
     }, [selectedWorklog]);
 
-    const formatHour = (val) => {
-        const num = parseFloat(val);
+    const formatHour = (val: string | number | null | undefined): string => {
+        if (val === null || val === undefined) return '-';
+        const num = parseFloat(val.toString());
         if (isNaN(num)) return '-';
         const h = Math.floor(num);
         const m = Math.round((num - h) * 60);
         return `${h}:${m.toString().padStart(2, '0')}`;
     };
 
-    const handleClose = () => {
+    const handleClose = (): void => {
         setPopoverOpen(false);
         setSelectedWorklog(null);
     };
 
-    const handleSubmitShiftUpdate = async () => {
+    const handleSubmitShiftUpdate = async (): Promise<void> => {
+        if (!selectedWorklog?.id || !selectedWorklog?.user_id) {
+            setErrorMessage('Missing worklog information');
+            setOpenSnackbar(true);
+            return;
+        }
+
         const worklogData = {
             user_worklog_id: selectedWorklog.id,
             user_id: selectedWorklog.user_id,
@@ -56,38 +73,48 @@ const ShiftEditPopover = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, sel
         try {
             const response: AxiosResponse<ShiftEdit> = await api.post('/request-worklog-change',  worklogData);
             if (response.data.IsSuccess) {
-                setSuccessMessage('User work time change requesterd successfully!');
+                setSuccessMessage('User work time change requested successfully!');
                 setOpenSnackbar(true);
                 handleClose();
             } else {
                 setErrorMessage(response.data.message || 'Failed to update shift');
                 setOpenSnackbar(true);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error during the API call:', error);
-            setErrorMessage('An error occurred while updating the shift');
+            
+            let errorMsg = 'An error occurred while updating the shift';
+            if (error?.response?.status === 500) {
+                errorMsg = 'Server error. Please try again later or contact support.';
+            } else if (error?.response?.data?.message) {
+                errorMsg = error.response.data.message;
+            } else if (error?.message) {
+                errorMsg = error.message;
+            }
+
+            setErrorMessage(errorMsg);
             setOpenSnackbar(true);
         }
     };
 
     const startTimeObj = useMemo(() => {
-        if (!startTime) return null;
+        if (!startTime || !selectedWorklog?.date_added) return null;
 
         const fullDateTime = `${selectedWorklog.date_added} ${startTime}`;
         const parsed = dayjs(fullDateTime, 'YYYY-MM-DD HH:mm');
-        
+
         return parsed.isValid() ? parsed : null;
-    }, [startTime]);
+    }, [startTime, selectedWorklog?.date_added]);
 
     const endTimeObj = useMemo(() => {
-        if (!endTime) return null;
+        if (!endTime || !selectedWorklog?.date_added) return null;
 
         const fullDateTime = `${selectedWorklog.date_added} ${endTime}`;
         const parsed = dayjs(fullDateTime, 'YYYY-MM-DD HH:mm');
 
         return parsed.isValid() ? parsed : null;
-    }, [endTime]);
-    
+    }, [endTime, selectedWorklog?.date_added]);
+
     return (
         <>
             <Popover
@@ -166,10 +193,11 @@ const ShiftEditPopover = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, sel
                                 </Box>
                                 <TimePicker
                                     value={startTimeObj}
-                                    onChange={(newValue: Date | null) => {
-                                        setStartTime(newValue.format('HH:mm'));
+                                    onChange={(newValue) => {
+                                        if (newValue) {
+                                            setStartTime(newValue.format('HH:mm'));
+                                        }
                                     }}
-                                    renderInput={(params) => <TextField {...params} />}
                                     viewRenderers={{
                                         hours: renderTimeViewClock,
                                         minutes: renderTimeViewClock,
@@ -225,10 +253,11 @@ const ShiftEditPopover = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, sel
                                 </Box>
                                 <TimePicker
                                     value={endTimeObj}
-                                    onChange={(newValue: Date | null) => {
-                                        setEndTime(newValue.format('HH:mm'));
+                                    onChange={(newValue) => {
+                                        if (newValue) {
+                                            setEndTime(newValue.format('HH:mm'));
+                                        }
                                     }}
-                                    renderInput={(params) => <TextField {...params} />}
                                     viewRenderers={{
                                         hours: renderTimeViewClock,
                                         minutes: renderTimeViewClock,
@@ -270,7 +299,7 @@ const ShiftEditPopover = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, sel
                             }}
                         >
                             {selectedWorklog?.break_log?.length > 0 ? (
-                                selectedWorklog.break_log.map((breakItem, index) => (
+                                selectedWorklog.break_log.map((breakItem: any, index: number) => (
                                     <Box
                                         key={index}
                                         display="flex"
@@ -345,7 +374,6 @@ const ShiftEditPopover = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, sel
                 onClose={() => setOpenSnackbar(false)}
                 autoHideDuration={6000}
                 message={errorMessage || successMessage}
-                severity={errorMessage ? 'error' : 'success'}
             />
         </>
     );
