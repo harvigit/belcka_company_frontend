@@ -69,27 +69,11 @@ type Timesheet = {
     end_date_month: string;
     days: Record<string, any>;
     payable_total_hours: string;
-    timesheet_light_id: string | number;
-    status_text?: string;
 };
 
 type TimesheetResponse = {
     IsSuccess: boolean;
     info: Timesheet[];
-};
-
-type FilterState = {
-    type: string;
-};
-
-type SortingState = Array<{
-    id: string;
-    desc: boolean;
-}>;
-
-type PaginationState = {
-    pageIndex: number;
-    pageSize: number;
 };
 
 const TimesheetList = () => {
@@ -103,14 +87,14 @@ const TimesheetList = () => {
     const [data, setData] = useState<Timesheet[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [open, setOpen] = useState<boolean>(false);
-    const [filters, setFilters] = useState<FilterState>({ type: '' });
-    const [tempFilters, setTempFilters] = useState<FilterState>(filters);
-    const [sorting, setSorting] = useState<SortingState>([]);
-    const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
-    const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
+    const [filters, setFilters] = useState<any>({ type: '' });
+    const [tempFilters, setTempFilters] = useState<any>(filters);
+    const [sorting, setSorting] = useState<any>([]);
+    const [pagination, setPagination] = useState<any>({ pageIndex: 0, pageSize: 50 });
+    const [selectedRows, setSelectedRows] = useState<any>({});
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
-
+    
     // const [tempStartDate, setTempStartDate] = useState<Date | null>(defaultStart);
     // const [tempEndDate, setTempEndDate] = useState<Date | null>(defaultEnd);
 
@@ -160,9 +144,8 @@ const TimesheetList = () => {
         });
     }, [data, searchTerm, filters]);
 
-    const formatHour = (val: string | number | null | undefined): string => {
-        if (val === null || val === undefined) return '-';
-        const num = parseFloat(val.toString());
+    const formatHour = (val: any) => {
+        const num = parseFloat(val);
         if (isNaN(num)) return '-';
         const h = Math.floor(num);
         const m = Math.round((num - h) * 60);
@@ -170,16 +153,14 @@ const TimesheetList = () => {
     };
 
     const toggleTimesheetStatus = useCallback(
-        async (timesheetIds: (string | number)[], action: 'approve' | 'unapprove') => {
+        async (timesheetIds: string[], action: 'approve' | 'unapprove') => {
             try {
                 const ids = timesheetIds.join(',');
                 const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
-                const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, { ids });
+                const response: AxiosResponse = await api.post(endpoint, { ids });
 
                 if (response.data.IsSuccess) {
-                    const defaultStartDate = startDate || defaultStart;
-                    const defaultEndDate = endDate || defaultEnd;
-                    fetchData(defaultStartDate, defaultEndDate);
+                    fetchData(startDate, endDate);
                     setSelectedRows({});
                 } else {
                     console.error(`Error ${action}ing timesheets`);
@@ -210,7 +191,7 @@ const TimesheetList = () => {
             toggleTimesheetStatus(timesheetIds, 'unapprove');
         }
     };
-
+    
     const fetchSidebarData = async (worklogIds: number[]) => {
         try {
             const res = await api.get('/timesheet/worklog-details', {
@@ -238,7 +219,7 @@ const TimesheetList = () => {
         setSelectedWorklog(entry);
         setPopoverOpen(true);
     };
-
+    
     const columns: any = useMemo(
         () => [
             {
@@ -435,7 +416,7 @@ const TimesheetList = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
+            
             <Divider />
 
             {/* Data Table */}
