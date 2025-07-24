@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     Avatar,
     Box,
@@ -33,7 +33,9 @@ import {
     IconChevronRight,
     IconChevronsLeft,
     IconChevronsRight,
-    IconX, IconArrowLeft,
+    IconX,
+    IconArrowLeft,
+    IconPencil,
 } from '@tabler/icons-react';
 import {
     flexRender,
@@ -52,6 +54,8 @@ import 'react-day-picker/dist/style.css';
 import '../../../../global.css';
 import { AxiosResponse } from 'axios';
 
+import ShiftEditPopover from './edit-shift-time/shift-edit-popover';
+
 const columnHelper = createColumnHelper();
 
 type Timesheet = {
@@ -65,11 +69,27 @@ type Timesheet = {
     end_date_month: string;
     days: Record<string, any>;
     payable_total_hours: string;
+    timesheet_light_id: string | number;
+    status_text?: string;
 };
 
 type TimesheetResponse = {
     IsSuccess: boolean;
     info: Timesheet[];
+};
+
+type FilterState = {
+    type: string;
+};
+
+type SortingState = Array<{
+    id: string;
+    desc: boolean;
+}>;
+
+type PaginationState = {
+    pageIndex: number;
+    pageSize: number;
 };
 
 const TimesheetList = () => {
@@ -83,16 +103,20 @@ const TimesheetList = () => {
     const [data, setData] = useState<Timesheet[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [open, setOpen] = useState<boolean>(false);
-    const [filters, setFilters] = useState<any>({ type: '' });
-    const [tempFilters, setTempFilters] = useState<any>(filters);
-    const [sorting, setSorting] = useState<any>([]);
-    const [pagination, setPagination] = useState<any>({ pageIndex: 0, pageSize: 50 });
-    const [selectedRows, setSelectedRows] = useState<any>({});
+    const [filters, setFilters] = useState<FilterState>({ type: '' });
+    const [tempFilters, setTempFilters] = useState<FilterState>(filters);
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
+    const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
-    const [tempStartDate, setTempStartDate] = useState<Date | null>(defaultStart);
-    const [tempEndDate, setTempEndDate] = useState<Date | null>(defaultEnd);
+
+    // const [tempStartDate, setTempStartDate] = useState<Date | null>(defaultStart);
+    // const [tempEndDate, setTempEndDate] = useState<Date | null>(defaultEnd);
+
     const [sidebarData, setSidebarData] = useState<any>(null);
+    const [popoverOpen, setPopoverOpen] = useState(false);
+    const [selectedWorklog, setSelectedWorklog] = useState<any>(null);
 
     const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -119,8 +143,8 @@ const TimesheetList = () => {
 
     const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (range.from && range.to) {
-            setTempStartDate(range.from);
-            setTempEndDate(range.to);
+            // setTempStartDate(range.from);
+            // setTempEndDate(range.to);
             setStartDate(range.from);
             setEndDate(range.to);
         }
@@ -136,12 +160,55 @@ const TimesheetList = () => {
         });
     }, [data, searchTerm, filters]);
 
-    const formatHour = (val: any) => {
-        const num = parseFloat(val);
+    const formatHour = (val: string | number | null | undefined): string => {
+        if (val === null || val === undefined) return '-';
+        const num = parseFloat(val.toString());
         if (isNaN(num)) return '-';
         const h = Math.floor(num);
         const m = Math.round((num - h) * 60);
         return `${h}:${m.toString().padStart(2, '0')}`;
+    };
+
+    const toggleTimesheetStatus = useCallback(
+        async (timesheetIds: (string | number)[], action: 'approve' | 'unapprove') => {
+            try {
+                const ids = timesheetIds.join(',');
+                const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
+                const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, { ids });
+
+                if (response.data.IsSuccess) {
+                    const defaultStartDate = startDate || defaultStart;
+                    const defaultEndDate = endDate || defaultEnd;
+                    fetchData(defaultStartDate, defaultEndDate);
+                    setSelectedRows({});
+                } else {
+                    console.error(`Error ${action}ing timesheets`);
+                }
+            } catch (error) {
+                console.error(`Error ${action}ing timesheets:`, error);
+            }
+        },
+        [startDate, endDate]
+    );
+
+    const handleLockClick = () => {
+        const timesheetIds = table.getRowModel().rows
+            .filter(row => selectedRows[row.id])
+            .map(row => row.original.timesheet_light_id);
+
+        if (timesheetIds.length > 0) {
+            toggleTimesheetStatus(timesheetIds, 'approve');
+        }
+    };
+
+    const handleUnlockClick = () => {
+        const timesheetIds = table.getRowModel().rows
+            .filter(row => selectedRows[row.id])
+            .map(row => row.original.timesheet_light_id);
+
+        if (timesheetIds.length > 0) {
+            toggleTimesheetStatus(timesheetIds, 'unapprove');
+        }
     };
 
     const fetchSidebarData = async (worklogIds: number[]) => {
@@ -165,6 +232,11 @@ const TimesheetList = () => {
         } catch {
             setSidebarData(null);
         }
+    };
+
+    const handleEditClick = (entry: any) => {
+        setSelectedWorklog(entry);
+        setPopoverOpen(true);
     };
 
     const columns: any = useMemo(
@@ -244,11 +316,12 @@ const TimesheetList = () => {
                 header: 'Payable Hours',
                 cell: (info: any) => formatHour(info.getValue()) || '-',
             }),
-            columnHelper.accessor('status', {
+            columnHelper.accessor('status_text', {
                 header: 'Status',
                 cell: (info: any) => {
-                    const val = info.getValue();
-                    return ['Pending', 'Locked', 'Paid'].includes(val) ? val : '-';
+                    return (
+                        <Typography>{info.getValue()}</Typography>
+                    );
                 },
             }),
         ],
@@ -266,7 +339,9 @@ const TimesheetList = () => {
         onSortingChange: setSorting,
         onPaginationChange: setPagination,
         enableRowSelection: true,
-        onRowSelectionChange: setSelectedRows,
+        onRowSelectionChange: (newSelection) => {
+            setSelectedRows(newSelection);
+        },
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -300,6 +375,13 @@ const TimesheetList = () => {
                 <Button variant="contained" onClick={() => setOpen(true)}>
                     <IconFilter width={18} />
                 </Button>
+
+                {Object.keys(selectedRows).length > 0 && (
+                    <>
+                        <Button variant="outlined" color="error" onClick={handleLockClick}> Lock </Button>
+                        <Button variant="outlined" color="primary" onClick={handleUnlockClick}> Unlock </Button>
+                    </>
+                )}
             </Stack>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" fullScreen={isMobile}>
@@ -353,7 +435,7 @@ const TimesheetList = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
+            
             <Divider />
 
             {/* Data Table */}
@@ -592,20 +674,30 @@ const TimesheetList = () => {
                                                 </Box>
                                             </Box>
 
-                                            {/*<IconButton size="small">*/}
-                                            {/*    <Box*/}
-                                            {/*        component="span"*/}
-                                            {/*        sx={{*/}
-                                            {/*            width: 25,*/}
-                                            {/*            height: 25,*/}
-                                            {/*            display: 'flex',*/}
-                                            {/*            alignItems: 'center',*/}
-                                            {/*            justifyContent: 'center',*/}
-                                            {/*        }}*/}
-                                            {/*    >*/}
-                                            {/*        <IconEdit size="small" />*/}
-                                            {/*    </Box>*/}
-                                            {/*</IconButton>*/}
+                                            {(entry.status < 6 || entry.status == 7) && (
+                                                <>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => {
+                                                            setSelectedWorklog(entry);
+                                                            handleEditClick(entry);
+                                                        }}
+                                                    >
+                                                        <Box
+                                                            component="span"
+                                                            sx={{
+                                                                width: 25,
+                                                                height: 25,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                            }}
+                                                        >
+                                                            <IconPencil size="small" />
+                                                        </Box>
+                                                    </IconButton>
+                                                </>
+                                            )}
                                         </Box>
                                     );
                                 })}
@@ -618,6 +710,13 @@ const TimesheetList = () => {
                     )}
                 </Box>
             </Drawer>
+
+            <ShiftEditPopover
+                popoverOpen={popoverOpen}
+                setPopoverOpen={setPopoverOpen}
+                setSelectedWorklog={setSelectedWorklog}
+                selectedWorklog={selectedWorklog}
+            />
         </Box>
     );
 };
