@@ -319,8 +319,10 @@ const TimesheetList = () => {
             columnHelper.accessor('status_text', {
                 header: 'Status',
                 cell: (info: any) => {
+                    const value = info.getValue();
+                    const color = value === 'Locked' ? 'green' : 'red';
                     return (
-                        <Typography>{info.getValue()}</Typography>
+                        <Typography style={{ color: color }} > {value} </Typography>
                     );
                 },
             }),
@@ -378,8 +380,8 @@ const TimesheetList = () => {
 
                 {Object.keys(selectedRows).length > 0 && (
                     <>
-                        <Button variant="outlined" color="error" onClick={handleLockClick}> Lock </Button>
-                        <Button variant="outlined" color="primary" onClick={handleUnlockClick}> Unlock </Button>
+                        <Button variant="outlined" color="success" onClick={handleLockClick}> Lock </Button>
+                        <Button variant="outlined" color="error" onClick={handleUnlockClick}> Unlock </Button>
                     </>
                 )}
             </Stack>
@@ -614,6 +616,7 @@ const TimesheetList = () => {
                             <Stack spacing={2}>
                                 {sidebarData.info.map((entry: any) => {
                                     const duration = formatHour(entry.worklog_payable_hours);
+                                    console.log(entry, 'entry')
 
                                     return (
                                         <Box
@@ -648,7 +651,7 @@ const TimesheetList = () => {
                                                 sx={{
                                                     position: 'absolute',
                                                     top: -10,
-                                                    left: 100,
+                                                    left: 90,
                                                     backgroundColor: '#009DFF',
                                                     border: '1px solid #009DFF',
                                                     color: '#fff',
@@ -674,7 +677,7 @@ const TimesheetList = () => {
                                                 </Box>
                                             </Box>
 
-                                            {(entry.status < 6 || entry.status == 7) && (
+                                            {(entry.status < 6 || entry.status === 7) && entry.is_request_pending !== true && (
                                                 <>
                                                     <IconButton
                                                         size="small"

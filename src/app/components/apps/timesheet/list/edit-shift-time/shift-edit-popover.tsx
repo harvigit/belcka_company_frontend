@@ -1,6 +1,6 @@
-import { Box, Button, IconButton, Popover, TextField, Typography, Snackbar } from '@mui/material';
+import { Box, Button, IconButton, Popover, TextField, Typography, Alert, Snackbar } from '@mui/material';
 import { IconX } from '@tabler/icons-react';
-import React, {useState, useEffect, useMemo} from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -9,6 +9,7 @@ import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import api from '@/utils/axios';
 import { AxiosResponse } from 'axios';
 import { Dispatch, SetStateAction } from 'react';
+import toast from 'react-hot-toast';
 
 type ShiftEdit = {
     IsSuccess: boolean;
@@ -22,17 +23,11 @@ interface ShiftEditPopoverProps {
     selectedWorklog: any;
 }
 
-
 const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPopoverOpen, setSelectedWorklog, selectedWorklog }) => {
 
     const [startTime, setStartTime] = useState<string | null>(null);
     const [endTime, setEndTime] = useState<string | null>(null);
-
     const [note, setNote] = useState('');
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const [openSnackbar, setOpenSnackbar] = useState(false);
-
 
     useEffect(() => {
         if (selectedWorklog) {
@@ -54,11 +49,9 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPop
         setPopoverOpen(false);
         setSelectedWorklog(null);
     };
-
+    
     const handleSubmitShiftUpdate = async (): Promise<void> => {
         if (!selectedWorklog?.id || !selectedWorklog?.user_id) {
-            setErrorMessage('Missing worklog information');
-            setOpenSnackbar(true);
             return;
         }
 
@@ -71,29 +64,15 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPop
         };
 
         try {
-            const response: AxiosResponse<ShiftEdit> = await api.post('/request-worklog-change',  worklogData);
+            const response: AxiosResponse<ShiftEdit> = await api.post('/request-worklog-change', worklogData);
+            
             if (response.data.IsSuccess) {
-                setSuccessMessage('User work time change requested successfully!');
-                setOpenSnackbar(true);
-                handleClose();
-            } else {
-                setErrorMessage(response.data.message || 'Failed to update shift');
-                setOpenSnackbar(true);
+                toast.success(response.data.message || 'Operation successful');
+            }else{
+                toast.error(response.data.message || 'Operation un-successful');
             }
         } catch (error: any) {
-            console.error('Error during the API call:', error);
-            
-            let errorMsg = 'An error occurred while updating the shift';
-            if (error?.response?.status === 500) {
-                errorMsg = 'Server error. Please try again later or contact support.';
-            } else if (error?.response?.data?.message) {
-                errorMsg = error.response.data.message;
-            } else if (error?.message) {
-                errorMsg = error.message;
-            }
-
-            setErrorMessage(errorMsg);
-            setOpenSnackbar(true);
+            throw error
         }
     };
 
@@ -249,7 +228,7 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPop
                                         boxShadow: 1,
                                     }}
                                 >
-                                    Stop Shift
+                                    End Shift
                                 </Box>
                                 <TimePicker
                                     value={endTimeObj}
@@ -283,23 +262,23 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPop
                         </Box>
 
                         {/* Break Info */}
-                        <Box
-                            display="flex"
-                            flexDirection="column"
-                            justifyContent="space-between"
-                            alignItems="flex-start"
-                            sx={{
-                                backgroundColor: '#f9f9f9',
-                                borderRadius: '12px',
-                                border: '1px solid #e0e0e0',
-                                px: 2,
-                                py: 1.5,
-                                mb: 2,
-                                fontSize: '0.9rem',
-                            }}
-                        >
-                            {selectedWorklog?.break_log?.length > 0 ? (
-                                selectedWorklog.break_log.map((breakItem: any, index: number) => (
+                        {selectedWorklog?.break_log?.length > 0 && (
+                            <Box
+                                display="flex"
+                                flexDirection="column"
+                                justifyContent="space-between"
+                                alignItems="flex-start"
+                                sx={{
+                                    backgroundColor: '#f9f9f9',
+                                    borderRadius: '12px',
+                                    border: '1px solid #e0e0e0',
+                                    px: 2,
+                                    py: 1.5,
+                                    mb: 2,
+                                    fontSize: '0.9rem',
+                                }}
+                            >
+                                {selectedWorklog.break_log.map((breakItem: any, index: number) => (
                                     <Box
                                         key={index}
                                         display="flex"
@@ -315,13 +294,9 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPop
                                             {breakItem?.duration || '00:00'}
                                         </Typography>
                                     </Box>
-                                ))
-                            ) : (
-                                <Typography sx={{ color: '#555' }}>
-                                    No break logs available.
-                                </Typography>
-                            )}
-                        </Box>
+                                ))}
+                            </Box>
+                        )}
 
                         {/* Total Hours */}
                         <Box
@@ -367,14 +342,6 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({ popoverOpen, setPop
                     </Box>
                 </LocalizationProvider>
             </Popover>
-
-            {/* Snackbar for success or error */}
-            <Snackbar
-                open={openSnackbar}
-                onClose={() => setOpenSnackbar(false)}
-                autoHideDuration={6000}
-                message={errorMessage || successMessage}
-            />
         </>
     );
 };
