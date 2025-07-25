@@ -1,17 +1,8 @@
 import { uniqueId } from "lodash";
 
-import {
-  IconChartPie,
-  IconInfoCircle,
-  IconPaperclip,
-  IconSettings2,
-  IconUserCheck,
-  IconUserPlus,
-  IconUsers,
-} from "@tabler/icons-react";
+import { IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
-import { IconShieldCheck } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
 
 const Menuitems: NavGroup[] = [
@@ -33,18 +24,6 @@ const Menuitems: NavGroup[] = [
     icon: IconUserPlus,
     href: "/apps/teams/list",
   },
-  // {
-  //   id: uniqueId(),
-  //   title: "Privacy Policy",
-  //   icon: IconShieldCheck,
-  //   href: "/privacy-policy",
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: "App Info",
-  //   icon: IconInfoCircle,
-  //   href: "/app-info",
-  // },
   {
     id: uniqueId(),
     title: "Timesheet",
@@ -53,7 +32,7 @@ const Menuitems: NavGroup[] = [
   },
   {
     id: uniqueId(),
-    title: "Admin",
+    title: "Settings",
     icon: IconSettings,
     href: "/admin-settings",
   },

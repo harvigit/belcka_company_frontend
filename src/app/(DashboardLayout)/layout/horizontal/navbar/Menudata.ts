@@ -1,19 +1,10 @@
 import {
-    IconInfoCircle,
-    IconListDetails,
     IconSettings,
-    IconShieldCheck,
     IconTicket,
-    IconTicketOff,
     IconUserPlus,
     IconUsers
 } from '@tabler/icons-react';
-import { IconPaperclip } from "@tabler/icons-react";
-import {
-  IconHome,
-  IconPoint,
-  IconAppWindow,
-} from "@tabler/icons-react";
+import { IconHome } from "@tabler/icons-react";
 import { uniqueId } from "lodash";
 
 const Menuitems = [
@@ -61,7 +52,7 @@ const Menuitems = [
       // },
       {
         id: uniqueId(),
-        title: "Admin",
+        title: "Settings",
         icon: IconSettings,
         href: "/admin-settings",
       },

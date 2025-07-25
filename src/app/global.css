@@ -89,3 +89,27 @@ input[type="checkbox"] {
     height: 90px !important;
     padding: 10px !important;
 }
+.user-profile-tabs span.MuiTabs-indicator.mui-1fmegky-MuiTabs-indicator, .admin-settings-tabs span.MuiTabs-indicator.mui-1fmegky-MuiTabs-indicator{
+    display: none;
+}
+
+.user-tabs{
+    padding: 10px 20px !important;
+    min-height: 20px !important;
+}
+
+.admin-settings{
+    padding: 10px 20px !important;
+    min-height: 20px !important;
+    color: #1e4db7;
+    border-radius: 7px;
+    margin-bottom: 7px;
+}
+
+.admin-settings.Mui-selected {
+    padding: 10px 20px !important;
+    min-height: 20px !important;
+    color: white;
+    background-color: #1e4db7;
+    border-radius: 7px;
+}
