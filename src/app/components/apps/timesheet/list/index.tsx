@@ -220,6 +220,7 @@ const TimesheetList = () => {
             if (res.data?.IsSuccess) {
                 setSidebarData({
                     info: res.data.info || [],
+                    userName: res.data.user_name || 0,
                     formattedDate: res.data.formatted_date || 0,
                     totalMinutes: res.data.total_minutes || 0,
                     totalBreakSeconds: res.data.total_break_seconds || 0,
@@ -591,18 +592,24 @@ const TimesheetList = () => {
                 }}
             >
                 <Box>
-                    <Box display="flex" alignItems="center" justifyContent="space-between" mt={1} mb={2}>
-                        <IconButton onClick={() => setSidebarData(null)}>
-                            <IconArrowLeft />
-                        </IconButton>
-
-                        <Typography variant="h6" fontWeight={700}>
-                            Work Logs
-                        </Typography>
-                    </Box>
-
                     {Array.isArray(sidebarData?.info) && sidebarData.info.length > 0 ? (
                         <>
+                            <Box display="flex" alignItems="center" justifyContent="space-between" mt={1} mb={2}>
+                                <Box display="flex" alignItems="center">
+                                    <IconButton onClick={() => setSidebarData(null)}>
+                                        <IconArrowLeft />
+                                    </IconButton>
+
+                                    <Typography variant="h6" fontWeight={700}>
+                                        {sidebarData.userName}
+                                    </Typography>
+                                </Box>
+
+                                <Typography variant="h6" fontWeight={700}>
+                                    Work Logs
+                                </Typography>
+                            </Box>
+                            
                             <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
                                 <Typography variant="h6" fontWeight={700}>
                                     {sidebarData.formattedDate}
@@ -616,8 +623,7 @@ const TimesheetList = () => {
                             <Stack spacing={2}>
                                 {sidebarData.info.map((entry: any) => {
                                     const duration = formatHour(entry.worklog_payable_hours);
-                                    console.log(entry, 'entry')
-
+                                    
                                     return (
                                         <Box
                                             key={entry.id}
@@ -667,40 +673,42 @@ const TimesheetList = () => {
 
                                             <Box mt={2}>
                                                 <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
-                                                    <Typography variant="body2" sx={{ color: '#666' }} mr={1}>
-                                                        ({entry.formatted_work_start_time} - {entry.formatted_work_end_time})
-                                                    </Typography>
+                                                    {/* Left side content */}
+                                                    <Box display="flex" alignItems="center">
+                                                        <Typography variant="body2" sx={{ color: '#666' }} mr={1}>
+                                                            ({entry.formatted_work_start_time} - {entry.formatted_work_end_time})
+                                                        </Typography>
 
-                                                    <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
-                                                        {duration} H
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
+                                                        <Typography variant="h6" fontWeight={700}>
+                                                            {duration} H
+                                                        </Typography>
+                                                    </Box>
 
-                                            {(entry.status < 6 || entry.status === 7) && entry.is_request_pending !== true && (
-                                                <>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => {
-                                                            setSelectedWorklog(entry);
-                                                            handleEditClick(entry);
-                                                        }}
-                                                    >
-                                                        <Box
-                                                            component="span"
-                                                            sx={{
-                                                                width: 25,
-                                                                height: 25,
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
+                                                    {/* Right side icon */}
+                                                    {(entry.status < 6 || entry.status === 7) && entry.is_request_pending !== true && (
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => {
+                                                                setSelectedWorklog(entry);
+                                                                handleEditClick(entry);
                                                             }}
                                                         >
-                                                            <IconPencil size="small" />
-                                                        </Box>
-                                                    </IconButton>
-                                                </>
-                                            )}
+                                                            <Box
+                                                                component="span"
+                                                                sx={{
+                                                                    width: 20,
+                                                                    height: 20,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                }}
+                                                            >
+                                                                <IconPencil size="small" />
+                                                            </Box>
+                                                        </IconButton>
+                                                    )}
+                                                </Box>
+                                            </Box>
                                         </Box>
                                     );
                                 })}

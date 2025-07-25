@@ -84,3 +84,8 @@ td.MuiTableCell-root.MuiTableCell-body.MuiTableCell-alignCenter.MuiTableCell-siz
 input[type="checkbox"] {
     transform: scale(1.4) !important;
 }
+
+.mui-1jw9ula{
+    height: 90px !important;
+    padding: 10px !important;
+}
