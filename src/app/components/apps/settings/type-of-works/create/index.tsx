@@ -115,7 +115,7 @@ const CreateWork = ({ onCloseDialog }: CreateWorkProps) => {
           justifyContent="space-between"
           mb={3}
         >
-          <Typography variant="h5">#Create Type of work</Typography>
+          <Typography variant="h5">#Add Type of work</Typography>
         </Stack>
 
         <Grid container spacing={3}>

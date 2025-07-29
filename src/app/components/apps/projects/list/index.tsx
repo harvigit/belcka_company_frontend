@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TableContainer,
   Table,
@@ -21,10 +21,11 @@ import {
   DialogTitle,
   DialogContent,
   Dialog,
+  CircularProgress,
+  Tabs,
+  Tab,
   Menu,
   ListItemIcon,
-  CircularProgress,
-  Tooltip,
 } from "@mui/material";
 import {
   flexRender,
@@ -39,93 +40,67 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconDotsVertical,
   IconFilter,
-  IconRotate,
+  IconLocation,
+  IconPlus,
   IconSearch,
-  IconTrash,
-  IconUserPlus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { Avatar } from "@mui/material";
-import Link from "next/link";
-import { IconDotsVertical } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { IconPlus } from "@tabler/icons-react";
-import JoinCompanyDialog from "../../modals/join-company";
-import toast from "react-hot-toast";
-import { TradeList } from "../team";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import GenerateCodeDialog from "../../modals/generate-code";
-import { IconEdit } from "@tabler/icons-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { IconNotes } from "@tabler/icons-react";
+import { IconUser } from "@tabler/icons-react";
+import Image from "next/image";
 
 dayjs.extend(customParseFormat);
 
-export type TeamList = {
-  id: number;
-  team_id: number;
-  team_member_ids: number[];
-  supervisor_id: number;
-  supervisor_name?: string;
-  supervisor_image?: string;
-  supervisor_email?: string;
-  supervisor_phone?: string;
-  team_member_count?: number;
-  working_member_count?: number;
-  subcontractor_company_name?: string;
-  is_subcontractor?: boolean;
-  company_id?: number;
-  subcontractor_company_id?: number;
-  team_name?: string;
-  name?: string;
-  image?: string;
-  is_active?: boolean;
-  trade_id?: number;
-  trade_name?: string;
-};
-
-export type UserList = {
+export type ProjectList = {
   id: number;
   name: string;
+  currency: string | null;
+  address: string;
+  budget: string;
+  start_date?: string;
+  end_date?: string;
+  description?: string;
+  progress: string;
+  status_int: number;
+  status_text: string;
+  check_ins: number;
 };
 
-const TablePagination = () => {
-  const [data, setData] = useState<TeamList[]>([]);
+const TablePagination = ({ projectId }: { projectId: number | null }) => {
+  const [data, setData] = useState<ProjectList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const [filters, setFilters] = useState({
-    team: "",
-    supervisor: "",
-  });
+  const [value, setValue] = useState(0);
+
+  const handleTabChange = (event: any, newValue: any) => {
+    setValue(newValue);
+  };
+
+  const [filters, setFilters] = useState({ status: "", sortOrder: "" });
 
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
 
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null };
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
-  const [openOtpDialog, setOpenOtpDialog] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [tradeValue, setTradeValue] = useState("");
-  const [trade, setTrade] = useState<TradeList[]>([]);
-
-  const [openGenerateDialog, setOpenGenerateDialog] = useState(false);
-  const router = useRouter();
-
-  const searchParams = useSearchParams();
-  const projectId = searchParams ? searchParams.get("project_id") : "";
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -134,236 +109,245 @@ const TablePagination = () => {
     setAnchorEl(null);
   };
 
-  // Fetch data
+  // Fetching data when projectId or value changes
   useEffect(() => {
-    const fetchTrades = async () => {
-      setLoading(true);
-      try {
-        let url = "";
-        if (projectId) {
-          url = `team/get-team-member-list?project_id=${projectId}`;
-        } else {
-          url = "team/get-team-member-list";
-        }
-        console.log(url,'url')
-        const res = await api.get(url);
-        if (res.data) {
-          setData(res.data.info);
+    if (projectId && value === 0) {
+      const fetchTrades = async () => {
+        setLoading(true);
+        try {
+          const res = await api.get(`address/get?project_id=${projectId}`);
+          if (res.data) {
+            setData(res.data.info);
+          }
+        } catch (err) {
+          console.error("Failed to fetch projects", err);
+        } finally {
           setLoading(false);
         }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
-      }
-    };
-    fetchTrades();
-  }, [api]);
-
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(
-          `trade/get-trades?company_id=${id.company_id}`
-        );
-        if (res.data) setTrade(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
-      }
-    };
-    fetchTrades();
-  }, []);
-
-  const handleGenerateCode = async (): Promise<string> => {
-    try {
-      const response = await api.post(
-        `team/company-generate-code?company_id=${id.company_id}`
-      );
-      toast.success(response.data.message);
-      return response.data.info.company_otp;
-    } catch (error) {
-      toast.error("Failed to generate code.");
-      throw error;
+      };
+      fetchTrades();
+    } else if (value === 1) {
+      // const fetchWorks = async () => {
+      //   setLoading(true);
+      //   try {
+      //     const res = await api.get(
+      //       `type-works/get?company_id=${user.company_id}`
+      //     );
+      //     if (res.data) {
+      //       setData(res.data.info);
+      //     }
+      //   } catch (err) {
+      //     console.error("Failed to fetch types", err);
+      //   } finally {
+      //     setLoading(false);
+      //   }
+      // };
+      // fetchWorks();
+      setData([]);
+    } else {
+      setData([]);
     }
+  }, [projectId, value, user]);
+
+  const formatDate = (date: string | undefined) => {
+    return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
 
-  // UseCallback to memoize these functions
-  const handleEdit = useCallback(
-    (id: number) => {
-      router.push(`/apps/teams/edit/${id}`);
-    },
-    [router]
-  );
-
-  const uniqueTrades = useMemo(
-    () => [...new Set(data.map((item) => item.name).filter(Boolean))],
-    [data]
-  );
-  const uniqueSupervisors = useMemo(
-    () => [
-      ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
-    ],
-    [data]
-  );
+  const status = ["Completed", "Pending", "In Progress"];
+  const uniqueTrades = status;
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const matchesTeam = filters.team ? item.name === filters.team : true;
-      const matchesSupervisor = filters.supervisor
-        ? item.supervisor_name === filters.supervisor
+    let filtered = data.filter((item) => {
+      const matchesTeam = filters.status
+        ? item.status_text === filters.status
         : true;
-
       const search = searchTerm.toLowerCase();
-
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
-        item.supervisor_name?.toLocaleLowerCase().includes(search);
-
-      return matchesTeam && matchesSearch && matchesSupervisor;
+        item.progress?.toLowerCase().includes(search);
+      return matchesTeam && matchesSearch;
     });
-  }, [data, filters, searchTerm]);
 
-  const columnHelper = createColumnHelper<TeamList>();
-  const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <CustomCheckbox
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
-            }
-            indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
-            }
-            onChange={(e) => {
-              if (e.target.checked) {
-                setSelectedRowIds(new Set(filteredData.map((_, i) => i)));
-              } else {
-                setSelectedRowIds(new Set());
-              }
-            }}
-          />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
-        </Stack>
-      ),
-      enableSorting: true,
-      cell: ({ row }) => {
-        const item = row.original;
-        const isChecked = selectedRowIds.has(row.index);
-        const shouldHighlight =
-          item.is_subcontractor === true &&
-          item.company_id !== item.subcontractor_company_id;
+    if (filters.sortOrder === "asc") {
+      filtered = filtered.sort((a, b) => (a.name > b.name ? 1 : -1));
+    } else if (filters.sortOrder === "desc") {
+      filtered = filtered.sort((a, b) => (a.name < b.name ? 1 : -1));
+    }
 
-        return (
+    return filtered;
+  }, [data, filters, searchTerm, tempFilters.sortOrder]);
+
+  const columnHelper = createColumnHelper<ProjectList>();
+
+  const columns = useMemo(() => {
+    const baseColumns = [
+      columnHelper.accessor("name", {
+        id: "name",
+        header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
-              checked={isChecked}
-              disabled={shouldHighlight}
-              onChange={() => {
-                const newSelected = new Set(selectedRowIds);
-                if (isChecked) {
-                  newSelected.delete(row.index);
+              checked={
+                selectedRowIds.size === filteredData.length &&
+                filteredData.length > 0
+              }
+              indeterminate={
+                selectedRowIds.size > 0 &&
+                selectedRowIds.size < filteredData.length
+              }
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedRowIds(new Set(filteredData.map((_, i) => i)));
                 } else {
-                  newSelected.add(row.index);
+                  setSelectedRowIds(new Set());
                 }
-                setSelectedRowIds(newSelected);
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Link href={`/apps/teams/team?team_id=${item.team_id}`} passHref>
-                <Typography
-                  variant="h5"
-                  color={shouldHighlight ? "secondary" : "textPrimary"}
-                  sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-                >
-                  {item.name ?? "-"}
-                </Typography>
-              </Link>
+            <Typography variant="subtitle2" fontWeight="inherit">
+              {value === 0 ? "Address" : "Tasks"}
+            </Typography>
+          </Stack>
+        ),
+        enableSorting: true,
+        cell: ({ row }) => {
+          const item = row.original;
+          const isChecked = selectedRowIds.has(row.index);
+          return (
+            <Stack direction="row" alignItems="center" spacing={4}>
+              <CustomCheckbox
+                checked={isChecked}
+                onChange={() => {
+                  const newSelected = new Set(selectedRowIds);
+                  if (isChecked) {
+                    newSelected.delete(row.index);
+                  } else {
+                    newSelected.add(row.index);
+                  }
+                  setSelectedRowIds(newSelected);
+                }}
+              />
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="h5">{item.name ?? "-"}</Typography>
+              </Stack>
             </Stack>
-          </Stack>
-        );
-      },
-    }),
+          );
+        },
+      }),
 
-    columnHelper.accessor((row) => row?.subcontractor_company_name, {
-      id: "subcontractor_company_name",
-      header: () => "Company",
-      cell: (info) => {
-        return (
-          <Typography variant="h5" color="textPrimary">
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
+      ...(value === 0
+        ? [
+            columnHelper.accessor((row) => row?.progress, {
+              id: "progress",
+              header: () => "Progress",
+              cell: (info) => {
+                const statusInt = info.row.original.status_int;
+                let color = "textPrimary";
+                if (statusInt === 13) {
+                  color = "#999999";
+                } else if (statusInt === 4) {
+                  color = "#32A852";
+                } else if (statusInt === 3) {
+                  color = "#FF7F00";
+                }
 
-    columnHelper.accessor("supervisor_name", {
-      header: () => "Supervisor",
-      cell: (info) => {
-        const row = info.row.original;
-        const name = info.getValue();
-        const image = row.supervisor_image;
-        const defaultImage = "/images/users/user.png";
+                return (
+                  <Typography variant="h5" color={color} fontWeight={700}>
+                    {info.getValue() ?? "-"}
+                  </Typography>
+                );
+              },
+            }),
 
-        return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Avatar
-              src={image || defaultImage}
-              alt={name}
-              sx={{ width: 36, height: 36 }}
-            />
-            <Box>
-              <Typography variant="h5" color="textPrimary">
-                {name ?? "-"}
-              </Typography>
-            </Box>
-          </Stack>
-        );
-      },
-    }),
+            columnHelper.accessor((row) => row?.check_ins, {
+              id: "check_ins",
+              header: () => "Check-ins",
+              cell: (info) => {
+                return (
+                  <Typography variant="h5" color={"#007AFF"} fontWeight={700}>
+                    {info.getValue() ?? "-"}
+                  </Typography>
+                );
+              },
+            }),
+          ]
+        : []),
 
-    columnHelper.accessor((row) => row?.team_member_count, {
-      id: "team_member_count",
-      header: () => "Users",
-      cell: (info) => {
-        const row = info.row.original;
-        const users = row.working_member_count;
+      ...(value === 1
+        ? [
+            columnHelper.accessor((row) => row?.address, {
+              id: "address",
+              header: () => "Address",
+              cell: (info) => {
+                return (
+                  <Typography variant="h5" color={"#007AFF"} fontWeight={700}>
+                    {info.getValue() ?? "-"}
+                  </Typography>
+                );
+              },
+            }),
 
-        return (
-          <Typography variant="h5" color="textPrimary">
-            {users + `/` + info.getValue()}
-          </Typography>
-        );
-      },
-    }),
-    columnHelper.display({
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const item = row.original;
-        const subcontractor =
-          item.is_subcontractor === true &&
-          item.company_id !== item.subcontractor_company_id;
-        return (
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Edit">
-              <IconButton
-                disabled={subcontractor}
-                onClick={() => handleEdit(item.team_id)}
-                color="primary"
-              >
-                <IconEdit size={18} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        );
-      },
-    }),
-  ];
+            columnHelper.accessor((row) => row?.status_text, {
+              id: "status_text",
+              header: () => "Status",
+              cell: (info) => {
+                const statusInt = info.row.original.status_int;
+                let color = "textPrimary";
+                if (statusInt === 13) {
+                  color = "#999999";
+                } else if (statusInt === 4) {
+                  color = "#32A852";
+                } else if (statusInt === 3) {
+                  color = "#FF7F00";
+                }
 
+                return (
+                  <Typography variant="h5" color={color} fontWeight={700}>
+                    {info.getValue() ?? "-"}
+                  </Typography>
+                );
+              },
+            }),
+          ]
+        : []),
+
+      columnHelper.accessor("start_date", {
+        id: "start_date",
+        header: () => "Start date",
+        cell: (info) => {
+          const value = info.getValue();
+          return (
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box>
+                <Typography variant="h5" color="textPrimary">
+                  {formatDate(value)}
+                </Typography>
+              </Box>
+            </Stack>
+          );
+        },
+      }),
+
+      columnHelper.accessor((row) => row?.end_date, {
+        id: "end_date",
+        header: () => "End date",
+        cell: (info) => {
+          const value = info.getValue();
+          return (
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box>
+                <Typography variant="h5" color="textPrimary">
+                  {formatDate(value)}
+                </Typography>
+              </Box>
+            </Stack>
+          );
+        },
+      }),
+    ];
+
+    return baseColumns;
+  }, [value, filteredData, selectedRowIds]);
+
+  // Set up the table
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -381,12 +365,11 @@ const TablePagination = () => {
     },
   });
 
-  // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
-  if (loading) {
+  if (loading == true) {
     return (
       <Box
         display="flex"
@@ -404,7 +387,6 @@ const TablePagination = () => {
       {/* Render the search and table */}
       <Stack
         mt={1}
-        mr={2}
         ml={2}
         mb={2}
         justifyContent="space-between"
@@ -412,9 +394,55 @@ const TablePagination = () => {
         spacing={{ xs: 1, sm: 2, md: 4 }}
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
-          <Button variant="contained" color="primary">
-            TEAMS ({table.getPrePaginationRowModel().rows.length})
-          </Button>
+          <Tabs
+            className="project-tabs"
+            sx={{
+              backgroundColor: "#D8D8D8 !important",
+              borderRadius: "12px",
+              width: "43%",
+              height: "48px",
+            }}
+            value={value}
+            onChange={handleTabChange}
+            aria-label="simple tabs example"
+          >
+            <Tab
+              label="Addresses"
+              className="address-tab"
+              sx={{
+                fontWeight: value === 0 ? "bold" : "normal",
+                color: value === 0 ? "black" : "gray",
+                textTransform: "none",
+                borderRadius: "12px",
+                marginTop: "2%",
+                marginLeft: "2%",
+                width: "50%",
+                height: "20px",
+                backgroundColor: value === 0 ? "white" : "transparent",
+                "&.MuiTab-root": {
+                  borderRadius: "12px",
+                },
+              }}
+            />
+            <Tab
+              label="Tasks"
+              className="task-tab"
+              sx={{
+                fontWeight: value === 1 ? "bold" : "normal",
+                color: value === 1 ? "black" : "gray",
+                textTransform: "none",
+                borderRadius: "12px",
+                marginTop: "2%",
+                marginRight: "2%",
+                width: "45%",
+                height: "20px",
+                backgroundColor: value === 1 ? "white" : "transparent",
+                "&.MuiTab-root": {
+                  borderRadius: "12px",
+                },
+              }}
+            />
+          </Tabs>
           <TextField
             id="search"
             type="text"
@@ -436,6 +464,30 @@ const TablePagination = () => {
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
+          {projectId && (
+            <>
+              <Link href={`/apps/teams/list?project_id=${projectId}`} passHref>
+                <Typography variant="h5" color="#007AFF">
+                  <Image
+                    src={"/images/svgs/teams.svg"}
+                    alt="logo"
+                    height={30}
+                    width={30}
+                  />
+                </Typography>
+              </Link>
+              <Link href={`/apps/users/list?project_id=${projectId}`} passHref>
+                <Typography variant="h5" color="#FF7F00">
+                  <Image
+                    src={"/images/svgs/user.svg"}
+                    alt="logo"
+                    height={30}
+                    width={30}
+                  />
+                </Typography>
+              </Link>
+            </>
+          )}
           <Dialog
             open={open}
             onClose={() => setOpen(false)}
@@ -468,39 +520,36 @@ const TablePagination = () => {
               <Stack spacing={2} mt={1}>
                 <TextField
                   select
-                  label="Team"
-                  value={tempFilters.team}
+                  label="Status"
+                  value={tempFilters.status}
                   onChange={(e) =>
-                    setTempFilters({ ...tempFilters, team: e.target.value })
+                    setTempFilters({ ...tempFilters, status: e.target.value })
                   }
                   fullWidth
                 >
                   <MenuItem value="">All</MenuItem>
-                  {uniqueTrades.map((trade, i) => (
-                    <MenuItem key={i} value={trade}>
-                      {trade}
+                  {uniqueTrades.map((status, i) => (
+                    <MenuItem key={i} value={status}>
+                      {status}
                     </MenuItem>
                   ))}
                 </TextField>
 
                 <TextField
                   select
-                  label="Supervisor"
-                  value={tempFilters.supervisor}
+                  label="Sort A-Z"
+                  value={tempFilters.sortOrder}
                   onChange={(e) =>
                     setTempFilters({
                       ...tempFilters,
-                      supervisor: e.target.value,
+                      sortOrder: e.target.value,
                     })
                   }
                   fullWidth
                 >
-                  <MenuItem value="">All</MenuItem>
-                  {uniqueSupervisors.map((supervisor, i) => (
-                    <MenuItem key={i} value={supervisor}>
-                      {supervisor}
-                    </MenuItem>
-                  ))}
+                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="asc">A-Z</MenuItem>
+                  <MenuItem value="desc">Z-A</MenuItem>
                 </TextField>
               </Stack>
             </DialogContent>
@@ -509,12 +558,12 @@ const TablePagination = () => {
               <Button
                 onClick={() => {
                   setTempFilters({
-                    team: "",
-                    supervisor: "",
+                    status: "",
+                    sortOrder: "",
                   });
                   setFilters({
-                    team: "",
-                    supervisor: "",
+                    status: "",
+                    sortOrder: "",
                   });
                   setOpen(false);
                 }}
@@ -540,16 +589,6 @@ const TablePagination = () => {
           justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
         >
-          {selectedRowIds.size > 0 && (
-            // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<IconTrash width={18} />}
-            >
-              Archive
-            </Button>
-          )}
           <IconButton
             sx={{ margin: "0px" }}
             id="basic-button"
@@ -574,7 +613,28 @@ const TablePagination = () => {
             <MenuItem onClick={handleClose}>
               <Link
                 color="body1"
-                href="/apps/teams/create"
+                // href="/apps/teams/create"
+                href="#"
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconLocation width={18} />
+                </ListItemIcon>
+                Add Address
+              </Link>
+            </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                // href="/apps/teams/create"
+                href="#"
                 style={{
                   width: "100%",
                   color: "#11142D",
@@ -587,27 +647,29 @@ const TablePagination = () => {
                 <ListItemIcon>
                   <IconPlus width={18} />
                 </ListItemIcon>
-                Add Team
+                Add Task
               </Link>
             </MenuItem>
-            <MenuItem
-              onClick={() => {
-                setOpenGenerateDialog(true);
-                handleClose(); // close MUI menu
-              }}
-            >
-              <ListItemIcon>
-                <IconRotate width={18} />
-              </ListItemIcon>
-              Generate Code
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Project detail
+              </Link>
             </MenuItem>
           </Menu>
-
-          <GenerateCodeDialog
-            open={openGenerateDialog}
-            onClose={() => setOpenGenerateDialog(false)}
-            onGenerate={handleGenerateCode}
-          />
         </Stack>
       </Stack>
       <Divider />
@@ -615,11 +677,7 @@ const TablePagination = () => {
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
-            <TableContainer
-              sx={{
-                maxHeight: 600,
-              }}
-            >
+            <TableContainer sx={{ maxHeight: 600 }}>
               <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (

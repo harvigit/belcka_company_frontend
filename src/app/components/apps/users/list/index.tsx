@@ -48,6 +48,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { useSearchParams } from "next/navigation";
 
 dayjs.extend(customParseFormat);
 
@@ -72,12 +73,20 @@ const TablePagination = () => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const searchParams = useSearchParams();
+  const projectId = searchParams ? searchParams.get("project_id") : "";
 
   useEffect(() => {
     const fetchTrades = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`user/get-user-lists`);
+        let url = "";
+        if (projectId) {
+          url = `user/get-user-lists?project_id=${projectId}`;
+        } else {
+          url = "user/get-user-lists";
+        }
+        const res = await api.get(url);
         if (res.data) {
           setData(res.data.info);
         }
@@ -87,7 +96,7 @@ const TablePagination = () => {
       setLoading(false);
     };
     fetchTrades();
-  }, []);
+  }, [projectId]);
 
   const uniqueTeams = useMemo(
     () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],

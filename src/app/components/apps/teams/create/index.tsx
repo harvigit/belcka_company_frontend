@@ -121,7 +121,7 @@ const CreateTeam = () => {
           justifyContent="space-between"
           mb={3}
         >
-          <Typography variant="h5">#Create Team</Typography>
+          <Typography variant="h5">#Add Team</Typography>
         </Stack>
         {/* <Divider /> */}
 

@@ -1,6 +1,6 @@
 import { uniqueId } from "lodash";
 
-import { IconUserPlus, IconUsers } from "@tabler/icons-react";
+import { IconFiles, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
@@ -29,6 +29,12 @@ const Menuitems: NavGroup[] = [
     title: "Timesheet",
     icon: IconTicket,
     href: "/apps/timesheet/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Projects",
+    icon: IconFiles,
+    href: "/apps/projects/index",
   },
   {
     id: uniqueId(),

@@ -113,3 +113,35 @@ input[type="checkbox"] {
     background-color: #1e4db7;
     border-radius: 7px;
 }
+
+input#project_id::placeholder {
+    color: #ffffff;
+}
+
+.project-tabs .address-tab, .project-tabs .task-tab{
+    min-height: 39px;
+}
+.project-tabs .address-tab, .project-tabs .task-tab {
+    color: #000;
+}
+
+.project-tabs span.MuiTabs-indicator.mui-acba2e-MuiTabs-indicator{
+    display: none;
+}
+
+.project-selection .mui-1o5cv33-MuiInputBase-root-MuiOutlinedInput-root {
+    background-color: #1e4db7 !important;
+    color: white !important;
+    font-weight: 600;
+    border-radius: 20px;
+}
+
+.project-selection .mui-1umw9bq-MuiSvgIcon-root{
+    color: white;
+}
+
+.project-selection .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator:hover{
+    .mui-1umw9bq-MuiSvgIcon-root{
+        color: black;
+    }
+}
