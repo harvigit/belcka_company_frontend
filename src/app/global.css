@@ -133,7 +133,7 @@ input#project_id::placeholder {
     display: none;
 }
 
-.project-selection .mui-1o5cv33-MuiInputBase-root-MuiOutlinedInput-root , .MuiInputBase-root.MuiOutlinedInput-root.MuiInputBase-colorPrimary.MuiInputBase-fullWidth.MuiInputBase-formControl.MuiInputBase-adornedEnd.MuiAutocomplete-inputRoot.mui-4h8b5a {
+.project-selection .mui-1o5cv33-MuiInputBase-root-MuiOutlinedInput-root , .project-selection .MuiInputBase-root.MuiOutlinedInput-root.MuiInputBase-colorPrimary.MuiInputBase-fullWidth.MuiInputBase-formControl.MuiInputBase-adornedEnd.MuiAutocomplete-inputRoot.mui-4h8b5a {
     background-color: #1e4db7 !important;
     color: white !important;
     font-weight: 600;
