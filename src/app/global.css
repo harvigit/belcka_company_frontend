@@ -89,7 +89,7 @@ input[type="checkbox"] {
     height: 90px !important;
     padding: 10px !important;
 }
-.admin-settings-tabs span.MuiTabs-indicator.mui-1fmegky-MuiTabs-indicator{
+.admin-settings-tabs span.MuiTabs-indicator.mui-1fmegky-MuiTabs-indicator, .admin-settings-tabs span.MuiTabs-indicator.mui-1v4h29q{
     display: none;
 }
 
