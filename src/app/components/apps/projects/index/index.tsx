@@ -153,7 +153,7 @@ const TablePagination = () => {
       <Grid
         size={{
           xs: 12,
-          lg: 3,
+          lg: 2,
         }}
       >
         <Box textAlign="center">
@@ -200,11 +200,10 @@ const TablePagination = () => {
                 lineHeight: "16px",
                 height: "35px",
                 borderRadius: "25px",
-                boxShadow: "0px 4px 4px 0px #00000040;",
                 border: "1px solid #CCCCCC",
               }}
             >
-              <Typography fontWeight={700}>Budget</Typography>
+              <Typography>Budget</Typography>
               <Typography color="#000000" fontWeight={700}>
                 {data[0]?.currency ?? "£"}
                 {budget ? budget : data[0]?.budget ?? 0}
@@ -222,11 +221,10 @@ const TablePagination = () => {
                 lineHeight: "16px",
                 height: "35px",
                 borderRadius: "25px",
-                boxShadow: "0px 4px 4px 0px #00000040 !important",
                 border: "1px solid #CCCCCC",
               }}
             >
-              <Typography fontWeight={700}>Salary:</Typography>
+              <Typography>Salary:</Typography>
               <Typography color="#FF484B" fontWeight={700}>
                 {data[0]?.currency ?? "£"}
                 {data[0]?.salary ?? 0}
@@ -244,11 +242,10 @@ const TablePagination = () => {
                 lineHeight: "16px",
                 height: "35px",
                 borderRadius: "25px",
-                boxShadow: "0px 4px 4px 0px #00000040 !important",
                 border: "1px solid #CCCCCC",
               }}
             >
-              <Typography fontWeight={700}>Materials:</Typography>
+              <Typography>Materials:</Typography>
               <Typography color="#FF7F00" fontWeight={700}>
                 {data[0]?.currency ?? "£"}
                 {data[0]?.materials ?? 0}
@@ -266,11 +263,10 @@ const TablePagination = () => {
                 lineHeight: "16px",
                 height: "35px",
                 borderRadius: "25px",
-                boxShadow: "0px 4px 4px 0px #00000040 !important",
                 border: "1px solid #CCCCCC",
               }}
             >
-              <Typography fontWeight={700}>Profit:</Typography>
+              <Typography>Profit:</Typography>
               <Typography color="#32A852" fontWeight={700}>
                 {data[0]?.currency ?? "£"}
                 {data[0]?.profit ?? budget ? budget : data[0]?.budget ?? 0}
@@ -285,7 +281,7 @@ const TablePagination = () => {
               </Typography>
               <Box
                 sx={{
-                  maxHeight: address.length > 3 ? "310px" : "auto",
+                  maxHeight: address.length > 3 ? "310px" : "350px",
                   overflow: address.length > 3 ? "auto" : "visible",
                   pr: 0,
                 }}
@@ -315,7 +311,7 @@ const TablePagination = () => {
                   return (
                     <Box
                       key={addr.id ?? index}
-                      mb={index === address.length - 1 ? 0 : 3}
+                      mb={index === address.length - 1 ? 0 : 2}
                       pl={2}
                       pr={2}
                       mt={2}
@@ -324,11 +320,11 @@ const TablePagination = () => {
                       alignItems="center"
                       sx={{
                         width: "100%",
-                        lineHeight: "16px",
-                        height: "80px",
+                        lineHeight: "10px",
+                        height: "100px",
                         borderRadius: "25px",
-                        boxShadow: "0px 4px 4px 0px #00000040",
-                        border: "1px solid #CCCCCC",
+                        boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
+                        border: "1px solid rgb(240 240 240)",
                       }}
                     >
                       <Box
@@ -355,7 +351,7 @@ const TablePagination = () => {
                         textAlign="start"
                         mt={1}
                       >
-                        <Typography fontWeight={700}>
+                        <Typography fontSize="14px">
                           {addr.name ?? `Address ${index + 1}`}
                         </Typography>
                         <Typography
@@ -377,7 +373,7 @@ const TablePagination = () => {
       <Grid
         size={{
           xs: 12,
-          lg: 9,
+          lg: 10,
         }}
       >
         <BlankCard>

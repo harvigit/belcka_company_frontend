@@ -127,22 +127,6 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
       };
       fetchTrades();
     } else if (value === 1) {
-      // const fetchWorks = async () => {
-      //   setLoading(true);
-      //   try {
-      //     const res = await api.get(
-      //       `type-works/get?company_id=${user.company_id}`
-      //     );
-      //     if (res.data) {
-      //       setData(res.data.info);
-      //     }
-      //   } catch (err) {
-      //     console.error("Failed to fetch types", err);
-      //   } finally {
-      //     setLoading(false);
-      //   }
-      // };
-      // fetchWorks();
       setData([]);
     } else {
       setData([]);
@@ -179,6 +163,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
 
   const columnHelper = createColumnHelper<ProjectList>();
 
+  // tab value 0 for address 1 for task
   const columns = useMemo(() => {
     const baseColumns = [
       columnHelper.accessor("name", {
@@ -397,7 +382,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
           <Tabs
             className="project-tabs"
             sx={{
-              backgroundColor: "#D8D8D8 !important",
+              backgroundColor: "#ECECEC !important",
               borderRadius: "12px",
               width: "43%",
               height: "48px",
@@ -410,7 +395,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
               label="Addresses"
               className="address-tab"
               sx={{
-                fontWeight: value === 0 ? "bold" : "normal",
+                fontWeight: "normal",
                 color: value === 0 ? "black" : "gray",
                 textTransform: "none",
                 borderRadius: "12px",
@@ -428,7 +413,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
               label="Tasks"
               className="task-tab"
               sx={{
-                fontWeight: value === 1 ? "bold" : "normal",
+                fontWeight:"normal",
                 color: value === 1 ? "black" : "gray",
                 textTransform: "none",
                 borderRadius: "12px",
@@ -467,7 +452,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
           {projectId && (
             <>
               <Link href={`/apps/teams/list?project_id=${projectId}`} passHref>
-                <Typography variant="h5" color="#007AFF">
+                <Typography variant="h5" color="#FF7F00">
                   <Image
                     src={"/images/svgs/teams.svg"}
                     alt="logo"
