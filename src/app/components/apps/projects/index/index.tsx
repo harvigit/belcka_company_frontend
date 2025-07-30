@@ -351,7 +351,7 @@ const TablePagination = () => {
                         textAlign="start"
                         mt={1}
                       >
-                        <Typography fontSize="14px">
+                        <Typography fontSize="14px" className="multi-ellipsis">
                           {addr.name ?? `Address ${index + 1}`}
                         </Typography>
                         <Typography

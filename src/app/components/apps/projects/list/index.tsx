@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, ChangeEvent } from "react";
 import {
   TableContainer,
   Table,
@@ -26,6 +26,7 @@ import {
   Tab,
   Menu,
   ListItemIcon,
+  Drawer,
 } from "@mui/material";
 import {
   flexRender,
@@ -56,8 +57,12 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import Link from "next/link";
 import { IconNotes } from "@tabler/icons-react";
-import { IconUser } from "@tabler/icons-react";
 import Image from "next/image";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import toast, { Toaster } from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { fetchData } from "next-auth/client/_utils";
+import { IconArrowLeft } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -84,7 +89,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
   const rerender = React.useReducer(() => ({}), {})[1];
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
-
+  const router = useRouter();
   const [value, setValue] = useState(0);
 
   const handleTabChange = (event: any, newValue: any) => {
@@ -95,12 +100,15 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
 
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
+  const [sidebar, setSidebar] = useState(false);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
+
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -109,28 +117,34 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
     setAnchorEl(null);
   };
 
+  const [formData, setFormData] = useState<any>({
+    project_id: projectId,
+    company_id: user.company_id,
+    name: "",
+  });
   // Fetching data when projectId or value changes
-  useEffect(() => {
+  const fetchTrades = async () => {
     if (projectId && value === 0) {
-      const fetchTrades = async () => {
-        setLoading(true);
-        try {
-          const res = await api.get(`address/get?project_id=${projectId}`);
-          if (res.data) {
-            setData(res.data.info);
-          }
-        } catch (err) {
-          console.error("Failed to fetch projects", err);
-        } finally {
-          setLoading(false);
+      setLoading(true);
+      try {
+        const res = await api.get(`address/get?project_id=${projectId}`);
+        if (res.data) {
+          setData(res.data.info);
         }
-      };
-      fetchTrades();
+      } catch (err) {
+        console.error("Failed to fetch projects", err);
+      } finally {
+        setLoading(false);
+      }
     } else if (value === 1) {
       setData([]);
     } else {
       setData([]);
     }
+  };
+
+  useEffect(() => {
+    fetchTrades();
   }, [projectId, value, user]);
 
   const formatDate = (date: string | undefined) => {
@@ -160,6 +174,43 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
 
     return filtered;
   }, [data, filters, searchTerm, tempFilters.sortOrder]);
+
+  // add address
+
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prevData: FormData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      setFormData({
+        project_id: projectId,
+        company_id: user.company_id,
+        name: "",
+      });
+
+      const result = await api.post("address/create", formData);
+      if (result.data.IsSuccess === true) {
+        toast.success(result.data.message);
+        fetchTrades();
+        setSidebar(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const columnHelper = createColumnHelper<ProjectList>();
 
@@ -413,7 +464,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
               label="Tasks"
               className="task-tab"
               sx={{
-                fontWeight:"normal",
+                fontWeight: "normal",
                 color: value === 1 ? "black" : "gray",
                 textTransform: "none",
                 borderRadius: "12px",
@@ -598,15 +649,18 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
             <MenuItem onClick={handleClose}>
               <Link
                 color="body1"
-                // href="/apps/teams/create"
                 href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSidebar(true);
+                }}
                 style={{
                   width: "100%",
                   color: "#11142D",
                   textTransform: "none",
                   display: "flex",
                   alignItems: "center",
-                  justifyItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 <ListItemIcon>
@@ -615,10 +669,10 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
                 Add Address
               </Link>
             </MenuItem>
+
             <MenuItem onClick={handleClose}>
               <Link
                 color="body1"
-                // href="/apps/teams/create"
                 href="#"
                 style={{
                   width: "100%",
@@ -658,6 +712,84 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
         </Stack>
       </Stack>
       <Divider />
+
+      <Drawer
+        anchor="right"
+        open={sidebar}
+        onClose={() => setSidebar(false)}
+        sx={{
+          width: 350,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 350,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+          },
+        }}
+      >
+        <Box display="flex" flexDirection="column" height="100%">
+          <Box height={"100%"}>
+            <form onSubmit={handleSubmit} className="address-form">
+              {" "}
+              {/* form includes the submit button */}
+              <Grid container mt={3}>
+                <Grid size={{ lg: 12, xs: 12 }}>
+                  <Box
+                    display={"flex"}
+                    alignContent={"center"}
+                    alignItems={"center"}
+                    flexWrap={"wrap"}
+                  >
+                    <IconButton onClick={() => setSidebar(false)}>
+                      <IconArrowLeft />
+                    </IconButton>
+                    <Typography variant="h5" fontWeight={700}>
+                      Add Address
+                    </Typography>
+                  </Box>
+                  <Typography variant="h5" mt={3}>Name</Typography>
+                  <CustomTextField
+                    id="name"
+                    name="name"
+                    placeholder="Enter address name.."
+                    value={formData.name}
+                    onChange={handleChange}
+                    variant="outlined"
+                    fullWidth
+                  />
+                </Grid>
+              </Grid>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 2,
+                }}
+              >
+                <Button
+                  color="error"
+                  onClick={() => setSidebar(false)}
+                  variant="contained"
+                  size="medium"
+                  fullWidth
+                >
+                  Close
+                </Button>
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="medium"
+                  type="submit"
+                  disabled={isSaving}
+                  fullWidth
+                >
+                  {isSaving ? "Creating Address..." : "Save"}
+                </Button>
+              </Box>
+            </form>
+          </Box>
+        </Box>
+      </Drawer>
 
       <Grid container spacing={3}>
         <Grid size={12}>

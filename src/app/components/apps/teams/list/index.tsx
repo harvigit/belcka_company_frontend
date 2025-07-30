@@ -116,10 +116,10 @@ const TablePagination = () => {
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
-  const [openOtpDialog, setOpenOtpDialog] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [otp, setOtp] = useState("");
-  const [tradeValue, setTradeValue] = useState("");
   const [trade, setTrade] = useState<TradeList[]>([]);
+  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
 
   const [openGenerateDialog, setOpenGenerateDialog] = useState(false);
   const router = useRouter();
@@ -135,26 +135,25 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  useEffect(() => {
-    const fetchTrades = async () => {
-      setLoading(true);
-      try {
-        let url = "";
-        if (projectId) {
-          url = `team/get-team-member-list?project_id=${projectId}`;
-        } else {
-          url = "team/get-team-member-list";
-        }
-        console.log(url,'url')
-        const res = await api.get(url);
-        if (res.data) {
-          setData(res.data.info);
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+  const fetchTrades = async () => {
+    setLoading(true);
+    try {
+      let url = "";
+      if (projectId) {
+        url = `team/get-team-member-list?project_id=${projectId}`;
+      } else {
+        url = "team/get-team-member-list";
       }
-    };
+      const res = await api.get(url);
+      if (res.data) {
+        setData(res.data.info);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    }
+  };
+  useEffect(() => {
     fetchTrades();
   }, [api]);
 
@@ -238,7 +237,7 @@ const TablePagination = () => {
             }
             onChange={(e) => {
               if (e.target.checked) {
-                setSelectedRowIds(new Set(filteredData.map((_, i) => i)));
+                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -252,7 +251,7 @@ const TablePagination = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const isChecked = selectedRowIds.has(row.index);
+        const isChecked = selectedRowIds.has(item.team_id);
         const shouldHighlight =
           item.is_subcontractor === true &&
           item.company_id !== item.subcontractor_company_id;
@@ -265,9 +264,9 @@ const TablePagination = () => {
               onChange={() => {
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
-                  newSelected.delete(row.index);
+                  newSelected.delete(item.team_id);
                 } else {
-                  newSelected.add(row.index);
+                  newSelected.add(item.team_id);
                 }
                 setSelectedRowIds(newSelected);
               }}
@@ -413,7 +412,7 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            TEAMS ({table.getPrePaginationRowModel().rows.length})
+            TEAMS ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
           <TextField
             id="search"
@@ -546,10 +545,57 @@ const TablePagination = () => {
               variant="outlined"
               color="error"
               startIcon={<IconTrash width={18} />}
+              onClick={() => {
+                const selectedIds = Array.from(selectedRowIds);
+                setUsersToDelete(selectedIds);
+                setConfirmOpen(true);
+              }}
             >
               Archive
             </Button>
           )}
+          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogContent>
+              <Typography color="textSecondary">
+                Are you sure you want to archive {usersToDelete.length} team
+                {usersToDelete.length > 1 ? "s" : ""} from the teams?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setConfirmOpen(false)}
+                variant="outlined"
+                color="primary"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      team_ids: usersToDelete.join(","),
+                    };
+                    const response = await api.post(
+                      "team/archive-teams",
+                      payload
+                    );
+                    toast.success(response.data.message);
+                    setSelectedRowIds(new Set());
+                    await fetchTrades();
+                  } catch (error) {
+                    toast.error("Failed to archive teams");
+                  } finally {
+                    setConfirmOpen(false);
+                  }
+                }}
+                variant="outlined"
+                color="error"
+              >
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
           <IconButton
             sx={{ margin: "0px" }}
             id="basic-button"

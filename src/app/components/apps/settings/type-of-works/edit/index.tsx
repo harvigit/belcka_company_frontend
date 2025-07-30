@@ -91,7 +91,7 @@ const EditWork = ({ id, name, trade_id, onCloseDialog }: EditWorkProps) => {
           justifyContent="space-between"
           mb={3}
         >
-          <Typography variant="h5">#Edit Type of Work</Typography>
+          <Typography variant="h5">Edit Type of Work</Typography>
         </Stack>
 
         <Grid container spacing={3}>

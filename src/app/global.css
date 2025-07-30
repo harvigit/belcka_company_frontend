@@ -149,3 +149,21 @@ input#project_id::placeholder {
         color: black;
     }
 }
+.project-selection .mui-3q9hdc-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-clearIndicator, .project-selection button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.MuiAutocomplete-clearIndicator.mui-lp6drn{
+    display: none;
+}
+
+.address-form {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.multi-ellipsis {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;      /* Number of lines to show */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
