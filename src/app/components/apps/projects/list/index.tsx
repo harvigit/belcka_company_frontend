@@ -485,7 +485,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h5" fontWeight={700}>
-                      Add Address {projectId}
+                      Add Address
                     </Typography>
                   </Box>
                   <Typography variant="h5" mt={3}>
