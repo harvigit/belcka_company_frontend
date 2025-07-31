@@ -83,7 +83,7 @@ const TablePagination = () => {
   useEffect(() => {
     if (projectId && user?.id) {
       Cookies.set(COOKIE_PREFIX + user.id, projectId.toString(), {
-        expires: 7,
+        expires: 30,
       });
     }
   }, [projectId, user?.id]);
@@ -115,18 +115,17 @@ const TablePagination = () => {
   }, [projectId, user.company_id]);
 
   // Fetch addresses for selected project
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      try {
-        const res = await api.get(`address/get?project_id=${projectId}`);
-        if (res.data?.info) {
-          setAddress(res.data.info);
-        }
-      } catch (err) {
-        console.error("Failed to fetch address", err);
+  const fetchAddresses = async () => {
+    try {
+      const res = await api.get(`address/get?project_id=${projectId}`);
+      if (res.data?.info) {
+        setAddress(res.data.info);
       }
-    };
-
+    } catch (err) {
+      console.error("Failed to fetch address", err);
+    }
+  };
+  useEffect(() => {
     if (user.company_id && projectId) {
       fetchAddresses();
     }
@@ -378,7 +377,7 @@ const TablePagination = () => {
       >
         <BlankCard>
           <CardContent sx={{ flex: 1 }}>
-            <ProjectListing projectId={projectId} />
+            <ProjectListing projectId={projectId} onProjectUpdated={fetchAddresses}/>
           </CardContent>
         </BlankCard>
       </Grid>

@@ -44,6 +44,7 @@ import TasksList from "./tasks-list";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import Cookies from "js-cookie";
+import { AnyARecord } from "dns";
 
 dayjs.extend(customParseFormat);
 
@@ -61,8 +62,13 @@ export type ProjectList = {
   status_text: string;
   check_ins: number;
 };
+interface ProjectListingProps {
+  projectId: number | null;
+  onProjectUpdated: () => void;
+}
 
-const TablePagination = ({ projectId }: { projectId: number | null }) => {
+// const ProjectListing: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
+const TablePagination: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ status: "", sortOrder: "" });
   const [tempFilters, setTempFilters] = useState(filters);
@@ -135,6 +141,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
         toast.success(result.data.message);
         setSidebar(false);
         setLoading(true);
+        onProjectUpdated?.();
         setTimeout(() => {
           setLoading(false);
         }, 100);
@@ -526,7 +533,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
                   disabled={isSaving}
                   fullWidth
                 >
-                  {isSaving ? "Creating Address..." : "Save"}
+                  {isSaving ? "Saving..." : "Save"}
                 </Button>
               </Box>
             </form>
