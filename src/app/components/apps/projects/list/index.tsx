@@ -64,7 +64,7 @@ export type ProjectList = {
 };
 interface ProjectListingProps {
   projectId: number | null;
-  onProjectUpdated: () => void;
+  onProjectUpdated?: () => void;
 }
 
 // const ProjectListing: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
