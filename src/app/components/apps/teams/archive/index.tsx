@@ -10,19 +10,12 @@ import {
   Typography,
   Box,
   Grid,
-  Button,
   Divider,
   IconButton,
   Stack,
   TextField,
   InputAdornment,
   MenuItem,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
-  Tooltip,
-  Checkbox,
   CircularProgress,
 } from "@mui/material";
 import {
@@ -39,17 +32,12 @@ import {
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconFilter,
-  IconInbox,
   IconSearch,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { Avatar } from "@mui/material";
-import { CheckBox, FacebookSharp } from "@mui/icons-material";
 
 dayjs.extend(customParseFormat);
 
@@ -64,9 +52,6 @@ const TablePagination = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
-  const [user, setUser] = useState([]);
-
-  const [open, setOpen] = useState(false);
 
   // Fetch data
   useEffect(() => {

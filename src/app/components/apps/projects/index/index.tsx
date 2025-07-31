@@ -291,11 +291,11 @@ const TablePagination = () => {
                   let color = "";
 
                   switch (addr.status_int) {
-                    case 3:
+                    case 13:
                       label = "New Address";
                       color = "#A600FF";
                       break;
-                    case 13:
+                    case 3:
                       label = "In Progress";
                       color = "#FF7F00";
                       break;

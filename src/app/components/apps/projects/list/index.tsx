@@ -63,6 +63,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { fetchData } from "next-auth/client/_utils";
 import { IconArrowLeft } from "@tabler/icons-react";
+import Cookies from "js-cookie";
 
 dayjs.extend(customParseFormat);
 
@@ -116,9 +117,10 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
   const handleClose = () => {
     setAnchorEl(null);
   };
-
+  const COOKIE_PREFIX = "project_";
+  const projectID = Cookies.get(COOKIE_PREFIX + user.id);
   const [formData, setFormData] = useState<any>({
-    project_id: projectId,
+    project_id: Number(projectID),
     company_id: user.company_id,
     name: "",
   });
@@ -145,7 +147,7 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
 
   useEffect(() => {
     fetchTrades();
-  }, [projectId, value, user]);
+  }, [projectId, value, user, projectID]);
 
   const formatDate = (date: string | undefined) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
@@ -176,7 +178,14 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
   }, [data, filters, searchTerm, tempFilters.sortOrder]);
 
   // add address
-
+  useEffect(() => {
+    if (projectId) {
+      setFormData((prev: any) => ({
+        ...prev,
+        project_id: projectId,
+      }));
+    }
+  }, [projectId]);
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -192,12 +201,15 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
     setIsSaving(true);
     try {
       setFormData({
-        project_id: projectId,
+        project_id: Number(projectID),
         company_id: user.company_id,
         name: "",
       });
-
-      const result = await api.post("address/create", formData);
+      const payload = {
+        ...formData,
+        project_id: projectId, 
+      };
+      const result = await api.post("address/create", payload);
       if (result.data.IsSuccess === true) {
         toast.success(result.data.message);
         fetchTrades();
@@ -744,10 +756,12 @@ const TablePagination = ({ projectId }: { projectId: number | null }) => {
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h5" fontWeight={700}>
-                      Add Address
+                      Add Address {projectId}
                     </Typography>
                   </Box>
-                  <Typography variant="h5" mt={3}>Name</Typography>
+                  <Typography variant="h5" mt={3}>
+                    Name
+                  </Typography>
                   <CustomTextField
                     id="name"
                     name="name"
