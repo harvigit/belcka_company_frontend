@@ -109,15 +109,15 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply }) =>
                 anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
             >
                 <Box sx={{ p: 2 }}>
-                    <Typography fontWeight={600} mb={1}>
-                        {tempRange.from
-                            ? `From ${format(tempRange.from, "dd MMM yyyy")}`
-                            : "From —"}
-                        <br />
-                        {tempRange.to
-                            ? `To ${format(tempRange.to, "dd MMM yyyy")}`
-                            : "To —"}
-                    </Typography>
+                    {/*<Typography fontWeight={600} mb={1}>*/}
+                    {/*    {tempRange.from*/}
+                    {/*        ? `From ${format(tempRange.from, "dd MMM yyyy")}`*/}
+                    {/*        : "From —"}*/}
+                    {/*    <br />*/}
+                    {/*    {tempRange.to*/}
+                    {/*        ? `To ${format(tempRange.to, "dd MMM yyyy")}`*/}
+                    {/*        : "To —"}*/}
+                    {/*</Typography>*/}
 
                     <DayPicker
                         mode="range"

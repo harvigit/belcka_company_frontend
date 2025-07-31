@@ -4,7 +4,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     Avatar,
     Box,
-    Button,
+    Button, Collapse,
     Dialog,
     DialogActions,
     DialogContent,
@@ -35,7 +35,7 @@ import {
     IconChevronsRight,
     IconX,
     IconArrowLeft,
-    IconPencil,
+    IconPencil, IconChevronDown, IconChevronUp,
 } from '@tabler/icons-react';
 import {
     flexRender,
@@ -110,6 +110,9 @@ const TimesheetList = () => {
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
+
+    const [expandedEntryDrawer, setExpandedEntryDrawer] = useState<any | null>(null);
+    const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
 
     // const [tempStartDate, setTempStartDate] = useState<Date | null>(defaultStart);
     // const [tempEndDate, setTempEndDate] = useState<Date | null>(defaultEnd);
@@ -622,17 +625,20 @@ const TimesheetList = () => {
 
                             <Stack spacing={2}>
                                 {sidebarData.info.map((entry: any) => {
+                                    const isExpanded = expandedEntryId === entry.id;
                                     const duration = formatHour(entry.worklog_payable_hours);
-                                    
+
                                     return (
                                         <Box
                                             key={entry.id}
                                             sx={{
                                                 position: 'relative',
-                                                p: 2,
-                                                borderRadius: 3,
+                                                borderRadius: 2,
+                                                border: '1px solid #ddd',
+                                                padding: 2,
                                                 backgroundColor: '#fff',
-                                                border: '1px solid #eee',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                                                transition: '0.3s ease',
                                             }}
                                         >
                                             <Box
@@ -684,31 +690,120 @@ const TimesheetList = () => {
                                                         </Typography>
                                                     </Box>
 
-                                                    {/* Right side icon */}
-                                                    {(entry.status < 6 || entry.status === 7) && entry.is_request_pending !== true && (
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => {
-                                                                setSelectedWorklog(entry);
-                                                                handleEditClick(entry);
-                                                            }}
-                                                        >
-                                                            <Box
-                                                                component="span"
-                                                                sx={{
-                                                                    width: 20,
-                                                                    height: 20,
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
+                                                    <Box>
+                                                        {(entry.status < 6 || entry.status === 7) && entry.is_request_pending !== true && (
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => {
+                                                                    setSelectedWorklog(entry);
+                                                                    handleEditClick(entry);
                                                                 }}
                                                             >
-                                                                <IconPencil size="small" />
-                                                            </Box>
+                                                                <Box
+                                                                    component="span"
+                                                                    sx={{
+                                                                        width: 20,
+                                                                        height: 20,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                    }}
+                                                                >
+                                                                    <IconPencil size="small" />
+                                                                </Box>
+                                                            </IconButton>
+                                                        )}
+    
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
+                                                            aria-label="Toggle details"
+                                                            sx={{
+                                                                width: 40,
+                                                                height: 40,
+                                                            }}
+                                                        >
+                                                            {isExpanded ? <IconChevronUp size="16" /> : <IconChevronDown size="16" />}
                                                         </IconButton>
-                                                    )}
+                                                    </Box>
                                                 </Box>
                                             </Box>
+
+                                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                                <Stack spacing={2} mt={2}>
+                                                    {entry.user_checklogs.map((userChecklog: any) => {
+                                                        const duration = formatHour(userChecklog.total_work_hours);
+
+                                                        return (
+                                                            <Box
+                                                                key={userChecklog.id}
+                                                                sx={{
+                                                                    p: 2,
+                                                                    borderRadius: 2,
+                                                                    backgroundColor: '#fff',
+                                                                    border: '1px solid #ddd',
+                                                                    position: 'relative',
+                                                                }}
+                                                            >
+                                                                <Stack direction="row" spacing={1} position="absolute" top={-10} left={16}>
+                                                                    { userChecklog.address_name && 
+                                                                        <Box
+                                                                            sx={{
+                                                                                backgroundColor: '#FF7A00',
+                                                                                color: '#fff',
+                                                                                fontSize: 11,
+                                                                                fontWeight: 600,
+                                                                                px: 1.5,
+                                                                                py: 0.5,
+                                                                                borderRadius: '999px',
+                                                                                maxWidth: '50%',
+                                                                                whiteSpace: 'nowrap',
+                                                                                overflow: 'hidden',
+                                                                                textOverflow: 'ellipsis',
+                                                                            }}
+                                                                        >
+                                                                            {userChecklog.address_name}
+                                                                        </Box>
+                                                                    }
+                                                                    { userChecklog.type_of_work_name &&
+                                                                        <Box
+                                                                            sx={{
+                                                                                backgroundColor: '#009DFF',
+                                                                                color: '#fff',
+                                                                                fontSize: 11,
+                                                                                fontWeight: 600,
+                                                                                px: 1.5,
+                                                                                py: 0.5,
+                                                                                borderRadius: '999px',
+                                                                                maxWidth: '50%',
+                                                                                whiteSpace: 'nowrap',
+                                                                                overflow: 'hidden',
+                                                                                textOverflow: 'ellipsis',
+                                                                            }}
+                                                                        >
+                                                                            {userChecklog.type_of_work_name}
+                                                                        </Box>
+                                                                    }
+                                                                </Stack>
+
+                                                                <Box mt={2}>
+                                                                    <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
+                                                                        <Box display="flex" alignItems="center">
+                                                                            <Typography variant="body2" sx={{ color: '#666' }} mr={1}>
+                                                                                ({userChecklog.formatted_checkin_date_time} - {userChecklog.formatted_checkout_date_time})
+                                                                            </Typography>
+
+                                                                            <Typography variant="h6" fontWeight={700}>
+                                                                                {duration} H
+                                                                            </Typography>
+                                                                        </Box>
+                                                                    </Box>
+                                                                </Box>
+                                                            </Box>
+                                                        );
+                                                    })}
+                                                </Stack>
+                                            </Collapse>
                                         </Box>
                                     );
                                 })}
