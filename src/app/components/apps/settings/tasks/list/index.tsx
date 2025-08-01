@@ -121,8 +121,8 @@ const TablePagination = () => {
     duration: 0,
     rate: 0,
     units: "",
-    is_pricework: 0,
-    repeatable_job: 0,
+    is_pricework: false,
+    repeatable_job: false,
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {

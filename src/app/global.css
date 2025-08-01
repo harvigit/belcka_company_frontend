@@ -168,5 +168,8 @@ input#project_id::placeholder {
     -webkit-line-clamp: 2;      /* Number of lines to show */
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-  
+}
+
+.address-form .mui-3q9hdc-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-clearIndicator{
+    display: none;
+}
