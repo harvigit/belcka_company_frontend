@@ -58,8 +58,8 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CreateTask from "../create";
 import ArchiveTask from "../archive";
-// import { IconEdit } from "@tabler/icons-react";
-// import EditTask from "../edit";
+import { IconEdit } from "@tabler/icons-react";
+import EditTask from "../edit";
 
 dayjs.extend(customParseFormat);
 
@@ -140,6 +140,7 @@ const TablePagination = () => {
       if (res.data) {
         setData(res.data.info);
         setLoading(false);
+        setarchiveDrawerOpen(false);
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);
@@ -164,6 +165,20 @@ const TablePagination = () => {
     };
     fetchTrades();
   }, []);
+
+  const handleOpenCreateDrawer = () => {
+    setFormData({
+      name: "",
+      trade_id: null,
+      company_id: id.company_id,
+      duration: 0,
+      rate: 0,
+      units: "",
+      is_pricework: false,
+      repeatable_job: false,
+    });
+    setDrawerOpen(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,18 +223,18 @@ const TablePagination = () => {
         rate: Number(formData.rate),
       };
 
-      const result = await api.post("type-works/update", payload);
+      const result = await api.put("type-works/update", payload);
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
           name: "",
           trade_id: 0,
-          is_pricework: 0,
+          is_pricework: false,
           units: "",
-          repeatable_job: 0,
+          repeatable_job: false,
         });
         fetchTasks();
-        setDrawerOpen(false);
+        setEditDrawerOpen(false);
       } else {
         toast.error(result.data.message);
       }
@@ -376,22 +391,22 @@ const TablePagination = () => {
       },
     }),
 
-    // columnHelper.display({
-    //   id: "actions",
-    //   header: "Actions",
-    //   cell: ({ row }) => {
-    //     const item = row.original;
-    //     return (
-    //       <Stack direction="row" spacing={1}>
-    //         <Tooltip title="Edit">
-    //           <IconButton onClick={() => handleEdit(item.id)} color="primary">
-    //             <IconEdit size={18} />
-    //           </IconButton>
-    //         </Tooltip>
-    //       </Stack>
-    //     );
-    //   },
-    // }),
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Edit">
+              <IconButton onClick={() => handleEdit(item.id)} color="primary">
+                <IconEdit size={18} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        );
+      },
+    }),
   ];
 
   const table = useReactTable({
@@ -632,7 +647,7 @@ const TablePagination = () => {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  setDrawerOpen(true);
+                  handleOpenCreateDrawer();
                 }}
                 style={{
                   width: "100%",
@@ -688,7 +703,7 @@ const TablePagination = () => {
       />
 
       {/* Edit task */}
-     {/* <EditTask
+      <EditTask
         open={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         id={selectedTaskId}
@@ -697,7 +712,7 @@ const TablePagination = () => {
         EditTask={editTask}
         trade={trade}
         isSaving={isSaving}
-      /> */}
+      />
 
       {/* Archive task list */}
       <ArchiveTask

@@ -175,7 +175,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                         bgcolor: "#FF7F00",
                         color: "#fff",
                         fontWeight: "600",
-                        height: "22px",
+                        height: "19px",
                       }}
                     />
                     <Chip
@@ -184,7 +184,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                         bgcolor: "#7523D3",
                         color: "#fff",
                         fontWeight: "600",
-                        height: "22px",
+                        height: "19px",
                       }}
                     />
                     {item.is_pricework ? (
@@ -194,7 +194,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                           bgcolor: "#32A852",
                           color: "#fff",
                           fontWeight: "600",
-                          height: "22px",
+                          height: "19px",
                         }}
                       />
                     ) : (
@@ -204,7 +204,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                           bgcolor: "#FF008C",
                           color: "#fff",
                           fontWeight: "600",
-                          height: "22px",
+                          height: "19px",
                         }}
                       />
                     )}
