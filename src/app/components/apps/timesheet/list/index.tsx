@@ -55,6 +55,8 @@ import '../../../../global.css';
 import { AxiosResponse } from 'axios';
 
 import ShiftEditPopover from './edit-shift-time/shift-edit-popover';
+import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
+import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 
 const columnHelper = createColumnHelper();
 
@@ -248,15 +250,13 @@ const TimesheetList = () => {
             {
                 id: 'select',
                 header: ({ table }: { table: any }) => (
-                    <input
-                        type="checkbox"
+                    <CustomCheckbox
                         checked={table.getIsAllPageRowsSelected()}
                         onChange={table.getToggleAllPageRowsSelectedHandler()}
                     />
                 ),
                 cell: ({ row }: { row: any }) => (
-                    <input
-                        type="checkbox"
+                    <CustomCheckbox
                         checked={row.getIsSelected()}
                         onChange={row.getToggleSelectedHandler()}
                     />
@@ -352,6 +352,11 @@ const TimesheetList = () => {
         getFilteredRowModel: getFilteredRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
+        initialState: {
+            pagination: {
+              pageSize: 50,
+            },
+        },
     });
 
     return (
@@ -527,58 +532,77 @@ const TimesheetList = () => {
 
             {/* Pagination and Rows Info */}
             <Stack
-                gap={1}
-                p={3}
-                alignItems="center"
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
+            gap={1}
+            pr={3}
+            pt={1}
+            pl={3}
+            pb={3}
+            alignItems="center"
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography color="textSecondary">
+                {table.getPrePaginationRowModel().rows.length} Rows
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: {
+                  xs: "block",
+                  sm: "flex",
+                },
+              }}
+              alignItems="center"
             >
-                <Typography variant="body1">{filteredData.length} Rows</Typography>
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="body1">Page</Typography>
-                    <Typography variant="body1" fontWeight={600}>
-                        {table.getState().pagination.pageIndex + 1} of{' '}
-                        {table.getPageCount()}
-                    </Typography>
-                    | Entries:
-                    <TextField
-                        select
-                        size="small"
-                        value={table.getState().pagination.pageSize}
-                        onChange={(e) => table.setPageSize(Number(e.target.value))}
-                    >
-                        {[10, 50, 100, 250, 500].map((size) => (
-                            <MenuItem key={size} value={size}>
-                                {size}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <IconButton
-                        onClick={() => table.setPageIndex(0)}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <IconChevronsLeft />
-                    </IconButton>
-                    <IconButton
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <IconChevronLeft />
-                    </IconButton>
-                    <IconButton
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <IconChevronRight />
-                    </IconButton>
-                    <IconButton
-                        onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <IconChevronsRight />
-                    </IconButton>
-                </Box>
-            </Stack>
+              <Stack direction="row" alignItems="center">
+                <Typography color="textSecondary">Page</Typography>
+                <Typography color="textSecondary" fontWeight={600} ml={1}>
+                  {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </Typography>
+                <Typography color="textSecondary" ml={"3px"}>
+                  {" "}
+                  | Enteries :{" "}
+                </Typography>
+              </Stack>
+              <Stack
+                ml={"5px"}
+                direction="row"
+                alignItems="center"
+                color="textSecondary"
+              >
+                <CustomSelect
+                  value={table.getState().pagination.pageSize}
+                  onChange={(e: { target: { value: any } }) => {
+                    table.setPageSize(Number(e.target.value));
+                  }}
+                >
+                  {[50, 100, 250, 500].map((pageSize) => (
+                    <MenuItem key={pageSize} value={pageSize}>
+                      {pageSize}
+                    </MenuItem>
+                  ))}
+                </CustomSelect>
+                <IconButton
+                  size="small"
+                  sx={{ width: "30px" }}
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <IconChevronLeft />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ width: "30px" }}
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <IconChevronRight />
+                </IconButton>
+              </Stack>
+            </Box>
+          </Stack>
 
             <Drawer
                 anchor="right"

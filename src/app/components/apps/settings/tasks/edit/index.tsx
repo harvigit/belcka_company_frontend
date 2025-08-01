@@ -53,9 +53,14 @@ const EditTask: React.FC<EditTaskProps> = ({
   isSaving,
 }) => {
   const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
+    if ((name === "duration" || name === "rate") && !/^\d*$/.test(value)) {
+      return;
+    }
+
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
@@ -71,12 +76,12 @@ const EditTask: React.FC<EditTaskProps> = ({
           const res = await api.get(`type-works/get-task-detail?id=${id}`);
           if (res.data && res.data.info) {
             const task = res.data.info;
-            setData(task); 
+            setData(task);
             setFormData({
               id: task.id,
               name: task.name || "",
               trade_id: task.trade_id || null,
-              company_id: task.company_id || "", 
+              company_id: task.company_id || "",
               duration: task.duration || 0,
               rate: task.rate || 0,
               units: task.units || "",
@@ -178,11 +183,15 @@ const EditTask: React.FC<EditTaskProps> = ({
                 <CustomTextField
                   id="duration"
                   name="duration"
-                  type="number"
-                  placeholder="Enter duration.."
+                  type="text"
+                  placeholder="Enter minutes.."
                   value={formData.duration === 0 ? "" : formData.duration}
                   onChange={handleChange}
                   variant="outlined"
+                  inputProps={{
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                  }}
                   fullWidth
                 />
                 <Typography
@@ -213,10 +222,14 @@ const EditTask: React.FC<EditTaskProps> = ({
                 <CustomTextField
                   id="rate"
                   name="rate"
-                  type="number"
+                  type="text"
                   placeholder="Enter rate.."
                   value={formData.rate === 0 ? "" : formData.rate}
                   onChange={handleChange}
+                  inputProps={{
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                  }}
                   variant="outlined"
                   fullWidth
                 />
@@ -245,7 +258,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                     <CustomTextField {...params} placeholder="Trades" />
                   )}
                 />
-                
+
                 <Typography variant="body1">
                   You can choose only one trade
                 </Typography>
