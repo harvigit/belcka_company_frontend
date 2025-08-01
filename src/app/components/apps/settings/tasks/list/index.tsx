@@ -64,7 +64,7 @@ import EditTask from "../edit";
 dayjs.extend(customParseFormat);
 
 export interface TradeList {
-  trade_id: number;
+  id: number;
   name: string;
 }
 
