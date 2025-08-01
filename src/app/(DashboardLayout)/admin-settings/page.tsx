@@ -11,7 +11,7 @@ import {
   Stack,
 } from "@mui/material";
 
-import CreateWork from "@/app/components/apps/settings/type-of-works/list";
+import CreateWork from "@/app/components/apps/settings/tasks/list";
 import { IconPlus} from "@tabler/icons-react";
 import BlankCard from "@/app/components/shared/BlankCard";
 
@@ -68,11 +68,11 @@ const AdminSetting = () => {
           <Grid
             size={{
               xs: 12,
-              lg: 3,
+              lg: 2,
             }}
           >
               <BlankCard>
-                <Stack direction="row" mt={3} ml={10} mb={3}>
+                <Stack direction="row" mt={3} ml={6} mb={3}>
                   <Tabs
                     className="admin-settings-tabs"
                     orientation="vertical"
@@ -84,7 +84,7 @@ const AdminSetting = () => {
                       className="admin-settings"
                       iconPosition="start"
                       icon={<IconPlus size="20" />}
-                      label="Type of works"
+                      label="Templates"
                       {...a11yProps(0)}
                     />
                     {/* <Tab
@@ -102,7 +102,7 @@ const AdminSetting = () => {
             display={"flex"}
             size={{
               xs: 12,
-              lg: 9,
+              lg: 10,
             }}
           >
             <BlankCard>

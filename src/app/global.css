@@ -153,13 +153,16 @@ input#project_id::placeholder {
     display: none;
 }
 
-.address-form {
+.address-form ,.task-form{
     display: flex;
     height: 100%;
     flex-direction: column;
     justify-content: space-between;
 }
 
+.task-form {
+    height: 95% !important;
+}
 .multi-ellipsis {
     display: -webkit-box;
     -webkit-line-clamp: 2;      /* Number of lines to show */
