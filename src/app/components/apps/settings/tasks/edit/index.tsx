@@ -15,7 +15,7 @@ import api from "@/utils/axios";
 import { TaskList } from "../list";
 
 interface Trade {
-  trade_id: string | number | null;
+  id: string | number | null;
   name: string;
 }
 
@@ -241,18 +241,18 @@ const EditTask: React.FC<EditTaskProps> = ({
                   id="trade_id"
                   options={trade}
                   value={
-                    trade.find((user) => user.trade_id === formData.trade_id) ??
+                    trade.find((user) => user.id === formData.trade_id) ??
                     null
                   }
                   onChange={(event, newValue) => {
                     setFormData({
                       ...formData,
-                      trade_id: newValue ? newValue.trade_id : null,
+                      trade_id: newValue ? newValue.id : null,
                     });
                   }}
                   getOptionLabel={(option) => option.name}
                   isOptionEqualToValue={(option, value) =>
-                    option.trade_id === value.trade_id
+                    option.id === value.id
                   }
                   renderInput={(params) => (
                     <CustomTextField {...params} placeholder="Trades" />
