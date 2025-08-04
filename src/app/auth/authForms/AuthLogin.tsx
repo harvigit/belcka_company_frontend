@@ -62,6 +62,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       extension,
       phone: nationalPhone,
       otp,
+      is_web: Boolean(1)
     };
 
     try {
