@@ -113,9 +113,13 @@ span.MuiTabs-indicator.mui-at3d3q{
 .admin-settings.Mui-selected {
     padding: 10px 20px !important;
     min-height: 20px !important;
-    color: white;
-    background-color: #1e4db7;
+    background-color: rgba(30, 77, 183, 0.08);
+    color: rgb(17, 20, 45);
     border-radius: 7px;
+}
+
+.admin-settings-tabs {
+    width: 90%
 }
 
 input#project_id::placeholder {
@@ -165,7 +169,7 @@ input#project_id::placeholder {
 }
 .multi-ellipsis {
     display: -webkit-box;
-    -webkit-line-clamp: 2;      /* Number of lines to show */
+    -webkit-line-clamp: 2; 
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

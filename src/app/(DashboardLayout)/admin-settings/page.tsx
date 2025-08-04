@@ -2,17 +2,10 @@
 
 import * as React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
-import {
-  Grid,
-  Tabs,
-  Tab,
-  Box,
-  CardContent,
-  Stack,
-} from "@mui/material";
+import { Grid, Tabs, Tab, Box, Stack } from "@mui/material";
 
 import CreateWork from "@/app/components/apps/settings/tasks/list";
-import { IconPlus} from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import BlankCard from "@/app/components/shared/BlankCard";
 
 interface TabPanelProps {
@@ -56,7 +49,7 @@ const AdminSetting = () => {
       title="Account Setting"
       description="This is Account Setting"
     >
-      <Grid container spacing={3}>
+      <Grid container spacing={1}>
         <Grid
           container
           display={"flex"}
@@ -71,32 +64,33 @@ const AdminSetting = () => {
               lg: 2,
             }}
           >
-              <BlankCard>
-                <Stack direction="row" mt={3} ml={6} mb={3}>
-                  <Tabs
-                    className="admin-settings-tabs"
-                    orientation="vertical"
-                    variant="scrollable"
-                    value={value}
-                    onChange={handleChange}
-                  >
-                    <Tab
-                      className="admin-settings"
-                      iconPosition="start"
-                      icon={<IconPlus size="20" />}
-                      label="Templates"
-                      {...a11yProps(0)}
-                    />
-                    {/* <Tab
+            <BlankCard className="tab-balnkcard">
+              <Stack direction="row" mt={3} ml={2} mb={3}>
+                <Tabs
+                  className="admin-settings-tabs"
+                  orientation="vertical"
+                  variant="scrollable"
+                  value={value}
+                  onChange={handleChange}
+                >
+                  <Tab
+                    className="admin-settings"
+                    color="textSecondary"
+                    iconPosition="start"
+                    icon={<IconPlus size="20" />}
+                    label="Templates"
+                    {...a11yProps(0)}
+                  />
+                  {/* <Tab
                       className="admin-settings"
                       iconPosition="start"
                       icon={<IconPlus size="20" />}
                       label="Type of works"
                       {...a11yProps(1)}
                     /> */}
-                  </Tabs>
-                </Stack>
-              </BlankCard>
+                </Tabs>
+              </Stack>
+            </BlankCard>
           </Grid>
           <Grid
             display={"flex"}
@@ -106,11 +100,9 @@ const AdminSetting = () => {
             }}
           >
             <BlankCard>
-              <CardContent>
-                <TabPanel value={value} index={0}>
-                  <CreateWork />
-                </TabPanel>
-              </CardContent>
+              <TabPanel value={value} index={0}>
+                <CreateWork />
+              </TabPanel>
             </BlankCard>
           </Grid>
         </Grid>

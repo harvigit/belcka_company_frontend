@@ -8,6 +8,11 @@ import {
   CardContent,
   Autocomplete,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Button,
 } from "@mui/material";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
@@ -19,6 +24,18 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import Cookies from "js-cookie";
+import {
+  IconArcheryArrow,
+  IconArrowRight,
+  IconArrowUp,
+  IconChevronLeft,
+  IconChevronRight,
+  IconPlus,
+  IconX,
+} from "@tabler/icons-react";
+import toast from "react-hot-toast";
+import CreateProject from "../create";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 dayjs.extend(customParseFormat);
 
@@ -43,38 +60,48 @@ const COOKIE_PREFIX = "project_";
 const TablePagination = () => {
   const [data, setData] = useState<ProjectList[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [projectId, setProjectId] = useState<number | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-
-  const [projectId, setProjectId] = useState<number | null>(null);
   const [address, setAddress] = useState<any[]>([]);
-
+  const [isSaving, setIsSaving] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [budget, setBudget] = useState<number | null>(null);
+  const [formData, setFormData] = useState<any>({
+    name: "",
+    address: "",
+    budget: "",
+    description: "",
+    code: "",
+    shift_ids: "",
+    team_ids: "",
+    company_id: user.company_id,
+  });
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(`project/get?company_id=${user.company_id}`);
-        if (res.data?.info) {
-          setData(res.data.info);
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`project/get?company_id=${user.company_id}`);
+      if (res.data?.info) {
+        setData(res.data.info);
 
-          const cookieProjectId = Cookies.get(COOKIE_PREFIX + user.id);
-          const validProjectId = res.data.info.some(
-            (p: any) => p.id === Number(cookieProjectId)
-          )
-            ? Number(cookieProjectId)
-            : res.data.info[0]?.id;
+        const cookieProjectId = Cookies.get(COOKIE_PREFIX + user.id);
+        const validProjectId = res.data.info.some(
+          (p: any) => p.id === Number(cookieProjectId)
+        )
+          ? Number(cookieProjectId)
+          : res.data.info[0]?.id;
 
-          setProjectId(validProjectId);
-        }
-      } catch (err) {
-        console.error("Failed to fetch projects", err);
+        setProjectId(validProjectId);
       }
-      setLoading(false);
-    };
-
+    } catch (err) {
+      console.error("Failed to fetch projects", err);
+    }
+    setLoading(false);
+  };
+  useEffect(() => {
     if (user.company_id) {
       fetchProjects();
     }
@@ -88,29 +115,31 @@ const TablePagination = () => {
     }
   }, [projectId, user?.id]);
 
+  const fetchProjectData = async () => {
+    setLoading(false);
+
+    if (!projectId) return;
+    try {
+      const res = await api.get(`project/get?company_id=${user.company_id}`);
+      if (res.data?.info) {
+        const projectList = res.data.info;
+        const selectedProject = projectList.find(
+          (p: any) => p.id === projectId
+        );
+        if (selectedProject) {
+          setBudget(selectedProject.budget);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to refresh project data", err);
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
-    const fetchProjectData = async () => {
-      if (!projectId) return;
-      try {
-        const res = await api.get(`project/get?company_id=${user.company_id}`);
-        if (res.data?.info) {
-          const projectList = res.data.info;
-          const selectedProject = projectList.find(
-            (p: any) => p.id === projectId
-          );
-          if (selectedProject) {
-            setBudget(selectedProject.budget);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to refresh project data", err);
-        setData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    setLoading(false);
     fetchProjectData();
   }, [projectId, user.company_id]);
 
@@ -125,6 +154,42 @@ const TablePagination = () => {
       console.error("Failed to fetch address", err);
     }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        company_id: user.company_id,
+        budget: Number(formData.budget),
+      };
+
+      const result = await api.post("project/create", payload);
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setFormData({
+          name: "",
+          address: "",
+          budget: "",
+          description: "",
+          code: 0,
+          shift_ids: "",
+          team_ids: "",
+          company_id: user.company_id,
+        });
+        fetchProjects();
+        setDrawerOpen(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (user.company_id && projectId) {
       fetchAddresses();
@@ -167,11 +232,10 @@ const TablePagination = () => {
             <Autocomplete
               fullWidth
               id="project_id"
-              options={data}
+              options={[]}
+              open={false}
+              onOpen={() => setDialogOpen(true)}
               value={data.find((project) => project.id === projectId) ?? null}
-              onChange={(event, newValue) => {
-                setProjectId(newValue ? newValue.id : null);
-              }}
               getOptionLabel={(option) => option.name}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => (
@@ -179,6 +243,7 @@ const TablePagination = () => {
                   {...params}
                   placeholder="Projects"
                   className="project-selection"
+                  onClick={() => setDialogOpen(true)}
                 />
               )}
             />
@@ -369,6 +434,105 @@ const TablePagination = () => {
           )}
         </Box>
       </Grid>
+
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
+          <Button
+            color="primary"
+            variant="outlined"
+            onClick={(e) => {
+              setDrawerOpen(true);
+              setDialogOpen(false);
+            }}
+          >
+            <IconPlus size={18} />
+            Add Project
+          </Button>
+          <IconButton
+            aria-label="close"
+            onClick={() => setDialogOpen(false)}
+            size="small"
+            sx={{
+              position: "absolute",
+              right: 12,
+              top: 8,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <IconX size={30} style={{ width: 30, height: 30 }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2} mb={2} display={"block"}>
+            {data.map((project) => (
+              <Grid
+                mt={2}
+                size={{
+                  xs: 12,
+                  sm: 10,
+                  md: 10,
+                }}
+                key={project.id}
+                display={"flex"}
+                textAlign={"start"}
+                alignItems={"center"}
+              >
+                <CustomCheckbox
+                  onClick={() => {
+                    setProjectId(project.id);
+                    setDialogOpen(false);
+                  }}
+                ></CustomCheckbox>
+                <Box
+                  onClick={() => {
+                    setProjectId(project.id);
+                    setDialogOpen(false);
+                  }}
+                  sx={{
+                    boxShadow: "0px 1px 4px 0px #00000040",
+                    borderRadius: "20px",
+                    height: "50px",
+                    width: "100%",
+                    "&:hover": {
+                      cursor: "pointer",
+                    },
+                  }}
+                  display={"flex"}
+                  justifyContent={"space-between"}
+                  alignItems={"center"}
+                >
+                  <Typography variant="subtitle1" ml={2}>
+                    {project.name}
+                  </Typography>
+                  <IconChevronRight
+                    style={{ color: "GrayText" }}
+                  ></IconChevronRight>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Project */}
+      <CreateProject
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        formData={formData}
+        setFormData={setFormData}
+        handleSubmit={handleSubmit}
+        isSaving={isSaving}
+      />
+
       <Grid
         size={{
           xs: 12,
@@ -377,7 +541,10 @@ const TablePagination = () => {
       >
         <BlankCard>
           <CardContent sx={{ flex: 1 }}>
-            <ProjectListing projectId={projectId} onProjectUpdated={fetchAddresses}/>
+            <ProjectListing
+              projectId={projectId}
+              onProjectUpdated={fetchAddresses}
+            />
           </CardContent>
         </BlankCard>
       </Grid>
