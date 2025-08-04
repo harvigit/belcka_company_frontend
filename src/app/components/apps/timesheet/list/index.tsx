@@ -308,7 +308,7 @@ const TimesheetList = () => {
                                         fetchSidebarData(value.worklog_ids);
                                     }
                                 }}
-                                style={{ cursor: 'pointer' }}
+                                style={{ cursor: 'pointer', color: `${value.color}` }}
                             >
                                 {formatHour(value.hours)}
                             </div>

@@ -15,6 +15,8 @@ import {
     Stack,
     MenuItem,
     CircularProgress,
+    Drawer,
+    Collapse, Tab, Tabs, InputAdornment, TextField, Button,
 } from '@mui/material';
 import {
     flexRender,
@@ -27,8 +29,12 @@ import {
     SortingState,
 } from '@tanstack/react-table';
 import {
+    IconArrowLeft,
+    IconChevronDown,
     IconChevronLeft,
     IconChevronRight,
+    IconChevronUp, IconFilter,
+    IconPencil, IconSearch,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
@@ -36,6 +42,10 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import { ProjectList } from './index';
+
+import { WorksTab } from './address-sidebar-tab/works-tab';
+import { DocumentsTab } from './address-sidebar-tab/documents-tab';
+import { TradesTab } from './address-sidebar-tab/trades-tab';
 
 dayjs.extend(customParseFormat);
 
@@ -54,7 +64,9 @@ const AddressesList = ({ projectId, searchTerm, filters }: AddressesListProps) =
     const [loading, setLoading] = useState<boolean>(false);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [sorting, setSorting] = useState<SortingState>([]);
-
+    const [sidebarData, setSidebarData] = useState<any>(null);
+    const [value, setValue] = useState<number>(0);
+    
     useEffect(() => {
         if (projectId) {
             const fetchAddresses = async () => {
@@ -74,10 +86,16 @@ const AddressesList = ({ projectId, searchTerm, filters }: AddressesListProps) =
         }
     }, [projectId]);
 
+    useEffect(() => {
+        if (sidebarData !== null) {
+            setValue(0);
+        }
+    }, [sidebarData]);
+
     const formatDate = (date: string | undefined) => {
         return dayjs(date ?? '').isValid() ? dayjs(date).format('DD/MM/YYYY') : '-';
     };
-
+    
     const currentFilteredData = useMemo(() => {
         let filtered = data.filter((item) => {
             const matchesStatus = filters.status ? item.status_text === filters.status : true;
@@ -97,6 +115,10 @@ const AddressesList = ({ projectId, searchTerm, filters }: AddressesListProps) =
 
     const columnHelper = createColumnHelper<ProjectList>();
 
+    const handleTabChange = (event: any, newValue: any) => {
+        setValue(newValue);
+    };
+    
     const columns = useMemo(() => [
         columnHelper.accessor('name', {
             id: 'name',
@@ -132,7 +154,21 @@ const AddressesList = ({ projectId, searchTerm, filters }: AddressesListProps) =
                                 setSelectedRowIds(newSelected);
                             }}
                         />
-                        <Typography variant="h5">{item.name ?? '-'}</Typography>
+                        <Typography
+                            variant="h5"
+                            onClick={() => {
+                                setSidebarData({
+                                    addressName: item.name,
+                                    companyId: item.company_id,
+                                    projectId: item.project_id,
+                                    addressId: item.id,
+                                    info: [true],
+                                })
+                            }}
+                            sx={{
+                                cursor: 'pointer',
+                            }}
+                        > {item.name ?? '-'} </Typography>
                     </Stack>
                 );
             },
@@ -209,7 +245,8 @@ const AddressesList = ({ projectId, searchTerm, filters }: AddressesListProps) =
     }
 
     return (
-        <Grid container spacing={3}>
+        <Box>
+            <Grid container spacing={3}>
             <Grid size={12}>
                 <Box>
                     <TableContainer sx={{ maxHeight: 600 }}>
@@ -380,6 +417,88 @@ const AddressesList = ({ projectId, searchTerm, filters }: AddressesListProps) =
                 </Stack>
             </Grid>
         </Grid>
+
+            <Drawer
+                anchor="right"
+                open={sidebarData !== null}
+                onClose={() => setSidebarData(null)}
+                sx={{
+                    width: { xs: '100%', sm: 500 },
+                    flexShrink: 0,
+                    '& .MuiDrawer-paper': {
+                        width: { xs: '100%', sm: 500 },
+                        padding: 2,
+                        backgroundColor: '#fff',
+                        boxSizing: 'border-box',
+                    },
+                }}
+            >
+                <Box>
+                    {Array.isArray(sidebarData?.info) && sidebarData.info.length > 0 ? (
+                        <>
+                            {/* Header */}
+                            <Box display="flex" alignItems="center" mb={2}>
+                                <IconButton onClick={() => setSidebarData(null)}>
+                                    <IconArrowLeft />
+                                </IconButton>
+                                <Typography variant="h6" fontWeight={700} noWrap>
+                                    {sidebarData.addressName}
+                                </Typography>
+                            </Box>
+                            
+                            {/* Tabs */}
+                            <Tabs
+                                className="address-sidebar-tabs"
+                                value={value}
+                                onChange={handleTabChange}
+                                aria-label="Sidebar Tabs"
+                                variant="fullWidth"
+                                TabIndicatorProps={{ style: { display: 'none' } }}
+                                sx={{
+                                    backgroundColor: '#E0E0E0',
+                                    borderRadius: '12px',
+                                    minHeight: '40px',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    mb: 2,
+                                }}
+                            >
+                                {['Works', 'Documents', 'Trades'].map((label, index) => (
+                                    <Tab
+                                        key={label}
+                                        label={label}
+                                        sx={{
+                                            textTransform: 'none',
+                                            borderRadius: '10px',
+                                            minHeight: '32px',
+                                            minWidth: 'auto',
+                                            px: 3,
+                                            py: 0.5,
+                                            fontSize: '14px',
+                                            fontWeight: value === index ? '600' : '400',
+                                            color: value === index ? '#000 !important' : '#888',
+                                            backgroundColor: value === index ? '#fff' : 'transparent',
+                                            boxShadow: value === index ? '0px 2px 4px rgba(0,0,0,0.1)' : 'none',
+                                            transition: 'all 0.3s ease',
+                                        }}
+                                    />
+                                ))}
+                            </Tabs>
+
+                            {value === 0 && <WorksTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
+                            {value === 1 && <DocumentsTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
+                            {value === 2 && <TradesTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
+
+                        </>
+                    ) : (
+                        <Typography variant="body1" color="text.secondary" mt={2}>
+                            No work logs available.
+                        </Typography>
+                    )}
+                </Box>
+            </Drawer>
+        </Box>
     );
 };
 

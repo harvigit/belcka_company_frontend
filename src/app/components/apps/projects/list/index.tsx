@@ -50,6 +50,8 @@ dayjs.extend(customParseFormat);
 
 export type ProjectList = {
   id: number;
+  company_id: number;
+  project_id: number;
   name: string;
   currency: string | null;
   address: string;
