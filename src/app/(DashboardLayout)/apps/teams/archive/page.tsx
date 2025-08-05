@@ -1,3 +1,4 @@
+"use client"
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import { TeamProvider } from "@/app/context/TeamContext";
