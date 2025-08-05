@@ -1,319 +1,245 @@
-"use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  TableContainer,
-  Table,
-  TableRow,
-  TableCell,
-  TableBody,
-  TableHead,
-  Typography,
+  Drawer,
   Box,
   Grid,
-  Divider,
   IconButton,
-  Stack,
-  TextField,
-  InputAdornment,
-  MenuItem,
-  CircularProgress,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  createColumnHelper,
-} from "@tanstack/react-table";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
-  IconSearch,
-} from "@tabler/icons-react";
+import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat";
+import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
+import toast from "react-hot-toast";
 
-dayjs.extend(customParseFormat);
-
-export interface TeamList {
-  id: number;
+interface ArchiveTeamProps {
+  open: boolean;
+  onClose: () => void;
+  onWorkUpdated?: () => void;
+}
+export interface TradeList {
+  trade_id: number;
   name: string;
 }
 
-const TablePagination = () => {
-  const [data, setData] = useState<TeamList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
+export type TeamList = {
+  id: number;
+  name: string;
+};
+
+const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
+  open,
+  onClose,
+  onWorkUpdated,
+}) => {
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const rerender = React.useReducer(() => ({}), {})[1];
+  const [data, setData] = useState<TeamList[]>([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{
+    id: number;
+    action: "restore" | "delete";
+  } | null>(null);
 
   // Fetch data
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(`team/archive-team-list`);
+  const fetchTeams = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`team/archive-team-list`);
 
-        if (res.data) {
-          setData(res.data.info);
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+      if (res.data) {
+        setData(res.data.info);
       }
-    };
-    fetchTrades();
-  }, [api]);
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const filteredData = useMemo(() => {
-    return data.filter((item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [data, searchTerm]);
-
-  const columnHelper = createColumnHelper<TeamList>();
-  const columns = [
-    columnHelper.accessor((row) => row?.name, {
-      id: "name",
-      header: () => "Team",
-      cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
-          {info.getValue() ?? "-"}
-        </Typography>
-      ),
-    }),
-  ];
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: {
-      columnFilters,
-    },
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  });
-
-  // Reset to first page when search term changes
   useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
+    fetchTeams();
+  }, [fetchTeams]);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleConfirmAction = async () => {
+    if (!selectedItem) return;
+
+    try {
+      const payload = {
+        team_id: selectedItem.id,
+      };
+
+      if (selectedItem.action === "restore") {
+        const response = await api.post("team/unarchive", payload);
+        if (response.data.IsSuccess) {
+          toast.success(response.data.message);
+          onWorkUpdated?.();
+        }
+      } else if (selectedItem.action === "delete") {
+        const response = await api.delete(
+          `/team/delete?team_id=${selectedItem.id}`
+        );
+        if (response.data.IsSuccess) {
+          toast.success(response.data.message);
+          fetchTeams();
+        }
+      }
+    } catch (err) {
+      console.error("Action failed", err);
+      toast.error("Something went wrong");
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchTeams();
+    }
+  }, [open, fetchTeams]);
 
   return (
-    <Grid>
-      {/* Render the search and table */}
-      <Grid>
-        <Typography variant="h2">Archived Teams</Typography>
-      </Grid>
-      <Stack
-        mt={1}
-        mr={2}
-        ml={2}
-        mb={1}
-        justifyContent="space-between"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 2, md: 4 }}
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      sx={{
+        width: 400,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: 400,
+          padding: 2,
+          backgroundColor: "#f9f9f9",
+          display: "flex",
+          flexDirection: "column",
+        },
+      }}
+    >
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          paddingRight: 1,
+        }}
       >
-        <Grid display="flex" gap={1}>
-          <TextField
-            id="search"
-            type="text"
-            size="small"
-            variant="outlined"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size={"16"} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-        </Grid>
-      </Stack>
-      <Divider />
+        <Box className="task-form">
+          <Grid container mt={3}>
+            <Grid size={{ xs: 12, lg: 12 }}>
+              <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
+                <IconButton onClick={onClose}>
+                  <IconArrowLeft />
+                </IconButton>
+                <Typography variant="h5" fontWeight={700}>
+                  Archive Team List
+                </Typography>
+              </Box>
 
-      <Grid container spacing={3}>
-        <Grid size={12}>
-          <Box>
-            <TableContainer>
-              <Table
-                sx={{
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <TableHead>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableCell
-                          key={header.id}
-                          sx={{
-                            width:
-                              header.column.id === "actions" ? 120 : "auto",
-                          }}
-                        >
-                          <Typography
-                            variant="h6"
-                            mb={1}
-                            onClick={header.column.getToggleSortingHandler()}
-                            className={
-                              header.column.getCanSort()
-                                ? "cursor-pointer select-none"
-                                : ""
-                            }
-                          >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                            {(() => {
-                              const sort = header.column.getIsSorted();
-                              if (sort === "asc") return " 🔼";
-                              if (sort === "desc") return " 🔽";
-                              return null;
-                            })()}
-                          </Typography>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHead>
-                <TableBody>
-                  {table.getRowModel().rows?.length > 0 ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-          <Divider />
-          <Stack
-          gap={1}
-          p={3}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
+              {data.map((item, index) => (
+                <Box
+                  key={index}
+                  mt={2}
+                  p={2}
+                  position="relative"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    border: "1px solid #999999",
+                    borderRadius: "15px",
+                  }}
+                >
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    width="100%"
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={600}
+                      className="multi-ellipsis"
+                    >
+                      Name: {item.name}
+                    </Typography>
+                    <Box display={"flex"} fontSize="10px">
+                      <IconButton
+                        color="primary"
+                        size="small"
+                        onClick={() => {
+                          setSelectedItem({ id: item.id, action: "restore" });
+                          setOpenDialog(true);
+                        }}
+                      >
+                        <IconArrowBackUp />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        size="small"
+                        onClick={() => {
+                          setSelectedItem({ id: item.id, action: "delete" });
+                          setOpenDialog(true);
+                        }}
+                      >
+                        <IconTrash />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                </Box>
+              ))}
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
+
+      <Box mt={2}>
+        <Button
+          color="error"
+          onClick={onClose}
+          variant="contained"
+          size="medium"
+          fullWidth
         >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center" >
-              <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600}>
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-            <Typography color="textSecondary" ml={'3px'}> | Enteries : </Typography>
-            </Stack>
-            <Stack
-            ml={'5px'}
-             direction="row"
-             alignItems="center"
-             color="textSecondary">
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
+          Close
+        </Button>
+      </Box>
 
-              <IconButton
-                size="small"
-                sx={{width: "30px"}}
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronsLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{width: "30px"}}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{width: "30px"}}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{width: "30px"}}
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronsRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
-        </Grid>
-      </Grid>
-    </Grid>
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>
+          {selectedItem?.action === "restore"
+            ? "Restore Task"
+            : "Confirm Deletion"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography color="textSecondary">
+            Are you sure you want to <strong>{selectedItem?.action}</strong>{" "}
+            this task?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            variant="outlined"
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => {
+              handleConfirmAction();
+              setOpenDialog(false);
+            }}
+          >
+           {selectedItem?.action === "restore"
+            ? "Confirm"
+            : "Delete"} 
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Drawer>
   );
 };
 
-export default TablePagination;
+export default ArchiveTeam;

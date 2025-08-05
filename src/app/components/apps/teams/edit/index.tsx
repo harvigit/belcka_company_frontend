@@ -44,7 +44,7 @@ const EditTeamPage = () => {
   const router = useRouter();
   const pathname = usePathname();
   const teamId = pathname?.split("/").pop();
-  const [supervisorName, setSupervisorName] = useState("Unknown Supervisor");
+  const [userList, setUserList] = useState<UserList[]>([]);
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
 
@@ -56,17 +56,31 @@ const EditTeamPage = () => {
       if (res.data) {
         const users = res.data.info;
         setFormData((prev) => {
-          if(!prev) return null;
-          return{
+          if (!prev) return null;
+          return {
             ...prev,
             team_members: users,
-          }
+          };
         });
       }
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
   };
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await api.get(`user/get-user-lists`);
+        if (res.data) {
+          setUserList(res.data.info);
+        }
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+    fetchTrades();
+  }, []);
 
   useEffect(() => {
     const fetchTeamData = async () => {
@@ -137,8 +151,6 @@ const EditTeamPage = () => {
                 team_member_ids: memberIds,
                 team_members: flattened.filter((u: any) => u.id),
               });
-
-              setSupervisorName(team.supervisor_name ?? "Unknown Supervisor");
             } else {
               // toast.error("Team not found.");
               router.push("/apps/teams/list");
@@ -165,8 +177,8 @@ const EditTeamPage = () => {
         name: formData.name,
         supervisor_id: formData.supervisor_id,
         team_member_ids: formData.team_member_ids,
-        team_id:0
-      });      
+        team_id: 0,
+      });
 
       toast.success("Team updated successfully.");
       router.push("/apps/teams/list");
@@ -239,7 +251,7 @@ const EditTeamPage = () => {
           }}
         >
           <CustomFormLabel
-            htmlFor="bl-name"
+            htmlFor="supervisor_id"
             sx={{ mt: 0, mb: { xs: "-10px", sm: 0 } }}
           >
             Supervisor
@@ -251,12 +263,23 @@ const EditTeamPage = () => {
             sm: 9,
           }}
         >
-          <CustomTextField
-            name="supervisor_id"
-            placeholder="Enter team name..."
-            value={supervisorName}
+          <Autocomplete
+            id="supervisor_id"
             fullWidth
-            disabled
+            options={userList}
+            value={
+              userList.find((u) => u.id === formData.supervisor_id) || null
+            }
+            onChange={(event, newValue) => {
+              setFormData((prev) =>
+                prev ? { ...prev, supervisor_id: newValue?.id ?? 0 } : prev
+              );
+            }}
+            getOptionLabel={(option) => option.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => (
+              <CustomTextField {...params} placeholder="Select supervisor..." />
+            )}
           />
         </Grid>
 

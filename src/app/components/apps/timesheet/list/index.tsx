@@ -273,7 +273,7 @@ const TimesheetList = () => {
                             <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
                             <Box textAlign="left">
                                 <Typography>{row.user_name}</Typography>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography color="textSecondary" variant="subtitle1">
                                     {row.trade_name}
                                 </Typography>
                             </Box>
