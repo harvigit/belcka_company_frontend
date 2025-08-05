@@ -146,7 +146,7 @@ const TablePagination = () => {
   // Fetch addresses for selected project
   const fetchAddresses = async () => {
     try {
-      const res = await api.get(`address/get?project_id=${projectId}`);
+      const res = await api.get(`project/get-history?project_id=${projectId}`);
       if (res.data?.info) {
         setAddress(res.data.info);
       }
@@ -351,24 +351,22 @@ const TablePagination = () => {
                 }}
               >
                 {address.map((addr, index) => {
-                  let label = "";
                   let color = "";
 
                   switch (addr.status_int) {
                     case 13:
-                      label = "New Address";
+                      color = "#A600FF";
+                      break;
+                    case 14:
                       color = "#A600FF";
                       break;
                     case 3:
-                      label = "In Progress";
                       color = "#FF7F00";
                       break;
                     case 4:
-                      label = "Completed";
                       color = "#32A852";
                       break;
                     default:
-                      label = "Unknown";
                       color = "#999";
                   }
 
@@ -406,7 +404,7 @@ const TablePagination = () => {
                           fontWeight={700}
                           color="#fff"
                         >
-                          {label}
+                          {addr.status_text}
                         </Typography>
                       </Box>
                       <Box
@@ -416,7 +414,7 @@ const TablePagination = () => {
                         mt={1}
                       >
                         <Typography fontSize="14px" className="multi-ellipsis">
-                          {addr.name ?? `Address ${index + 1}`}
+                          {addr.message}
                         </Typography>
                         <Typography
                           color="textSecondary"
