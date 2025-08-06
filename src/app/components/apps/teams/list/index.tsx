@@ -40,6 +40,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconFilter,
+  IconNotes,
   IconRotate,
   IconSearch,
   IconTrash,
@@ -63,6 +64,7 @@ import { User } from "next-auth";
 import GenerateCodeDialog from "../../modals/generate-code";
 import { IconEdit } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import ArchiveTeam from "../archive";
 
 dayjs.extend(customParseFormat);
 
@@ -102,6 +104,7 @@ const TablePagination = () => {
   const rerender = React.useReducer(() => ({}), {})[1];
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
 
   const [filters, setFilters] = useState({
     team: "",
@@ -135,27 +138,27 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  const fetchTrades = async () => {
+  const fetchTrades = useCallback(async () => {
     setLoading(true);
     try {
-      let url = "";
-      if (projectId) {
-        url = `team/get-team-member-list?project_id=${projectId}`;
-      } else {
-        url = "team/get-team-member-list";
-      }
+      const url = projectId
+        ? `team/get-team-member-list?project_id=${projectId}`
+        : "team/get-team-member-list";
+
       const res = await api.get(url);
       if (res.data) {
         setData(res.data.info);
-        setLoading(false);
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [projectId]);
+
   useEffect(() => {
     fetchTrades();
-  }, [api]);
+  }, [fetchTrades]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -592,7 +595,7 @@ const TablePagination = () => {
                 variant="outlined"
                 color="error"
               >
-                Delete
+                Archive
               </Button>
             </DialogActions>
           </Dialog>
@@ -636,6 +639,29 @@ const TablePagination = () => {
                 Add Team
               </Link>
             </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setarchiveDrawerOpen(true);
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archive List
+              </Link>
+            </MenuItem>
             <MenuItem
               onClick={() => {
                 setOpenGenerateDialog(true);
@@ -658,6 +684,12 @@ const TablePagination = () => {
       </Stack>
       <Divider />
 
+      {/* Archive team list */}
+      <ArchiveTeam
+        open={archiveDrawerOpen}
+        onClose={() => setarchiveDrawerOpen(false)}
+        onWorkUpdated={fetchTrades}
+      />
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
