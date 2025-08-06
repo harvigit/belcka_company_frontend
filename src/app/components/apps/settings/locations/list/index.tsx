@@ -434,7 +434,7 @@ const TablePagination = () => {
                 <ListItemIcon>
                   <IconPlus width={18} />
                 </ListItemIcon>
-                Add Task
+                Add Location
               </Link>
             </MenuItem>
           </Menu>
