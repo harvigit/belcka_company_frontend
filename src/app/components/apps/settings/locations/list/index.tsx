@@ -437,29 +437,6 @@ const TablePagination = () => {
                 Add Task
               </Link>
             </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setarchiveDrawerOpen(true);
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconNotes width={18} />
-                </ListItemIcon>
-                Archive List
-              </Link>
-            </MenuItem>
           </Menu>
         </Stack>
       </Stack>
