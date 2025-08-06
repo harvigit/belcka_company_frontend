@@ -48,11 +48,11 @@ import {
 } from '@tanstack/react-table';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
-import { format } from 'date-fns';
+import {format} from 'date-fns';
 
 import 'react-day-picker/dist/style.css';
 import '../../../../global.css';
-import { AxiosResponse } from 'axios';
+import {AxiosResponse} from 'axios';
 
 import ShiftEditPopover from './edit-shift-time/shift-edit-popover';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
@@ -105,10 +105,10 @@ const TimesheetList = () => {
     const [data, setData] = useState<Timesheet[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [open, setOpen] = useState<boolean>(false);
-    const [filters, setFilters] = useState<FilterState>({ type: '' });
+    const [filters, setFilters] = useState<FilterState>({type: ''});
     const [tempFilters, setTempFilters] = useState<FilterState>(filters);
     const [sorting, setSorting] = useState<SortingState>([]);
-    const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
+    const [pagination, setPagination] = useState<PaginationState>({pageIndex: 0, pageSize: 50});
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
@@ -132,7 +132,7 @@ const TimesheetList = () => {
                 end_date: format(end, 'dd/MM/yyyy'),
             };
 
-            const response: AxiosResponse<TimesheetResponse> = await api.get('/timesheet/get-web', { params });
+            const response: AxiosResponse<TimesheetResponse> = await api.get('/timesheet/get-web', {params});
 
             if (response.data.IsSuccess) {
                 setData(response.data.info);
@@ -179,7 +179,7 @@ const TimesheetList = () => {
             try {
                 const ids = timesheetIds.join(',');
                 const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
-                const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, { ids });
+                const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, {ids});
 
                 if (response.data.IsSuccess) {
                     const defaultStartDate = startDate || defaultStart;
@@ -219,7 +219,7 @@ const TimesheetList = () => {
     const fetchSidebarData = async (worklogIds: number[]) => {
         try {
             const res = await api.get('/timesheet/worklog-details', {
-                params: { worklog_ids: worklogIds.join(',') },
+                params: {worklog_ids: worklogIds.join(',')},
             });
 
             if (res.data?.IsSuccess) {
@@ -249,13 +249,13 @@ const TimesheetList = () => {
         () => [
             {
                 id: 'select',
-                header: ({ table }: { table: any }) => (
+                header: ({table}: { table: any }) => (
                     <CustomCheckbox
                         checked={table.getIsAllPageRowsSelected()}
                         onChange={table.getToggleAllPageRowsSelectedHandler()}
                     />
                 ),
-                cell: ({ row }: { row: any }) => (
+                cell: ({row}: { row: any }) => (
                     <CustomCheckbox
                         checked={row.getIsSelected()}
                         onChange={row.getToggleSelectedHandler()}
@@ -270,7 +270,7 @@ const TimesheetList = () => {
                     const row = info.row.original;
                     return (
                         <Stack direction="row" alignItems="center" spacing={2}>
-                            <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
+                            <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{width: 36, height: 36}}/>
                             <Box textAlign="left">
                                 <Typography>{row.user_name}</Typography>
                                 <Typography variant="caption" color="text.secondary">
@@ -292,7 +292,7 @@ const TimesheetList = () => {
                     );
                 },
             }),
-            columnHelper.accessor('type', { header: 'Type' }),
+            columnHelper.accessor('type', {header: 'Type'}),
             ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) =>
                 columnHelper.accessor((row: any) => row.days?.[day], {
                     id: day,
@@ -308,7 +308,7 @@ const TimesheetList = () => {
                                         fetchSidebarData(value.worklog_ids);
                                     }
                                 }}
-                                style={{ cursor: 'pointer', color: `${value.color}` }}
+                                style={{cursor: 'pointer', color: `${value.color}`}}
                             >
                                 {formatHour(value.hours)}
                             </div>
@@ -326,7 +326,7 @@ const TimesheetList = () => {
                     const value = info.getValue();
                     const color = value === 'Locked' ? 'green' : 'red';
                     return (
-                        <Typography style={{ color: color }} > {value} </Typography>
+                        <Typography style={{color: color}}> {value} </Typography>
                     );
                 },
             }),
@@ -354,7 +354,7 @@ const TimesheetList = () => {
         getPaginationRowModel: getPaginationRowModel(),
         initialState: {
             pagination: {
-              pageSize: 50,
+                pageSize: 50,
             },
         },
     });
@@ -365,8 +365,8 @@ const TimesheetList = () => {
                 mt={3}
                 mx={2}
                 mb={3}
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={{ xs: 1.5, sm: 2 }}
+                direction={{xs: 'column', sm: 'row'}}
+                spacing={{xs: 1.5, sm: 2}}
                 alignItems="center"
                 flexWrap="wrap"
             >
@@ -381,10 +381,10 @@ const TimesheetList = () => {
                     size="small"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{ endAdornment: <IconSearch size={16} /> }}
+                    InputProps={{endAdornment: <IconSearch size={16}/>}}
                 />
                 <Button variant="contained" onClick={() => setOpen(true)}>
-                    <IconFilter width={18} />
+                    <IconFilter width={18}/>
                 </Button>
 
                 {Object.keys(selectedRows).length > 0 && (
@@ -407,7 +407,7 @@ const TimesheetList = () => {
                             backgroundColor: 'transparent',
                         }}
                     >
-                        <IconX size={40} />
+                        <IconX size={40}/>
                     </IconButton>
                 </DialogTitle>
                 <DialogContent>
@@ -416,7 +416,7 @@ const TimesheetList = () => {
                         select
                         label="Type"
                         value={tempFilters.type}
-                        onChange={(e) => setTempFilters({ ...tempFilters, type: e.target.value })}
+                        onChange={(e) => setTempFilters({...tempFilters, type: e.target.value})}
                     >
                         <MenuItem value="">All</MenuItem>
                         <MenuItem value="T">Timesheet</MenuItem>
@@ -427,8 +427,8 @@ const TimesheetList = () => {
                 <DialogActions>
                     <Button
                         onClick={() => {
-                            setFilters({ type: '' });
-                            setTempFilters({ type: '' });
+                            setFilters({type: ''});
+                            setTempFilters({type: ''});
                             setOpen(false);
                         }}
                         color="inherit"
@@ -446,11 +446,11 @@ const TimesheetList = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-            
-            <Divider />
+
+            <Divider/>
 
             {/* Data Table */}
-            <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
+            <TableContainer sx={{maxHeight: 600, overflowX: 'auto'}}>
                 <Table stickyHeader>
                     <TableHead>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -484,8 +484,8 @@ const TimesheetList = () => {
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    '&:hover': { color: '#888' },
-                                                    '&:hover .hoverIcon': { opacity: 1 },
+                                                    '&:hover': {color: '#888'},
+                                                    '&:hover .hoverIcon': {opacity: 1},
                                                 }}
                                             >
                                                 <Typography variant="body2" fontWeight="inherit">
@@ -532,77 +532,77 @@ const TimesheetList = () => {
 
             {/* Pagination and Rows Info */}
             <Stack
-            gap={1}
-            pr={3}
-            pt={1}
-            pl={3}
-            pb={3}
-            alignItems="center"
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              <Typography color="textSecondary">
-                {table.getPrePaginationRowModel().rows.length} Rows
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: {
-                  xs: "block",
-                  sm: "flex",
-                },
-              }}
-              alignItems="center"
-            >
-              <Stack direction="row" alignItems="center">
-                <Typography color="textSecondary">Page</Typography>
-                <Typography color="textSecondary" fontWeight={600} ml={1}>
-                  {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </Typography>
-                <Typography color="textSecondary" ml={"3px"}>
-                  {" "}
-                  | Enteries :{" "}
-                </Typography>
-              </Stack>
-              <Stack
-                ml={"5px"}
-                direction="row"
+                gap={1}
+                pr={3}
+                pt={1}
+                pl={3}
+                pb={3}
                 alignItems="center"
-                color="textSecondary"
-              >
-                <CustomSelect
-                  value={table.getState().pagination.pageSize}
-                  onChange={(e: { target: { value: any } }) => {
-                    table.setPageSize(Number(e.target.value));
-                  }}
+                direction={{xs: 'column', sm: 'row'}}
+                justifyContent="space-between"
+            >
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Typography color="textSecondary">
+                        {table.getPrePaginationRowModel().rows.length} Rows
+                    </Typography>
+                </Box>
+                <Box
+                    sx={{
+                        display: {
+                            xs: 'block',
+                            sm: 'flex',
+                        },
+                    }}
+                    alignItems="center"
                 >
-                  {[50, 100, 250, 500].map((pageSize) => (
-                    <MenuItem key={pageSize} value={pageSize}>
-                      {pageSize}
-                    </MenuItem>
-                  ))}
-                </CustomSelect>
-                <IconButton
-                  size="small"
-                  sx={{ width: "30px" }}
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <IconChevronLeft />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ width: "30px" }}
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <IconChevronRight />
-                </IconButton>
-              </Stack>
-            </Box>
-          </Stack>
+                    <Stack direction="row" alignItems="center">
+                        <Typography color="textSecondary">Page</Typography>
+                        <Typography color="textSecondary" fontWeight={600} ml={1}>
+                            {table.getState().pagination.pageIndex + 1} of{' '}
+                            {table.getPageCount()}
+                        </Typography>
+                        <Typography color="textSecondary" ml={'3px'}>
+                            {' '}
+                            | Enteries :{' '}
+                        </Typography>
+                    </Stack>
+                    <Stack
+                        ml={'5px'}
+                        direction="row"
+                        alignItems="center"
+                        color="textSecondary"
+                    >
+                        <CustomSelect
+                            value={table.getState().pagination.pageSize}
+                            onChange={(e: { target: { value: any } }) => {
+                                table.setPageSize(Number(e.target.value));
+                            }}
+                        >
+                            {[50, 100, 250, 500].map((pageSize) => (
+                                <MenuItem key={pageSize} value={pageSize}>
+                                    {pageSize}
+                                </MenuItem>
+                            ))}
+                        </CustomSelect>
+                        <IconButton
+                            size="small"
+                            sx={{width: '30px'}}
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            <IconChevronLeft/>
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            sx={{width: '30px'}}
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <IconChevronRight/>
+                        </IconButton>
+                    </Stack>
+                </Box>
+            </Stack>
 
             <Drawer
                 anchor="right"
@@ -624,7 +624,7 @@ const TimesheetList = () => {
                             <Box display="flex" alignItems="center" justifyContent="space-between" mt={1} mb={2}>
                                 <Box display="flex" alignItems="center">
                                     <IconButton onClick={() => setSidebarData(null)}>
-                                        <IconArrowLeft />
+                                        <IconArrowLeft/>
                                     </IconButton>
 
                                     <Typography variant="h6" fontWeight={700}>
@@ -636,13 +636,13 @@ const TimesheetList = () => {
                                     Work Logs
                                 </Typography>
                             </Box>
-                            
+
                             <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
                                 <Typography variant="h6" fontWeight={700}>
                                     {sidebarData.formattedDate}
                                 </Typography>
 
-                                <Typography variant="h6" fontWeight={700} sx={{ color: '#000' }}>
+                                <Typography variant="h6" fontWeight={700} sx={{color: '#000'}}>
                                     Total: {formatHour(sidebarData.payableHours)} H
                                 </Typography>
                             </Box>
@@ -705,7 +705,7 @@ const TimesheetList = () => {
                                                 <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
                                                     {/* Left side content */}
                                                     <Box display="flex" alignItems="center">
-                                                        <Typography variant="body2" sx={{ color: '#666' }} mr={1}>
+                                                        <Typography variant="body2" sx={{color: '#666'}} mr={1}>
                                                             ({entry.formatted_work_start_time} - {entry.formatted_work_end_time})
                                                         </Typography>
 
@@ -733,11 +733,11 @@ const TimesheetList = () => {
                                                                         justifyContent: 'center',
                                                                     }}
                                                                 >
-                                                                    <IconPencil size="small" />
+                                                                    <IconPencil size="small"/>
                                                                 </Box>
                                                             </IconButton>
                                                         )}
-    
+
                                                         <IconButton
                                                             size="small"
                                                             onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
@@ -747,7 +747,8 @@ const TimesheetList = () => {
                                                                 height: 40,
                                                             }}
                                                         >
-                                                            {isExpanded ? <IconChevronUp size="16" /> : <IconChevronDown size="16" />}
+                                                            {isExpanded ? <IconChevronUp size="16"/> :
+                                                                <IconChevronDown size="16"/>}
                                                         </IconButton>
                                                     </Box>
                                                 </Box>
@@ -769,8 +770,9 @@ const TimesheetList = () => {
                                                                     position: 'relative',
                                                                 }}
                                                             >
-                                                                <Stack direction="row" spacing={1} position="absolute" top={-10} left={16}>
-                                                                    { userChecklog.address_name && 
+                                                                <Stack direction="row" spacing={1} position="absolute"
+                                                                       top={-10} left={16}>
+                                                                    {userChecklog.address_name &&
                                                                         <Box
                                                                             sx={{
                                                                                 backgroundColor: '#FF7A00',
@@ -789,7 +791,7 @@ const TimesheetList = () => {
                                                                             {userChecklog.address_name}
                                                                         </Box>
                                                                     }
-                                                                    { userChecklog.type_of_work_name &&
+                                                                    {userChecklog.type_of_work_name &&
                                                                         <Box
                                                                             sx={{
                                                                                 backgroundColor: '#009DFF',
@@ -811,9 +813,11 @@ const TimesheetList = () => {
                                                                 </Stack>
 
                                                                 <Box mt={2}>
-                                                                    <Box display="flex" justifyContent="space-between" mt={1} mb={2}>
+                                                                    <Box display="flex" justifyContent="space-between"
+                                                                         mt={1} mb={2}>
                                                                         <Box display="flex" alignItems="center">
-                                                                            <Typography variant="body2" sx={{ color: '#666' }} mr={1}>
+                                                                            <Typography variant="body2"
+                                                                                        sx={{color: '#666'}} mr={1}>
                                                                                 ({userChecklog.formatted_checkin_date_time} - {userChecklog.formatted_checkout_date_time})
                                                                             </Typography>
 
