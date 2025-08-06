@@ -49,54 +49,30 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
 import { IconDotsVertical } from "@tabler/icons-react";
-import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import CreateTask from "../create";
-import ArchiveTask from "../archive";
 import { IconEdit } from "@tabler/icons-react";
-import EditTask from "../edit";
+import CreateLocation from "../create";
+import EditLocation from "../edit";
 
 dayjs.extend(customParseFormat);
 
-export interface TradeList {
+export type LocationList = {
   id: number;
   name: string;
-}
-
-export type TaskList = {
-  id: number;
-  name: string;
-  trade_id?: number;
-  trade_name?: string;
-  duration: string;
-  repeatable_job: boolean;
-  is_pricework: boolean;
-  rate: string;
-  units: string;
-};
-
-export type UserList = {
-  id: number;
-  name: string;
+  company_name?: string;
 };
 
 const TablePagination = () => {
-  const [data, setData] = useState<TaskList[]>([]);
+  const [data, setData] = useState<LocationList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
-
-  const [filters, setFilters] = useState({
-    team: "",
-  });
-
-  const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
 
   const session = useSession();
@@ -105,7 +81,6 @@ const TablePagination = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [trade, setTrade] = useState<TradeList[]>([]);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -115,13 +90,7 @@ const TablePagination = () => {
   const [formData, setFormData] = useState<any>({
     id: 0,
     name: "",
-    trade_id: "",
     company_id: id.company_id,
-    duration: 0,
-    rate: 0,
-    units: "",
-    is_pricework: false,
-    repeatable_job: false,
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -132,49 +101,31 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  const fetchTasks = async () => {
+  const fetchLocations = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`type-works/get?company_id=${id.company_id}`);
+      const res = await api.get(
+        `company-locations/get?company_id=${id.company_id}`
+      );
       if (res.data) {
         setData(res.data.info);
         setLoading(false);
         setarchiveDrawerOpen(false);
       }
     } catch (err) {
-      console.error("Failed to fetch trades", err);
+      console.error("Failed to fetch location", err);
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchTasks();
+    fetchLocations();
   }, [api]);
-
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(
-          `trade/get-trades?company_id=${id.company_id}`
-        );
-        if (res.data) setTrade(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
-      }
-    };
-    fetchTrades();
-  }, []);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
       name: "",
-      trade_id: null,
       company_id: id.company_id,
-      duration: 0,
-      rate: 0,
-      units: "",
-      is_pricework: false,
-      repeatable_job: false,
     });
     setDrawerOpen(true);
   };
@@ -185,22 +136,16 @@ const TablePagination = () => {
     try {
       const payload = {
         ...formData,
-        duration: Number(formData.duration),
-        rate: Number(formData.rate),
       };
 
-      const result = await api.post("type-works/create", payload);
+      const result = await api.post("company-locations/create", payload);
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
           id: 0,
           name: "",
-          trade_id: 0,
-          is_pricework: 0,
-          units: "",
-          repeatable_job: 0,
         });
-        fetchTasks();
+        fetchLocations();
         setDrawerOpen(false);
       } else {
         toast.error(result.data.message);
@@ -212,27 +157,21 @@ const TablePagination = () => {
     }
   };
 
-  const editTask = async (e: React.FormEvent) => {
+  const editLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
       const payload = {
         ...formData,
-        duration: Number(formData.duration),
-        rate: Number(formData.rate),
       };
 
-      const result = await api.put("type-works/update", payload);
+      const result = await api.put("company-locations/update", payload);
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
           name: "",
-          trade_id: 0,
-          is_pricework: false,
-          units: "",
-          repeatable_job: false,
         });
-        fetchTasks();
+        fetchLocations();
         setEditDrawerOpen(false);
       } else {
         toast.error(result.data.message);
@@ -244,27 +183,17 @@ const TablePagination = () => {
     }
   };
 
-  const uniqueTrades = useMemo(
-    () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
-    [data]
-  );
-
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      const matchesTeam = filters.team
-        ? item.trade_name === filters.team
-        : true;
-
       const search = searchTerm.toLowerCase();
 
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
-        item.trade_name?.toLowerCase().includes(search) ||
-        item.duration?.toLowerCase().includes(search);
+        item.company_name?.toLowerCase().includes(search);
 
-      return matchesTeam && matchesSearch;
+      return matchesSearch;
     });
-  }, [data, filters, searchTerm]);
+  }, [data, searchTerm]);
 
   // UseCallback to memoize these functions
   const handleEdit = useCallback((id: number) => {
@@ -272,7 +201,7 @@ const TablePagination = () => {
     setEditDrawerOpen(true);
   }, []);
 
-  const columnHelper = createColumnHelper<TaskList>();
+  const columnHelper = createColumnHelper<LocationList>();
   const columns = [
     columnHelper.accessor("name", {
       id: "name",
@@ -323,69 +252,6 @@ const TablePagination = () => {
               <Typography variant="h5">{item.name ?? "-"}</Typography>
             </Stack>
           </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.trade_name, {
-      id: "trade_name",
-      header: () => "Trade",
-      cell: (info) => {
-        return (
-          <Typography variant="h5" color="textPrimary">
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
-
-    columnHelper.accessor("repeatable_job", {
-      header: () => "Type",
-      cell: (info) => {
-        return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Box>
-              <Typography variant="h5" color="textPrimary">
-                {info.getValue() ?? "-"}
-              </Typography>
-            </Box>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.duration, {
-      id: "duration",
-      header: () => "Duration",
-      cell: (info) => {
-        return (
-          <Typography variant="h5" color="textPrimary" fontWeight={700}>
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.rate, {
-      id: "rate",
-      header: () => "Rate",
-      cell: (info) => {
-        return (
-          <Typography variant="h5" color="textPrimary">
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.units, {
-      id: "units",
-      header: () => "Units",
-      cell: (info) => {
-        return (
-          <Typography variant="h5" color="textPrimary">
-            {info.getValue() ?? "-"}
-          </Typography>
         );
       },
     }),
@@ -444,7 +310,7 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            TEMPLATES ({table.getPrePaginationRowModel().rows.length}){" "}
+            Locations ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
           <TextField
             id="search"
@@ -464,85 +330,6 @@ const TablePagination = () => {
               },
             }}
           />
-          <Button variant="contained" onClick={() => setOpen(true)}>
-            <IconFilter width={18} />
-          </Button>
-          <Dialog
-            open={open}
-            onClose={() => setOpen(false)}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle
-              sx={{ m: 0, position: "relative", overflow: "visible" }}
-            >
-              Filters
-              <IconButton
-                aria-label="close"
-                onClick={() => setOpen(false)}
-                size="large"
-                sx={{
-                  position: "absolute",
-                  right: 12,
-                  top: 8,
-                  color: (theme) => theme.palette.grey[900],
-                  backgroundColor: "transparent",
-                  zIndex: 10,
-                  width: 50,
-                  height: 50,
-                }}
-              >
-                <IconX size={40} style={{ width: 40, height: 40 }} />
-              </IconButton>
-            </DialogTitle>
-            <DialogContent>
-              <Stack spacing={2} mt={1}>
-                <TextField
-                  select
-                  label="Trade"
-                  value={tempFilters.team}
-                  onChange={(e) =>
-                    setTempFilters({ ...tempFilters, team: e.target.value })
-                  }
-                  fullWidth
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {uniqueTrades.map((trade, i) => (
-                    <MenuItem key={i} value={trade}>
-                      {trade}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
-            </DialogContent>
-
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setTempFilters({
-                    team: "",
-                  });
-                  setFilters({
-                    team: "",
-                  });
-                  setOpen(false);
-                }}
-                color="inherit"
-              >
-                Clear
-              </Button>
-
-              <Button
-                variant="contained"
-                onClick={() => {
-                  setFilters(tempFilters);
-                  setOpen(false);
-                }}
-              >
-                Apply
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Grid>
         <Stack
           mb={2}
@@ -561,15 +348,15 @@ const TablePagination = () => {
                 setConfirmOpen(true);
               }}
             >
-              Archive
+              Delete
             </Button>
           )}
           <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogContent>
               <Typography color="textSecondary">
-                Are you sure you want to archive {usersToDelete.length} work
-                {usersToDelete.length > 1 ? "s" : ""} from the works?
+                Are you sure you want to delete {usersToDelete.length} location
+                {usersToDelete.length > 1 ? "s" : ""} from the locations?
               </Typography>
             </DialogContent>
             <DialogActions>
@@ -584,15 +371,15 @@ const TablePagination = () => {
                 onClick={async () => {
                   try {
                     const payload = {
-                      work_ids: usersToDelete.join(","),
+                      location_ids: usersToDelete.join(","),
                     };
                     const response = await api.post(
-                      "type-works/archive-works",
+                      "company-locations/delete",
                       payload
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
-                    await fetchTasks();
+                    await fetchLocations();
                   } catch (error) {
                     toast.error("Failed to remove works");
                   } finally {
@@ -602,7 +389,7 @@ const TablePagination = () => {
                 variant="outlined"
                 color="error"
               >
-                Archive
+                Delete
               </Button>
             </DialogActions>
           </Dialog>
@@ -677,34 +464,25 @@ const TablePagination = () => {
         </Stack>
       </Stack>
       <Divider />
-      {/* Add task */}
-      <CreateTask
+      {/* Add location */}
+      <CreateLocation
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         formData={formData}
         setFormData={setFormData}
         handleSubmit={handleSubmit}
-        trade={trade}
         isSaving={isSaving}
       />
 
       {/* Edit task */}
-      <EditTask
+      <EditLocation
         open={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         id={selectedTaskId}
         formData={formData}
         setFormData={setFormData}
-        EditTask={editTask}
-        trade={trade}
+        EditLocation={editLocation}
         isSaving={isSaving}
-      />
-
-      {/* Archive task list */}
-      <ArchiveTask
-        open={archiveDrawerOpen}
-        onClose={() => setarchiveDrawerOpen(false)}
-        onWorkUpdated={fetchTasks}
       />
 
       <Grid container spacing={3}>

@@ -8,11 +8,9 @@ import {
   CardContent,
   Autocomplete,
   Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   IconButton,
   Button,
+  Drawer,
 } from "@mui/material";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
@@ -25,10 +23,6 @@ import { User } from "next-auth";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import Cookies from "js-cookie";
 import {
-  IconArcheryArrow,
-  IconArrowRight,
-  IconArrowUp,
-  IconChevronLeft,
   IconChevronRight,
   IconPlus,
   IconX,
@@ -433,24 +427,19 @@ const TablePagination = () => {
         </Box>
       </Grid>
 
-      <Dialog
+      <Drawer
+        anchor="left"
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
+        PaperProps={{
+          sx: {
+            width: 250,
+            maxWidth: "100%",
+          },
+        }}
       >
-        <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
-          <Button
-            color="primary"
-            variant="outlined"
-            onClick={(e) => {
-              setDrawerOpen(true);
-              setDialogOpen(false);
-            }}
-          >
-            <IconPlus size={18} />
-            Add Project
-          </Button>
+        <Box sx={{ position: "relative", p: 2 }}>
+          {/* Close Button */}
           <IconButton
             aria-label="close"
             onClick={() => setDialogOpen(false)}
@@ -466,30 +455,39 @@ const TablePagination = () => {
               height: 50,
             }}
           >
-            <IconX size={30} style={{ width: 30, height: 30 }} />
+            <IconX size={18} />
           </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2} mb={2} display={"block"}>
+
+          {/* Add Project Button */}
+          <Button
+            color="primary"
+            variant="outlined"
+            onClick={() => {
+              setDrawerOpen(true);
+              setDialogOpen(false);
+            }}
+            startIcon={<IconPlus size={18} />}
+            sx={{ mb: 1 }}
+          >
+            Add Project
+          </Button>
+
+          {/* Project List */}
+          <Grid container spacing={2} display="block">
             {data.map((project) => (
               <Grid
                 mt={2}
-                size={{
-                  xs: 12,
-                  sm: 10,
-                  md: 10,
-                }}
                 key={project.id}
-                display={"flex"}
-                textAlign={"start"}
-                alignItems={"center"}
+                display="flex"
+                textAlign="start"
+                alignItems="center"
               >
                 <CustomCheckbox
                   onClick={() => {
                     setProjectId(project.id);
                     setDialogOpen(false);
                   }}
-                ></CustomCheckbox>
+                />
                 <Box
                   onClick={() => {
                     setProjectId(project.id);
@@ -504,22 +502,25 @@ const TablePagination = () => {
                       cursor: "pointer",
                     },
                   }}
-                  display={"flex"}
-                  justifyContent={"space-between"}
-                  alignItems={"center"}
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
                 >
-                  <Typography variant="subtitle1" ml={2}>
+                  <Typography
+                    variant="subtitle1"
+                    ml={2}
+                    className="multi-ellipsis"
+                    maxWidth={"110px"}
+                  >
                     {project.name}
                   </Typography>
-                  <IconChevronRight
-                    style={{ color: "GrayText" }}
-                  ></IconChevronRight>
+                  <IconChevronRight style={{ color: "GrayText" }} />
                 </Box>
               </Grid>
             ))}
           </Grid>
-        </DialogContent>
-      </Dialog>
+        </Box>
+      </Drawer>
 
       {/* Add Project */}
       <CreateProject

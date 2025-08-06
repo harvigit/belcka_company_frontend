@@ -23,7 +23,6 @@ import {
   Dialog,
   Menu,
   ListItemIcon,
-  CircularProgress,
   Tooltip,
 } from "@mui/material";
 import {
@@ -44,7 +43,6 @@ import {
   IconRotate,
   IconSearch,
   IconTrash,
-  IconUserPlus,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -56,7 +54,6 @@ import { IconDotsVertical } from "@tabler/icons-react";
 import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconPlus } from "@tabler/icons-react";
-import JoinCompanyDialog from "../../modals/join-company";
 import toast from "react-hot-toast";
 import { TradeList } from "../team";
 import { useSession } from "next-auth/react";
@@ -387,19 +384,6 @@ const TablePagination = () => {
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
-
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Box>
@@ -766,26 +750,18 @@ const TablePagination = () => {
                   ))}
                 </TableHead>
                 <TableBody>
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        No records found
-                      </TableCell>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
