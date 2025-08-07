@@ -46,6 +46,7 @@ export type TaskList = {
     end_date?: string;
     status_int: number;
     status_text: string;
+    progress: string;
 };
 
 interface TasksListProps {
@@ -172,6 +173,24 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
             columnHelper.accessor('status_text', {
                 id: 'status_text',
                 header: () => 'Status',
+                cell: (info) => {
+                    const statusInt = info.row.original.status_int;
+                    let color = 'textPrimary';
+                    if (statusInt === 13) color = '#999999';
+                    else if (statusInt === 4) color = '#32A852';
+                    else if (statusInt === 3) color = '#FF7F00';
+
+                    return (
+                        <Typography variant="h5" color={color} fontWeight={700}>
+                            {info.getValue() ?? '-'}
+                        </Typography>
+                    );
+                },
+            }),
+
+            columnHelper.accessor('progress', {
+                id: 'progress',
+                header: () => 'Progress',
                 cell: (info) => {
                     const statusInt = info.row.original.status_int;
                     let color = 'textPrimary';
