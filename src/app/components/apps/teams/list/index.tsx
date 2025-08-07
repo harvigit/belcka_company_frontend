@@ -237,7 +237,7 @@ const TablePagination = () => {
             }
             onChange={(e) => {
               if (e.target.checked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setSelectedRowIds(new Set(filteredData.map((row) => row.team_id)));
               } else {
                 setSelectedRowIds(new Set());
               }

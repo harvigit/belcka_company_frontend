@@ -77,6 +77,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
         const response = await api.post("team/unarchive", payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
+          fetchTeams();
           onWorkUpdated?.();
         }
       } else if (selectedItem.action === "delete") {
