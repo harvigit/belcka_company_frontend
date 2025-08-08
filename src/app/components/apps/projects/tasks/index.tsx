@@ -36,6 +36,7 @@ interface Task {
   duration: number;
   rate: number;
   is_pricework: boolean;
+  repeatable_job: boolean;
 }
 
 interface FormData {
@@ -48,6 +49,7 @@ interface FormData {
   rate: number;
   is_attchment: boolean;
   is_pricework: boolean;
+  repeatable_job: boolean;
 }
 
 interface CreateProjectTaskProps {
@@ -93,6 +95,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
     rate: 0,
     is_attchment: false,
     is_pricework: false,
+    repeatable_job: false,
   };
 
   // Fetch addresses
@@ -153,7 +156,8 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               rate,
               duration,
               type_of_work_id: firstTask.id,
-              is_pricework: firstTask.is_pricework ,
+              is_pricework: firstTask.is_pricework,
+              repeatable_job: firstTask.repeatable_job
             }));
 
             setBaseRate(rate);
@@ -166,6 +170,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               duration: 0,
               type_of_work_id: 0,
               is_pricework: false,
+              repeatable_job: false
             }));
 
             setBaseRate(0);
@@ -376,6 +381,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                         duration,
                         type_of_work_id: newVal.id,
                         is_pricework: newVal.is_pricework,
+                        repeatable_job: newVal.repeatable_job,
                       }));
 
                       setBaseRate(rate);
@@ -387,6 +393,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                         duration: 0,
                         type_of_work_id: null,
                         is_pricework: false,
+                        repeatable_job: false
                       }));
                       setBaseRate(0);
                       setBaseDuration(0);

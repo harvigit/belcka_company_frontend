@@ -171,7 +171,8 @@ const TablePagination = () => {
           shift_ids: "",
           team_ids: "",
           company_id: user.company_id,
-          is_pricework: false
+          is_pricework: false,
+          repeatable_job: false
         });
         fetchProjects();
         setDrawerOpen(false);
