@@ -33,7 +33,7 @@ const Profile = () => {
       phone?: number | null;
     } & { user_image?: string | null } & { first_name?: string | null } & {
       last_name?: string | null;
-    };
+    } & { trade_name : string | null };
   const [loading] = useState(false);
 
   const userLogout = () => {
@@ -129,7 +129,7 @@ const Profile = () => {
             {user?.first_name} {user?.last_name}
             </Typography>
             <Typography variant="h6" color="textSecondary" sx={{ textTransform:"capitalize"}}>
-              {user.user_role}
+              {user.trade_name ?? user.user_role}
             </Typography>
             
             {user.email ? <Typography

@@ -93,7 +93,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h5" fontWeight={700}>
-                    Add Task
+                    Add Template
                   </Typography>
                 </Box>
                 <Typography variant="h5" mt={2}>

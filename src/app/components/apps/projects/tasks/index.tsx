@@ -157,7 +157,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               duration,
               type_of_work_id: firstTask.id,
               is_pricework: firstTask.is_pricework,
-              repeatable_job: firstTask.repeatable_job
+              repeatable_job: firstTask.repeatable_job,
             }));
 
             setBaseRate(rate);
@@ -170,7 +170,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               duration: 0,
               type_of_work_id: 0,
               is_pricework: false,
-              repeatable_job: false
+              repeatable_job: false,
             }));
 
             setBaseRate(0);
@@ -393,7 +393,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                         duration: 0,
                         type_of_work_id: null,
                         is_pricework: false,
-                        repeatable_job: false
+                        repeatable_job: false,
                       }));
                       setBaseRate(0);
                       setBaseDuration(0);
@@ -476,24 +476,25 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               </Typography>
 
               {/* Quantity Input (disabled if pricework) */}
-              <CustomTextField
-                id="quantity"
-                name="quantity"
-                type="text"
-                placeholder="Enter quantity.."
-                disabled={
-                  formData.type_of_work_id == 0 ||
-                  formData.is_pricework === true
-                }
-                value={quantityInput}
-                onChange={handleQuantityChange}
-                variant="outlined"
-                inputProps={{
-                  inputMode: "numeric",
-                  pattern: "[0-9]*",
-                }}
-                fullWidth
-              />
+              {!(
+                formData.type_of_work_id === 0 || formData.is_pricework === true
+              ) && (
+                <CustomTextField
+                  id="quantity"
+                  name="quantity"
+                  type="text"
+                  placeholder="Enter quantity.."
+                  value={quantityInput}
+                  onChange={handleQuantityChange}
+                  variant="outlined"
+                  inputProps={{
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                  }}
+                  fullWidth
+                />
+              )}
+
               <Box mt={2} display="flex" justifyContent="space-between" gap={2}>
                 <Button
                   color="error"
