@@ -171,6 +171,7 @@ const TablePagination = () => {
           shift_ids: "",
           team_ids: "",
           company_id: user.company_id,
+          is_pricework: false
         });
         fetchProjects();
         setDrawerOpen(false);
@@ -446,7 +447,7 @@ const TablePagination = () => {
             size="small"
             sx={{
               position: "absolute",
-              right: 12,
+              right: 0,
               top: 8,
               color: (theme) => theme.palette.grey[900],
               backgroundColor: "transparent",
@@ -467,7 +468,7 @@ const TablePagination = () => {
               setDialogOpen(false);
             }}
             startIcon={<IconPlus size={18} />}
-            sx={{ mb: 1 }}
+            sx={{ mb: 1 , ml:2 }}
           >
             Add Project
           </Button>

@@ -35,6 +35,7 @@ interface Task {
   name: string;
   duration: number;
   rate: number;
+  is_pricework: boolean;
 }
 
 interface FormData {
@@ -46,6 +47,7 @@ interface FormData {
   duration: number;
   rate: number;
   is_attchment: boolean;
+  is_pricework: boolean;
 }
 
 interface CreateProjectTaskProps {
@@ -90,6 +92,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
     duration: 0,
     rate: 0,
     is_attchment: false,
+    is_pricework: false,
   };
 
   // Fetch addresses
@@ -150,6 +153,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               rate,
               duration,
               type_of_work_id: firstTask.id,
+              is_pricework: firstTask.is_pricework ,
             }));
 
             setBaseRate(rate);
@@ -161,6 +165,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               rate: 0,
               duration: 0,
               type_of_work_id: 0,
+              is_pricework: false,
             }));
 
             setBaseRate(0);
@@ -183,51 +188,57 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
   useEffect(() => {
     const quantity = Number(quantityInput);
 
-    // Fallback to 0 if baseRate or baseDuration is undefined or NaN
     const safeBaseRate = isNaN(baseRate) || baseRate == null ? 0 : baseRate;
     const safeBaseDuration =
       isNaN(baseDuration) || baseDuration == null ? 0 : baseDuration;
 
-    if (!isNaN(quantity) && quantity > 0) {
-      if (selectedTask) {
-        const effectiveRate =
-          selectedTask.rate > 0 ? selectedTask.rate : safeBaseRate;
-        const effectiveDuration =
-          selectedTask.duration > 0 ? selectedTask.duration : safeBaseDuration;
+    if (!formData.is_pricework) {
+      if (!isNaN(quantity) && quantity > 0) {
+        if (selectedTask) {
+          const effectiveRate =
+            selectedTask.rate > 0 ? selectedTask.rate : safeBaseRate;
+          const effectiveDuration =
+            selectedTask.duration > 0
+              ? selectedTask.duration
+              : safeBaseDuration;
 
-        setFormData((prev) => ({
-          ...prev,
-          rate: effectiveRate * quantity,
-          duration: effectiveDuration * quantity,
-        }));
+          setFormData((prev) => ({
+            ...prev,
+            rate: effectiveRate * quantity,
+            duration: effectiveDuration * quantity,
+          }));
+        }
       } else {
-        setFormData((prev) => ({
-          ...prev,
-          rate: safeBaseRate * quantity,
-          duration: safeBaseDuration * quantity,
-        }));
+        if (selectedTask) {
+          const effectiveRate =
+            selectedTask.rate > 0 ? selectedTask.rate : safeBaseRate;
+          const effectiveDuration =
+            selectedTask.duration > 0
+              ? selectedTask.duration
+              : safeBaseDuration;
+
+          setFormData((prev) => ({
+            ...prev,
+            rate: effectiveRate,
+            duration: effectiveDuration,
+          }));
+        }
       }
     } else {
-      if (selectedTask) {
-        const effectiveRate =
-          selectedTask.rate > 0 ? selectedTask.rate : safeBaseRate;
-        const effectiveDuration =
-          selectedTask.duration > 0 ? selectedTask.duration : safeBaseDuration;
-
-        setFormData((prev) => ({
-          ...prev,
-          rate: effectiveRate,
-          duration: effectiveDuration,
-        }));
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          rate: safeBaseRate,
-          duration: safeBaseDuration,
-        }));
-      }
+      // If repeatable_job, just keep base values
+      setFormData((prev) => ({
+        ...prev,
+        rate: baseRate,
+        duration: baseDuration,
+      }));
     }
-  }, [quantityInput, selectedTask, baseRate, baseDuration]);
+  }, [
+    quantityInput,
+    selectedTask,
+    baseRate,
+    baseDuration,
+    formData.is_pricework,
+  ]);
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -315,6 +326,9 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                     <CustomTextField {...params} placeholder="Trades" />
                   )}
                 />
+                <Typography variant="body1">
+                  You can choose only one trade
+                </Typography>
 
                 {/* Address Select */}
                 <Typography variant="h5" mt={2}>
@@ -352,22 +366,30 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                   onChange={(e, newVal) => {
                     setSelectedTask(newVal);
                     if (newVal) {
-                      const rate =
-                        newVal.rate > 0 ? newVal.rate : formData.rate;
+                      const rate = newVal.rate > 0 ? newVal.rate : 0;
                       const duration =
-                        newVal.duration > 0
-                          ? newVal.duration
-                          : formData.duration;
+                        newVal.duration > 0 ? newVal.duration : 0;
 
                       setFormData((prev) => ({
                         ...prev,
                         rate,
                         duration,
                         type_of_work_id: newVal.id,
+                        is_pricework: newVal.is_pricework,
                       }));
 
                       setBaseRate(rate);
                       setBaseDuration(duration);
+                    } else {
+                      setFormData((prev) => ({
+                        ...prev,
+                        rate: 0,
+                        duration: 0,
+                        type_of_work_id: null,
+                        is_pricework: false,
+                      }));
+                      setBaseRate(0);
+                      setBaseDuration(0);
                     }
                   }}
                   getOptionLabel={(option) => option.name}
@@ -403,16 +425,19 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                     <CustomTextField {...params} placeholder="Location" />
                   )}
                 />
-                {/* Rate/Duration (after task selected) */}
-                {selectedTask && (
-                  <>
-                    <Typography variant="h5" color="textSecondary" mt={2}>
-                      Recommended duration: {formData.duration} min
-                    </Typography>
-                    <Typography variant="h4" color="textSecondary" mt={2}>
-                      Amount: £{formData.rate}
-                    </Typography>
-                  </>
+
+                {/* Duration Display */}
+                {selectedTask && !formData.is_pricework && (
+                  <Typography variant="h5" color="textSecondary" mt={2}>
+                    Recommended duration: {formData.duration} min
+                  </Typography>
+                )}
+
+                {/* Rate Display (Only if not pricework) */}
+                {selectedTask && !formData.is_pricework && (
+                  <Typography variant="h4" color="textSecondary" mt={2}>
+                    Amount: £{formData.rate}
+                  </Typography>
                 )}
               </Grid>
             </Grid>
@@ -442,13 +467,17 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                   }
                 />
               </Typography>
-              {/* Quantity Input */}
+
+              {/* Quantity Input (disabled if pricework) */}
               <CustomTextField
                 id="quantity"
                 name="quantity"
                 type="text"
                 placeholder="Enter quantity.."
-                disabled={formData.type_of_work_id == 0}
+                disabled={
+                  formData.type_of_work_id == 0 ||
+                  formData.is_pricework === true
+                }
                 value={quantityInput}
                 onChange={handleQuantityChange}
                 variant="outlined"
@@ -471,7 +500,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                   size="medium"
                   fullWidth
                 >
-                  Cancle
+                  Cancel
                 </Button>
 
                 <Button
