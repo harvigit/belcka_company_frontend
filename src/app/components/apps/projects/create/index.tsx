@@ -98,7 +98,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({
         if (res.data?.info) {
           setTeam(res.data.info);
         }
-        console.log(res, "res.datares.data");
       } catch (err) {
         console.error("Failed to refresh project data", err);
       }

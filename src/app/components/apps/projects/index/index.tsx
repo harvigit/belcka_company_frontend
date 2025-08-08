@@ -22,11 +22,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import Cookies from "js-cookie";
-import {
-  IconChevronRight,
-  IconPlus,
-  IconX,
-} from "@tabler/icons-react";
+import { IconChevronRight, IconPlus, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import CreateProject from "../create";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
@@ -171,6 +167,8 @@ const TablePagination = () => {
           shift_ids: "",
           team_ids: "",
           company_id: user.company_id,
+          is_pricework: false,
+          repeatable_job: false,
         });
         fetchProjects();
         setDrawerOpen(false);
@@ -389,13 +387,13 @@ const TablePagination = () => {
                         left="15px"
                         bgcolor={color}
                         px={1.5}
-                        py={0.5}
                         borderRadius="10px"
                         zIndex={1}
                       >
                         <Typography
                           variant="caption"
                           fontWeight={700}
+                          fontSize={"12px !important"}
                           color="#fff"
                         >
                           {addr.status_text}
@@ -410,13 +408,12 @@ const TablePagination = () => {
                         <Typography fontSize="14px" className="multi-ellipsis">
                           {addr.message}
                         </Typography>
-                        <Typography
+                        <p
+                          style={{ fontSize: "12px", textAlign: "end" , color:"GrayText"}}
                           color="textSecondary"
-                          fontSize="14px"
-                          textAlign="end"
                         >
                           {formatDate(addr.date_added)}
-                        </Typography>
+                        </p>
                       </Box>
                     </Box>
                   );
@@ -446,7 +443,7 @@ const TablePagination = () => {
             size="small"
             sx={{
               position: "absolute",
-              right: 12,
+              right: 0,
               top: 8,
               color: (theme) => theme.palette.grey[900],
               backgroundColor: "transparent",
@@ -467,7 +464,7 @@ const TablePagination = () => {
               setDialogOpen(false);
             }}
             startIcon={<IconPlus size={18} />}
-            sx={{ mb: 1 }}
+            sx={{ mb: 1, ml: 2 }}
           >
             Add Project
           </Button>

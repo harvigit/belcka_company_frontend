@@ -647,7 +647,7 @@ const TablePagination = () => {
                 <ListItemIcon>
                   <IconPlus width={18} />
                 </ListItemIcon>
-                Add Task
+                Add Template
               </Link>
             </MenuItem>
             <MenuItem onClick={handleClose}>

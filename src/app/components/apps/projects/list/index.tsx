@@ -44,7 +44,7 @@ import TasksList from "./tasks-list";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import Cookies from "js-cookie";
-import { AnyARecord } from "dns";
+import CreateProjectTask from "../tasks";
 
 dayjs.extend(customParseFormat);
 
@@ -68,9 +68,16 @@ interface ProjectListingProps {
   projectId: number | null;
   onProjectUpdated?: () => void;
 }
+export interface TradeList {
+  id: number;
+  name: string;
+}
 
 // const ProjectListing: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
-const TablePagination: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
+const TablePagination: React.FC<ProjectListingProps> = ({
+  projectId,
+  onProjectUpdated,
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ status: "", sortOrder: "" });
   const [tempFilters, setTempFilters] = useState(filters);
@@ -78,6 +85,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({ projectId, onProjectUp
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [trade, setTrade] = useState<TradeList[]>([]);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -107,6 +116,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({ projectId, onProjectUp
   };
 
   useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await api.get(
+          `trade/get-trades?company_id=${user.company_id}`
+        );
+        if (res.data) setTrade(res.data.info);
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+    fetchTrades();
+  }, []);
+
+  useEffect(() => {
     if (projectId) {
       setFormData((prev: any) => ({
         ...prev,
@@ -123,6 +146,59 @@ const TablePagination: React.FC<ProjectListingProps> = ({ projectId, onProjectUp
       ...prevData,
       [name]: value,
     }));
+  };
+
+  const handleOpenCreateDrawer = () => {
+    setFormData({
+      address_id: null,
+      type_of_work_id: null,
+      location_id: null,
+      trade_id: null,
+      company_id: user?.company_id || 0,
+      duration: 0,
+      rate: 0,
+      is_attchment: false,
+    });
+    setDrawerOpen(true);
+  };
+
+  const handleTaskSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        project_id: projectId,
+      };
+      const result = await api.post("company-tasks/create", payload);
+      if (result.data.IsSuccess === true) {
+        toast.success(result.data.message);
+        setDrawerOpen(false);
+        setLoading(true);
+        onProjectUpdated?.();
+        setTimeout(() => {
+          setLoading(false);
+        }, 100);
+        setFormData({
+          address_id: null,
+          type_of_work_id: null,
+          location_id: null,
+          trade_id: null,
+          company_id: user?.company_id || 0,
+          duration: 0,
+          rate: 0,
+          is_attchment: false,
+        });
+      } else {
+        toast.error(result.data.message);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error creating address:", error);
+      setLoading(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -425,6 +501,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({ projectId, onProjectUp
               <Link
                 color="body1"
                 href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleOpenCreateDrawer();
+                }}
                 style={{
                   width: "100%",
                   color: "#11142D",
@@ -463,6 +543,17 @@ const TablePagination: React.FC<ProjectListingProps> = ({ projectId, onProjectUp
         </Stack>
       </Stack>
       <Divider />
+      {/* Add task */}
+      <CreateProjectTask
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        formData={formData}
+        setFormData={setFormData}
+        handleTaskSubmit={handleTaskSubmit}
+        trade={trade}
+        isSaving={isSaving}
+        projectId={projectId}
+      />
       <Drawer
         anchor="right"
         open={sidebar}
