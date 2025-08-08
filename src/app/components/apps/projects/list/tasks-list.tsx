@@ -40,7 +40,7 @@ dayjs.extend(customParseFormat);
 
 export type TaskList = {
     id: number;
-    task_name: string;
+    company_task_name: string;
     address_name: string;
     start_date?: string;
     end_date?: string;
@@ -96,7 +96,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
             // Filter by search term
             const search = searchTerm.toLowerCase();
             const matchesSearch =
-                item.task_name.toLowerCase().includes(search) ||
+                item.company_task_name.toLowerCase().includes(search) ||
                 item.address_name.toLowerCase().includes(search);
 
             return matchesStatus && matchesSearch;
@@ -104,9 +104,9 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
 
         // Apply sorting
         if (filters.sortOrder === 'asc') {
-            filtered = filtered.sort((a, b) => a.task_name?.localeCompare(b.task_name));
+            filtered = filtered.sort((a, b) => a.company_task_name?.localeCompare(b.company_task_name));
         } else if (filters.sortOrder === 'desc') {
-            filtered = filtered.sort((a, b) => b.task_name?.localeCompare(a.task_name));
+            filtered = filtered.sort((a, b) => b.company_task_name?.localeCompare(a.company_task_name));
         }
 
         return filtered;
@@ -116,8 +116,8 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
 
     const columns = useMemo(() => {
         return [
-            columnHelper.accessor('task_name', {
-                id: 'task_name',
+            columnHelper.accessor('company_task_name', {
+                id: 'company_task_name',
                 header: () => (
                     <Stack direction="row" alignItems="center" spacing={4}>
                         <CustomCheckbox
@@ -154,7 +154,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                                     setSelectedRowIds(newSelected);
                                 }}
                             />
-                            <Typography variant="h5">{item.task_name ?? '-'}</Typography>
+                            <Typography variant="h5">{item.company_task_name ?? '-'}</Typography>
                         </Stack>
                     );
                 },

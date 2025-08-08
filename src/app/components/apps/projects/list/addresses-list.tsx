@@ -486,7 +486,7 @@ const AddressesList = ({ projectId, searchTerm, filters }: AddressesListProps) =
                                 ))}
                             </Tabs>
 
-                            {value === 0 && <WorksTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
+                            {value === 0 && <WorksTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} />}
                             {value === 1 && <DocumentsTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
                             {value === 2 && <TradesTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
 

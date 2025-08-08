@@ -1,36 +1,34 @@
 'use client';
 
-import React, {useEffect, useState, useMemo} from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     Avatar, Box, Button, Chip, IconButton, InputAdornment,
     TextField, Typography
 } from '@mui/material';
-import {Stack} from '@mui/system';
-import {IconChevronRight, IconFilter, IconSearch} from '@tabler/icons-react';
+import { Stack } from '@mui/system';
+import { IconChevronRight, IconFilter, IconSearch } from '@tabler/icons-react';
 import api from '@/utils/axios';
-import {number} from 'yup';
 
 interface WorksTabProps {
     addressId: number,
-    projectId: number,
     companyId: number
 }
 
-export const WorksTab = ({addressId, projectId, companyId}: WorksTabProps) => {
+export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     const [tabData, setTabData] = useState<any[]>([]);
     const [searchUser, setSearchUser] = useState<string>('');
 
     const fetchWorkTabData = async () => {
         try {
-            // const res = await api.get('/work/get-checklogs', {
-            //     params: { project_id: projectId, address_id: addressId }
-            // });
-            //
-            // if (res.data?.IsSuccess) {
-            //     setTabData(res.data.info || []);
-            // } else {
-            //     setTabData([]);
-            // }
+            const res = await api.get('/project/get-works', {
+                params: { address_id: addressId, company_id: companyId }
+            });
+
+            if (res.data?.IsSuccess) {
+                setTabData(res.data.info || []);
+            } else {
+                setTabData([]);
+            }
         } catch {
             setTabData([]);
         }
@@ -47,10 +45,10 @@ export const WorksTab = ({addressId, projectId, companyId}: WorksTabProps) => {
     };
 
     useEffect(() => {
-        if (addressId && projectId) {
+        if (addressId) {
             fetchWorkTabData();
         }
-    }, [addressId, projectId]);
+    }, [addressId]);
 
     const filteredData = useMemo(() => {
         const search = searchUser.trim().toLowerCase();
@@ -64,7 +62,8 @@ export const WorksTab = ({addressId, projectId, companyId}: WorksTabProps) => {
 
     return (
         <Box>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+            {/* Search bar and filter button */}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2} sx={{ flexWrap: 'wrap' }}>
                 <TextField
                     placeholder="Search..."
                     size="small"
@@ -73,20 +72,21 @@ export const WorksTab = ({addressId, projectId, companyId}: WorksTabProps) => {
                     InputProps={{
                         endAdornment: (
                             <InputAdornment position="end">
-                                <IconSearch size={16}/>
+                                <IconSearch size={16} />
                             </InputAdornment>
                         )
                     }}
-                    sx={{width: '80%'}}
+                    sx={{ width: { xs: '100%', sm: '80%' }, mb: { xs: 2, sm: 0 } }}
                 />
-                <Button variant="outlined">
-                    <IconFilter width={18}/>
+                <Button variant="outlined" sx={{ height: '40px' }}>
+                    <IconFilter width={18} />
                 </Button>
             </Stack>
 
+            {/* List of works */}
             {filteredData.length > 0 ? (
                 filteredData.map((work, idx) => (
-                    <Box key={idx} mb={1}>
+                    <Box key={idx} mb={2} sx={{ display: 'flex', flexDirection: 'column' }}>
                         <Box
                             sx={{
                                 position: 'relative',
@@ -97,28 +97,13 @@ export const WorksTab = ({addressId, projectId, companyId}: WorksTabProps) => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
+                                flexWrap: 'wrap',
+                                '&:hover': {
+                                    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
+                                },
                             }}
                         >
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    top: -10,
-                                    right: 8,
-                                    backgroundColor: '#007aff',
-                                    color: 'white',
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: '50%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold',
-                                }}
-                            >
-                                {work.total_checklogs}
-                            </Box>
-
+                            {/* Badge for Trade */}
                             <Box
                                 sx={{
                                     position: 'absolute',
@@ -134,27 +119,82 @@ export const WorksTab = ({addressId, projectId, companyId}: WorksTabProps) => {
                                     borderRadius: '999px',
                                 }}
                             >
-                                {work.work_name}
+                                {work.trade_name}
                             </Box>
 
-                            <Stack direction="row" spacing={2} alignItems="center">
-                                <Avatar
-                                    src={work.user_thumb_image || '/default-avatar.png'}
-                                    alt={work.user_name}
-                                    sx={{width: 56, height: 56}}
-                                />
-                                <Box>
-                                    <Typography fontWeight="bold">{work.user_name}</Typography>
-                                </Box>
-                            </Stack>
+                            {/* Badge for Duration */}
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: -10,
+                                    left: 98,
+                                    backgroundColor: '#7523D3',
+                                    border: '1px solid #7523D3',
+                                    color: '#fff',
+                                    fontSize: '11px',
+                                    fontWeight: 500,
+                                    px: 1,
+                                    py: 0.2,
+                                    borderRadius: '999px',
+                                }}
+                            >
+                                {work.duration}
+                            </Box>
+                            
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: -10,
+                                    left: 166,
+                                    backgroundColor: work.repeatable_job === 'Task' ? '#32A852' : '#FF008C',
+                                    border: work.repeatable_job === 'Task' ? '1px solid #32A852' : '1px solid #FF008C',
+                                    color: '#fff',
+                                    fontSize: '11px',
+                                    fontWeight: 500,
+                                    px: 1,
+                                    py: 0.2,
+                                    borderRadius: '999px',
+                                }}
+                            >
+                                {work.repeatable_job === 'Task' ? work.rate : 'Job'}
+                            </Box>
+                            
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: -10,
+                                    left: 213,
+                                    backgroundColor: work.status_color,
+                                    border: `1px solid ${work.status_color}`,
+                                    color: '#fff',
+                                    fontSize: '11px',
+                                    fontWeight: 500,
+                                    px: 1,
+                                    py: 0.2,
+                                    borderRadius: '999px',
+                                }}
+                            >
+                                {work.status_text}
+                            </Box>
 
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography fontWeight="bold" fontSize="1.25rem">
-                                    {formatHour(work.total_work_hours)} H
-                                </Typography>
-                                <IconButton>
-                                    <IconChevronRight fontSize="small"/>
-                                </IconButton>
+                            {/* Work Name and Total Hours */}
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                                <Box sx={{ flexGrow: 1 }}>
+                                    <Typography fontWeight="bold" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+                                        {work.name}
+                                    </Typography>
+                                </Box>
+
+                                {parseFloat(work.total_work_hours) > 0 && (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Typography fontWeight="bold" fontSize="1.25rem">
+                                            {formatHour(work.total_work_hours)} H
+                                        </Typography>
+                                        <IconButton>
+                                            <IconChevronRight fontSize="small" />
+                                        </IconButton>
+                                    </Stack>
+                                )}
                             </Stack>
                         </Box>
                     </Box>
