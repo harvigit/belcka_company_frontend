@@ -61,6 +61,7 @@ interface CreateProjectTaskProps {
   trade: Trade[];
   isSaving: boolean;
   projectId: number | null;
+  address_id: number | null;
 }
 
 const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
@@ -72,6 +73,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
   trade,
   projectId,
   isSaving,
+  address_id,
 }) => {
   const [address, setAddress] = useState<Address[]>([]);
   const [location, setLocation] = useState<Location[]>([]);
@@ -100,16 +102,34 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
 
   // Fetch addresses
   useEffect(() => {
-    if (!projectId) return;
+    if (!open || !projectId) return;
+
     (async () => {
       try {
         const res = await api.get(`address/get?project_id=${projectId}`);
-        if (res.data) setAddress(res.data.info);
+        if (res.data && Array.isArray(res.data.info)) {
+          const fetchedAddresses = res.data.info;
+          setAddress(fetchedAddresses);
+
+          if (address_id !== null && formData.address_id === null) {
+            const matchedAddress = fetchedAddresses.find(
+              (addr: Address) => addr.id === address_id
+            );
+
+            if (matchedAddress) {
+              setFormData((prev) => ({
+                ...prev,
+                address_id: matchedAddress.id,
+              }));
+              console.log("Auto-selected address:", matchedAddress.id);
+            }
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch addresses", err);
       }
     })();
-  }, [projectId]);
+  }, [open, projectId, address_id]);
 
   // Fetch locations
   useEffect(() => {
@@ -305,7 +325,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h5" fontWeight={700}>
-                    Add Task
+                    Add Task {address_id} {formData.address_id}
                   </Typography>
                 </Box>
 
@@ -434,14 +454,14 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                 />
 
                 {/* Duration Display */}
-                {selectedTask && !formData.is_pricework && (
+                {selectedTask && formData.is_pricework && (
                   <Typography variant="h5" color="textSecondary" mt={2}>
                     Recommended duration: {formData.duration} min
                   </Typography>
                 )}
 
                 {/* Rate Display (Only if not pricework) */}
-                {selectedTask && !formData.is_pricework && (
+                {selectedTask && formData.is_pricework && (
                   <Typography variant="h4" color="textSecondary" mt={2}>
                     Amount: £{formData.rate}
                   </Typography>
@@ -477,7 +497,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
 
               {/* Quantity Input (disabled if pricework) */}
               {!(
-                formData.type_of_work_id === 0 || formData.is_pricework === true
+                formData.type_of_work_id === 0 || formData.is_pricework === false
               ) && (
                 <CustomTextField
                   id="quantity"

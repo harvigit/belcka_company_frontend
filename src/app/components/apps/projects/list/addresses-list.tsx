@@ -118,9 +118,9 @@ const AddressesList = ({
 
   const handleOpenCreateDrawer = () => {
     setFormData({
-      address_id: 0,
+      address_id: null,
       type_of_work_id: 0,
-      location_id: null,
+      location_id: 0,
       trade_id: null,
       company_id: user?.company_id || 0,
       duration: 0,
@@ -160,9 +160,9 @@ const AddressesList = ({
     setIsSaving(true);
     try {
       setFormData({
-        address_id: 0,
+        address_id: null,
         type_of_work_id: 0,
-        location_id: null,
+        location_id: 0,
         trade_id: null,
         company_id: user?.company_id || 0,
         duration: 0,
@@ -233,9 +233,9 @@ const AddressesList = ({
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
               checked={selectedRowIds.size === data.length && data.length > 0}
-              indeterminate={
-                selectedRowIds.size > 0 && selectedRowIds.size < data.length
-              }
+              // indeterminate={
+              //   selectedRowIds.size > 0 && selectedRowIds.size < data.length
+              // }
               onChange={(e) => {
                 if (e.target.checked) {
                   setSelectedRowIds(new Set(data.map((_, i) => i)));
@@ -255,7 +255,7 @@ const AddressesList = ({
           const isChecked = selectedRowIds.has(row.index);
 
           return (
-            <Stack direction="row" alignItems="center" spacing={4}>
+            <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
               <CustomCheckbox
                 checked={isChecked}
                 onChange={() => {
@@ -629,6 +629,7 @@ const AddressesList = ({
                 handleTaskSubmit={handleTaskSubmit}
                 trade={trade}
                 isSaving={isSaving}
+                address_id={sidebarData.addressId}
                 projectId={projectId}
               />
               {/* Tabs */}

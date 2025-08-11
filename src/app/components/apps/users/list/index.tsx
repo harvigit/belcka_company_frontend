@@ -137,10 +137,6 @@ const TablePagination = () => {
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
             }
-            indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
-            }
             onChange={(e) => {
               if (e.target.checked) {
                 setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
@@ -161,7 +157,7 @@ const TablePagination = () => {
         const isChecked = selectedRowIds.has(user.id);
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4}>
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
             <CustomCheckbox
               checked={isChecked}
               onChange={() => {

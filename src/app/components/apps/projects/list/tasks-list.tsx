@@ -124,9 +124,9 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                             checked={
                                 selectedRowIds.size === data.length && data.length > 0
                             }
-                            indeterminate={
-                                selectedRowIds.size > 0 && selectedRowIds.size < data.length
-                            }
+                            // indeterminate={
+                            //     selectedRowIds.size > 0 && selectedRowIds.size < data.length
+                            // }
                             onChange={(e) => {
                                 if (e.target.checked) {
                                     setSelectedRowIds(new Set(data.map((_, i) => i)));
@@ -145,7 +145,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                     const item = row.original;
                     const isChecked = selectedRowIds.has(row.index);
                     return (
-                        <Stack direction="row" alignItems="center" spacing={4}>
+                        <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
                             <CustomCheckbox
                                 checked={isChecked}
                                 onChange={() => {
