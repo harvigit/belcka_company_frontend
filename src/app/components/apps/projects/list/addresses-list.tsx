@@ -120,7 +120,7 @@ const AddressesList = ({
     setFormData({
       address_id: null,
       type_of_work_id: 0,
-      location_id: 0,
+      location_id: null,
       trade_id: null,
       company_id: user?.company_id || 0,
       duration: 0,
@@ -159,16 +159,6 @@ const AddressesList = ({
     e.preventDefault();
     setIsSaving(true);
     try {
-      setFormData({
-        address_id: null,
-        type_of_work_id: 0,
-        location_id: 0,
-        trade_id: null,
-        company_id: user?.company_id || 0,
-        duration: 0,
-        rate: 0,
-        is_attchment: false,
-      });
       const payload = {
         ...formData,
         project_id: projectId,
@@ -182,6 +172,16 @@ const AddressesList = ({
         setTimeout(() => {
           setLoading(false);
         }, 100);
+        setFormData({
+          address_id: null,
+          type_of_work_id: 0,
+          location_id: null,
+          trade_id: null,
+          company_id: user?.company_id || 0,
+          duration: 0,
+          rate: 0,
+          is_attchment: false,
+        });
       } else {
         toast.error(result.data.message);
         setLoading(false);
@@ -255,7 +255,12 @@ const AddressesList = ({
           const isChecked = selectedRowIds.has(row.index);
 
           return (
-            <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={4}
+              sx={{ pl: 0.2 }}
+            >
               <CustomCheckbox
                 checked={isChecked}
                 onChange={() => {
@@ -675,20 +680,36 @@ const AddressesList = ({
                 ))}
               </Tabs>
 
-                            {value === 0 && <WorksTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} />}
-                            {value === 1 && <DocumentsTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
-                            {value === 2 && <TradesTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
-
-                        </>
-                    ) : (
-                        <Typography variant="body1" color="text.secondary" mt={2}>
-                            No work logs available.
-                        </Typography>
-                    )}
-                </Box>
-            </Drawer>
+              {value === 0 && (
+                <WorksTab
+                  companyId={sidebarData.companyId}
+                  addressId={sidebarData.addressId}
+                />
+              )}
+              {value === 1 && (
+                <DocumentsTab
+                  companyId={sidebarData.companyId}
+                  addressId={sidebarData.addressId}
+                  projectId={sidebarData.projectId}
+                />
+              )}
+              {value === 2 && (
+                <TradesTab
+                  companyId={sidebarData.companyId}
+                  addressId={sidebarData.addressId}
+                  projectId={sidebarData.projectId}
+                />
+              )}
+            </>
+          ) : (
+            <Typography variant="body1" color="text.secondary" mt={2}>
+              No work logs available.
+            </Typography>
+          )}
         </Box>
-    );
+      </Drawer>
+    </Box>
+  );
 };
 
 export default AddressesList;

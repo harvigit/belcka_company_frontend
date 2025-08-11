@@ -217,7 +217,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
     const safeBaseDuration =
       isNaN(baseDuration) || baseDuration == null ? 0 : baseDuration;
 
-    if (!formData.is_pricework) {
+    if (formData.is_pricework) {
       if (!isNaN(quantity) && quantity > 0) {
         if (selectedTask) {
           const effectiveRate =
@@ -325,7 +325,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h5" fontWeight={700}>
-                    Add Task {address_id} {formData.address_id}
+                    Add Task
                   </Typography>
                 </Box>
 
