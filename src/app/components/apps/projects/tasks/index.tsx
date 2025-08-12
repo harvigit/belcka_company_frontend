@@ -7,12 +7,15 @@ import {
   Button,
   Autocomplete,
   Box,
+  Divider,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
+import { width } from "@mui/system";
+import { IconSearch } from "@tabler/icons-react";
 
 interface Trade {
   id: string | number | null;
@@ -90,6 +93,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
   const [address, setAddress] = useState<Address[]>([]);
   const [location, setLocation] = useState<Location[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskSearch, setTaskSearch] = useState("");
 
   const { data: session } = useSession();
   const userCompanyId = (session?.user as any)?.company_id || 0;
@@ -268,6 +272,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                   alignContent={"center"}
                   alignItems={"center"}
                   flexWrap={"wrap"}
+                  mb={1}
                 >
                   <IconButton onClick={handleResetAndClose}>
                     <IconArrowLeft />
@@ -295,84 +300,113 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                     )}
                   />
                 </Box>
+                {formData.trade_id && (
+                  <Box mt={1} mb={1} display={"flex"} justifyContent={"start"}>
+                    <CustomTextField
+                      size="small"
+                      placeholder="Search task"
+                      value={taskSearch}
+                      onChange={(e: any) => setTaskSearch(e.target.value)}
+                      fullWidth
+                      sx={{ width: "90%", ml: 5 }}
+                    />
+                  </Box>
+                )}
 
                 {/* Task list */}
                 <Box mt={2}>
-                  {tasks.map((task) => {
-                    const selected = selectedTasks.find(
-                      (t) => t.taskId === task.id
-                    );
-                    const quantityInfo = quantities[task.id] || {
-                      quantity: 0,
-                      rate: task.is_pricework ? task.rate : 0,
-                      duration: task.is_pricework ? task.duration : 0,
-                    };
-                    const quantity = quantityInfo.quantity;
+                  {tasks
+                    .filter((task) =>
+                      task.name.toLowerCase().includes(taskSearch.toLowerCase())
+                    )
+                    .map((task) => {
+                      const selected = selectedTasks.find(
+                        (t) => t.taskId === task.id
+                      );
+                      const quantityInfo = quantities[task.id] || {
+                        quantity: 0,
+                        rate: task.is_pricework ? task.rate : 0,
+                        duration: task.is_pricework ? task.duration : 0,
+                      };
+                      const quantity = quantityInfo.quantity;
 
-                    return (
-                      <Box
-                        key={task.id}
-                        mb={1}
-                        sx={{
-                          padding: 1,
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 1,
-                        }}
-                      >
-                        <Box display="flex" alignItems="center" gap={2} className="task_wrapper">
-                          <CustomCheckbox
-                            checked={!!selected}
-                            onChange={(e) =>
-                              handleTaskCheckbox(task, e.target.checked)
-                            }
-                          />
-
-                          <CustomTextField
-                            id="name"
-                            name="name"
-                            className="task-input"
-                            disabled
-                            value={task.name}
-                          />
-
-                          <CustomTextField
-                            type="text"
-                            inputProps={{
-                              inputMode: "numeric",
-                              pattern: "[0-9]*",
-                            }}
-                            value={quantity}
-                            onChange={(e: any) =>
-                              handleQuantityChange(task, e.target.value)
-                            }
-                            sx={{ width: 80 }}
-                          />
-                        </Box>
-
-                        {task.is_pricework && (
+                      return (
+                        <Box
+                          key={task.id}
+                          mb={1}
+                          sx={{
+                            padding: 1,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 1,
+                          }}
+                        >
                           <Box
                             display="flex"
-                            justifyContent="start"
-                            gap={10}
-                            ml={8}
+                            alignItems="center"
+                            gap={2}
+                            className="task_wrapper"
                           >
-                            <Typography variant="caption" color="textSecondary" fontWeight={500}>
-                              Duration: {quantityInfo.duration} min
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary" fontWeight={500}>
-                              Rate: £{quantityInfo.rate.toFixed(2)}
-                            </Typography>
+                            <CustomCheckbox
+                              checked={!!selected}
+                              onChange={(e) =>
+                                handleTaskCheckbox(task, e.target.checked)
+                              }
+                            />
+
+                            <CustomTextField
+                              id="name"
+                              name="name"
+                              className="task-input"
+                              disabled
+                              value={task.name}
+                            />
+
+                            <CustomTextField
+                              type="text"
+                              inputProps={{
+                                inputMode: "numeric",
+                                pattern: "[0-9]*",
+                              }}
+                              value={quantity}
+                              onChange={(e: any) =>
+                                handleQuantityChange(task, e.target.value)
+                              }
+                              sx={{ width: 80 }}
+                            />
                           </Box>
-                        )}
-                      </Box>
-                    );
-                  })}
+
+                          {task.is_pricework && (
+                            <Box
+                              display="flex"
+                              justifyContent="start"
+                              gap={10}
+                              ml={8}
+                            >
+                              <Typography
+                                variant="caption"
+                                color="textSecondary"
+                                fontWeight={500}
+                              >
+                                Duration: {quantityInfo.duration} min
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="textSecondary"
+                                fontWeight={500}
+                              >
+                                Rate: £{quantityInfo.rate.toFixed(2)}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      );
+                    })}
                 </Box>
               </Grid>
             </Grid>
-            {/* Submit buttons */}
 
+            {/* Submit buttons */}
             <Box>
               <Box className="task_wrapper">
                 <Typography variant="h5" color="textSecondary" mt={2}>

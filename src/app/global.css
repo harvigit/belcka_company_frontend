@@ -194,18 +194,20 @@ input#project_id::placeholder {
     .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator, .mui-1uhhrmm-MuiAutocomplete-endAdornment{
         display: none;
     }
+    /* .mui-d5iifd-MuiInputBase-input-MuiOutlinedInput-input{ */
+    /* } */
 }
 
 .task_wrapper{
     .task-input {
         width: 80% !important;
-        .mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input.Mui-disabled ,.mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input{
+        .mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input.Mui-disabled ,.mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input, .mui-ao3ay5.Mui-disabled{
             opacity: 1;
             font-weight: 500;
             -webkit-text-fill-color: #11142D !important;
         }
     }
-    .mui-454zd4-MuiInputBase-input-MuiOutlinedInput-input{
+    .mui-454zd4-MuiInputBase-input-MuiOutlinedInput-input ,.mui-is1b5t .MuiOutlinedInput-root .MuiAutocomplete-input{
         opacity: 1;
         font-weight: 500;
         -webkit-text-fill-color: #11142D !important;
