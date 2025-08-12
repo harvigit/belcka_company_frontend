@@ -187,3 +187,27 @@ input#project_id::placeholder {
 .MuiTypography-root {
     font-size: 0.875rem !important;
 }
+
+.trade-selection{
+    width: 90% !important;
+
+    .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator, .mui-1uhhrmm-MuiAutocomplete-endAdornment{
+        display: none;
+    }
+}
+
+.task_wrapper{
+    .task-input {
+        width: 80% !important;
+        .mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input.Mui-disabled ,.mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input{
+            opacity: 1;
+            font-weight: 500;
+            -webkit-text-fill-color: #11142D !important;
+        }
+    }
+    .mui-454zd4-MuiInputBase-input-MuiOutlinedInput-input{
+        opacity: 1;
+        font-weight: 500;
+        -webkit-text-fill-color: #11142D !important;
+    }
+}
