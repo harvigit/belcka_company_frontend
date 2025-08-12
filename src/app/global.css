@@ -191,7 +191,7 @@ input#project_id::placeholder {
 .trade-selection{
     width: 90% !important;
 
-    .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator, .mui-1uhhrmm-MuiAutocomplete-endAdornment{
+    .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator, .mui-1uhhrmm-MuiAutocomplete-endAdornment, button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.MuiAutocomplete-popupIndicator.mui-tcwnsx{
         display: none;
     }
     /* .mui-d5iifd-MuiInputBase-input-MuiOutlinedInput-input{ */
