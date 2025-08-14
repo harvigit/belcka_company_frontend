@@ -940,7 +940,7 @@ const TablePagination = () => {
                       {table.getPageCount()}
                     </Typography>
                     <Typography color="textSecondary" ml={"3px"}>
-                      | Enteries :{" "}
+                      | Entries :{" "}
                     </Typography>
                   </Stack>
                   <Stack
