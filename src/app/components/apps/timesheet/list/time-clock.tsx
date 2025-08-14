@@ -220,6 +220,11 @@ const TimesheetList = () => {
                 header: 'Pricework Amount',
                 cell: (info: any) => (info.getValue() ? `${currency}${info.getValue()}` : '-'),
             }),
+            
+            columnHelper.accessor('total_payable_amount', {
+                header: 'Total Payable Amount',
+                cell: (info: any) => (info.getValue() ? `${currency}${info.getValue()}` : '-'),
+            }),
         ],
         [currency]
     );
@@ -272,62 +277,62 @@ const TimesheetList = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     InputProps={{endAdornment: <IconSearch size={16}/>}}
                 />
-                <Button variant="contained" onClick={() => setOpen(true)}>
-                    <IconFilter width={18}/>
-                </Button>
+                {/*<Button variant="contained" onClick={() => setOpen(true)}>*/}
+                {/*    <IconFilter width={18}/>*/}
+                {/*</Button>*/}
             </Stack>
 
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" fullScreen={isMobile}>
-                <DialogTitle>
-                    Filters
-                    <IconButton
-                        onClick={() => setOpen(false)}
-                        sx={{
-                            position: 'absolute',
-                            right: 12,
-                            top: 8,
-                            backgroundColor: 'transparent',
-                        }}
-                    >
-                        <IconX size={40}/>
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent>
-                    <TextField
-                        fullWidth
-                        select
-                        label="Type"
-                        value={tempFilters.type}
-                        onChange={(e) => setTempFilters({...tempFilters, type: e.target.value})}
-                    >
-                        <MenuItem value="">All</MenuItem>
-                        <MenuItem value="T">Timesheet</MenuItem>
-                        <MenuItem value="P">Pricework</MenuItem>
-                        <MenuItem value="E">Expense</MenuItem>
-                    </TextField>
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        onClick={() => {
-                            setFilters({type: ''});
-                            setTempFilters({type: ''});
-                            setOpen(false);
-                        }}
-                        color="inherit"
-                    >
-                        Clear
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={() => {
-                            setFilters(tempFilters);
-                            setOpen(false);
-                        }}
-                    >
-                        Apply
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {/*<Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" fullScreen={isMobile}>*/}
+            {/*    <DialogTitle>*/}
+            {/*        Filters*/}
+            {/*        <IconButton*/}
+            {/*            onClick={() => setOpen(false)}*/}
+            {/*            sx={{*/}
+            {/*                position: 'absolute',*/}
+            {/*                right: 12,*/}
+            {/*                top: 8,*/}
+            {/*                backgroundColor: 'transparent',*/}
+            {/*            }}*/}
+            {/*        >*/}
+            {/*            <IconX size={40}/>*/}
+            {/*        </IconButton>*/}
+            {/*    </DialogTitle>*/}
+            {/*    <DialogContent>*/}
+            {/*        <TextField*/}
+            {/*            fullWidth*/}
+            {/*            select*/}
+            {/*            label="Type"*/}
+            {/*            value={tempFilters.type}*/}
+            {/*            onChange={(e) => setTempFilters({...tempFilters, type: e.target.value})}*/}
+            {/*        >*/}
+            {/*            <MenuItem value="">All</MenuItem>*/}
+            {/*            <MenuItem value="T">Timesheet</MenuItem>*/}
+            {/*            <MenuItem value="P">Pricework</MenuItem>*/}
+            {/*            <MenuItem value="E">Expense</MenuItem>*/}
+            {/*        </TextField>*/}
+            {/*    </DialogContent>*/}
+            {/*    <DialogActions>*/}
+            {/*        <Button*/}
+            {/*            onClick={() => {*/}
+            {/*                setFilters({type: ''});*/}
+            {/*                setTempFilters({type: ''});*/}
+            {/*                setOpen(false);*/}
+            {/*            }}*/}
+            {/*            color="inherit"*/}
+            {/*        >*/}
+            {/*            Clear*/}
+            {/*        </Button>*/}
+            {/*        <Button*/}
+            {/*            variant="contained"*/}
+            {/*            onClick={() => {*/}
+            {/*                setFilters(tempFilters);*/}
+            {/*                setOpen(false);*/}
+            {/*            }}*/}
+            {/*        >*/}
+            {/*            Apply*/}
+            {/*        </Button>*/}
+            {/*    </DialogActions>*/}
+            {/*</Dialog>*/}
 
             <Divider/>
 
