@@ -6,14 +6,16 @@ import {
   Typography,
   Button,
   Autocomplete,
+  Box,
+  Divider,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
-import { User } from "next-auth";
-import { Box } from "@mui/system";
+import { width } from "@mui/system";
+import { IconSearch } from "@tabler/icons-react";
 
 interface Trade {
   id: string | number | null;
@@ -39,17 +41,22 @@ interface Task {
   repeatable_job: boolean;
 }
 
+interface SelectedTask {
+  taskId: number;
+  quantity: number;
+  duration: number;
+  rate: number;
+  is_pricework: boolean;
+  repeatable_job: boolean;
+}
+
 interface FormData {
   address_id: number | null;
-  type_of_work_id: number | null;
   location_id: number | null;
   trade_id: string | number | null;
   company_id: string | number;
-  duration: number;
-  rate: number;
   is_attchment: boolean;
-  is_pricework: boolean;
-  repeatable_job: boolean;
+  tasks: SelectedTask[];
 }
 
 interface CreateProjectTaskProps {
@@ -61,6 +68,15 @@ interface CreateProjectTaskProps {
   trade: Trade[];
   isSaving: boolean;
   projectId: number | null;
+  address_id: number | null;
+}
+
+interface QuantityState {
+  [taskId: number]: {
+    quantity: number;
+    rate: number;
+    duration: number;
+  };
 }
 
 const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
@@ -72,65 +88,74 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
   trade,
   projectId,
   isSaving,
+  address_id,
 }) => {
   const [address, setAddress] = useState<Address[]>([]);
   const [location, setLocation] = useState<Location[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [quantityInput, setQuantityInput] = useState<string>("");
+  const [taskSearch, setTaskSearch] = useState("");
 
-  const [baseRate, setBaseRate] = useState<number>(formData.rate);
-  const [baseDuration, setBaseDuration] = useState<number>(formData.duration);
+  const { data: session } = useSession();
+  const userCompanyId = (session?.user as any)?.company_id || 0;
 
-  const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const [selectedTasks, setSelectedTasks] = useState<SelectedTask[]>([]);
+  const [quantities, setQuantities] = useState<QuantityState>({});
 
-  const initialFormData: FormData = {
-    address_id: null,
-    type_of_work_id: null,
-    location_id: null,
-    trade_id: null,
-    company_id: user?.company_id || 0,
-    duration: 0,
-    rate: 0,
-    is_attchment: false,
-    is_pricework: false,
-    repeatable_job: false,
-  };
-
-  // Fetch addresses
   useEffect(() => {
-    if (!projectId) return;
+    setFormData((prev) => ({
+      ...prev,
+      tasks: selectedTasks,
+    }));
+  }, [selectedTasks]);
+
+  useEffect(() => {
+    if (!open || !projectId) return;
+
     (async () => {
       try {
         const res = await api.get(`address/get?project_id=${projectId}`);
-        if (res.data) setAddress(res.data.info);
+        if (res.data && Array.isArray(res.data.info)) {
+          setAddress(res.data.info);
+
+          if (address_id !== null && !formData.address_id) {
+            const matched = res.data.info.find(
+              (addr: Address) => addr.id === address_id
+            );
+            if (matched) {
+              setFormData((prev) => ({
+                ...prev,
+                address_id: matched.id,
+              }));
+            }
+          }
+        }
       } catch (err) {
-        console.error("Failed to fetch addresses", err);
+        console.error("Error fetching addresses", err);
       }
     })();
-  }, [projectId]);
+  }, [open, projectId, address_id]);
 
-  // Fetch locations
   useEffect(() => {
-    if (!user?.company_id) return;
+    if (!userCompanyId) return;
     (async () => {
       try {
         const res = await api.get(
-          `company-locations/get?company_id=${user.company_id}`
+          `company-locations/get?company_id=${userCompanyId}`
         );
-        if (res.data) setLocation(res.data.info);
+        if (res.data && Array.isArray(res.data.info)) {
+          setLocation(res.data.info);
+        }
       } catch (err) {
-        console.error("Failed to fetch locations", err);
+        console.error("Error fetching locations", err);
       }
     })();
-  }, [user?.company_id]);
+  }, [userCompanyId]);
 
-  // Fetch tasks when trade changes
   useEffect(() => {
     if (!formData.trade_id) {
       setTasks([]);
-      setSelectedTask(null);
+      setSelectedTasks([]);
+      setQuantities({});
       return;
     }
 
@@ -139,132 +164,86 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
         const res = await api.get(
           `type-works/get-work-resources?trade_id=${formData.trade_id}`
         );
-
         if (res.data && Array.isArray(res.data.info)) {
-          const fetchedTasks = res.data.info;
-          setTasks(fetchedTasks);
+          setTasks(res.data.info);
 
-          if (fetchedTasks.length > 0) {
-            const firstTask = fetchedTasks[0];
+          const initialQuantities: QuantityState = {};
+          res.data.info.forEach((task: Task) => {
+            initialQuantities[task.id] = {
+              quantity: task.is_pricework ? 1 : 0,
+              rate: task.rate,
+              duration: task.duration,
+            };
+          });
 
-            const rate = firstTask.rate > 0 ? firstTask.rate : 0;
-            const duration = firstTask.duration > 0 ? firstTask.duration : 0;
-
-            setSelectedTask(firstTask);
-            setFormData((prev) => ({
-              ...prev,
-              rate,
-              duration,
-              type_of_work_id: firstTask.id,
-              is_pricework: firstTask.is_pricework,
-              repeatable_job: firstTask.repeatable_job,
-            }));
-
-            setBaseRate(rate);
-            setBaseDuration(duration);
-          } else {
-            setSelectedTask(null);
-            setFormData((prev) => ({
-              ...prev,
-              rate: 0,
-              duration: 0,
-              type_of_work_id: 0,
-              is_pricework: false,
-              repeatable_job: false,
-            }));
-
-            setBaseRate(0);
-            setBaseDuration(0);
-          }
+          setQuantities(initialQuantities);
+          setSelectedTasks([]); // Reset selections
         }
       } catch (err) {
-        console.error("Failed to fetch tasks", err);
-        setTasks([]);
-        setSelectedTask(null);
+        console.error("Error fetching tasks", err);
       }
     })();
   }, [formData.trade_id]);
 
-  useEffect(() => {
-    setBaseRate(formData.rate);
-    setBaseDuration(formData.duration);
-  }, []);
+  const handleTaskCheckbox = (task: Task, checked: boolean) => {
+    const qInfo = quantities[task.id] || {
+      quantity: 0,
+      rate: task.rate,
+      duration: task.duration,
+    };
 
-  useEffect(() => {
-    const quantity = Number(quantityInput);
-
-    const safeBaseRate = isNaN(baseRate) || baseRate == null ? 0 : baseRate;
-    const safeBaseDuration =
-      isNaN(baseDuration) || baseDuration == null ? 0 : baseDuration;
-
-    if (!formData.is_pricework) {
-      if (!isNaN(quantity) && quantity > 0) {
-        if (selectedTask) {
-          const effectiveRate =
-            selectedTask.rate > 0 ? selectedTask.rate : safeBaseRate;
-          const effectiveDuration =
-            selectedTask.duration > 0
-              ? selectedTask.duration
-              : safeBaseDuration;
-
-          setFormData((prev) => ({
-            ...prev,
-            rate: effectiveRate * quantity,
-            duration: effectiveDuration * quantity,
-          }));
-        }
-      } else {
-        if (selectedTask) {
-          const effectiveRate =
-            selectedTask.rate > 0 ? selectedTask.rate : safeBaseRate;
-          const effectiveDuration =
-            selectedTask.duration > 0
-              ? selectedTask.duration
-              : safeBaseDuration;
-
-          setFormData((prev) => ({
-            ...prev,
-            rate: effectiveRate,
-            duration: effectiveDuration,
-          }));
-        }
-      }
-    } else {
-      // If repeatable_job, just keep base values
-      setFormData((prev) => ({
+    if (checked) {
+      setSelectedTasks((prev) => [
         ...prev,
-        rate: baseRate,
-        duration: baseDuration,
-      }));
+        {
+          taskId: task.id,
+          quantity: qInfo.quantity,
+          name: task.name,
+          duration: qInfo.duration,
+          rate: qInfo.rate,
+          is_pricework: task.is_pricework,
+          repeatable_job: task.repeatable_job,
+        },
+      ]);
+    } else {
+      setSelectedTasks((prev) => prev.filter((t) => t.taskId !== task.id));
     }
-  }, [
-    quantityInput,
-    selectedTask,
-    baseRate,
-    baseDuration,
-    formData.is_pricework,
-  ]);
-
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (!/^\d*$/.test(value)) return;
-    setQuantityInput(value);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
+  const handleQuantityChange = (task: Task, val: string) => {
+    if (!/^\d*$/.test(val)) return;
 
-    if ((name === "duration" || name === "rate") && !/^\d*$/.test(value)) {
-      return;
-    }
+    const quantity = val === "" ? 0 : Math.max(0, Number(val));
 
-    setFormData((prev) => ({
+    setQuantities((prev) => ({
       ...prev,
-      [name]:
-        name === "duration" || name === "rate" ? Number(value) || 0 : value,
+      [task.id]: {
+        quantity,
+        rate: task.is_pricework
+          ? quantity === 0
+            ? task.rate
+            : task.rate * quantity
+          : task.rate,
+        duration: task.is_pricework
+          ? quantity === 0
+            ? task.duration
+            : task.duration * quantity
+          : task.duration,
+      },
     }));
+  };
+
+  const handleResetAndClose = () => {
+    setFormData({
+      address_id: null,
+      location_id: null,
+      trade_id: null,
+      company_id: userCompanyId,
+      is_attchment: false,
+      tasks: [],
+    });
+    setSelectedTasks([]);
+    onClose();
   };
 
   return (
@@ -278,7 +257,6 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
         "& .MuiDrawer-paper": {
           width: 500,
           padding: 2,
-          backgroundColor: "#f9f9f9",
           boxSizing: "border-box",
         },
       }}
@@ -287,56 +265,151 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
         <Box height={"100%"}>
           <form onSubmit={handleTaskSubmit} className="address-form">
             <Grid container spacing={2} mt={1}>
+              {/* Trade Selection */}
               <Grid size={{ lg: 12, xs: 12 }}>
                 <Box
                   display={"flex"}
                   alignContent={"center"}
                   alignItems={"center"}
                   flexWrap={"wrap"}
+                  mb={1}
                 >
-                  <IconButton
-                    onClick={() => {
-                      setFormData(initialFormData);
-                      setSelectedTask(null);
-                      setQuantityInput("");
-                      onClose();
-                    }}
-                  >
+                  <IconButton onClick={handleResetAndClose}>
                     <IconArrowLeft />
                   </IconButton>
-                  <Typography variant="h5" fontWeight={700}>
-                    Add Task
-                  </Typography>
+                  <Autocomplete
+                    fullWidth
+                    className="trade-selection"
+                    size="small"
+                    options={trade}
+                    value={
+                      trade.find((t) => t.id === formData.trade_id) ?? null
+                    }
+                    onChange={(e, val) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        trade_id: val ? val.id : null,
+                      }))
+                    }
+                    getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    renderInput={(params) => (
+                      <CustomTextField {...params} placeholder="Search Trade" />
+                    )}
+                  />
                 </Box>
+                {formData.trade_id && (
+                  <Box mt={1} mb={1} display={"flex"} justifyContent={"start"}>
+                    <CustomTextField
+                      size="small"
+                      placeholder="Search task"
+                      value={taskSearch}
+                      onChange={(e: any) => setTaskSearch(e.target.value)}
+                      fullWidth
+                      sx={{ width: "90%", ml: 5 }}
+                    />
+                  </Box>
+                )}
 
-                {/* Trade Select */}
-                <Typography variant="h5" mt={2}>
-                  Select Trade
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  options={trade}
-                  value={trade.find((t) => t.id === formData.trade_id) ?? null}
-                  onChange={(e, newVal) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      trade_id: newVal ? newVal.id : null,
-                    }))
-                  }
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Trades" />
-                  )}
-                />
-                <Typography variant="body1">
-                  You can choose only one trade
-                </Typography>
+                {/* Task list */}
+                <Box mt={2}>
+                  {tasks
+                    .filter((task) =>
+                      task.name.toLowerCase().includes(taskSearch.toLowerCase())
+                    )
+                    .map((task) => {
+                      const selected = selectedTasks.find(
+                        (t) => t.taskId === task.id
+                      );
+                      const quantityInfo = quantities[task.id] || {
+                        quantity: 0,
+                        rate: task.is_pricework ? task.rate : 0,
+                        duration: task.is_pricework ? task.duration : 0,
+                      };
+                      const quantity = quantityInfo.quantity;
 
-                {/* Address Select */}
-                <Typography variant="h5" mt={2}>
+                      return (
+                        <Box
+                          key={task.id}
+                          mb={1}
+                          sx={{
+                            padding: 1,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 1,
+                          }}
+                        >
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={2}
+                            className="task_wrapper"
+                          >
+                            <CustomCheckbox
+                              checked={!!selected}
+                              onChange={(e) =>
+                                handleTaskCheckbox(task, e.target.checked)
+                              }
+                            />
+
+                            <CustomTextField
+                              id="name"
+                              name="name"
+                              className="task-input"
+                              disabled
+                              value={task.name}
+                            />
+
+                            <CustomTextField
+                              type="text"
+                              inputProps={{
+                                inputMode: "numeric",
+                                pattern: "[0-9]*",
+                              }}
+                              value={quantity}
+                              onChange={(e: any) =>
+                                handleQuantityChange(task, e.target.value)
+                              }
+                              sx={{ width: 80 }}
+                            />
+                          </Box>
+
+                          {task.is_pricework && (
+                            <Box
+                              display="flex"
+                              justifyContent="start"
+                              gap={10}
+                              ml={8}
+                            >
+                              <Typography
+                                variant="caption"
+                                color="textSecondary"
+                                fontWeight={500}
+                              >
+                                Duration: {quantityInfo.duration} min
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="textSecondary"
+                                fontWeight={500}
+                              >
+                                Rate: £{quantityInfo.rate.toFixed(2)}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      );
+                    })}
+                </Box>
+              </Grid>
+            </Grid>
+
+            {/* Submit buttons */}
+            <Box>
+              <Box className="task_wrapper">
+                <Typography variant="h5" color="textSecondary" mt={2}>
                   Select Address
                 </Typography>
                 <Autocomplete
@@ -359,57 +432,8 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                     <CustomTextField {...params} placeholder="Address" />
                   )}
                 />
-
-                {/* Task Select */}
-                <Typography variant="h5" mt={2}>
-                  Select Task
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  options={tasks}
-                  value={selectedTask}
-                  onChange={(e, newVal) => {
-                    setSelectedTask(newVal);
-                    if (newVal) {
-                      const rate = newVal.rate > 0 ? newVal.rate : 0;
-                      const duration =
-                        newVal.duration > 0 ? newVal.duration : 0;
-
-                      setFormData((prev) => ({
-                        ...prev,
-                        rate,
-                        duration,
-                        type_of_work_id: newVal.id,
-                        is_pricework: newVal.is_pricework,
-                        repeatable_job: newVal.repeatable_job,
-                      }));
-
-                      setBaseRate(rate);
-                      setBaseDuration(duration);
-                    } else {
-                      setFormData((prev) => ({
-                        ...prev,
-                        rate: 0,
-                        duration: 0,
-                        type_of_work_id: null,
-                        is_pricework: false,
-                        repeatable_job: false,
-                      }));
-                      setBaseRate(0);
-                      setBaseDuration(0);
-                    }
-                  }}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Task" />
-                  )}
-                />
-
                 {/* Location Select */}
-                <Typography variant="h5" mt={2}>
+                <Typography variant="h5" color="textSecondary" mt={2}>
                   Select Location
                 </Typography>
                 <Autocomplete
@@ -432,76 +456,37 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                     <CustomTextField {...params} placeholder="Location" />
                   )}
                 />
-
-                {/* Duration Display */}
-                {selectedTask && !formData.is_pricework && (
-                  <Typography variant="h5" color="textSecondary" mt={2}>
-                    Recommended duration: {formData.duration} min
-                  </Typography>
-                )}
-
-                {/* Rate Display (Only if not pricework) */}
-                {selectedTask && !formData.is_pricework && (
-                  <Typography variant="h4" color="textSecondary" mt={2}>
-                    Amount: £{formData.rate}
-                  </Typography>
-                )}
-              </Grid>
-            </Grid>
-
-            {/* Attachment Checkbox */}
-            <Box>
-              <Typography
-                variant="h5"
-                mt={2}
-                mb={2}
-                ml={"-8px"}
-                display="flex"
-                justifyContent="start"
-                flexDirection="row-reverse"
-                alignItems="center"
-                gap={1}
-              >
-                Attachment Mandatory
-                <CustomCheckbox
-                  name="is_attchment"
-                  checked={formData.is_attchment}
-                  onChange={(e) =>
-                    setFormData((prevData) => ({
-                      ...prevData,
-                      is_attchment: e.target.checked,
-                    }))
-                  }
-                />
-              </Typography>
-
-              {/* Quantity Input (disabled if pricework) */}
-              {!(
-                formData.type_of_work_id === 0 || formData.is_pricework === true
-              ) && (
-                <CustomTextField
-                  id="quantity"
-                  name="quantity"
-                  type="text"
-                  placeholder="Enter quantity.."
-                  value={quantityInput}
-                  onChange={handleQuantityChange}
-                  variant="outlined"
-                  inputProps={{
-                    inputMode: "numeric",
-                    pattern: "[0-9]*",
-                  }}
-                  fullWidth
-                />
-              )}
-
+                <Typography
+                  variant="h5"
+                  mt={2}
+                  mb={2}
+                  ml={"-8px"}
+                  display="flex"
+                  justifyContent="start"
+                  flexDirection="row-reverse"
+                  alignItems="center"
+                  gap={1}
+                >
+                  Attachment Mandatory
+                  <CustomCheckbox
+                    name="is_attchment"
+                    checked={formData.is_attchment}
+                    onChange={(e) =>
+                      setFormData((prevData) => ({
+                        ...prevData,
+                        is_attchment: e.target.checked,
+                      }))
+                    }
+                  />
+                </Typography>
+              </Box>
               <Box mt={2} display="flex" justifyContent="space-between" gap={2}>
                 <Button
                   color="error"
                   onClick={() => {
-                    setFormData(initialFormData);
-                    setSelectedTask(null);
-                    setQuantityInput("");
+                    // setFormData(initialFormData);
+                    // setSelectedTasks(null);
+                    // setQuantityInput("");
                     onClose();
                   }}
                   variant="contained"

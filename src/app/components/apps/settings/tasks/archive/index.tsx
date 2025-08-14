@@ -214,11 +214,12 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                     justifyContent="space-between"
                     alignItems="center"
                     width="100%"
+                    height="20px"
                   >
                     <Typography
                       variant="subtitle1"
                       fontWeight={600}
-                      className="multi-ellipsis"
+                      className="archive-multi-ellipsis"
                     >
                       Name: {item.name}
                     </Typography>

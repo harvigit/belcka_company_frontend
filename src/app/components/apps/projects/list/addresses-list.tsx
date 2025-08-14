@@ -118,7 +118,7 @@ const AddressesList = ({
 
   const handleOpenCreateDrawer = () => {
     setFormData({
-      address_id: 0,
+      address_id: null,
       type_of_work_id: 0,
       location_id: null,
       trade_id: null,
@@ -159,16 +159,6 @@ const AddressesList = ({
     e.preventDefault();
     setIsSaving(true);
     try {
-      setFormData({
-        address_id: 0,
-        type_of_work_id: 0,
-        location_id: null,
-        trade_id: null,
-        company_id: user?.company_id || 0,
-        duration: 0,
-        rate: 0,
-        is_attchment: false,
-      });
       const payload = {
         ...formData,
         project_id: projectId,
@@ -182,6 +172,16 @@ const AddressesList = ({
         setTimeout(() => {
           setLoading(false);
         }, 100);
+        setFormData({
+          address_id: null,
+          type_of_work_id: 0,
+          location_id: null,
+          trade_id: null,
+          company_id: user?.company_id || 0,
+          duration: 0,
+          rate: 0,
+          is_attchment: false,
+        });
       } else {
         toast.error(result.data.message);
         setLoading(false);
@@ -233,9 +233,9 @@ const AddressesList = ({
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
               checked={selectedRowIds.size === data.length && data.length > 0}
-              indeterminate={
-                selectedRowIds.size > 0 && selectedRowIds.size < data.length
-              }
+              // indeterminate={
+              //   selectedRowIds.size > 0 && selectedRowIds.size < data.length
+              // }
               onChange={(e) => {
                 if (e.target.checked) {
                   setSelectedRowIds(new Set(data.map((_, i) => i)));
@@ -255,7 +255,12 @@ const AddressesList = ({
           const isChecked = selectedRowIds.has(row.index);
 
           return (
-            <Stack direction="row" alignItems="center" spacing={4}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={4}
+              sx={{ pl: 0.2 }}
+            >
               <CustomCheckbox
                 checked={isChecked}
                 onChange={() => {
@@ -629,6 +634,7 @@ const AddressesList = ({
                 handleTaskSubmit={handleTaskSubmit}
                 trade={trade}
                 isSaving={isSaving}
+                address_id={sidebarData.addressId}
                 projectId={projectId}
               />
               {/* Tabs */}
@@ -674,20 +680,36 @@ const AddressesList = ({
                 ))}
               </Tabs>
 
-                            {value === 0 && <WorksTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} />}
-                            {value === 1 && <DocumentsTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
-                            {value === 2 && <TradesTab companyId={sidebarData.companyId} addressId={sidebarData.addressId} projectId={sidebarData.projectId} />}
-
-                        </>
-                    ) : (
-                        <Typography variant="body1" color="text.secondary" mt={2}>
-                            No work logs available.
-                        </Typography>
-                    )}
-                </Box>
-            </Drawer>
+              {value === 0 && (
+                <WorksTab
+                  companyId={sidebarData.companyId}
+                  addressId={sidebarData.addressId}
+                />
+              )}
+              {value === 1 && (
+                <DocumentsTab
+                  companyId={sidebarData.companyId}
+                  addressId={sidebarData.addressId}
+                  projectId={sidebarData.projectId}
+                />
+              )}
+              {value === 2 && (
+                <TradesTab
+                  companyId={sidebarData.companyId}
+                  addressId={sidebarData.addressId}
+                  projectId={sidebarData.projectId}
+                />
+              )}
+            </>
+          ) : (
+            <Typography variant="body1" color="text.secondary" mt={2}>
+              No work logs available.
+            </Typography>
+          )}
         </Box>
-    );
+      </Drawer>
+    </Box>
+  );
 };
 
 export default AddressesList;

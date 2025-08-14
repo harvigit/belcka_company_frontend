@@ -92,7 +92,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const user = session.data?.user as User & { company_id?: number | null };
 
   const openMenu = Boolean(anchorEl);
-  const status = ["Completed", "Pending", "In Progress"];
+  const status = ["Completed", "To Do", "In Progress"];
   const [isSaving, setIsSaving] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const COOKIE_PREFIX = "project_";
@@ -552,6 +552,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         handleTaskSubmit={handleTaskSubmit}
         trade={trade}
         isSaving={isSaving}
+        address_id={null}
         projectId={projectId}
       />
       <Drawer
@@ -634,7 +635,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         </Box>
       </Drawer>
       {value === 0 ? (
-        <Box mt={2}>
+        <Box>
           <AddressesList
             projectId={projectId}
             searchTerm={searchTerm}
@@ -642,7 +643,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           />
         </Box>
       ) : (
-        <Box mt={2}>
+        <Box>
           <TasksList
             projectId={projectId}
             searchTerm={searchTerm}

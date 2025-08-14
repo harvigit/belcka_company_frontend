@@ -231,10 +231,10 @@ const TablePagination = () => {
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
             }
-            indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
-            }
+            // indeterminate={
+            //   selectedRowIds.size > 0 &&
+            //   selectedRowIds.size < filteredData.length
+            // }
             onChange={(e) => {
               if (e.target.checked) {
                 setSelectedRowIds(new Set(filteredData.map((row) => row.team_id)));
@@ -257,7 +257,7 @@ const TablePagination = () => {
           item.company_id !== item.subcontractor_company_id;
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4}>
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
             <CustomCheckbox
               checked={isChecked}
               disabled={shouldHighlight}
@@ -389,7 +389,7 @@ const TablePagination = () => {
     <Box>
       {/* Render the search and table */}
       <Stack
-        mt={1}
+        mt={3}
         mr={2}
         ml={2}
         mb={2}
