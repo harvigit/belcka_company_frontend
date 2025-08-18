@@ -1,14 +1,9 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
     Avatar,
     Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     Divider,
     IconButton,
     MenuItem,
@@ -21,14 +16,11 @@ import {
     TableRow,
     TextField,
     Typography,
-    useMediaQuery,
 } from '@mui/material';
 import {
     IconSearch,
-    IconFilter,
     IconChevronLeft,
     IconChevronRight,
-    IconX,
 } from '@tabler/icons-react';
 import {
     flexRender,
@@ -98,17 +90,13 @@ const TimesheetList = () => {
     const [data, setData] = useState<Timesheet[]>([]);
     const [currency, setCurrency] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
-    const [open, setOpen] = useState<boolean>(false);
     const [filters, setFilters] = useState<FilterState>({type: ''});
-    const [tempFilters, setTempFilters] = useState<FilterState>(filters);
     const [sorting, setSorting] = useState<SortingState>([]);
     const [pagination, setPagination] = useState<PaginationState>({pageIndex: 0, pageSize: 50});
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
-
-    const isMobile = useMediaQuery('(max-width:600px)');
-
+    
     const fetchData = async (start: Date, end: Date): Promise<void> => {
         try {
             const params: Record<string, string> = {
