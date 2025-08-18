@@ -57,6 +57,7 @@ import { User } from "next-auth";
 import { IconEdit } from "@tabler/icons-react";
 import CreateLocation from "../create";
 import EditLocation from "../edit";
+import ArchiveLocation from "../archive";
 
 dayjs.extend(customParseFormat);
 
@@ -348,14 +349,14 @@ const TablePagination = () => {
                 setConfirmOpen(true);
               }}
             >
-              Delete
+              Archive
             </Button>
           )}
           <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogContent>
               <Typography color="textSecondary">
-                Are you sure you want to delete {usersToDelete.length} location
+                Are you sure you want to archive {usersToDelete.length} location
                 {usersToDelete.length > 1 ? "s" : ""} from the locations?
               </Typography>
             </DialogContent>
@@ -374,7 +375,7 @@ const TablePagination = () => {
                       location_ids: usersToDelete.join(","),
                     };
                     const response = await api.post(
-                      "company-locations/delete",
+                      "company-locations/archive",
                       payload
                     );
                     toast.success(response.data.message);
@@ -389,7 +390,7 @@ const TablePagination = () => {
                 variant="outlined"
                 color="error"
               >
-                Delete
+                Archive
               </Button>
             </DialogActions>
           </Dialog>
@@ -437,6 +438,29 @@ const TablePagination = () => {
                 Add Location
               </Link>
             </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setarchiveDrawerOpen(true);
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archive List
+              </Link>
+            </MenuItem>
           </Menu>
         </Stack>
       </Stack>
@@ -462,6 +486,12 @@ const TablePagination = () => {
         isSaving={isSaving}
       />
 
+      {/* Archive task list */}
+      <ArchiveLocation
+        open={archiveDrawerOpen}
+        onClose={() => setarchiveDrawerOpen(false)}
+        onWorkUpdated={fetchLocations}
+      />
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
