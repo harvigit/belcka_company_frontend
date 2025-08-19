@@ -45,6 +45,10 @@ import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import Cookies from "js-cookie";
 import CreateProjectTask from "../tasks";
+import TimelineList from "./timeline-list";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import "react-day-picker/dist/style.css";
+import "../../../../global.css";
 
 dayjs.extend(customParseFormat);
 
@@ -87,6 +91,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
+  const [data, setData] = useState<ProjectList[]>([]);
+  const [addressId, setAddressId] = useState<number | null>(null);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -103,6 +109,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     name: "",
   });
 
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+  const [startDate, setStartDate] = useState<Date | null>(defaultStart);
+  const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
   const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
@@ -135,6 +149,25 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         ...prev,
         project_id: projectId,
       }));
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      const fetchAddresses = async () => {
+        setLoading(true);
+        try {
+          const res = await api.get(`address/get?project_id=${projectId}`);
+          if (res.data) {
+            setData(res.data.info);
+          }
+        } catch (err) {
+          console.error("Failed to fetch addresses", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchAddresses();
     }
   }, [projectId]);
 
@@ -235,6 +268,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   };
 
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+    }
+  };
   if (loading == true) {
     return (
       <Box
@@ -251,21 +293,25 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     <Box>
       <Stack
         mt={1}
-        ml={2}
         mb={2}
         justifyContent="space-between"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 2, md: 4 }}
+        direction={{ sm: "column", xl: "row" }}
       >
-        <Grid display="flex" gap={1} alignItems={"center"}>
+        <Grid
+          display="flex"
+          gap={1}
+          alignItems={"center"}
+          justifyContent={"center"}
+          className="project_wrapper"
+        >
           <Tabs
             className="project-tabs"
             value={value}
             sx={{
               backgroundColor: "#ECECEC !important",
               borderRadius: "12px",
-              width: "43%",
-              height: "48px",
+              width: "100%",
+              height: "51px",
             }}
             onChange={handleTabChange}
             aria-label="simple tabs example"
@@ -279,8 +325,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 textTransform: "none",
                 borderRadius: "12px",
                 marginTop: "2%",
-                marginLeft: "2%",
-                width: "50%",
+                marginLeft: "1%",
+                width: "25%",
                 height: "20px",
                 backgroundColor: value === 0 ? "white" : "transparent",
                 "&.MuiTab-root": {
@@ -297,8 +343,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 textTransform: "none",
                 borderRadius: "12px",
                 marginTop: "2%",
-                marginRight: "2%",
-                width: "45%",
+                marginLeft: "1%",
+                width: "23%",
                 height: "20px",
                 backgroundColor: value === 1 ? "white" : "transparent",
                 "&.MuiTab-root": {
@@ -306,32 +352,83 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 },
               }}
             />
+            <Tab
+              label="Timeline"
+              className="timeline-tab"
+              sx={{
+                fontWeight: "normal",
+                color: value === 2 ? "black" : "gray",
+                textTransform: "none",
+                borderRadius: "12px",
+                marginTop: "2%",
+                width: "20%",
+                height: "20px",
+                backgroundColor: value === 2 ? "white" : "transparent",
+                "&.MuiTab-root": {
+                  borderRadius: "12px",
+                },
+              }}
+            />
           </Tabs>
-          <TextField
-            id="search"
-            type="text"
-            size="small"
-            variant="outlined"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size={"16"} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+          {value === 2 && (
+            <>
+              <DateRangePickerBox
+                from={startDate}
+                to={endDate}
+                onChange={handleDateRangeChange}
+              />
+            </>
+          )}
+          {/* {value === 2 && (
+            <>
+              <Autocomplete
+                fullWidth
+                id="project_id"
+                options={data}
+                value={data.find((address) => address.id) ?? null}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <CustomTextField
+                    {...params}
+                    placeholder="Select Address"
+                    // className="project-selection"
+                  />
+                )}
+              />
+            </>
+          )} */}
+          {value !== 2 ? (
+            <TextField
+              id="search"
+              type="text"
+              size="small"
+              variant="outlined"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconSearch size={"16"} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              sx={{ width: "80%" }}
+            />
+          ) : (
+            <></>
+          )}
+
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
-          {projectId && (
+          {projectId && value !== 2 && (
             <>
               <Link href={`/apps/teams/list?project_id=${projectId}`} passHref>
-                <Typography variant="h5" color="#FF7F00">
+                <Typography variant="h5">
                   <Image
                     src={"/images/svgs/teams.svg"}
                     alt="logo"
@@ -341,7 +438,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 </Typography>
               </Link>
               <Link href={`/apps/users/list?project_id=${projectId}`} passHref>
-                <Typography variant="h5" color="#FF7F00">
+                <Typography variant="h5">
                   <Image
                     src={"/images/svgs/user.svg"}
                     alt="logo"
@@ -543,6 +640,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         </Stack>
       </Stack>
       <Divider />
+
       {/* Add task */}
       <CreateProjectTask
         open={drawerOpen}
@@ -573,7 +671,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           <Box height={"100%"}>
             <form onSubmit={handleSubmit} className="address-form">
               {" "}
-              {/* form includes the submit button */}
               <Grid container mt={3}>
                 <Grid size={{ lg: 12, xs: 12 }}>
                   <Box
@@ -634,22 +731,27 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           </Box>
         </Box>
       </Drawer>
-      {value === 0 ? (
-        <Box>
-          <AddressesList
-            projectId={projectId}
-            searchTerm={searchTerm}
-            filters={filters}
-          />
-        </Box>
-      ) : (
-        <Box>
-          <TasksList
-            projectId={projectId}
-            searchTerm={searchTerm}
-            filters={filters}
-          />
-        </Box>
+
+      {value === 0 && (
+        <AddressesList
+          projectId={projectId}
+          searchTerm={searchTerm}
+          filters={filters}
+        />
+      )}
+      {value === 1 && (
+        <TasksList
+          projectId={projectId}
+          searchTerm={searchTerm}
+          filters={filters}
+        />
+      )}
+      {value === 2 && (
+        <TimelineList
+          projectId={projectId}
+          startDate={startDate}
+          endDate={endDate}
+        />
       )}
     </Box>
   );

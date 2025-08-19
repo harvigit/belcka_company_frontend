@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Drawer,
   Box,
@@ -128,7 +128,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h5" fontWeight={700}>
-                    Edit Task
+                    Edit Template
                   </Typography>
                 </Box>
                 <Typography variant="h5" mt={2}>

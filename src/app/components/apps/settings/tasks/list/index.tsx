@@ -568,8 +568,8 @@ const TablePagination = () => {
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogContent>
               <Typography color="textSecondary">
-                Are you sure you want to archive {usersToDelete.length} work
-                {usersToDelete.length > 1 ? "s" : ""} from the works?
+                Are you sure you want to archive {usersToDelete.length} template
+                {usersToDelete.length > 1 ? "s" : ""} from the templates?
               </Typography>
             </DialogContent>
             <DialogActions>

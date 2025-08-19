@@ -231,10 +231,6 @@ const TablePagination = () => {
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
             }
-            // indeterminate={
-            //   selectedRowIds.size > 0 &&
-            //   selectedRowIds.size < filteredData.length
-            // }
             onChange={(e) => {
               if (e.target.checked) {
                 setSelectedRowIds(new Set(filteredData.map((row) => row.team_id)));
@@ -750,18 +746,38 @@ const TablePagination = () => {
                   ))}
                 </TableHead>
                 <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
+                  {table.getRowModel().rows.map((row) => {
+                    const item = row.original;
+                    const isDisabled =
+                      item.is_subcontractor === true &&
+                      item.company_id !== item.subcontractor_company_id;
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        hover
+                        onClick={() => {
+                          if (!isDisabled) {
+                            router.push(
+                              `/apps/teams/team?team_id=${item.team_id}`
+                            );
+                          }
+                        }}
+                        sx={{
+                          cursor: isDisabled ? "default" : "pointer",
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>

@@ -274,7 +274,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
         <DialogContent>
           <Typography color="textSecondary">
             Are you sure you want to <strong>{selectedItem?.action}</strong>{" "}
-            this task?
+            this template?
           </Typography>
         </DialogContent>
         <DialogActions>
