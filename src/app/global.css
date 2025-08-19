@@ -128,6 +128,7 @@ input#project_id::placeholder {
 
 .project-tabs {
     overflow: visible;
+    width: 24%;
 }
 
 .project-tabs .address-tab, .project-tabs .task-tab, .project-tabs .timeline-tab{
@@ -141,8 +142,12 @@ input#project_id::placeholder {
     display: none;
 }
 
-.project_wrapper .mui-1gnfaea-MuiButtonBase-root-MuiButton-root, .project_wrapper .mui-wa2t8b {
+.project_wrapper{
     width: 100%;
+} 
+
+.project_wrapper .mui-1gnfaea-MuiButtonBase-root-MuiButton-root, .project_wrapper .mui-wa2t8b {
+    width: 21%;
 }
 
 .color_box {
@@ -155,7 +160,16 @@ input#project_id::placeholder {
     font-weight: 600;
     border-radius: 15px;
 }
-
+ .project_wrapper .mui-1w98mmc-MuiAutocomplete-root , .project_wrapper .mui-is1b5t {
+    background-color: #1e4db7 !important;
+    color: white !important;
+    font-weight: 600;
+    border-radius: 15px;
+    width: 18%;
+ }
+.project_search {
+    width: 18%;
+}
 .project-selection .mui-1umw9bq-MuiSvgIcon-root{
     color: white;
 }

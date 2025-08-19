@@ -21,6 +21,7 @@ import {
   ListItemIcon,
   Drawer,
   CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import {
   IconDotsVertical,
@@ -301,7 +302,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           display="flex"
           gap={1}
           alignItems={"center"}
-          justifyContent={"center"}
+          justifyContent={"start"}
           className="project_wrapper"
         >
           <Tabs
@@ -325,7 +326,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 textTransform: "none",
                 borderRadius: "12px",
                 marginTop: "2%",
-                marginLeft: "1%",
+                marginLeft: "2%",
                 width: "25%",
                 height: "20px",
                 backgroundColor: value === 0 ? "white" : "transparent",
@@ -361,7 +362,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 textTransform: "none",
                 borderRadius: "12px",
                 marginTop: "2%",
-                width: "20%",
+                width: "21%",
                 height: "20px",
                 backgroundColor: value === 2 ? "white" : "transparent",
                 "&.MuiTab-root": {
@@ -379,25 +380,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               />
             </>
           )}
-          {/* {value === 2 && (
-            <>
-              <Autocomplete
-                fullWidth
-                id="project_id"
-                options={data}
-                value={data.find((address) => address.id) ?? null}
-                getOptionLabel={(option) => option.name}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => (
-                  <CustomTextField
-                    {...params}
-                    placeholder="Select Address"
-                    // className="project-selection"
-                  />
-                )}
-              />
-            </>
-          )} */}
           {value !== 2 ? (
             <TextField
               id="search"
@@ -405,6 +387,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               size="small"
               variant="outlined"
               placeholder="Search..."
+              className="project_search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               slotProps={{
@@ -425,6 +408,25 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
+          {/* {value === 2 && (
+            <>
+              <Autocomplete
+                fullWidth
+                id="project_id"
+                options={data}
+                value={data.find((address) => address.id) ?? null}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <CustomTextField
+                    {...params}
+                    placeholder="Select Address"
+                    className="project-selection"
+                  />
+                )}
+              />
+            </>
+          )} */}
           {projectId && value !== 2 && (
             <>
               <Link href={`/apps/teams/list?project_id=${projectId}`} passHref>

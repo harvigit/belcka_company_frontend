@@ -399,7 +399,7 @@ const TimelineList: React.FC<TimelineListProps> = ({
                   fontWeight: "bold",
                 }}
               >
-                Name
+                Address
               </TableCell>
               <TableCell
                 align="center"
