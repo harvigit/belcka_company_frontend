@@ -1,5 +1,5 @@
 "use client";
-import React, { ChangeEvent, useEffect, useState } from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
   Typography,
   Box,
@@ -24,6 +24,8 @@ import {
   Autocomplete,
 } from "@mui/material";
 import {
+  IconChevronLeft,
+  IconChevronRight,
   IconDotsVertical,
   IconFilter,
   IconLocation,
@@ -278,6 +280,19 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       setEndDate(range.to);
     }
   };
+
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Scroll active tab into view whenever value changes
+  useEffect(() => {
+    if (tabRefs.current[value]) {
+      tabRefs.current[value]?.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+      });
+    }
+  }, [value]);
+
   if (loading == true) {
     return (
       <Box
@@ -296,91 +311,64 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         mt={1}
         mb={2}
         justifyContent="space-between"
-        direction={{ sm: "column", xl: "row" }}
+        direction={{ xs: "column", xl: "row" }}
+        gap={1}
       >
         <Grid
           display="flex"
           gap={1}
-          alignItems={"center"}
-          justifyContent={"start"}
+          alignItems="center"
+          justifyContent="flex-start"
+          flexWrap="wrap"
           className="project_wrapper"
         >
-          <Tabs
-            className="project-tabs"
-            value={value}
-            sx={{
-              backgroundColor: "#ECECEC !important",
-              borderRadius: "12px",
-              width: "100%",
-              height: "51px",
-            }}
-            onChange={handleTabChange}
-            aria-label="simple tabs example"
-          >
-            <Tab
-              label="Addresses"
-              className="address-tab"
+          <Box display="flex" alignItems="center">
+            <Tabs
+              className="project-tabs"
+              value={value}
+              onChange={handleTabChange}
               sx={{
-                fontWeight: "normal",
-                color: value === 0 ? "black" : "gray",
-                textTransform: "none",
-                borderRadius: "12px",
-                marginTop: "2%",
-                marginLeft: "2%",
-                width: "25%",
-                height: "20px",
-                backgroundColor: value === 0 ? "white" : "transparent",
-                "&.MuiTab-root": {
-                  borderRadius: "12px",
-                },
+                flex: 1,
+                backgroundColor: "#ececec",
+                color: "#000",
+                minHeight: "44px",
+                borderRadius: "15px",
               }}
-            />
-            <Tab
-              label="Tasks"
-              className="task-tab"
-              sx={{
-                fontWeight: "normal",
-                color: value === 1 ? "black" : "gray",
-                textTransform: "none",
-                borderRadius: "12px",
-                marginTop: "2%",
-                marginLeft: "1%",
-                width: "23%",
-                height: "20px",
-                backgroundColor: value === 1 ? "white" : "transparent",
-                "&.MuiTab-root": {
-                  borderRadius: "12px",
-                },
-              }}
-            />
-            <Tab
-              label="Timeline"
-              className="timeline-tab"
-              sx={{
-                fontWeight: "normal",
-                color: value === 2 ? "black" : "gray",
-                textTransform: "none",
-                borderRadius: "12px",
-                marginTop: "2%",
-                width: "21%",
-                height: "20px",
-                backgroundColor: value === 2 ? "white" : "transparent",
-                "&.MuiTab-root": {
-                  borderRadius: "12px",
-                },
-              }}
-            />
-          </Tabs>
+            >
+              {["Addresses", "Tasks", "Timeline"].map((label, index) => (
+                <Tab
+                  key={label}
+                  label={label}
+                  className="project_tabs"
+                  color="#000"
+                  sx={{
+                    minHeight: "25px",
+                    marginLeft: index === 0 ? "8px" : index === 2 ? "8px" : 0,
+                    marginRight: index === 0 ? "8px" : index === 2 ? "8px" : 0,
+                    "&.Mui-selected": {
+                      borderRadius: "12px",
+                      backgroundColor: "#fff",
+                      color: "#000",
+                      margin: "2%",
+                      marginLeft: index === 0 ? "8px" : index === 2 ? "8px" : 0,
+                      marginRight:
+                        index === 0 ? "8px" : index === 2 ? "8px" : 0,
+                    },
+                  }}
+                />
+              ))}
+            </Tabs>
+          </Box>
+
           {value === 2 && (
-            <>
-              <DateRangePickerBox
-                from={startDate}
-                to={endDate}
-                onChange={handleDateRangeChange}
-              />
-            </>
+            <DateRangePickerBox
+              from={startDate}
+              to={endDate}
+              onChange={handleDateRangeChange}
+            />
           )}
-          {value !== 2 ? (
+
+          {value !== 2 && (
             <TextField
               id="search"
               type="text"
@@ -390,176 +378,54 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               className="project_search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconSearch size={"16"} />
-                    </InputAdornment>
-                  ),
-                },
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconSearch size={16} />
+                  </InputAdornment>
+                ),
               }}
-              sx={{ width: "80%" }}
+              sx={{ width: { xs: "100%", sm: "60%", md: "40%", lg: "30%" } }}
             />
-          ) : (
-            <></>
           )}
 
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
-          {/* {value === 2 && (
-            <>
-              <Autocomplete
-                fullWidth
-                id="project_id"
-                options={data}
-                value={data.find((address) => address.id) ?? null}
-                getOptionLabel={(option) => option.name}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => (
-                  <CustomTextField
-                    {...params}
-                    placeholder="Select Address"
-                    className="project-selection"
-                  />
-                )}
-              />
-            </>
-          )} */}
+
           {projectId && value !== 2 && (
             <>
               <Link href={`/apps/teams/list?project_id=${projectId}`} passHref>
-                <Typography variant="h5">
+                <IconButton>
                   <Image
-                    src={"/images/svgs/teams.svg"}
-                    alt="logo"
-                    height={30}
-                    width={30}
+                    src="/images/svgs/teams.svg"
+                    alt="Teams"
+                    width={24}
+                    height={24}
                   />
-                </Typography>
+                </IconButton>
               </Link>
               <Link href={`/apps/users/list?project_id=${projectId}`} passHref>
-                <Typography variant="h5">
+                <IconButton>
                   <Image
-                    src={"/images/svgs/user.svg"}
-                    alt="logo"
-                    height={30}
-                    width={30}
+                    src="/images/svgs/user.svg"
+                    alt="Users"
+                    width={24}
+                    height={24}
                   />
-                </Typography>
+                </IconButton>
               </Link>
             </>
           )}
-          <Dialog
-            open={open}
-            onClose={() => setOpen(false)}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle
-              sx={{ m: 0, position: "relative", overflow: "visible" }}
-            >
-              Filters
-              <IconButton
-                aria-label="close"
-                onClick={() => setOpen(false)}
-                size="large"
-                sx={{
-                  position: "absolute",
-                  right: 12,
-                  top: 8,
-                  color: (theme) => theme.palette.grey[900],
-                  backgroundColor: "transparent",
-                  zIndex: 10,
-                  width: 50,
-                  height: 50,
-                }}
-              >
-                <IconX size={40} style={{ width: 40, height: 40 }} />
-              </IconButton>
-            </DialogTitle>
-            <DialogContent>
-              <Stack spacing={2} mt={1}>
-                <TextField
-                  select
-                  label="Status"
-                  value={tempFilters.status}
-                  onChange={(e) =>
-                    setTempFilters({ ...tempFilters, status: e.target.value })
-                  }
-                  fullWidth
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {status.map((statusItem, i) => (
-                    <MenuItem key={i} value={statusItem}>
-                      {statusItem}
-                    </MenuItem>
-                  ))}
-                </TextField>
-
-                <TextField
-                  select
-                  label="Sort A-Z"
-                  value={tempFilters.sortOrder}
-                  onChange={(e) =>
-                    setTempFilters({
-                      ...tempFilters,
-                      sortOrder: e.target.value,
-                    })
-                  }
-                  fullWidth
-                >
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="asc">A-Z</MenuItem>
-                  <MenuItem value="desc">Z-A</MenuItem>
-                </TextField>
-              </Stack>
-            </DialogContent>
-
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setTempFilters({
-                    status: "",
-                    sortOrder: "",
-                  });
-                  setFilters({
-                    status: "",
-                    sortOrder: "",
-                  });
-                  setOpen(false);
-                }}
-                color="inherit"
-              >
-                Clear
-              </Button>
-
-              <Button
-                variant="contained"
-                onClick={() => {
-                  setFilters(tempFilters);
-                  setOpen(false);
-                }}
-              >
-                Apply
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Grid>
+
         <Stack
           mb={2}
-          justifyContent="end"
-          direction={{ xs: "column", sm: "row" }}
+          justifyContent="flex-end"
+          direction={{ xs: "row", sm: "row" }}
+          gap={1}
         >
-          <IconButton
-            sx={{ margin: "0px" }}
-            id="basic-button"
-            aria-controls={openMenu ? "basic-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={openMenu ? "true" : undefined}
-            onClick={handleClick}
-          >
+          <IconButton onClick={handleClick} size="small">
             <IconDotsVertical width={18} />
           </IconButton>
           <Menu
@@ -568,75 +434,35 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             open={openMenu}
             onClose={handleClose}
             slotProps={{
-              list: {
-                "aria-labelledby": "basic-button",
-              },
+              list: { "aria-labelledby": "basic-button" },
             }}
           >
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSidebar(true);
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconLocation width={18} />
-                </ListItemIcon>
-                Add Address
-              </Link>
+            <MenuItem
+              onClick={handleClose}
+              sx={{ display: "flex", alignItems: "center" }}
+            >
+              <ListItemIcon>
+                <IconLocation width={18} />
+              </ListItemIcon>
+              Add Address
             </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleOpenCreateDrawer();
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconPlus width={18} />
-                </ListItemIcon>
-                Add Task
-              </Link>
+            <MenuItem
+              onClick={handleClose}
+              sx={{ display: "flex", alignItems: "center" }}
+            >
+              <ListItemIcon>
+                <IconPlus width={18} />
+              </ListItemIcon>
+              Add Task
             </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconNotes width={18} />
-                </ListItemIcon>
-                Project detail
-              </Link>
+            <MenuItem
+              onClick={handleClose}
+              sx={{ display: "flex", alignItems: "center" }}
+            >
+              <ListItemIcon>
+                <IconNotes width={18} />
+              </ListItemIcon>
+              Project Detail
             </MenuItem>
           </Menu>
         </Stack>
