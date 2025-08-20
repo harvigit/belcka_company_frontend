@@ -430,35 +430,75 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             open={openMenu}
             onClose={handleClose}
             slotProps={{
-              list: { "aria-labelledby": "basic-button" },
+              list: {
+                "aria-labelledby": "basic-button",
+              },
             }}
           >
-            <MenuItem
-              onClick={handleClose}
-              sx={{ display: "flex", alignItems: "center" }}
-            >
-              <ListItemIcon>
-                <IconLocation width={18} />
-              </ListItemIcon>
-              Add Address
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSidebar(true);
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconLocation width={18} />
+                </ListItemIcon>
+                Add Address
+              </Link>
             </MenuItem>
-            <MenuItem
-              onClick={handleClose}
-              sx={{ display: "flex", alignItems: "center" }}
-            >
-              <ListItemIcon>
-                <IconPlus width={18} />
-              </ListItemIcon>
-              Add Task
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleOpenCreateDrawer();
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconPlus width={18} />
+                </ListItemIcon>
+                Add Task
+              </Link>
             </MenuItem>
-            <MenuItem
-              onClick={handleClose}
-              sx={{ display: "flex", alignItems: "center" }}
-            >
-              <ListItemIcon>
-                <IconNotes width={18} />
-              </ListItemIcon>
-              Project Detail
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Project detail
+              </Link>
             </MenuItem>
           </Menu>
         </Stack>
