@@ -99,10 +99,10 @@ export default function TimelineList({
             ? !defaultOpenIds.includes(project.id)
             : false,
           styles: {
-            progressColor: "#fac465",
-            progressSelectedColor: "#fac465",
-            backgroundColor: "#fac465",
-            backgroundSelectedColor: "#fac465",
+            progressColor: "#9BF6FF",
+            progressSelectedColor: "#9BF6FF",
+            backgroundColor: "#9BF6FF",
+            backgroundSelectedColor: "#9BF6FF",
           },
         });
 
@@ -132,16 +132,16 @@ export default function TimelineList({
           let barColor = "#000";
           switch (t.status) {
             case 13:
-              barColor = "#9ca3af";
+              barColor = "#bfdaf0d5";
               break;
             case 4:
-              barColor = "#22c55e";
+              barColor = "#B9FBC0";
               break;
             case 3:
-              barColor = "#f97316";
+              barColor = "#ffc5b7ff";
               break;
             default:
-              barColor = "#000";
+              barColor = "#CDB4DB";
           }
 
           mappedTasks.push({

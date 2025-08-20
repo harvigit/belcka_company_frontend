@@ -228,3 +228,6 @@ input#project_id::placeholder {
     background: white;
     z-index: 10;
   }
+  ._3zRJQ, ._3KcaM{
+    fill: gray !important;
+  }
