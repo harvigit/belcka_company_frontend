@@ -150,6 +150,7 @@ input#project_id::placeholder {
     color: white !important;
     font-weight: 600;
     border-radius: 15px;
+    height: 45px;
 }
 
 /* .project_search {

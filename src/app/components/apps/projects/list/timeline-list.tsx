@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import api from "@/utils/axios";
+import { format } from "date-fns";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -59,18 +60,18 @@ export default function TimelineList({
       });
 
       const mappedTasks: Task[] = [];
-      const result = response.data.info;
+      const projects = response.data.info;
 
-      result.forEach((project: any) => {
+      projects.forEach((project: any) => {
         const projStart = project.start_date
           ? new Date(project.start_date)
           : project.created_at
           ? new Date(project.created_at)
           : new Date();
 
-        let projEnd = project.end_date
+        const projEnd = project.end_date
           ? new Date(project.end_date)
-          : new Date(); // fallback today
+          : new Date();
 
         const showFullEnd =
           project.progress === 100 || project.status === 4 || !project.end_date;
@@ -112,8 +113,7 @@ export default function TimelineList({
             : t.created_at
             ? new Date(t.created_at)
             : new Date();
-
-          let taskEnd = t.end_date ? new Date(t.end_date) : new Date();
+          const taskEnd = t.end_date ? new Date(t.end_date) : new Date();
           const showFullEndChild =
             t.progress === 100 || t.status === 4 || !t.end_date;
 
@@ -129,7 +129,7 @@ export default function TimelineList({
             return;
           if (displayTaskStart > displayTaskEnd) return;
 
-          let barColor = "#000";
+          let barColor = "#CDB4DB"; 
           switch (t.status) {
             case 13:
               barColor = "#bfdaf0d5";
@@ -140,8 +140,6 @@ export default function TimelineList({
             case 3:
               barColor = "#ffc5b7ff";
               break;
-            default:
-              barColor = "#CDB4DB";
           }
 
           mappedTasks.push({
@@ -166,6 +164,7 @@ export default function TimelineList({
       setTasks(mappedTasks);
     } catch (err) {
       console.error("Failed to load projects:", err);
+      setTasks([]);
     } finally {
       setLoading(false);
     }

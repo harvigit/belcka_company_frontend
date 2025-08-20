@@ -308,14 +308,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   return (
     <Box>
       <Stack
-        mt={1}
-        mb={2}
+        mb={value == 2 ? 1 : 2}
+        display={"flex"}
         justifyContent="space-between"
-        direction={{ xs: "column", xl: "row" }}
+        direction={{ xs: "row", xl: "row" }}
         gap={1}
       >
         <Grid
           display="flex"
+          width="90%"
           gap={1}
           alignItems="center"
           justifyContent="flex-start"
@@ -324,39 +325,32 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         >
           <Box display="flex" alignItems="center">
             <Tabs
-              className="project-tabs"
               value={value}
               onChange={handleTabChange}
+              aria-label="minimal-tabs"
               sx={{
-                flex: 1,
-                backgroundColor: "#ececec",
-                color: "#000",
-                minHeight: "44px",
-                borderRadius: "15px",
+                minHeight: 36,
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "#007bff",
+                  height: 2,
+                },
+                "& .MuiTab-root": {
+                  minHeight: 36,
+                  textTransform: "none",
+                  fontSize: 14,
+                  fontWeight: 400,
+                  color: "#555",
+                  padding: "0 8px",
+                },
+                "& .Mui-selected": {
+                  color: "#007bff",
+                  fontWeight: 600,
+                },
               }}
             >
-              {["Addresses", "Tasks", "Timeline"].map((label, index) => (
-                <Tab
-                  key={label}
-                  label={label}
-                  className="project_tabs"
-                  color="#000"
-                  sx={{
-                    minHeight: "25px",
-                    marginLeft: index === 0 ? "8px" : index === 2 ? "8px" : 0,
-                    marginRight: index === 0 ? "8px" : index === 2 ? "8px" : 0,
-                    "&.Mui-selected": {
-                      borderRadius: "12px",
-                      backgroundColor: "#fff",
-                      color: "#000",
-                      margin: "2%",
-                      marginLeft: index === 0 ? "8px" : index === 2 ? "8px" : 0,
-                      marginRight:
-                        index === 0 ? "8px" : index === 2 ? "8px" : 0,
-                    },
-                  }}
-                />
-              ))}
+              <Tab label="Addresses" />
+              <Tab label="Tasks" />
+              <Tab label="Timeline" />
             </Tabs>
           </Box>
 
@@ -418,12 +412,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             </>
           )}
         </Grid>
-
         <Stack
-          mb={2}
+          width="10%"
+          display="flex"
           justifyContent="flex-end"
           direction={{ xs: "row", sm: "row" }}
           gap={1}
+          alignItems="center"
+          flexWrap="wrap"
         >
           <IconButton onClick={handleClick} size="small">
             <IconDotsVertical width={18} />
@@ -467,7 +463,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           </Menu>
         </Stack>
       </Stack>
-      <Divider />
+      {value !== 2 && (
+        <>
+          <Divider />
+        </>
+      )}
 
       {/* Add task */}
       <CreateProjectTask
