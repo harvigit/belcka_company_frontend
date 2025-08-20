@@ -1,11 +1,10 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useState} from 'react';
 import {
     Box,
     Tab,
     Tabs,
-    Typography,
 } from '@mui/material';
 
 import 'react-day-picker/dist/style.css';

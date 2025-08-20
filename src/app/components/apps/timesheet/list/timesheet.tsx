@@ -11,18 +11,15 @@ import {
     DialogTitle,
     Divider,
     Drawer,
-    Grid,
     IconButton,
     MenuItem,
     Stack,
-    Tab,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    Tabs,
     TextField,
     Tooltip,
     Typography,
@@ -33,8 +30,6 @@ import {
     IconFilter,
     IconChevronLeft,
     IconChevronRight,
-    IconChevronsLeft,
-    IconChevronsRight,
     IconX,
     IconArrowLeft,
     IconPencil, IconChevronDown, IconChevronUp,
@@ -114,24 +109,14 @@ const TimesheetList = () => {
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(defaultStart);
     const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
-
-    const [value, setValue] = useState(0);
-
-    const [expandedEntryDrawer, setExpandedEntryDrawer] = useState<any | null>(null);
+    
     const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
-
-    // const [tempStartDate, setTempStartDate] = useState<Date | null>(defaultStart);
-    // const [tempEndDate, setTempEndDate] = useState<Date | null>(defaultEnd);
 
     const [sidebarData, setSidebarData] = useState<any>(null);
     const [popoverOpen, setPopoverOpen] = useState(false);
     const [selectedWorklog, setSelectedWorklog] = useState<any>(null);
 
     const isMobile = useMediaQuery('(max-width:600px)');
-
-    const handleTabChange = (event: any, newValue: any) => {
-        setValue(newValue);
-    };
 
     const fetchData = async (start: Date, end: Date): Promise<void> => {
         try {
@@ -156,8 +141,6 @@ const TimesheetList = () => {
 
     const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (range.from && range.to) {
-            // setTempStartDate(range.from);
-            // setTempEndDate(range.to);
             setStartDate(range.from);
             setEndDate(range.to);
         }
