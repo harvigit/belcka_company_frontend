@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from "react";
 import dayjs from "dayjs";
-import { Box, Typography, Stack, Tooltip, IconButton } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Stack,
+  Tooltip,
+  IconButton,
+  Divider,
+} from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 
@@ -126,13 +133,13 @@ export default function DynamicGantt({
             }}
           >
             <Box sx={{ width: 300 }}>
-              <Typography fontWeight={600}>Name</Typography>
+              <Typography>Name</Typography>
             </Box>
             <Box sx={{ width: 120 }}>
-              <Typography fontWeight={600}>Start Date</Typography>
+              <Typography>Start Date</Typography>
             </Box>
             <Box sx={{ width: 120 }}>
-              <Typography fontWeight={600}>End Date</Typography>
+              <Typography>End Date</Typography>
             </Box>
           </Box>
 
@@ -158,6 +165,7 @@ export default function DynamicGantt({
             })}
           </Box>
         </Box>
+        <Divider sx={{ mt:2}}/>
 
         {/* BODY */}
         <Box sx={{ display: "flex", minWidth: 540 + timelineWidth }}>
