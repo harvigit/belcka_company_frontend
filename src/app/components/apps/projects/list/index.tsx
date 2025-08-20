@@ -386,31 +386,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
-
-          {projectId && value !== 2 && (
-            <>
-              <Link href={`/apps/teams/list?project_id=${projectId}`} passHref>
-                <IconButton>
-                  <Image
-                    src="/images/svgs/teams.svg"
-                    alt="Teams"
-                    width={24}
-                    height={24}
-                  />
-                </IconButton>
-              </Link>
-              <Link href={`/apps/users/list?project_id=${projectId}`} passHref>
-                <IconButton>
-                  <Image
-                    src="/images/svgs/user.svg"
-                    alt="Users"
-                    width={24}
-                    height={24}
-                  />
-                </IconButton>
-              </Link>
-            </>
-          )}
         </Grid>
         <Stack
           width="10%"
@@ -501,6 +476,101 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               </Link>
             </MenuItem>
           </Menu>
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle
+              sx={{ m: 0, position: "relative", overflow: "visible" }}
+            >
+              Filters
+              <IconButton
+                aria-label="close"
+                onClick={() => setOpen(false)}
+                size="large"
+                sx={{
+                  position: "absolute",
+                  right: 12,
+                  top: 8,
+                  color: (theme) => theme.palette.grey[900],
+                  backgroundColor: "transparent",
+                  zIndex: 10,
+                  width: 50,
+                  height: 50,
+                }}
+              >
+                <IconX size={40} style={{ width: 40, height: 40 }} />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <Stack spacing={2} mt={1}>
+                <TextField
+                  select
+                  label="Status"
+                  value={tempFilters.status}
+                  onChange={(e) =>
+                    setTempFilters({ ...tempFilters, status: e.target.value })
+                  }
+                  fullWidth
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {status.map((statusItem, i) => (
+                    <MenuItem key={i} value={statusItem}>
+                      {statusItem}
+                    </MenuItem>
+                  ))}
+                </TextField>
+
+                <TextField
+                  select
+                  label="Sort A-Z"
+                  value={tempFilters.sortOrder}
+                  onChange={(e) =>
+                    setTempFilters({
+                      ...tempFilters,
+                      sortOrder: e.target.value,
+                    })
+                  }
+                  fullWidth
+                >
+                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="asc">A-Z</MenuItem>
+                  <MenuItem value="desc">Z-A</MenuItem>
+                </TextField>
+              </Stack>
+            </DialogContent>
+
+            <DialogActions>
+              <Button
+                onClick={() => {
+                  setTempFilters({
+                    status: "",
+                    sortOrder: "",
+                  });
+                  setFilters({
+                    status: "",
+                    sortOrder: "",
+                  });
+                  setOpen(false);
+                }}
+                color="inherit"
+              >
+                Clear
+              </Button>
+
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setFilters(tempFilters);
+                  setOpen(false);
+                }}
+              >
+                Apply
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Stack>
       </Stack>
       {value !== 2 && (
