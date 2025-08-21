@@ -24,8 +24,7 @@ import {
   Autocomplete,
 } from "@mui/material";
 import {
-  IconChevronLeft,
-  IconChevronRight,
+  IconChartPie,
   IconDotsVertical,
   IconFilter,
   IconLocation,
@@ -48,10 +47,10 @@ import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import Cookies from "js-cookie";
 import CreateProjectTask from "../tasks";
-import TimelineList from "./timeline-list";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import "react-day-picker/dist/style.css";
 import "../../../../global.css";
+import DynamicGantt from "@/app/components/DynamicGantt";
 
 dayjs.extend(customParseFormat);
 
@@ -80,6 +79,17 @@ export interface TradeList {
   name: string;
 }
 
+type Task = {
+  id: string;
+  name: string;
+  start: Date;
+  end: Date;
+  progress: number;
+  status: "Pending" | "In Progress" | "Completed";
+  type: "project" | "task";
+  parentId?: string;
+  created_at?: Date;
+};
 // const ProjectListing: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
 const TablePagination: React.FC<ProjectListingProps> = ({
   projectId,
@@ -99,6 +109,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
 
   const openMenu = Boolean(anchorEl);
   const status = ["Completed", "To Do", "In Progress"];
@@ -120,6 +132,135 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   defaultEnd.setDate(today.getDate() - today.getDay() + 7);
   const [startDate, setStartDate] = useState<Date | null>(defaultStart);
   const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
+
+  const fetchProjects = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get(`address/get`, {
+        params: {
+          project_id: projectId,
+          start_date: startDate ? dayjs(startDate).format("YYYY-MM-DD") : null,
+          end_date: endDate ? dayjs(endDate).format("YYYY-MM-DD") : null,
+        },
+      });
+
+      const projects = response.data.info;
+
+      const mappedTasks: Task[] = [];
+
+      projects.forEach((project: any) => {
+        const projStart = project.start_date
+          ? new Date(project.start_date)
+          : project.created_at
+          ? new Date(project.created_at)
+          : new Date();
+
+        const projEnd = project.end_date
+          ? new Date(project.end_date)
+          : new Date();
+
+        const showFullEnd =
+          project.progress === 100 || project.status === 4 || !project.end_date;
+
+        const displayStart =
+          startDate && projStart < startDate ? startDate : projStart;
+        const displayEnd = showFullEnd
+          ? projEnd
+          : endDate && projEnd > endDate
+          ? endDate
+          : projEnd;
+
+        if (displayStart > displayEnd) return;
+
+        mappedTasks.push({
+          id: `project-${project.id}`,
+          name: project.name,
+          type: "project",
+          start: displayStart,
+          end: displayEnd,
+          progress: Number(project.progress) || 0,
+          status:
+            project.status === 4
+              ? "Completed"
+              : project.status === 3
+              ? "In Progress"
+              : "Pending",
+        });
+
+        project.tasks.forEach((t: any) => {
+          const taskStart = t.start_date
+            ? new Date(t.start_date)
+            : t.created_at
+            ? new Date(t.created_at)
+            : new Date();
+          const taskEnd = t.end_date ? new Date(t.end_date) : new Date();
+
+          const showFullEndChild =
+            t.progress === 100 || t.status === 4 || !t.end_date;
+
+          const displayTaskStart =
+            startDate && taskStart < startDate ? startDate : taskStart;
+          const displayTaskEnd = showFullEndChild
+            ? taskEnd
+            : endDate && taskEnd > endDate
+            ? endDate
+            : taskEnd;
+
+          if (displayTaskStart > displayTaskEnd) return;
+
+          mappedTasks.push({
+            id: `task-${t.id}`,
+            name: t.name,
+            type: "task",
+            parentId: `project-${project.id}`,
+            start: displayTaskStart,
+            end: displayTaskEnd,
+            progress: Number(t.progress) || 0,
+            status:
+              t.status === 4
+                ? "Completed"
+                : t.status === 3
+                ? "In Progress"
+                : "Pending",
+          });
+        });
+      });
+
+      setTasks(mappedTasks);
+    } catch (err) {
+      console.error("Failed to load projects:", err);
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, [projectId, startDate, endDate]);
+
+  const timelineStart =
+    startDate ??
+    (tasks.length
+      ? tasks.reduce(
+          (min, t) => (t.start < min ? t.start : min),
+          tasks[0].start
+        )
+      : new Date());
+
+  const timelineEnd =
+    endDate ??
+    (tasks.length
+      ? tasks.reduce((max, t) => (t.end > max ? t.end : max), tasks[0].end)
+      : new Date());
+
+  const handleRowClick = () => {
+    setDetailsOpen(true);
+  };
+
+  const closeDetails = () => {
+    setDetailsOpen(false);
+  };
   const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
@@ -271,16 +412,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   };
 
-  const handleDateRangeChange = (range: {
-    from: Date | null;
-    to: Date | null;
-  }) => {
-    if (range.from && range.to) {
-      setStartDate(range.from);
-      setEndDate(range.to);
-    }
-  };
-
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Scroll active tab into view whenever value changes
@@ -308,7 +439,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   return (
     <Box>
       <Stack
-        mb={value == 2 ? 1 : 2}
+        mb={2}
         display={"flex"}
         justifyContent="space-between"
         direction={{ xs: "row", xl: "row" }}
@@ -350,42 +481,34 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             >
               <Tab label="Addresses" />
               <Tab label="Tasks" />
-              <Tab label="Timeline" />
             </Tabs>
           </Box>
 
-          {value === 2 && (
-            <DateRangePickerBox
-              from={startDate}
-              to={endDate}
-              onChange={handleDateRangeChange}
-            />
-          )}
-
-          {value !== 2 && (
-            <TextField
-              id="search"
-              type="text"
-              size="small"
-              variant="outlined"
-              placeholder="Search..."
-              className="project_search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size={16} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ width: { xs: "100%", sm: "60%", md: "40%", lg: "30%" } }}
-            />
-          )}
+          <TextField
+            id="search"
+            type="text"
+            size="small"
+            variant="outlined"
+            placeholder="Search..."
+            className="project_search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconSearch size={16} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: { xs: "100%", sm: "60%", md: "40%", lg: "30%" } }}
+          />
 
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
+          <IconButton onClick={() => handleRowClick()}>
+            <IconChartPie size={24}></IconChartPie>
+          </IconButton>
         </Grid>
         <Stack
           width="10%"
@@ -573,11 +696,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           </Dialog>
         </Stack>
       </Stack>
-      {value !== 2 && (
-        <>
-          <Divider />
-        </>
-      )}
+      <Divider />
 
       {/* Add task */}
       <CreateProjectTask
@@ -684,13 +803,49 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           filters={filters}
         />
       )}
-      {value === 2 && (
-        <TimelineList
-          projectId={projectId}
-          startDate={startDate}
-          endDate={endDate}
-        />
-      )}
+      <Drawer
+        anchor="bottom"
+        open={detailsOpen}
+        onClose={closeDetails}
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            height: "95vh",
+            boxShadow: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
+          },
+        }}
+      >
+        {tasks.length === 0 ? (
+          <Box>
+            <Box display={"flex"} justifyContent={"end"} mt={2} mr={3}>
+              <IconButton onClick={closeDetails} size="small">
+                <IconX />
+              </IconButton>
+            </Box>
+            <Box
+              sx={{
+                p: 6,
+                textAlign: "center",
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <Typography variant="h4" color="text.secondary">
+                No records found in the selected date range.
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <DynamicGantt
+            open={detailsOpen}
+            tasks={tasks}
+            onClose={closeDetails}
+          />
+        )}
+      </Drawer>
     </Box>
   );
 };

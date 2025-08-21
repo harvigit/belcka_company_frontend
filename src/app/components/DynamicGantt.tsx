@@ -10,12 +10,15 @@ import {
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import { IconX } from "@tabler/icons-react";
+import { format } from "date-fns";
+import DateRangePickerBox from "./common/DateRangePickerBox";
 
 type Task = {
   id: string;
   name: string;
-  start?: Date; // only for listing
-  end?: Date; // only for listing
+  start: Date; // only for listing
+  end: Date; // only for listing
   created_at?: Date; // new field for bar start
   progress: number;
   status: "Pending" | "In Progress" | "Completed";
@@ -25,8 +28,8 @@ type Task = {
 
 type Props = {
   tasks: Task[];
-  timelineStart: Date;
-  timelineEnd: Date;
+  open: boolean;
+  onClose: () => void;
 };
 
 const STATUS_COLORS = {
@@ -38,53 +41,50 @@ const STATUS_COLORS = {
 function daysBetween(start: Date, end: Date) {
   return dayjs(end).diff(dayjs(start), "day") + 1;
 }
-
 function isVisibleInTimeline(
   task: Task,
   timelineStart: Date,
   timelineEnd: Date
 ) {
+  const start = dayjs(task.start);
+  const end = dayjs(task.end);
+
   return (
-    dayjs(new Date()).isAfter(dayjs(timelineStart)) &&
-    dayjs(task.start).isBefore(dayjs(timelineEnd))
+    end.isAfter(dayjs(timelineStart)) && start.isBefore(dayjs(timelineEnd))
   );
 }
 
-function calcPosition(task: Task, timelineStart: Date, timelineEnd: Date) {
-  const totalDays = daysBetween(timelineStart, timelineEnd);
-
-  const taskStart = dayjs(task.start);
-  const taskEnd = dayjs(new Date());
-  const rangeStart = dayjs(timelineStart);
-  const rangeEnd = dayjs(timelineEnd);
-
-  const effectiveStart = taskStart.isBefore(rangeStart)
-    ? rangeStart
-    : taskStart;
-  const effectiveEnd = taskEnd.isAfter(rangeEnd) ? rangeEnd : taskEnd;
-
-  const startOffset = effectiveStart.diff(rangeStart, "day");
-  const taskDuration = Math.max(
-    1,
-    effectiveEnd.diff(effectiveStart, "day") + 1
-  );
-
-  const leftPercent = (startOffset / totalDays) * 100;
-  const widthPercent = (taskDuration / totalDays) * 100;
-
-  return { leftPercent, widthPercent };
-}
-
-export default function DynamicGantt({
-  tasks,
-  timelineStart,
-  timelineEnd,
-}: Props) {
+export default function DynamicGantt({ tasks, open, onClose }: Props) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
     new Set()
   );
+
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+  const [startDate, setStartDate] = useState<Date | null>(defaultStart);
+  const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
+
+  const timelineStart =
+    startDate ??
+    (tasks.length
+      ? tasks.reduce(
+          (min, t) => (t.start < min ? t.start : min),
+          tasks[0].start
+        )
+      : new Date());
+
+  const timelineEnd =
+    endDate ??
+    (tasks.length
+      ? tasks.reduce((max, t) => (t.end > max ? t.end : max), tasks[0].end)
+      : new Date());
+
   const totalDays = daysBetween(timelineStart, timelineEnd);
-  const dayWidth = 36;
+  const dayWidth = 50;
   const timelineWidth = totalDays * dayWidth;
 
   const rootProjects = useMemo(
@@ -106,9 +106,56 @@ export default function DynamicGantt({
     setExpandedProjects(newSet);
   };
 
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+    }
+  };
+
+  const formatDate = (date?: Date | string | null) => {
+    if (!date) return "-";
+    try {
+      return format(new Date(date), "dd MMM yyyy");
+    } catch {
+      return "-";
+    }
+  };
   return (
     <Box>
-      <Box sx={{ overflow: "auto", borderColor: "divider" }}>
+      <Box
+        sx={{
+          p: 2,
+          borderBottom: "1px solid #e0e0e0",
+          display: "flex",
+          alignItems: "end",
+          justifyContent: "space-between",
+        }}
+      >
+        <Box
+          display={"flex"}
+          gap={3}
+          justifyItems={"center"}
+          alignItems={"center"}
+        >
+          <Typography fontWeight={700} ml={2}>
+            {formatDate(startDate)} - {formatDate(endDate)}
+          </Typography>
+          <DateRangePickerBox
+            from={startDate}
+            to={endDate}
+            onChange={handleDateRangeChange}
+          />
+        </Box>
+
+        <IconButton onClick={onClose} size="small">
+          <IconX />
+        </IconButton>
+      </Box>
+      <Box sx={{ overflow: "auto", borderColor: "divider", p: 4 }}>
         {/* HEADER */}
         <Box
           sx={{
@@ -117,25 +164,26 @@ export default function DynamicGantt({
             top: 0,
             bgcolor: "background.paper",
             zIndex: 5,
-            minWidth: 540 + timelineWidth,
+            minWidth: 640 + timelineWidth,
           }}
         >
           {/* Sticky left side */}
           <Box
             sx={{
               flexShrink: 0,
-              width: 540,
+              width: 640,
               position: "sticky",
               display: "flex",
               left: 0,
               backgroundColor: "#fafbfb",
               zIndex: 2,
+              ml: 2,
             }}
           >
-            <Box sx={{ width: 300 }}>
+            <Box sx={{ width: 470 }}>
               <Typography>Name</Typography>
             </Box>
-            <Box sx={{ width: 120 }}>
+            <Box sx={{ width: 150 }}>
               <Typography>Start Date</Typography>
             </Box>
             <Box sx={{ width: 120 }}>
@@ -165,19 +213,20 @@ export default function DynamicGantt({
             })}
           </Box>
         </Box>
-        <Divider sx={{ mt:2}}/>
+        <Divider sx={{ mt: 2 }} />
 
         {/* BODY */}
-        <Box sx={{ display: "flex", minWidth: 540 + timelineWidth }}>
+        <Box sx={{ display: "flex", minWidth: 300 + timelineWidth }}>
           {/* LEFT SIDE */}
           <Box
             sx={{
               flexShrink: 0,
-              width: 540,
+              width: 640,
               position: "sticky",
               left: 0,
               bgcolor: "background.paper",
               zIndex: 2,
+              ml: 2,
             }}
           >
             {rootProjects.map((project) => {
@@ -198,7 +247,12 @@ export default function DynamicGantt({
                     onClick={() => toggleExpand(project.id)}
                   >
                     <Box
-                      sx={{ width: 300, display: "flex", alignItems: "center" }}
+                      sx={{
+                        width: 387,
+                        display: "flex",
+                        alignItems: "center",
+                        mr: 2,
+                      }}
                     >
                       <IconButton size="small" edge="start" sx={{ mr: 1 }}>
                         {showChildren ? (
@@ -207,11 +261,11 @@ export default function DynamicGantt({
                           <KeyboardArrowRightIcon />
                         )}
                       </IconButton>
-                      <Typography fontWeight={600} noWrap>
+                      <Typography fontWeight={600} noWrap width={345}>
                         {project.name}
                       </Typography>
                     </Box>
-                    <Box sx={{ width: 120 }}>
+                    <Box sx={{ width: 150 }}>
                       <Typography fontWeight={600} noWrap>
                         {project.start
                           ? dayjs(project.start).format("ddd D/M")
@@ -240,17 +294,17 @@ export default function DynamicGantt({
                           py: 0.75,
                         }}
                       >
-                        <Box sx={{ width: 250 }}>
+                        <Box sx={{ width: 510 }}>
                           <Typography noWrap>{task.name}</Typography>
                         </Box>
-                        <Box sx={{ width: 120 }}>
+                        <Box sx={{ width: 190 }}>
                           <Typography noWrap>
                             {task.start
                               ? dayjs(task.start).format("ddd D/M")
                               : "-"}
                           </Typography>
                         </Box>
-                        <Box sx={{ width: 120 }}>
+                        <Box sx={{ width: 150 }}>
                           <Typography noWrap>
                             {task.end ? dayjs(task.end).format("ddd D/M") : "-"}
                           </Typography>
@@ -318,6 +372,39 @@ export default function DynamicGantt({
   );
 }
 
+function calcPositionPx(
+  task: Task,
+  timelineStart: Date,
+  timelineEnd: Date,
+  dayWidth: number
+) {
+  const rangeStart = dayjs(timelineStart);
+  const rangeEnd = dayjs(timelineEnd);
+
+  const taskStart = dayjs(task.start);
+  const taskEnd = dayjs(task.end);
+
+  const effectiveStart = taskStart.isBefore(rangeStart)
+    ? rangeStart
+    : taskStart;
+  const effectiveEnd = taskEnd.isAfter(rangeEnd) ? rangeEnd : taskEnd;
+
+  if (effectiveEnd.isBefore(rangeStart) || effectiveStart.isAfter(rangeEnd)) {
+    return null;
+  }
+
+  const startOffsetDays = effectiveStart.diff(rangeStart, "day");
+  const durationDays = Math.max(
+    1,
+    effectiveEnd.diff(effectiveStart, "day") + 1
+  );
+
+  return {
+    leftPx: startOffsetDays * dayWidth,
+    widthPx: durationDays * dayWidth,
+  };
+}
+
 function BarWithDates({
   task,
   timelineStart,
@@ -327,11 +414,12 @@ function BarWithDates({
   timelineStart: Date;
   timelineEnd: Date;
 }) {
-  const { leftPercent, widthPercent } = calcPosition(
-    task,
-    timelineStart,
-    timelineEnd
-  );
+  const dayWidth = 50;
+
+  const position = calcPositionPx(task, timelineStart, timelineEnd, dayWidth);
+  if (!position) return null;
+
+  const { leftPx, widthPx } = position;
 
   const bgColor =
     task.type === "project"
@@ -339,41 +427,44 @@ function BarWithDates({
       : STATUS_COLORS[task.status] || "#999999";
 
   return (
-    <Tooltip
-      title={
-        <>
-          <div>
-            <strong>{task.name}</strong>
-          </div>
-          <div>
-            {task.start ? dayjs(task.start).format("DD MMM YYYY") : "-"} →{" "}
-            {task.end ? dayjs(task.end).format("DD MMM YYYY") : "-"}
-          </div>
-          <div>Status: {task.status}</div>
-          <div>Progress: {task.progress}%</div>
-        </>
-      }
-    >
-      <Box
-        sx={{
-          position: "absolute",
-          left: `${leftPercent}%`,
-          width: `${widthPercent}%`,
-          height: 20,
-          backgroundColor: bgColor,
-          borderRadius: 1,
-          boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-        }}
+    <>
+      <Tooltip
+        title={
+          <>
+            <div>
+              <strong>{task.name}</strong>
+            </div>
+            <div>
+              {task.start ? dayjs(task.start).format("DD MMM YYYY") : "-"} →{" "}
+              {task.end ? dayjs(task.end).format("DD MMM YYYY") : "-"}
+            </div>
+            <div>Status: {task.status}</div>
+            <div>Progress: {task.progress}%</div>
+          </>
+        }
       >
         <Box
           sx={{
-            width: `${task.progress}%`,
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.2)",
+            position: "absolute",
+            left: `${leftPx}px`,
+            width: `${widthPx}px`,
+            height: 20,
+            backgroundColor: bgColor,
             borderRadius: 1,
+            boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+            overflow: "hidden",
           }}
-        />
-      </Box>
-    </Tooltip>
+        >
+          <Box
+            sx={{
+              width: `${task.progress}%`,
+              height: "100%",
+              backgroundColor: "rgba(0, 0, 0, 0.2)",
+              borderRadius: 1,
+            }}
+          />
+        </Box>
+      </Tooltip>
+    </>
   );
 }
