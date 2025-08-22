@@ -3,11 +3,11 @@
 import * as React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import { Grid, Tabs, Tab, Box, Stack } from "@mui/material";
-
 import CreateWork from "@/app/components/apps/settings/tasks/list";
 import LocationList from "@/app/components/apps/settings/locations/list";
-import { IconPlus } from "@tabler/icons-react";
+import { IconMap, IconNotebook, IconUser } from "@tabler/icons-react";
 import BlankCard from "@/app/components/shared/BlankCard";
+import AuthRegister from "@/app/components/apps/settings/auth";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -78,16 +78,24 @@ const AdminSetting = () => {
                     className="admin-settings"
                     color="textSecondary"
                     iconPosition="start"
-                    icon={<IconPlus size="20" />}
+                    icon={<IconNotebook size="20" />}
                     label="Templates"
                     {...a11yProps(0)}
                   />
                   <Tab
                     className="admin-settings"
                     iconPosition="start"
-                    icon={<IconPlus size="20" />}
+                    icon={<IconMap size="20" />}
                     label="Locations"
                     {...a11yProps(1)}
+                  />
+                  <Tab
+                    className="admin-settings"
+                    color="textSecondary"
+                    iconPosition="start"
+                    icon={<IconUser size="20" />}
+                    label="Add Client"
+                    {...a11yProps(2)}
                   />
                 </Tabs>
               </Stack>
@@ -106,6 +114,9 @@ const AdminSetting = () => {
               </TabPanel>
               <TabPanel value={value} index={1}>
                 <LocationList />
+              </TabPanel>
+              <TabPanel value={value} index={2}>
+                <AuthRegister />
               </TabPanel>
             </BlankCard>
           </Grid>
