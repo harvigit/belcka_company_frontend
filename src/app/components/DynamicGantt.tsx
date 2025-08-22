@@ -106,6 +106,9 @@ export default function DynamicGantt({ tasks, open, onClose }: Props) {
     newSet.has(projectId) ? newSet.delete(projectId) : newSet.add(projectId);
     setExpandedProjects(newSet);
   };
+  const isAnyProjectExpanded = useMemo(() => {
+    return rootProjects.some((p) => expandedProjects.has(p.id));
+  }, [expandedProjects, rootProjects]);
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -155,14 +158,14 @@ export default function DynamicGantt({ tasks, open, onClose }: Props) {
             <Button
               size="small"
               onClick={() => {
-                const allIds = new Set(rootProjects.map((p) => p.id));
-                setExpandedProjects(allIds);
+                if (isAnyProjectExpanded) {
+                  setExpandedProjects(new Set());
+                } else {
+                  setExpandedProjects(new Set(rootProjects.map((p) => p.id)));
+                }
               }}
             >
-              Expand All
-            </Button>
-            <Button size="small" onClick={() => setExpandedProjects(new Set())}>
-              Collapse All
+              {isAnyProjectExpanded ? "Collapse All" : "Expand All"}
             </Button>
           </Box>
         </Box>
