@@ -21,7 +21,6 @@ import {
   ListItemIcon,
   Drawer,
   CircularProgress,
-  Autocomplete,
 } from "@mui/material";
 import {
   IconChartPie,
@@ -38,7 +37,6 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import Link from "next/link";
 import { IconNotes } from "@tabler/icons-react";
-import Image from "next/image";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { IconArrowLeft } from "@tabler/icons-react";
 import AddressesList from "./addresses-list";
@@ -47,7 +45,6 @@ import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import Cookies from "js-cookie";
 import CreateProjectTask from "../tasks";
-import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import "react-day-picker/dist/style.css";
 import "../../../../global.css";
 import DynamicGantt from "@/app/components/DynamicGantt";
@@ -105,7 +102,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
-  const [addressId, setAddressId] = useState<number | null>(null);
+   const [selectedAddressIds, setSelectedAddressIds] = useState<string[]>([]);
+
+  const handleSelectionChange = (selectedIds: string[]) => {
+    setSelectedAddressIds(selectedIds);
+  };
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -139,6 +140,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       const response = await api.get(`address/get`, {
         params: {
           project_id: projectId,
+          company_id: user.company_id,
           start_date: startDate ? dayjs(startDate).format("YYYY-MM-DD") : null,
           end_date: endDate ? dayjs(endDate).format("YYYY-MM-DD") : null,
         },
@@ -825,16 +827,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 <IconX />
               </IconButton>
             </Box>
+            <Divider></Divider>
             <Box
               sx={{
                 p: 6,
+                pt: 3,
                 textAlign: "center",
                 display: "flex",
                 justifyContent: "center",
               }}
             >
               <Typography variant="h4" color="text.secondary">
-                No records found in the selected date range.
+                No records found for tasks.
               </Typography>
             </Box>
           </Box>

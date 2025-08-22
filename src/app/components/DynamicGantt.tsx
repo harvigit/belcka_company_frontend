@@ -7,6 +7,7 @@ import {
   Tooltip,
   IconButton,
   Divider,
+  Button,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
@@ -149,6 +150,21 @@ export default function DynamicGantt({ tasks, open, onClose }: Props) {
             to={endDate}
             onChange={handleDateRangeChange}
           />
+
+          <Box display="flex" gap={1}>
+            <Button
+              size="small"
+              onClick={() => {
+                const allIds = new Set(rootProjects.map((p) => p.id));
+                setExpandedProjects(allIds);
+              }}
+            >
+              Expand All
+            </Button>
+            <Button size="small" onClick={() => setExpandedProjects(new Set())}>
+              Collapse All
+            </Button>
+          </Box>
         </Box>
 
         <IconButton onClick={onClose} size="small">
