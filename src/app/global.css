@@ -232,3 +232,6 @@ input#project_id::placeholder {
   ._3zRJQ, ._3KcaM{
     fill: gray !important;
   }
+  .form_inputs{
+    width: 100%;
+  }

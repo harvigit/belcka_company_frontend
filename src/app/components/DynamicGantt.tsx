@@ -8,17 +8,10 @@ import {
   IconButton,
   Divider,
   Button,
-  CircularProgress,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  DialogActions,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
-import { IconFilter, IconX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import api from "@/utils/axios";
 import DateRangePickerBox from "./common/DateRangePickerBox";
@@ -86,11 +79,37 @@ export default function DynamicGantt({
 
   const [startDate, setStartDate] = useState<Date | null>(defaultStart);
   const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
+
+  // Add these states at the top of your component
+  const [sortField, setSortField] = useState<"name" | "start" | "end" | null>(
+    null
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const [tempSortOrder, setTempSortOrder] = useState<"asc" | "desc">(sortOrder);
-  const [openFilter, setOpenFilter] = useState(false);
+  // Sorting function
+  const sortTasks = (list: Task[]) => {
+    if (!sortField) return list;
 
+    return [...list].sort((a, b) => {
+      let valA: string | number | Date | null = null;
+      let valB: string | number | Date | null = null;
+
+      if (sortField === "name") {
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+      } else if (sortField === "start") {
+        valA = a.start ?? new Date(0);
+        valB = b.start ?? new Date(0);
+      } else if (sortField === "end") {
+        valA = a.end ?? new Date(0);
+        valB = b.end ?? new Date(0);
+      }
+
+      if (valA! < valB!) return sortOrder === "asc" ? -1 : 1;
+      if (valA! > valB!) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
   const fetchProjects = async () => {
     if (!projectId || !companyId) return;
 
@@ -226,31 +245,32 @@ export default function DynamicGantt({
     [tasks]
   );
 
-  const sortedRootProjects = useMemo(() => {
-    return [...rootProjects].sort((a, b) => {
-      if (sortOrder === "asc") return a.name.localeCompare(b.name);
-      else return b.name.localeCompare(a.name);
-    });
-  }, [rootProjects, sortOrder]);
+  // Sorted root projects
+  const sortedProjects = useMemo(
+    () => sortTasks(rootProjects),
+    [rootProjects, sortField, sortOrder]
+  );
 
-  const handleApply = () => {
-    setSortOrder(tempSortOrder);
-    setOpenFilter(false);
-  };
-
-  const handleClear = () => {
-    setTempSortOrder("asc");
-    setSortOrder("asc");
-    setOpenFilter(false);
-  };
-
+  // Child sorting too (optional)
   const getChildTasks = (projectId: string) =>
-    tasks.filter(
-      (t) =>
-        t.type === "task" &&
-        t.parentId === projectId &&
-        isVisibleInTimeline(t, timelineStart, timelineEnd)
+    sortTasks(
+      tasks.filter(
+        (t) =>
+          t.type === "task" &&
+          t.parentId === projectId &&
+          isVisibleInTimeline(t, timelineStart, timelineEnd)
+      )
     );
+
+  // Handle header click
+  const handleSort = (field: "name" | "start" | "end") => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
 
   const toggleExpand = (projectId: string) => {
     const newSet = new Set(expandedProjects);
@@ -418,61 +438,8 @@ export default function DynamicGantt({
             >
               {isAnyProjectExpanded ? "Collapse All" : "Expand All"}
             </Button>
-            <Button variant="contained" onClick={() => setOpenFilter(true)}>
-              <IconFilter width={18} />
-            </Button>
           </Box>
         </Box>
-
-        <Dialog
-          open={openFilter}
-          onClose={() => setOpenFilter(false)}
-          fullWidth
-          maxWidth="sm"
-        >
-          <DialogTitle sx={{ position: "relative" }}>
-            Filters
-            <IconButton
-              aria-label="close"
-              onClick={() => setOpenFilter(false)}
-              size="large"
-              sx={{
-                position: "absolute",
-                right: 12,
-                top: 8,
-                color: (theme) => theme.palette.grey[900],
-              }}
-            >
-              <IconX size={24} />
-            </IconButton>
-          </DialogTitle>
-
-          <DialogContent>
-            <Stack spacing={2} mt={1}>
-              <TextField
-                select
-                label="Sort Order"
-                fullWidth
-                value={tempSortOrder}
-                onChange={(e) =>
-                  setTempSortOrder(e.target.value as "asc" | "desc")
-                }
-              >
-                <MenuItem value="asc">Sort A-Z</MenuItem>
-                <MenuItem value="desc">Sort Z-A</MenuItem>
-              </TextField>
-            </Stack>
-          </DialogContent>
-
-          <DialogActions>
-            <Button color="inherit" onClick={handleClear}>
-              Clear
-            </Button>
-            <Button variant="contained" onClick={handleApply}>
-              Apply
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         <IconButton onClick={onClose} size="small">
           <IconX />
@@ -521,14 +488,58 @@ export default function DynamicGantt({
                 ml: 2,
               }}
             >
-              <Box sx={{ width: 470 }}>
-                <Typography>Name</Typography>
+              <Box
+                sx={{
+                  width: 470,
+                  cursor: "pointer",
+                  "&:hover": {
+                    color: "GrayText",
+                  },
+                }}
+                onClick={() => handleSort("name")}
+              >
+                <Typography fontWeight={700}>
+                  Name{" "}
+                  {sortField === "name"
+                    ? sortOrder === "asc"
+                      ? "↑"
+                      : "↓"
+                    : ""}
+                </Typography>
               </Box>
-              <Box sx={{ width: 150 }}>
-                <Typography>Start Date</Typography>
+              <Box
+                sx={{
+                  width: 150,
+                  cursor: "pointer",
+                  "&:hover": {
+                    color: "GrayText",
+                  },
+                }}
+                onClick={() => handleSort("start")}
+              >
+                <Typography fontWeight={700}>
+                  Start Date{" "}
+                  {sortField === "start"
+                    ? sortOrder === "asc"
+                      ? "↑"
+                      : "↓"
+                    : ""}
+                </Typography>
               </Box>
-              <Box sx={{ width: 120 }}>
-                <Typography>End Date</Typography>
+              <Box
+                sx={{
+                  width: 120,
+                  cursor: "pointer",
+                  "&:hover": {
+                    color: "GrayText",
+                  },
+                }}
+                onClick={() => handleSort("end")}
+              >
+                <Typography fontWeight={700}>
+                  End Date{" "}
+                  {sortField === "end" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
+                </Typography>
               </Box>
             </Box>
 
@@ -570,7 +581,7 @@ export default function DynamicGantt({
                 ml: 2,
               }}
             >
-              {sortedRootProjects.map((project) => {
+              {sortedProjects.map((project) => {
                 const showChildren = expandedProjects.has(project.id);
                 const children = getChildTasks(project.id);
                 return (
@@ -661,7 +672,7 @@ export default function DynamicGantt({
 
             <Box sx={{ flex: 1 }}>
               <Box sx={{ minWidth: timelineWidth }}>
-                {sortedRootProjects.map((project) => {
+                {sortedProjects.map((project) => {
                   const showChildren = expandedProjects.has(project.id);
                   const children = getChildTasks(project.id);
                   return (
