@@ -726,28 +726,31 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                             borderRadius: 0,
                                                         }}
                                                     >
-                                                        {/* Show checklogs for the specific expanded worklog */}
                                                         {(() => {
                                                             const expandedWorklogIndex = expandedWorklogs[row.id];
-                                                            const expandedWorklog = row.original.rowsData?.[expandedWorklogIndex!];
+                                                            const expandedWorklog = (row.original.rowsData?.[expandedWorklogIndex!]) as any;
                                                             const worklogChecklogs = expandedWorklog?.user_checklogs || [];
 
                                                             return worklogChecklogs.length > 0 ? (
                                                                 <Table size="small">
                                                                     <TableHead>
-                                                                        <TableRow>
-                                                                            {expandedTableColumns.map((col) => (
-                                                                                <TableCell
-                                                                                    key={col.id}
-                                                                                    sx={{
-                                                                                        backgroundColor: '#fafafa',
-                                                                                        fontWeight: 600,
-                                                                                    }}
-                                                                                >
-                                                                                    {flexRender(col.header, col)}
-                                                                                </TableCell>
-                                                                            ))}
-                                                                        </TableRow>
+                                                                        {table.getHeaderGroups().map(headerGroup => (
+                                                                            <TableRow key={headerGroup.id}>
+                                                                                {headerGroup.headers.map(header => (
+                                                                                    <TableCell
+                                                                                        key={header.id}
+                                                                                        sx={{
+                                                                                            backgroundColor: '#fafafa',
+                                                                                            fontWeight: 600,
+                                                                                        }}
+                                                                                    >
+                                                                                        {header.isPlaceholder
+                                                                                            ? null
+                                                                                            : flexRender(header.column.columnDef.header, header.getContext())}
+                                                                                    </TableCell>
+                                                                                ))}
+                                                                            </TableRow>
+                                                                        ))}
                                                                     </TableHead>
                                                                     <TableBody>
                                                                         {worklogChecklogs.map(
