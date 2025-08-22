@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     Avatar,
@@ -13,16 +14,13 @@ import {
     TableRow,
     TextField,
     Typography,
-    Chip,
     Popover,
     FormGroup,
     FormControlLabel,
     Checkbox,
-    Collapse,
 } from '@mui/material';
 import {
     IconX,
-    IconClock,
     IconTableColumn,
     IconChevronRight,
     IconChevronDown,
@@ -43,23 +41,38 @@ import { TimeClock } from './time-clock';
 import api from '@/utils/axios';
 
 type DailyBreakdown = {
+    rowsData?: [];
+    checkin_time: any;
+    checkout_time: any;
+    total_hours: any;
     rowType: 'week' | 'day';
+    weeklyTotalHours?: string;
+    weeklyPayableAmount?: string;
     weekLabel?: string;
+
     date?: string;
     shift?: string;
     typeOfWork?: string;
     start?: string;
     end?: string;
     totalHours?: string;
+    priceWorkAmount?: string;
     dailyTotal?: string;
-    weeklyTotal?: string;
+    payableAmount?: string;
     regular?: string;
     employeeNotes?: string;
     managerNotes?: string;
+
     parsedDate?: Date | null;
     address?: string;
     check_in?: string;
     check_out?: string;
+
+    isFirst?: boolean;
+    rowSpan?: number;
+
+    userChecklogs?: CheckLog[];
+    allUserChecklogs?: CheckLog[];
 };
 
 interface TimeClockDetailsProps {
@@ -73,23 +86,61 @@ interface TimeClockDetailsProps {
 type TimeClockDetailResponse = {
     IsSuccess: boolean;
     info: TimeClock[];
+    type_of_works: [];
+    shifts: [];
 };
 
-// const columnHelper = createColumnHelper<DailyBreakdown>();
-const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, user_id, currency, onClose}) => {
+type CheckLog = {
+    checklog_id: number;
+    date_added: string;
+    address_id: number;
+    address_name: string;
+    checkin_time: string;
+    checkout_time: string;
+    total_hours: number;
+};
+
+const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, user_id, currency, onClose,}) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [expanded, setExpanded] = useState<ExpandedState>({});
+    const [expandedWorklogs, setExpandedWorklogs] = useState<{[key: string]: number | null}>({});
     const [data, setData] = useState<TimeClock[]>([]);
-    
+    const [headerDetail, setHeaderDetail] = useState<any>(null);
+    const [typeOfWorks, setTypeOfWorks] = useState<any>([]);
+    const [shifts, setShifts] = useState<any>([]);
+
+    const handleWorklogToggle = (rowId: string, worklogIndex: number) => {
+        setExpandedWorklogs(prev => {
+            const currentExpanded = prev[rowId];
+            if (currentExpanded === worklogIndex) {
+                return { ...prev, [rowId]: null };
+            } else {
+                return { ...prev, [rowId]: worklogIndex };
+            }
+        });
+    };
+
     const formatHour = (val: string | number | null | undefined): string => {
         if (val === null || val === undefined) return '00:00';
-        const num = parseFloat(val.toString());
-        if (isNaN(num)) return '00:00';
-        const h = Math.floor(num);
-        const m = Math.round((num - h) * 60);
-        return `${h}:${m.toString().padStart(2, '0')}`;
+        const str = val.toString().trim();
+
+        if (/^\d{1,2}:\d{1,2}(\.\d+)?$/.test(str)) {
+            const [h, m] = str.split(':');
+            const minutes = parseFloat(m) || 0;
+            return `${h.padStart(2, '0')}:${Math.floor(minutes)
+                .toString()
+                .padStart(2, '0')}`;
+        }
+
+        const num = parseFloat(str);
+        if (!isNaN(num)) {
+            const h = Math.floor(num);
+            const m = Math.round((num - h) * 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
+        return '00:00';
     };
 
     const parseDate = (dateString: string): Date | null => {
@@ -108,15 +159,12 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
     const sanitizeDateTime = (dateTime: string): string => {
         return dateTime && dateTime !== 'Invalid DateTime' ? dateTime : '--';
     };
-    
+
     const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
+    const handlePopoverClose = () => setAnchorEl(null);
 
-    const handlePopoverClose = () => {
-        setAnchorEl(null);
-    };
-    
     const fetchTimeClockData = async (start: Date, end: Date): Promise<void> => {
         try {
             const params: Record<string, string> = {
@@ -124,20 +172,35 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                 start_date: format(start, 'dd/MM/yyyy'),
                 end_date: format(end, 'dd/MM/yyyy'),
             };
-
             const response: AxiosResponse<TimeClockDetailResponse> = await api.get(
                 '/timesheet/time-clock-details',
                 { params }
             );
-
             if (response.data.IsSuccess) {
                 setData(response.data.info || []);
+                setHeaderDetail(response.data);
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
         }
     };
-    
+
+    const fetchTimeClockResources = async (companyId: string): Promise<void> => {
+        try {
+            const params: Record<string, string> = { company_id: companyId || '' };
+            const response: AxiosResponse<TimeClockDetailResponse> = await api.get(
+                '/timesheet/time-clock-resources',
+                { params }
+            );
+            if (response.data.IsSuccess) {
+                setTypeOfWorks(response.data.type_of_works || []);
+                setShifts(response.data.shifts || []);
+            }
+        } catch (error) {
+            console.error('Error fetching timeClock data:', error);
+        }
+    };
+
     useEffect(() => {
         if (timeClock?.start_date && timeClock?.end_date) {
             fetchTimeClockData(
@@ -145,51 +208,145 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                 new Date(timeClock.end_date)
             );
         }
+        fetchTimeClockResources(timeClock?.company_id || '');
     }, [timeClock]);
-    
+
     const dailyData = useMemo<DailyBreakdown[]>(() => {
         return (data || []).flatMap((week) => {
             const weekRows: DailyBreakdown[] = [];
-            
+
+            // Week header row
             weekRows.push({
+                checkin_time: '--',
+                checkout_time: '--',
+                total_hours: '--',
                 rowType: 'week',
                 weekLabel: week.week_range,
+                weeklyTotalHours: formatHour(week.weekly_total_hours),
+                weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
             });
-            
-            const dayRows = (week.days || []).map((day: any) => ({
-                rowType: 'day' as const,
-                date: day.date ?? '--',
-                shift: day.shift_name || 'Shift',
-                typeOfWork: day.type_of_work_name || 'Select',
-                start: sanitizeDateTime(day.start),
-                end: sanitizeDateTime(day.end),
-                totalHours: formatHour(day.total_hours),
-                dailyTotal: formatHour(day.daily_total),
-                weeklyTotal: formatHour(day.weekly_total),
-                regular: formatHour(day.regular),
-                employeeNotes: day.employee_notes || '--',
-                managerNotes: day.manager_notes || '--',
-                weekLabel: week.week_range,
-                parsedDate: parseDate(day.date),
-                address: day.address || '--',
-                check_in: sanitizeDateTime(day.check_in),
-                check_out: sanitizeDateTime(day.check_out),
-            }));
+
+            // Days
+            const dayRows = (week.days || []).flatMap((day: any) => {
+                if (day.worklogs && day.worklogs.length > 0) {
+                    if(day.worklogs.length === 1){
+                        return day.worklogs.map((log: any, idx: number) => ({
+                            rowType: 'day' as const,
+                            date:  day.date,
+                            shift: log.shift_name || 'Shift',
+                            start: sanitizeDateTime(log.start),
+                            end: sanitizeDateTime(log.end),
+                            priceWorkAmount: `${currency}${log.pricework_amount || 0}`,
+                            totalHours: log.total_hours != '--' ? formatHour(log.total_hours) : '--',
+                            dailyTotal: formatHour(day.daily_total),
+                            payableAmount: `${currency}${log.payable_amount || 0}`,
+                            regular: formatHour(log.regular),
+                            employeeNotes: (log.employee_notes || '--'),
+                            managerNotes: (log.manager_notes || '--'),
+                            weekLabel: week.week_range,
+                            weeklyTotalHours: formatHour(week.weekly_total_hours),
+                            weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
+                            parsedDate: parseDate(day.date),
+                            address: log.address || '--',
+                            check_in: sanitizeDateTime(log.check_in),
+                            check_out: sanitizeDateTime(log.check_out),
+                            rowSpan: idx === 0 ? day.worklogs.length : 0,
+                            userChecklogs: log.user_checklogs ?? [],
+                        }));
+                    }
+
+                    const allChecklogs = day.worklogs.reduce((acc: CheckLog[], log: any) => {
+                        if (log.user_checklogs && Array.isArray(log.user_checklogs)) {
+                            return [...acc, ...log.user_checklogs];
+                        }
+                        return acc;
+                    }, []);
+
+                    return [{
+                        rowType: 'day' as const,
+                        date: day.date ?? '--',
+                        shift: '--',
+                        start: '--',
+                        end: '--',
+                        priceWorkAmount: '--',
+                        totalHours: '--',
+                        dailyTotal: formatHour(day.daily_total),
+                        payableAmount: `${currency}${day.daily_payable_amount || 0}`,
+                        regular: '--',
+                        employeeNotes: day.employee_notes || '--',
+                        managerNotes: day.manager_notes || '--',
+                        weekLabel: week.week_range,
+                        weeklyTotalHours: formatHour(week.weekly_total_hours),
+                        weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
+                        parsedDate: parseDate(day.date),
+                        address: '--',
+                        check_in: '--',
+                        check_out: '--',
+                        rowsData: day.worklogs,
+                        rowSpan: 1,
+                        allUserChecklogs: allChecklogs,
+                    },
+                    ];
+
+                }
+
+                return [
+                    {
+                        rowType: 'day' as const,
+                        date: day.date ?? '--',
+                        shift: '--',
+                        start: '--',
+                        end: '--',
+                        priceWorkAmount: '--',
+                        totalHours: '--',
+                        dailyTotal: '--',
+                        payableAmount: '--',
+                        regular: '--',
+                        employeeNotes: '--',
+                        managerNotes: '--',
+                        weekLabel: '--',
+                        weeklyTotalHours: '--',
+                        weeklyPayableAmount: '--',
+                        parsedDate: '--',
+                        address: '--',
+                        check_in: '--',
+                        check_out: '--',
+                        rowSpan: 1,
+                        allUserChecklogs: [],
+                    },
+                ];
+            });
 
             weekRows.push(...dayRows);
             return weekRows;
         });
-    }, [data]);
-    
+    }, [data, currency]);
+
     const mainTableColumns = useMemo<ColumnDef<DailyBreakdown, any>[]>(
         () => [
+            {
+                id: 'select',
+                header: () => <CustomCheckbox />,
+                cell: ({ row }) =>
+                    row.original.rowType === 'day'  ? (
+                        <CustomCheckbox />
+                    ) : null,
+                enableSorting: false,
+                size: 40,
+            },
+            {
+                id: 'date',
+                header: 'Date',
+                cell: ({ row }) =>
+                    row.original.rowType === 'day' ? row.original.date : null,
+            },
             {
                 id: 'expander',
                 header: '',
                 size: 36,
                 enableSorting: false,
                 cell: ({ row }) => {
-                    if (row.original.rowType !== 'day') return null;
+                    if (row.original.rowType !== 'day' || !row.original?.rowsData) return null;
                     return (
                         <IconButton
                             size="small"
@@ -206,51 +363,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                 },
             },
             {
-                id: 'select',
-                header: () => <CustomCheckbox />,
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? <CustomCheckbox /> : null,
-                enableSorting: false,
-                size: 40,
-            },
-            {
-                id: 'date',
-                accessorKey: 'date',
-                header: 'Date',
-                cell: ({ row }) => {
-                    return row.original.rowType === 'day' ? (
-                        <Stack>
-                            <Typography variant="body2" fontWeight={500}>
-                                {row.original.date}
-                            </Typography>
-                        </Stack>
-                    ) : null;
-                },
-            },
-            {
                 id: 'shift',
                 accessorKey: 'shift',
                 header: 'Shift',
                 cell: ({ row }) =>
-                    row.original.rowType === 'day' ? (
-                        <Chip
-                            label={row.original.shift}
-                            size="small"
-                            variant="outlined"
-                            icon={<IconClock size={14} />}
-                        />
-                    ) : null,
-            },
-            {
-                id: 'typeOfWork',
-                accessorKey: 'typeOfWork',
-                header: 'Type of Work',
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? (
-                        <Typography variant="body2">
-                            {row.original.typeOfWork || '—'}
-                        </Typography>
-                    ) : null,
+                    row.original.rowType === 'day' ? row.original.shift : null,
             },
             {
                 id: 'start',
@@ -274,55 +391,36 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                     row.original.rowType === 'day' ? row.original.totalHours : null,
             },
             {
+                id: 'priceWorkAmount',
+                accessorKey: 'priceWorkAmount',
+                header: 'Pricework Amount',
+                cell: ({ row }) =>
+                    row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
+            },
+            {
                 id: 'dailyTotal',
-                accessorKey: 'dailyTotal',
                 header: 'Daily total',
                 cell: ({ row }) =>
-                    row.original.rowType === 'day' ? (
-                        <Typography fontWeight={600}>{row.original.dailyTotal}</Typography>
-                    ) : null,
+                    row.original.rowType === 'day' ? row.original.dailyTotal : null,
             },
             {
-                id: 'weeklyTotal',
-                accessorKey: 'weeklyTotal',
-                header: 'Weekly total',
+                id: 'payableAmount',
+                accessorKey: 'payableAmount',
+                header: 'Payable Amount',
                 cell: ({ row }) =>
-                    row.original.rowType === 'day' ? (
-                        <Typography fontWeight={600}>{row.original.weeklyTotal}</Typography>
-                    ) : null,
-            },
-            {
-                id: 'regular',
-                accessorKey: 'regular',
-                header: 'Regular',
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? row.original.regular : null,
+                    row.original.rowType === 'day' ? row.original.payableAmount : null,
             },
             {
                 id: 'employeeNotes',
-                accessorKey: 'employeeNotes',
                 header: 'Employee notes',
                 cell: ({ row }) =>
                     row.original.rowType === 'day' ? row.original.employeeNotes : null,
             },
             {
                 id: 'managerNotes',
-                accessorKey: 'managerNotes',
                 header: 'Manager notes',
                 cell: ({ row }) =>
                     row.original.rowType === 'day' ? row.original.managerNotes : null,
-            },
-            {
-                id: 'actions',
-                header: '',
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? (
-                        <IconButton size="small">
-                            <Typography variant="body2">⋮</Typography>
-                        </IconButton>
-                    ) : null,
-                enableSorting: false,
-                size: 40,
             },
         ],
         []
@@ -331,98 +429,53 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
     const expandedTableColumns = useMemo<ColumnDef<DailyBreakdown, any>[]>(
         () => [
             {
-                id: 'date',
-                accessorKey: 'date',
-                header: 'Date',
-                cell: ({ row }) => {
-                    return row.original.rowType === 'day' ? (
-                        <Stack>
-                            <Typography variant="body2" fontWeight={500}>
-                                {row.original.date}
-                            </Typography>
-                        </Stack>
-                    ) : null;
-                },
-            },
-            {
                 id: 'address',
                 accessorKey: 'address',
-                header: 'Address',
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? row.original.address : null,
+                header: 'Address' 
             },
             {
-                id: 'check_in',
-                accessorKey: 'check_in',
-                header: 'Check In',
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? row.original.check_in : null,
+                id: 'checkin_time',
+                accessorKey: 'checkin_time',
+                header: 'Check In' 
+            },
+            { 
+                id: 'checkout_time',
+                accessorKey: 'checkout_time',
+                header: 'Check Out' 
             },
             {
-                id: 'check_out',
-                accessorKey: 'check_out',
-                header: 'Check Out',
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? row.original.check_out : null,
-            },
-            {
-                id: 'totalHours',
-                accessorKey: 'totalHours',
+                id: 'total_hours',
+                accessorKey: 'total_hours',
                 header: 'Total hours',
-                cell: ({ row }) =>
-                    row.original.rowType === 'day' ? row.original.totalHours : null,
             },
         ],
         []
     );
-    
+
     const table = useReactTable({
         data: dailyData,
         columns: mainTableColumns,
-        state: {
-            columnVisibility,
-            expanded,
-        },
+        state: { columnVisibility, expanded },
         onColumnVisibilityChange: setColumnVisibility,
         getCoreRowModel: getCoreRowModel(),
         getExpandedRowModel: getExpandedRowModel(),
         onExpandedChange: setExpanded,
         getRowCanExpand: (row) => row.original.rowType === 'day',
     });
-    
+
     if (!timeClock) return null;
-    
-    const statistics = [
-        {
-            value: formatHour(timeClock.total_hours),
-            label: 'Regular',
-        },
-        {
-            value: formatHour(timeClock.total_break_hours),
-            label: 'Paid time off',
-        },
-        {
-            value: formatHour(timeClock.total_hours),
-            label: 'Total Paid Hours',
-        },
-        {
-            value: '6',
-            label: 'Worked Days',
-        },
-        {
-            value: '00:00',
-            label: 'Unpaid time off',
-        },
-        {
-            value: timeClock.total_payable_amount
-                ? `${currency}${timeClock.total_payable_amount}`
-                : `${currency}0.00`,
-            label: 'Pay per dates',
-        },
+
+    const headerDetails = [
+        { value: formatHour(headerDetail?.total_hours), label: 'Total Hours' },
+        { value: formatHour(headerDetail?.total_break_hours), label: 'Total Break Hours' },
+        { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
+        { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
+        { value: headerDetail?.worked_days ?? 0, label: 'Worked Days' },
     ];
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
             <Box
                 sx={{
                     p: 2,
@@ -451,7 +504,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                     <IconX />
                 </IconButton>
             </Box>
-            
+
             <Box
                 sx={{
                     p: 2,
@@ -462,7 +515,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                 }}
             >
                 <Stack direction="row" spacing={6} alignItems="center">
-                    {statistics.map((stat, index) => (
+                    {headerDetails.map((stat, index) => (
                         <Box key={index} textAlign="center">
                             <Typography variant="h4" fontWeight={700} color="text.primary">
                                 {stat.value}
@@ -473,7 +526,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                         </Box>
                     ))}
                 </Stack>
-                
+
                 <Stack>
                     <IconButton onClick={handlePopoverOpen}>
                         <IconTableColumn />
@@ -509,21 +562,26 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                                                 onChange={col.getToggleVisibilityHandler()}
                                             />
                                         }
-                                        label={(col.columnDef.header as string) || ''}
+                                        label={
+                                            (typeof col.columnDef.header === 'string'
+                                                ? col.columnDef.header
+                                                : col.id) as string
+                                        }
                                     />
                                 ))}
                         </FormGroup>
                     </Popover>
                 </Stack>
             </Box>
-            
+
+            {/* Table */}
             <Box sx={{ flex: 1, overflow: 'auto' }}>
                 <TableContainer>
                     <Table size="small" stickyHeader>
                         <TableHead>
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => (
+                            {table.getHeaderGroups().map((hg) => (
+                                <TableRow key={hg.id}>
+                                    {hg.headers.map((header) => (
                                         <TableCell
                                             key={header.id}
                                             sx={{
@@ -544,99 +602,206 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({  open, timeClock, u
                                 </TableRow>
                             ))}
                         </TableHead>
+
                         <TableBody>
                             {table.getRowModel().rows.map((row) => {
                                 const rowData = row.original;
-                                
+
+                                // Week header row
                                 if (rowData.rowType === 'week') {
+                                    const visibleColumnsCount =
+                                        table.getVisibleLeafColumns().length;
                                     return (
                                         <TableRow key={row.id}>
                                             <TableCell
-                                                colSpan={table.getAllLeafColumns().length}
+                                                colSpan={visibleColumnsCount}
                                                 sx={{
                                                     backgroundColor: '#f0f0f0',
                                                     fontWeight: 600,
                                                     textAlign: 'center',
+                                                    py: 1.5,
                                                 }}
                                             >
-                                                {rowData.weekLabel}
+                                                <Stack
+                                                    direction="row"
+                                                    alignItems="center"
+                                                    sx={{ width: '100%', position: 'relative' }}
+                                                >
+                                                    <Typography
+                                                        variant="body1"
+                                                        fontWeight={600}
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            left: '50%',
+                                                            transform: 'translateX(-50%)',
+                                                        }}
+                                                    >
+                                                        {rowData.weekLabel}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body1"
+                                                        fontWeight={600}
+                                                        sx={{ marginLeft: 'auto' }}
+                                                    >
+                                                        Week Total: {rowData.weeklyTotalHours}({rowData.weeklyPayableAmount})
+                                                    </Typography>
+                                                </Stack>
                                             </TableCell>
                                         </TableRow>
                                     );
                                 }
-                                
+
+                                // Day rows
                                 return (
                                     <React.Fragment key={row.id}>
-                                        <TableRow sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell
-                                                    key={cell.id}
-                                                    sx={{ py: 1, fontSize: '0.875rem' }}
-                                                >
-                                                    {flexRender(
-                                                        cell.column.columnDef.cell,
-                                                        cell.getContext()
-                                                    )}
+                                        <TableRow key={row.id}> {/* 👈 Main Row */}
+
+                                            {row.original.rowsData ? <>
+                                                <TableCell><CustomCheckbox /></TableCell>
+                                                <TableCell>{rowData.date}</TableCell>
+                                                <TableCell colSpan={table.getVisibleLeafColumns().length - 6}>
+                                                    <Table size="small">
+                                                        <TableBody>
+                                                            <TableRow key={row.id}></TableRow>
+                                                            {row.original.rowsData.map((log: any, idx: number) => (
+                                                                <TableRow key={idx}>
+                                                                    <TableCell sx={{ p: 0 }}>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleWorklogToggle(row.id, idx)}
+                                                                            aria-label={expandedWorklogs[row.id] === idx ? 'Collapse' : 'Expand'}
+                                                                        >
+                                                                            {expandedWorklogs[row.id] === idx ? (
+                                                                                <IconChevronDown size={18} />
+                                                                            ) : (
+                                                                                <IconChevronRight size={18} />
+                                                                            )}
+                                                                        </IconButton>
+                                                                    </TableCell>
+                                                                    <TableCell>{log.shift_name}</TableCell>
+                                                                    <TableCell>{sanitizeDateTime(log.start)}</TableCell>
+                                                                    <TableCell>{sanitizeDateTime(log.end)}</TableCell>
+                                                                    <TableCell>{formatHour(log.total_hours)}</TableCell>
+                                                                    <TableCell>{`${currency}${log.pricework_amount || 0}`}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
                                                 </TableCell>
-                                            ))}
+                                                <TableCell> {rowData.dailyTotal} </TableCell>
+                                                <TableCell> {rowData.payableAmount} </TableCell>
+                                                <TableCell> {rowData.employeeNotes} </TableCell>
+                                                <TableCell> {rowData.managerNotes} </TableCell>
+
+                                            </> : row.getVisibleCells().map((cell) => {
+                                                const { column } = cell;
+
+                                                return (
+                                                    <TableCell key={cell.id} sx={{ py: 1, fontSize: '0.875rem' }}>
+                                                        {flexRender(column.columnDef.cell, cell.getContext())}
+                                                    </TableCell>
+                                                );
+                                            })}
                                         </TableRow>
-                                        <TableRow>
-                                            <TableCell
-                                                colSpan={table.getAllLeafColumns().length}
-                                                sx={{ p: 0, borderBottom: 0 }}
+
+                                        {expandedWorklogs[row.id] !== null && expandedWorklogs[row.id] !== undefined && (
+                                            <TableRow
+                                                sx={{
+                                                    '& > td': {
+                                                        borderBottom: 'none',
+                                                    },
+                                                }}
                                             >
-                                                <Collapse
-                                                    in={row.getIsExpanded()}
-                                                    timeout="auto"
-                                                    unmountOnExit
+                                                <TableCell
+                                                    colSpan={table.getVisibleLeafColumns().length}
+                                                    sx={{ p: 0 }}
                                                 >
                                                     <Box
                                                         sx={{
                                                             px: 3,
                                                             py: 2,
                                                             backgroundColor: '#fcfcfc',
-                                                            borderTop: '1px dashed #e0e0e0',
+                                                            borderTop: '1px solid #e0e0e0',
+                                                            borderBottom: '1px solid #e0e0e0',
+                                                            borderRadius: 0,
                                                         }}
                                                     >
-                                                        <Table size="small">
-                                                            <TableHead>
-                                                                <TableRow>
-                                                                    {expandedTableColumns.map((col) => (
-                                                                        <TableCell
-                                                                            key={col.id}
-                                                                            sx={{
-                                                                                backgroundColor: '#fafafa',
-                                                                                fontWeight: 600,
-                                                                            }}
-                                                                        >
-                                                                            {flexRender(col.header, {
-                                                                                column: col,
-                                                                            } as any)}
-                                                                        </TableCell>
-                                                                    ))}
-                                                                </TableRow>
-                                                            </TableHead>
-                                                            <TableBody>
-                                                                {table.getRowModel().rows.map((row) => (
-                                                                    <TableRow key={row.id}>
-                                                                        {expandedTableColumns.map((col) => {
-                                                                            const cell = row.getVisibleCells().find((c) => c.column.id === col.id);
-                                                                            return (
-                                                                                <TableCell key={col.id}>
-                                                                                    {cell
-                                                                                        ? flexRender(cell.column.columnDef.cell, cell.getContext())
-                                                                                        : null}
+                                                        {/* Show checklogs for the specific expanded worklog */}
+                                                        {(() => {
+                                                            const expandedWorklogIndex = expandedWorklogs[row.id];
+                                                            const expandedWorklog = row.original.rowsData?.[expandedWorklogIndex!];
+                                                            const worklogChecklogs = expandedWorklog?.user_checklogs || [];
+
+                                                            return worklogChecklogs.length > 0 ? (
+                                                                <Table size="small">
+                                                                    <TableHead>
+                                                                        <TableRow>
+                                                                            {expandedTableColumns.map((col) => (
+                                                                                <TableCell
+                                                                                    key={col.id}
+                                                                                    sx={{
+                                                                                        backgroundColor: '#fafafa',
+                                                                                        fontWeight: 600,
+                                                                                    }}
+                                                                                >
+                                                                                    {flexRender(col.header, col)}
                                                                                 </TableCell>
-                                                                            );
-                                                                        })}
-                                                                    </TableRow>
-                                                                ))}
-                                                            </TableBody>
-                                                        </Table>
+                                                                            ))}
+                                                                        </TableRow>
+                                                                    </TableHead>
+                                                                    <TableBody>
+                                                                        {worklogChecklogs.map(
+                                                                            (checklog: CheckLog) => {
+                                                                                const sameAddressCount = worklogChecklogs.filter(
+                                                                                    (c: CheckLog) =>
+                                                                                        c.address_id === checklog.address_id
+                                                                                ).length;
+                                                                                const renderAddressCell =
+                                                                                    worklogChecklogs.findIndex(
+                                                                                        (c: CheckLog) =>
+                                                                                            c.address_id === checklog.address_id
+                                                                                    ) === worklogChecklogs.indexOf(checklog);
+
+                                                                                return (
+                                                                                    <TableRow key={checklog.checklog_id}>
+                                                                                        {renderAddressCell && (
+                                                                                            <TableCell
+                                                                                                rowSpan={sameAddressCount}
+                                                                                                sx={{ borderBottom: 'none' }}
+                                                                                            >
+                                                                                                {checklog.address_name}
+                                                                                            </TableCell>
+                                                                                        )}
+                                                                                        <TableCell>
+                                                                                            {checklog.checkin_time}
+                                                                                        </TableCell>
+                                                                                        <TableCell>
+                                                                                            {checklog.checkout_time}
+                                                                                        </TableCell>
+                                                                                        <TableCell>
+                                                                                            {formatHour(checklog.total_hours)}
+                                                                                        </TableCell>
+                                                                                    </TableRow>
+                                                                                );
+                                                                            }
+                                                                        )}
+                                                                    </TableBody>
+                                                                </Table>
+                                                            ) : (
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    color="text.secondary"
+                                                                    textAlign="center"
+                                                                    sx={{ py: 2 }}
+                                                                >
+                                                                    This worklog has no check logs.
+                                                                </Typography>
+                                                            );
+                                                        })()}
                                                     </Box>
-                                                </Collapse>
-                                            </TableCell>
-                                        </TableRow>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
                                     </React.Fragment>
                                 );
                             })}

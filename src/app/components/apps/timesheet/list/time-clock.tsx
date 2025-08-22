@@ -43,37 +43,22 @@ import '../../../../global.css';
 const columnHelper = createColumnHelper<TimeClock>();
 
 export type TimeClock = {
+    weekly_payable_amount: number;
+    company_id: string;
     week_range: any;
-    date: string;
-    end_time: string;
-    start_time: string;
-    job_name: string;
-    week_label: undefined;
-    manager_notes: string;
-    employee_notes: string;
-    regular_hours: string | number;
     weekly_total_hours: string | number;
-    daily_total_hours: string | number;
-    daily_total_break_hours: string | number;
-    daylog_id: string | number;
-    daylog_date: string;
-    daylog_payable_amount: string | number;
-    pricework_total_amount: string | number;
-    total_payable_amount: string | number;
+    daylog_payable_amount: number;
+    pricework_total_amount: number;
+    total_payable_amount: number;
     user_id: any;
     user_name: string;
     trade_name: string;
     type: string;
-    status?: string;
     user_thumb_image: string;
-    week_number: string;
     start_date: string;
     end_date: string;
-    start_date_month: string;
-    end_date_month: string;
     days: Record<string, any>;
     payable_total_hours: string;
-    status_text?: string;
     total_hours?: string | number;
     total_break_hours?: string | number;
 };
@@ -241,17 +226,26 @@ const TimeClock = () => {
             columnHelper.accessor('daylog_payable_amount', {
                 id: 'daylog_payable_amount',
                 header: 'Payable Amount',
-                cell: (info: any) => (info.getValue() ? `${currency}${info.getValue()}` : '-'),
+                cell: (info: any) => {
+                    const value = info.getValue();
+                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+                },
             }),
             columnHelper.accessor('pricework_total_amount', {
                 id: 'pricework_total_amount',
                 header: 'Pricework Amount',
-                cell: (info: any) => (info.getValue() ? `${currency}${info.getValue()}` : '-'),
+                cell: (info: any) => {
+                    const value = info.getValue();
+                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+                },
             }),
             columnHelper.accessor('total_payable_amount', {
                 id: 'total_payable_amount',
                 header: 'Total Payable Amount',
-                cell: (info: any) => (info.getValue() ? `${currency}${info.getValue()}` : '-'),
+                cell: (info: any) => {
+                    const value = info.getValue();
+                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+                },
             }),
         ],
         [currency]
