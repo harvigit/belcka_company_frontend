@@ -11,9 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
 import { Grid, Stack } from "@mui/system";
-import { registerType } from "@/app/(DashboardLayout)/types/auth/auth";
 import "react-phone-input-2/lib/material.css";
 import { SetStateAction, useEffect, useState } from "react";
 import PhoneInput from "react-phone-input-2";
@@ -40,7 +38,13 @@ export type ProjectList = {
   date_added: string;
 };
 
-const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onWorkUpdated?: () => void;
+}
+
+const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const [email, setEmail] = useState("");
   const [firstName, setfirstName] = useState("");
   const [lastName, setlastName] = useState("");
@@ -57,10 +61,10 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
 
   const user = session.data?.user as User & { company_id?: string | null };
   const handleRegister = async (e: React.FormEvent) => {
+    setLoading(true);
     e.preventDefault();
 
     try {
-      setLoading(true);
       const selectedIds = selectedProjects.map((p) => p.id).join(",");
 
       const payload = {
@@ -77,6 +81,7 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
       const response = await api.post("company-clients/registration", payload);
 
       if (response.data.IsSuccess === true) {
+        onWorkUpdated?.();
         toast.success(response.data.message);
         setInviteLink(response.data.info.invited_link);
         setInviteDialogOpen(true);
@@ -89,6 +94,7 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
         setSelectedProjects([]);
       }
     } catch (error: any) {
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -96,7 +102,6 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
 
   const fetchProjects = async () => {
     try {
-      setLoading(true);
       const res = await api.get(`project/get?company_id=${user.company_id}`);
       if (res.data?.info) {
         setProjects(res.data.info);
@@ -104,13 +109,44 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
     } catch (err) {
       console.error("Failed to fetch projects", err);
     }
-    setLoading(false);
   };
   useEffect(() => {
     if (user.company_id) {
       fetchProjects();
     }
   }, [user.company_id, user.id]);
+
+  const handleCopyCode = () => {
+    const codeToCopy = inviteLink ?? "";
+
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(codeToCopy)
+        .then(() => toast.success("Code copied!"))
+        .catch((err) => {
+          console.error("Clipboard API failed:", err);
+          fallbackCopyCode(codeToCopy);
+        });
+    } else {
+      fallbackCopyCode(codeToCopy);
+    }
+  };
+
+  const fallbackCopyCode = (codeToCopy: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = codeToCopy;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand("copy");
+      toast.success("Code copied!");
+    } catch (err) {
+      console.error("Fallback failed:", err);
+      toast.error("Failed to copy code!");
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  };
 
   return (
     <>
@@ -186,8 +222,8 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
                     />
                   </Box>
                 </Box>
-                <Box display={"flex"}>
-                  <Box width={"50%"}>
+                <Box display={"flex"} gap={3}>
+                  <Box className="form_inputs" mt={3}>
                     <Typography mt={3}>Select Projects</Typography>
                     <Autocomplete
                       fullWidth
@@ -214,6 +250,7 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
                       )}
                     />
                   </Box>
+                  <Box className="form_inputs" mt={3}></Box>
                 </Box>
               </Stack>
               <Button
@@ -231,7 +268,7 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
             </form>
             <Dialog
               fullWidth
-              maxWidth="md"
+              maxWidth="sm"
               open={inviteDialogOpen}
               onClose={() => setInviteDialogOpen(false)}
             >
@@ -253,12 +290,7 @@ const AuthRegister = ({ title, subtitle, subtext }: registerType) => {
                   InputProps={{
                     endAdornment: (
                       <Tooltip title="Copy to clipboard">
-                        <IconButton
-                          onClick={() => {
-                            navigator.clipboard.writeText(inviteLink);
-                            toast.success("Invite link copied!");
-                          }}
-                        >
+                        <IconButton onClick={handleCopyCode}>
                           <IconCopy />
                         </IconButton>
                       </Tooltip>
