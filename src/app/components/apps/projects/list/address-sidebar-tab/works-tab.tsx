@@ -78,9 +78,9 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     }}
                     sx={{ width: { xs: '100%', sm: '80%' }, mb: { xs: 2, sm: 0 } }}
                 />
-                <Button variant="outlined" sx={{ height: '40px' }}>
-                    <IconFilter width={18} />
-                </Button>
+                {/*<Button variant="contained" onClick={() => setOpen(true)}>*/}
+                {/*    <IconFilter width={18} />*/}
+                {/*</Button>*/}
             </Stack>
 
             {/* List of works */}

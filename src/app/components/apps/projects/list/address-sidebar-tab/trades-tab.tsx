@@ -2,13 +2,12 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-    Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, InputAdornment, MenuItem,
-    TextField, Typography, useMediaQuery
+    Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
+    IconButton, InputAdornment, TextField, Typography, useMediaQuery, Autocomplete
 } from '@mui/material';
 import { Stack } from '@mui/system';
-import {IconChevronRight, IconFilter, IconSearch, IconX} from '@tabler/icons-react';
+import { IconChevronRight, IconFilter, IconSearch, IconX } from '@tabler/icons-react';
 import api from '@/utils/axios';
-import {number} from 'yup';
 
 interface TradesTabProps {
     companyId: number;
@@ -33,7 +32,6 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
             const res = await api.get('/trade/get-checklogs', {
                 params: { project_id: projectId, address_id: addressId }
             });
-
             if (res.data?.IsSuccess) {
                 setTabData(res.data.info || []);
             } else {
@@ -43,26 +41,6 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
             setTabData([]);
         }
     };
-
-    const formatHour = (val: string | number | null | undefined): string => {
-        if (val === null || val === undefined) return '-';
-        const num = parseFloat(val.toString());
-        if (isNaN(num)) return '-';
-
-        const h = Math.floor(num);
-        const m = Math.round((num - h) * 60);
-        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    };
-
-    useEffect(() => {
-        if (addressId && projectId) {
-            fetchTradeTabData();
-        }
-
-        if (open) {
-            fetchFilterOptions();
-        }
-    }, [addressId, projectId, open]);
 
     const fetchFilterOptions = async () => {
         try {
@@ -79,15 +57,43 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
         }
     };
 
+    const formatHour = (val: string | number | null | undefined): string => {
+        if (val === null || val === undefined) return '-';
+        const num = parseFloat(val.toString());
+        if (isNaN(num)) return '-';
+        const h = Math.floor(num);
+        const m = Math.round((num - h) * 60);
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        if (addressId && projectId) {
+            fetchTradeTabData();
+        }
+        if (open) {
+            fetchFilterOptions();
+        }
+    }, [addressId, projectId, open]);
+
+    /** ✅ Apply both search and filter */
     const filteredData = useMemo(() => {
-        const search = searchUser.trim().toLowerCase();
-        if (!search) return tabData;
-        return tabData.filter(
-            (item) =>
-                item.user_name?.toLowerCase().includes(search) ||
-                item.trade_name?.toLowerCase().includes(search)
-        );
-    }, [searchUser, tabData]);
+        let data = [...tabData];
+
+        if (filters.type) {
+            data = data.filter((item) => item.trade_id?.toString() === filters.type);
+        }
+
+        if (searchUser.trim()) {
+            const search = searchUser.trim().toLowerCase();
+            data = data.filter(
+                (item) =>
+                    item.user_name?.toLowerCase().includes(search) ||
+                    item.trade_name?.toLowerCase().includes(search)
+            );
+        }
+
+        return data;
+    }, [searchUser, tabData, filters]);
 
     const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -106,7 +112,7 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
                             </InputAdornment>
                         )
                     }}
-                    sx={{ width: '80%' }}
+                    sx={{ width: '80%', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
                 <Button variant="contained" onClick={() => setOpen(true)}>
                     <IconFilter width={18} />
@@ -116,79 +122,74 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
             <Dialog
                 open={open}
                 onClose={() => setOpen(false)}
-                fullScreen={isMobile}
-                maxWidth="xs"
                 fullWidth
-                PaperProps={{
-                    sx: {
-                        borderRadius: isMobile ? 0 : 3,
-                        p: isMobile ? 2 : 4,
-                        m: isMobile ? 0 : 'auto',
-                        width: isMobile ? '100%' : 400,
-                    }
-                }}
+                maxWidth="sm"
             >
-                <DialogTitle sx={{ position: 'relative', p: 0, mb: 2 }}>
-                    <Typography variant="h6" fontWeight={600} p={2}>
-                        Filters
-                    </Typography>
+                <DialogTitle
+                    sx={{ m: 0, position: "relative", overflow: "visible" }}
+                >
+                    Filters
                     <IconButton
+                        aria-label="close"
                         onClick={() => setOpen(false)}
+                        size="large"
                         sx={{
-                            position: 'absolute',
-                            right: 8,
+                            position: "absolute",
+                            right: 12,
                             top: 8,
-                            zIndex: 1,
+                            color: (theme) => theme.palette.grey[900],
+                            backgroundColor: "transparent",
+                            zIndex: 10,
+                            width: 50,
+                            height: 50,
                         }}
                     >
-                        <IconX size={24} />
+                        <IconX size={40} style={{ width: 40, height: 40 }} />
                     </IconButton>
                 </DialogTitle>
 
-                <DialogContent sx={{ p: 0 }}>
-                    <TextField
-                        fullWidth
-                        select
-                        label="Type"
-                        value={tempFilters.type}
-                        onChange={(e) => setTempFilters({ ...tempFilters, type: e.target.value })}
-                        size="small"
-                        SelectProps={{
-                            MenuProps: {
-                                PaperProps: {
-                                    sx: {
-                                        maxHeight: 300,
-                                    },
-                                },
-                            },
-                        }}
-                        sx={{
-                            mb: 3,
-                            '& .MuiInputBase-root': {
-                                borderRadius: 2,
-                            },
-                        }}
-                    >
-                        <MenuItem value="">All</MenuItem>
-                        {filterOptions.map((opt) => (
-                            <MenuItem key={opt.id} value={opt.id}>
-                                {opt.name}
-                            </MenuItem>
-                        ))}
-                    </TextField>
+                <DialogContent>
+                    <Stack spacing={2} mt={1}>
+                        <Autocomplete
+                            options={filterOptions}
+                            getOptionLabel={(opt: any) => opt.name || ""}
+                            value={
+                                filterOptions.find(
+                                    (opt) => opt.id.toString() === tempFilters.type
+                                ) || null
+                            }
+                            onChange={(_, newValue) => {
+                                setTempFilters({
+                                    ...tempFilters,
+                                    type: newValue ? newValue.id.toString() : "",
+                                });
+                            }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Trade Type"
+                                    placeholder="Search trade type..."
+                                    fullWidth
+                                />
+                            )}
+                            clearOnEscape
+                            fullWidth
+                        />
+                    </Stack>
                 </DialogContent>
 
-                <DialogActions sx={{ px: 0, display: 'flex', justifyContent: 'space-between' }}>
+                <DialogActions>
                     <Button
                         onClick={() => {
-                            setFilters({ type: '' });
-                            setTempFilters({ type: '' });
+                            setFilters({ type: "" });
+                            setTempFilters({ type: "" });
                             setOpen(false);
                         }}
                         color="inherit"
                     >
                         Clear
                     </Button>
+
                     <Button
                         variant="contained"
                         onClick={() => {
@@ -201,19 +202,21 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
                 </DialogActions>
             </Dialog>
 
+            {/* Data List */}
             {filteredData.length > 0 ? (
                 filteredData.map((trade, idx) => (
                     <Box key={idx} mb={1}>
                         <Box
                             sx={{
                                 position: 'relative',
-                                border: '1px solid #ccc',
+                                border: '1px solid #e0e0e0',
                                 borderRadius: 2,
                                 p: 2,
                                 mb: 2,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
+                                boxShadow: '0px 2px 6px rgba(0,0,0,0.05)',
                             }}
                         >
                             <Box

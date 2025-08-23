@@ -346,7 +346,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                 size: 36,
                 enableSorting: false,
                 cell: ({ row }) => {
-                    if (row.original.rowType !== 'day' || !row.original?.rowsData) return null;
+                    if (row.original.rowType !== 'day') return null;
+
                     return (
                         <IconButton
                             size="small"
@@ -431,17 +432,17 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
             {
                 id: 'address',
                 accessorKey: 'address',
-                header: 'Address' 
+                header: 'Address'
             },
             {
                 id: 'checkin_time',
                 accessorKey: 'checkin_time',
-                header: 'Check In' 
+                header: 'Check In'
             },
-            { 
+            {
                 id: 'checkout_time',
                 accessorKey: 'checkout_time',
-                header: 'Check Out' 
+                header: 'Check Out'
             },
             {
                 id: 'total_hours',
@@ -660,12 +661,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                 <TableCell><CustomCheckbox /></TableCell>
                                                 <TableCell>{rowData.date}</TableCell>
                                                 <TableCell colSpan={table.getVisibleLeafColumns().length - 6}>
-                                                    <Table size="small">
+                                                    <Table size="small" sx={{ padding:0, tableLayout: 'fixed' }}>
                                                         <TableBody>
-                                                            <TableRow key={row.id}></TableRow>
                                                             {row.original.rowsData.map((log: any, idx: number) => (
                                                                 <TableRow key={idx}>
-                                                                    <TableCell sx={{ p: 0 }}>
+                                                                    <TableCell sx={{ width: '40px', textAlign: 'center' }}>
                                                                         <IconButton
                                                                             size="small"
                                                                             onClick={() => handleWorklogToggle(row.id, idx)}
@@ -687,11 +687,129 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                             ))}
                                                         </TableBody>
                                                     </Table>
+                                                    {/*{expandedWorklogs[row.id] !== null && expandedWorklogs[row.id] !== undefined && (*/}
+                                                    {/*    <TableRow*/}
+                                                    {/*        sx={{*/}
+                                                    {/*            '& > td': {*/}
+                                                    {/*                borderBottom: 'none',*/}
+                                                    {/*            },*/}
+                                                    {/*        }}*/}
+                                                    {/*    >*/}
+                                                    {/*        <TableCell*/}
+                                                    {/*            colSpan={table.getVisibleLeafColumns().length}*/}
+                                                    {/*            sx={{ p: 0 }}*/}
+                                                    {/*        >*/}
+                                                    {/*            <Box*/}
+                                                    {/*                sx={{*/}
+                                                    {/*                    px: 3,*/}
+                                                    {/*                    py: 2,*/}
+                                                    {/*                    backgroundColor: '#fcfcfc',*/}
+                                                    {/*                    borderTop: '1px solid #e0e0e0',*/}
+                                                    {/*                    borderBottom: '1px solid #e0e0e0',*/}
+                                                    {/*                    borderRadius: 0,*/}
+                                                    {/*                }}*/}
+                                                    {/*            >*/}
+                                                    {/*                {(() => {*/}
+                                                    {/*                    const expandedWorklogIndex = expandedWorklogs[row.id];*/}
+                                                    {/*                    const expandedWorklog = (row.original.rowsData?.[expandedWorklogIndex!]) as any;*/}
+                                                    {/*                    const worklogChecklogs = expandedWorklog?.user_checklogs || [];*/}
+                                                    
+                                                    {/*                    return worklogChecklogs.length > 0 ? (*/}
+                                                    {/*                        <Table size="small">*/}
+                                                    {/*                            <TableHead>*/}
+                                                    {/*                                <TableRow>*/}
+                                                    {/*                                    <TableCell*/}
+                                                    {/*                                        sx={{*/}
+                                                    {/*                                            backgroundColor: '#fafafa',*/}
+                                                    {/*                                            fontWeight: 600,*/}
+                                                    {/*                                        }}*/}
+                                                    {/*                                    >*/}
+                                                    {/*                                        Address*/}
+                                                    {/*                                    </TableCell>*/}
+                                                    {/*                                    <TableCell*/}
+                                                    {/*                                        sx={{*/}
+                                                    {/*                                            backgroundColor: '#fafafa',*/}
+                                                    {/*                                            fontWeight: 600,*/}
+                                                    {/*                                        }}*/}
+                                                    {/*                                    >*/}
+                                                    {/*                                        Check In*/}
+                                                    {/*                                    </TableCell>*/}
+                                                    {/*                                    <TableCell*/}
+                                                    {/*                                        sx={{*/}
+                                                    {/*                                            backgroundColor: '#fafafa',*/}
+                                                    {/*                                            fontWeight: 600,*/}
+                                                    {/*                                        }}*/}
+                                                    {/*                                    >*/}
+                                                    {/*                                        Check Out*/}
+                                                    {/*                                    </TableCell>*/}
+                                                    {/*                                    <TableCell*/}
+                                                    {/*                                        sx={{*/}
+                                                    {/*                                            backgroundColor: '#fafafa',*/}
+                                                    {/*                                            fontWeight: 600,*/}
+                                                    {/*                                        }}*/}
+                                                    {/*                                    >*/}
+                                                    {/*                                        Total Hours*/}
+                                                    {/*                                    </TableCell>*/}
+                                                    {/*                                </TableRow>*/}
+                                                    {/*                            </TableHead>*/}
+                                                    {/*                            <TableBody>*/}
+                                                    {/*                                {worklogChecklogs.map(*/}
+                                                    {/*                                    (checklog: CheckLog) => {*/}
+                                                    {/*                                        const sameAddressCount = worklogChecklogs.filter(*/}
+                                                    {/*                                            (c: CheckLog) =>*/}
+                                                    {/*                                                c.address_id === checklog.address_id*/}
+                                                    {/*                                        ).length;*/}
+                                                    {/*                                        const renderAddressCell =*/}
+                                                    {/*                                            worklogChecklogs.findIndex(*/}
+                                                    {/*                                                (c: CheckLog) =>*/}
+                                                    {/*                                                    c.address_id === checklog.address_id*/}
+                                                    {/*                                            ) === worklogChecklogs.indexOf(checklog);*/}
+                                                    
+                                                    {/*                                        return (*/}
+                                                    {/*                                            <TableRow key={checklog.checklog_id}>*/}
+                                                    {/*                                                {renderAddressCell && (*/}
+                                                    {/*                                                    <TableCell*/}
+                                                    {/*                                                        rowSpan={sameAddressCount}*/}
+                                                    {/*                                                        sx={{ borderBottom: 'none' }}*/}
+                                                    {/*                                                    >*/}
+                                                    {/*                                                        {checklog.address_name}*/}
+                                                    {/*                                                    </TableCell>*/}
+                                                    {/*                                                )}*/}
+                                                    {/*                                                <TableCell>*/}
+                                                    {/*                                                    {checklog.checkin_time}*/}
+                                                    {/*                                                </TableCell>*/}
+                                                    {/*                                                <TableCell>*/}
+                                                    {/*                                                    {checklog.checkout_time}*/}
+                                                    {/*                                                </TableCell>*/}
+                                                    {/*                                                <TableCell>*/}
+                                                    {/*                                                    {formatHour(checklog.total_hours)}*/}
+                                                    {/*                                                </TableCell>*/}
+                                                    {/*                                            </TableRow>*/}
+                                                    {/*                                        );*/}
+                                                    {/*                                    }*/}
+                                                    {/*                                )}*/}
+                                                    {/*                            </TableBody>*/}
+                                                    {/*                        </Table>*/}
+                                                    {/*                    ) : (*/}
+                                                    {/*                        <Typography*/}
+                                                    {/*                            variant="body2"*/}
+                                                    {/*                            color="text.secondary"*/}
+                                                    {/*                            textAlign="center"*/}
+                                                    {/*                            sx={{ py: 2 }}*/}
+                                                    {/*                        >*/}
+                                                    {/*                            This worklog has no check logs.*/}
+                                                    {/*                        </Typography>*/}
+                                                    {/*                    );*/}
+                                                    {/*                })()}*/}
+                                                    {/*            </Box>*/}
+                                                    {/*        </TableCell>*/}
+                                                    {/*    </TableRow>*/}
+                                                    {/*)}*/}
                                                 </TableCell>
-                                                <TableCell> {rowData.dailyTotal} </TableCell>
-                                                <TableCell> {rowData.payableAmount} </TableCell>
-                                                <TableCell> {rowData.employeeNotes} </TableCell>
-                                                <TableCell> {rowData.managerNotes} </TableCell>
+                                                <TableCell sx={{ verticalAlign: 'middle' }}> {rowData.dailyTotal} </TableCell>
+                                                <TableCell sx={{ verticalAlign: 'middle' }}> {rowData.payableAmount} </TableCell>
+                                                <TableCell sx={{ verticalAlign: 'middle' }}> {rowData.employeeNotes} </TableCell>
+                                                <TableCell sx={{ verticalAlign: 'middle' }}> {rowData.managerNotes} </TableCell>
 
                                             </> : row.getVisibleCells().map((cell) => {
                                                 const { column } = cell;
@@ -703,108 +821,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                 );
                                             })}
                                         </TableRow>
-
-                                        {expandedWorklogs[row.id] !== null && expandedWorklogs[row.id] !== undefined && (
-                                            <TableRow
-                                                sx={{
-                                                    '& > td': {
-                                                        borderBottom: 'none',
-                                                    },
-                                                }}
-                                            >
-                                                <TableCell
-                                                    colSpan={table.getVisibleLeafColumns().length}
-                                                    sx={{ p: 0 }}
-                                                >
-                                                    <Box
-                                                        sx={{
-                                                            px: 3,
-                                                            py: 2,
-                                                            backgroundColor: '#fcfcfc',
-                                                            borderTop: '1px solid #e0e0e0',
-                                                            borderBottom: '1px solid #e0e0e0',
-                                                            borderRadius: 0,
-                                                        }}
-                                                    >
-                                                        {(() => {
-                                                            const expandedWorklogIndex = expandedWorklogs[row.id];
-                                                            const expandedWorklog = (row.original.rowsData?.[expandedWorklogIndex!]) as any;
-                                                            const worklogChecklogs = expandedWorklog?.user_checklogs || [];
-
-                                                            return worklogChecklogs.length > 0 ? (
-                                                                <Table size="small">
-                                                                    <TableHead>
-                                                                        {table.getHeaderGroups().map(headerGroup => (
-                                                                            <TableRow key={headerGroup.id}>
-                                                                                {headerGroup.headers.map(header => (
-                                                                                    <TableCell
-                                                                                        key={header.id}
-                                                                                        sx={{
-                                                                                            backgroundColor: '#fafafa',
-                                                                                            fontWeight: 600,
-                                                                                        }}
-                                                                                    >
-                                                                                        {header.isPlaceholder
-                                                                                            ? null
-                                                                                            : flexRender(header.column.columnDef.header, header.getContext())}
-                                                                                    </TableCell>
-                                                                                ))}
-                                                                            </TableRow>
-                                                                        ))}
-                                                                    </TableHead>
-                                                                    <TableBody>
-                                                                        {worklogChecklogs.map(
-                                                                            (checklog: CheckLog) => {
-                                                                                const sameAddressCount = worklogChecklogs.filter(
-                                                                                    (c: CheckLog) =>
-                                                                                        c.address_id === checklog.address_id
-                                                                                ).length;
-                                                                                const renderAddressCell =
-                                                                                    worklogChecklogs.findIndex(
-                                                                                        (c: CheckLog) =>
-                                                                                            c.address_id === checklog.address_id
-                                                                                    ) === worklogChecklogs.indexOf(checklog);
-
-                                                                                return (
-                                                                                    <TableRow key={checklog.checklog_id}>
-                                                                                        {renderAddressCell && (
-                                                                                            <TableCell
-                                                                                                rowSpan={sameAddressCount}
-                                                                                                sx={{ borderBottom: 'none' }}
-                                                                                            >
-                                                                                                {checklog.address_name}
-                                                                                            </TableCell>
-                                                                                        )}
-                                                                                        <TableCell>
-                                                                                            {checklog.checkin_time}
-                                                                                        </TableCell>
-                                                                                        <TableCell>
-                                                                                            {checklog.checkout_time}
-                                                                                        </TableCell>
-                                                                                        <TableCell>
-                                                                                            {formatHour(checklog.total_hours)}
-                                                                                        </TableCell>
-                                                                                    </TableRow>
-                                                                                );
-                                                                            }
-                                                                        )}
-                                                                    </TableBody>
-                                                                </Table>
-                                                            ) : (
-                                                                <Typography
-                                                                    variant="body2"
-                                                                    color="text.secondary"
-                                                                    textAlign="center"
-                                                                    sx={{ py: 2 }}
-                                                                >
-                                                                    This worklog has no check logs.
-                                                                </Typography>
-                                                            );
-                                                        })()}
-                                                    </Box>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
                                     </React.Fragment>
                                 );
                             })}
