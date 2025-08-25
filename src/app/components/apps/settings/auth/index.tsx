@@ -7,7 +7,6 @@ import {
   DialogTitle,
   IconButton,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -19,7 +18,8 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconCopy, IconX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 export type ProjectList = {
   id: number;
@@ -284,21 +284,17 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                 </IconButton>
               </Box>
               <DialogContent sx={{ pt: 1 }}>
-                <TextField
-                  fullWidth
-                  value={inviteLink}
-                  InputProps={{
-                    endAdornment: (
-                      <Tooltip title="Copy to clipboard">
-                        <IconButton onClick={handleCopyCode}>
-                          <IconCopy />
-                        </IconButton>
-                      </Tooltip>
-                    ),
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                  variant="outlined"
-                />
+                <Box display="flex" gap={2} justifyContent="center">
+                  <TextField
+                    fullWidth
+                    value={inviteLink}
+                    variant="outlined"
+                    InputProps={{ readOnly: true }}
+                  />
+                  <Button variant="outlined" onClick={handleCopyCode}>
+                    <ContentCopyIcon />
+                  </Button>
+                </Box>
               </DialogContent>
             </Dialog>
           </Box>
