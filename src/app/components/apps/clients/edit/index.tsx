@@ -79,7 +79,6 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   // Fetch unique client
   const fetchClients = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
     try {
       const res = await api.get(
         `company-clients/get?company_id=${user.company_id}&client_id=${id}`
@@ -112,7 +111,6 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
     } catch (err) {
       console.error("Failed to fetch clients", err);
     } finally {
-      setLoading(false);
     }
   }, [id, projects]);
 
