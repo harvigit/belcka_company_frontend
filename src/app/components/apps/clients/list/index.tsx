@@ -69,6 +69,7 @@ export type ClientList = {
   expired_on: string;
   projects: string;
   company_name: string;
+  phone: number;
 };
 
 const TablePagination = () => {
@@ -199,6 +200,18 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row?.email, {
       id: "email",
       header: () => "Email",
+      cell: (info) => {
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.phone, {
+      id: "phone",
+      header: () => "Phone",
       cell: (info) => {
         return (
           <Typography variant="h5" color="textPrimary">

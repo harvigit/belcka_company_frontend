@@ -280,7 +280,7 @@ const TablePagination = () => {
       const payload = {
         code: String(otp),
         team_id: Number(teamId),
-        company_id: Number(id.company_id)
+        company_id: Number(id.company_id),
       };
       const response = await api.post(`company/add-team-to-company`, payload);
       toast.success(response.data.message);
@@ -363,7 +363,12 @@ const TablePagination = () => {
           item.is_subcontractor === true &&
           item.company_id !== item.subcontractor_company_id;
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.2 }}
+          >
             <CustomCheckbox
               checked={isChecked}
               disabled={shouldHighlight}
@@ -671,7 +676,6 @@ const TablePagination = () => {
                 onClose={close}
                 slotProps={{ list: { "aria-labelledby": "basic-button" } }}
               >
-
                 <MenuItem
                   onClick={() => {
                     setOpenOtpDialog(true);
@@ -891,18 +895,26 @@ const TablePagination = () => {
                       ))}
                     </TableHead>
                     <TableBody>
-                      {table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id}>
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
+                      {table.getRowModel().rows.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={columns.length} align="center">
+                            No records found
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>

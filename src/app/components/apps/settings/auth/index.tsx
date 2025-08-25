@@ -57,7 +57,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const [selectedProjects, setSelectedProjects] = useState<ProjectList[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   const user = session.data?.user as User & { company_id?: string | null };
   const handleRegister = async (e: React.FormEvent) => {
