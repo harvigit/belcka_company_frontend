@@ -73,6 +73,7 @@ export type ClientList = {
   projects: string;
   company_name: string;
   phone: number;
+  invite_link: string;
 };
 
 const TablePagination = () => {
@@ -227,6 +228,14 @@ const TablePagination = () => {
             {info.getValue() ?? "-"}
           </Typography>
         );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.invite_link, {
+      id: "invite_link",
+      header: () => "Invite Link",
+      cell: (info) => {
+        return <Typography variant="h5"> {info.getValue() ?? "-"} </Typography>;
       },
     }),
 
