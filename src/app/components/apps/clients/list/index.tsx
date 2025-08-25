@@ -39,6 +39,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconDotsVertical,
+  IconEdit,
   IconNotes,
   IconPlus,
   IconSearch,
@@ -56,6 +57,8 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import ArchiveClient from "../archive";
 import AuthRegister from "../../settings/auth";
+import EditClient from "@/app/components/apps/clients/edit";
+import { number } from "prop-types";
 
 dayjs.extend(customParseFormat);
 
@@ -82,7 +85,7 @@ const TablePagination = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [openActiveDialog, setOpenActiveDialog] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>();
-
+  const [selectedTaskId, setSelectedTaskId] = useState<number>(0);
   const [filters, setFilters] = useState({
     team: "",
     supervisor: "",
@@ -90,6 +93,7 @@ const TablePagination = () => {
 
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
@@ -127,6 +131,11 @@ const TablePagination = () => {
   const formatDate = (date: string | undefined) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
+
+  const handleEdit = useCallback((id: number) => {
+    setSelectedTaskId(id);
+    setOpenEdit(true);
+  }, []);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -294,33 +303,43 @@ const TablePagination = () => {
         const { expired_on } = item;
 
         return (
-          <Stack>
-            {expired_on !== "expired" ? (
-              <Tooltip title="Reactivate">
-                <Button
-                  color="primary"
-                  onClick={() => {
-                    setSelectedClientId(item.id);
-                    setOpenActiveDialog(true);
-                  }}
-                >
-                  Re-Activate
-                </Button>
+          <Box display={"flex"} gap={1}>
+            <Box>
+              <Tooltip title="Edit">
+                <IconButton onClick={() => handleEdit(item.id)} color="primary">
+                  <IconEdit size={18} />
+                </IconButton>
               </Tooltip>
-            ) : expired_on === "expired" ? (
-              <Tooltip title="Archive">
-                <Button
-                  color="error"
-                  onClick={() => {
-                    setSelectedClientId(item.id);
-                    setOpenDialog(true);
-                  }}
-                >
-                  Archive
-                </Button>
-              </Tooltip>
-            ) : null}
-          </Stack>
+            </Box>
+
+            <Box>
+              {expired_on !== "expired" ? (
+                <Tooltip title="Reactivate">
+                  <Button
+                    color="primary"
+                    onClick={() => {
+                      setSelectedClientId(item.id);
+                      setOpenActiveDialog(true);
+                    }}
+                  >
+                    Re-Activate
+                  </Button>
+                </Tooltip>
+              ) : expired_on === "expired" ? (
+                <Tooltip title="Archive">
+                  <Button
+                    color="error"
+                    onClick={() => {
+                      setSelectedClientId(item.id);
+                      setOpenDialog(true);
+                    }}
+                  >
+                    Archive
+                  </Button>
+                </Tooltip>
+              ) : null}
+            </Box>
+          </Box>
         );
       },
     }),
@@ -478,7 +497,7 @@ const TablePagination = () => {
                               paddingTop: "10px",
                               paddingBottom: "10px",
                               width:
-                                header.column.id === "actions" ? 150 : "auto",
+                                header.column.id === "actions" ? 210 : "auto",
                             }}
                           >
                             <Box
@@ -583,6 +602,39 @@ const TablePagination = () => {
                 onWorkUpdated={fetchClients}
                 open={open}
                 onClose={() => setOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* edit client */}
+          <Dialog
+            open={openEdit}
+            onClose={() => setOpenEdit(false)}
+            fullWidth
+            maxWidth="lg"
+          >
+            <DialogTitle>
+              <Typography color="GrayText" fontWeight={700}>
+                Edit Client
+              </Typography>
+              <IconButton
+                onClick={() => setOpenEdit(false)}
+                sx={{
+                  position: "absolute",
+                  right: 12,
+                  top: 8,
+                  backgroundColor: "transparent",
+                }}
+              >
+                <IconX size={40} />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <EditClient
+                id={selectedTaskId}
+                onWorkUpdated={fetchClients}
+                open={open}
+                onClose={() => setOpenEdit(false)}
               />
             </DialogContent>
           </Dialog>
