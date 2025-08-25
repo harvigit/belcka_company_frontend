@@ -58,7 +58,8 @@ import Link from "next/link";
 import ArchiveClient from "../archive";
 import AuthRegister from "../../settings/auth";
 import EditClient from "@/app/components/apps/clients/edit";
-import { number } from "prop-types";
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime);
 
 dayjs.extend(customParseFormat);
 
@@ -294,11 +295,39 @@ const TablePagination = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
-
         const value = item.expired_on;
+
+        if (!value || value === "expired") {
+          return (
+            <Typography variant="h5" color="textPrimary">
+              -
+            </Typography>
+          );
+        }
+
+        const now = dayjs();
+        const expiry = dayjs(value);
+        const diffInMs = expiry.diff(now);
+
+        if (diffInMs <= 0) {
+          return (
+            <Typography variant="h5">
+              -
+            </Typography>
+          );
+        }
+
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+        const diffInHours = Math.floor(diffInMinutes / 60);
+
+        const display =
+          diffInHours >= 1
+            ? `${diffInHours} hour${diffInHours > 1 ? "s" : ""}`
+            : `${diffInMinutes} minute${diffInMinutes > 1 ? "s" : ""}`;
+
         return (
           <Typography variant="h5" color="textPrimary">
-            {value == "expired" ? "-" : value}
+            {display}
           </Typography>
         );
       },
