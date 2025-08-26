@@ -17,13 +17,13 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
+  Tooltip,
   Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogActions,
   Menu,
   ListItemIcon,
-  Tooltip,
 } from "@mui/material";
 import {
   flexRender,
@@ -38,61 +38,70 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
-  IconFilter,
+  IconDotsVertical,
+  IconEdit,
   IconNotes,
+  IconPlus,
   IconSearch,
-  IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import Link from "next/link";
-import { IconDotsVertical } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { IconPlus } from "@tabler/icons-react";
-import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconEdit } from "@tabler/icons-react";
-import CreateLocation from "../create";
-import EditLocation from "../edit";
-import ArchiveLocation from "../archive";
+import { format } from "date-fns";
+import toast from "react-hot-toast";
+import Link from "next/link";
+import ArchiveClient from "../archive";
+import AuthRegister from "../../settings/auth";
+import EditClient from "@/app/components/apps/clients/edit";
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime);
 
 dayjs.extend(customParseFormat);
 
-export type LocationList = {
+export type ClientList = {
   id: number;
-  name: string;
-  company_name?: string;
+  company_id?: number;
+  name?: string;
+  email: string;
+  status: string;
+  invite_date: string;
+  expired_on: string;
+  projects: string;
+  company_name: string;
+  phone: number;
+  invite_link: string;
 };
 
 const TablePagination = () => {
-  const [data, setData] = useState<LocationList[]>([]);
+  const [data, setData] = useState<ClientList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [openActiveDialog, setOpenActiveDialog] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>();
+  const [selectedTaskId, setSelectedTaskId] = useState<number>(0);
+  const [filters, setFilters] = useState({
+    team: "",
+    supervisor: "",
+  });
+
+  const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+  const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
 
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
-
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
-  const [formData, setFormData] = useState<any>({
-    id: 0,
-    name: "",
-    company_id: id.company_id,
-  });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -100,109 +109,50 @@ const TablePagination = () => {
   const handleClose = () => {
     setAnchorEl(null);
   };
-
   // Fetch data
-  const fetchLocations = async () => {
+  const fetchClients = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(
-        `company-locations/get?company_id=${id.company_id}`
+        `company-clients/get?company_id=${id.company_id}`
       );
       if (res.data) {
         setData(res.data.info);
-        setLoading(false);
-        setarchiveDrawerOpen(false);
       }
     } catch (err) {
-      console.error("Failed to fetch location", err);
+      console.error("Failed to fetch clients", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [id.company_id]);
 
   useEffect(() => {
-    fetchLocations();
-  }, [api]);
+    fetchClients();
+  }, [fetchClients]);
 
-  const handleOpenCreateDrawer = () => {
-    setFormData({
-      name: "",
-      company_id: id.company_id,
-    });
-    setDrawerOpen(true);
+  const formatDate = (date: string | undefined) => {
+    return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-      };
-
-      const result = await api.post("company-locations/create", payload);
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          name: "",
-        });
-        fetchLocations();
-        setDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const editLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-      };
-
-      const result = await api.put("company-locations/update", payload);
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          name: "",
-        });
-        fetchLocations();
-        setEditDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const handleEdit = useCallback((id: number) => {
+    setSelectedTaskId(id);
+    setOpenEdit(true);
+  }, []);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      const matchesTeam = filters.team ? item.name === filters.team : true;
       const search = searchTerm.toLowerCase();
 
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search);
+        item.email?.toLocaleLowerCase().includes(search);
 
-      return matchesSearch;
+      return matchesTeam && matchesSearch;
     });
-  }, [data, searchTerm]);
+  }, [data, filters, searchTerm]);
 
-  // UseCallback to memoize these functions
-  const handleEdit = useCallback((id: number) => {
-    setSelectedTaskId(id);
-    setEditDrawerOpen(true);
-  }, []);
-
-  const columnHelper = createColumnHelper<LocationList>();
+  const columnHelper = createColumnHelper<ClientList>();
   const columns = [
     columnHelper.accessor("name", {
       id: "name",
@@ -213,10 +163,6 @@ const TablePagination = () => {
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
             }
-            // indeterminate={
-            //   selectedRowIds.size > 0 &&
-            //   selectedRowIds.size < filteredData.length
-            // }
             onChange={(e) => {
               if (e.target.checked) {
                 setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
@@ -262,19 +208,176 @@ const TablePagination = () => {
       },
     }),
 
+    columnHelper.accessor((row) => row?.email, {
+      id: "email",
+      header: () => "Email",
+      cell: (info) => {
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.phone, {
+      id: "phone",
+      header: () => "Phone",
+      cell: (info) => {
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.invite_link, {
+      id: "invite_link",
+      header: () => "Invite Link",
+      cell: (info) => {
+        return <Typography variant="h5"> {info.getValue() ?? "-"} </Typography>;
+      },
+    }),
+
+    columnHelper.accessor("status", {
+      header: () => "Status",
+      cell: (info) => {
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor(() => "projects", {
+      id: "projects",
+      header: () => (
+        <Stack direction="row" alignItems="center">
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Project
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+
+        const value = item.projects;
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {value.length <= 0 ? "-" : value}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.invite_date, {
+      id: "invite_date",
+      header: () => "Invite Date",
+      cell: (info) => {
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {formatDate(info.getValue())}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor(() => "expired_on", {
+      id: "expired_on",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Expires In
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        const value = item.expired_on;
+
+        if (!value || value === "expired") {
+          return (
+            <Typography variant="h5" color="textPrimary">
+              -
+            </Typography>
+          );
+        }
+
+        const now = dayjs();
+        const expiry = dayjs(value);
+        const diffInMs = expiry.diff(now);
+
+        if (diffInMs <= 0) {
+          return (
+            <Typography variant="h5">
+              -
+            </Typography>
+          );
+        }
+
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+        const diffInHours = Math.floor(diffInMinutes / 60);
+
+        const display =
+          diffInHours >= 1
+            ? `${diffInHours} hour${diffInHours > 1 ? "s" : ""}`
+            : `${diffInMinutes} minute${diffInMinutes > 1 ? "s" : ""}`;
+
+        return (
+          <Typography variant="h5" color="textPrimary">
+            {display}
+          </Typography>
+        );
+      },
+    }),
+
     columnHelper.display({
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
         const item = row.original;
+        const { expired_on } = item;
+
         return (
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Edit">
-              <IconButton onClick={() => handleEdit(item.id)} color="primary">
-                <IconEdit size={18} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+          <Box display={"flex"} gap={1}>
+            <Box>
+              <Tooltip title="Edit">
+                <IconButton onClick={() => handleEdit(item.id)} color="primary">
+                  <IconEdit size={18} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            <Box>
+              {expired_on !== "expired" ? (
+                <Tooltip title="Reactivate">
+                  <Button
+                    color="primary"
+                    onClick={() => {
+                      setSelectedClientId(item.id);
+                      setOpenActiveDialog(true);
+                    }}
+                  >
+                    Re-Activate
+                  </Button>
+                </Tooltip>
+              ) : expired_on === "expired" ? (
+                <Tooltip title="Archive">
+                  <Button
+                    color="error"
+                    onClick={() => {
+                      setSelectedClientId(item.id);
+                      setOpenDialog(true);
+                    }}
+                  >
+                    Archive
+                  </Button>
+                </Tooltip>
+              ) : null}
+            </Box>
+          </Box>
         );
       },
     }),
@@ -306,7 +409,7 @@ const TablePagination = () => {
     <Box>
       {/* Render the search and table */}
       <Stack
-        mt={1}
+        mt={3}
         mr={2}
         ml={2}
         mb={2}
@@ -316,7 +419,7 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            Locations ({table.getPrePaginationRowModel().rows.length}){" "}
+            CLIENTS ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
           <TextField
             id="search"
@@ -342,63 +445,15 @@ const TablePagination = () => {
           justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
         >
-          {selectedRowIds.size > 0 && (
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<IconTrash width={18} />}
-              sx={{ marginRight: "5px" }}
-              onClick={() => {
-                const selectedIds = Array.from(selectedRowIds);
-                setUsersToDelete(selectedIds);
-                setConfirmOpen(true);
-              }}
-            >
-              Archive
-            </Button>
-          )}
-          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogContent>
-              <Typography color="textSecondary">
-                Are you sure you want to archive {usersToDelete.length} location
-                {usersToDelete.length > 1 ? "s" : ""} from the locations?
-              </Typography>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => setConfirmOpen(false)}
-                variant="outlined"
-                color="primary"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  try {
-                    const payload = {
-                      location_ids: usersToDelete.join(","),
-                    };
-                    const response = await api.post(
-                      "company-locations/archive",
-                      payload
-                    );
-                    toast.success(response.data.message);
-                    setSelectedRowIds(new Set());
-                    await fetchLocations();
-                  } catch (error) {
-                    toast.error("Failed to remove works");
-                  } finally {
-                    setConfirmOpen(false);
-                  }
-                }}
-                variant="outlined"
-                color="error"
-              >
-                Archive
-              </Button>
-            </DialogActions>
-          </Dialog>
+          <Button
+            variant="outlined"
+            color="primary"
+            sx={{ display: "flex", justifyItems: "center" }}
+            onClick={() => setOpen(true)}
+          >
+            <IconPlus width={18} />
+            Add Client
+          </Button>
           <IconButton
             sx={{ margin: "0px" }}
             id="basic-button"
@@ -426,29 +481,6 @@ const TablePagination = () => {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleOpenCreateDrawer();
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconPlus width={18} />
-                </ListItemIcon>
-                Add Location
-              </Link>
-            </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
                   setarchiveDrawerOpen(true);
                 }}
                 style={{
@@ -469,34 +501,15 @@ const TablePagination = () => {
           </Menu>
         </Stack>
       </Stack>
-      <Divider />
-      {/* Add location */}
-      <CreateLocation
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        formData={formData}
-        setFormData={setFormData}
-        handleSubmit={handleSubmit}
-        isSaving={isSaving}
-      />
-
-      {/* Edit task */}
-      <EditLocation
-        open={editDrawerOpen}
-        onClose={() => setEditDrawerOpen(false)}
-        id={selectedTaskId}
-        formData={formData}
-        setFormData={setFormData}
-        EditLocation={editLocation}
-        isSaving={isSaving}
-      />
 
       {/* Archive task list */}
-      <ArchiveLocation
+      <ArchiveClient
         open={archiveDrawerOpen}
         onClose={() => setarchiveDrawerOpen(false)}
-        onWorkUpdated={fetchLocations}
+        onWorkUpdated={fetchClients}
       />
+
+      <Divider />
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
@@ -522,7 +535,7 @@ const TablePagination = () => {
                               paddingTop: "10px",
                               paddingBottom: "10px",
                               width:
-                                header.column.id === "actions" ? 120 : "auto",
+                                header.column.id === "actions" ? 210 : "auto",
                             }}
                           >
                             <Box
@@ -598,6 +611,162 @@ const TablePagination = () => {
             </TableContainer>
           </Box>
           <Divider />
+
+          {/* add client */}
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            fullWidth
+            maxWidth="lg"
+          >
+            <DialogTitle>
+              <Typography color="GrayText" fontWeight={700}>
+                Add Client
+              </Typography>
+              <IconButton
+                onClick={() => setOpen(false)}
+                sx={{
+                  position: "absolute",
+                  right: 12,
+                  top: 8,
+                  backgroundColor: "transparent",
+                }}
+              >
+                <IconX size={40} />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <AuthRegister
+                onWorkUpdated={fetchClients}
+                open={open}
+                onClose={() => setOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* edit client */}
+          <Dialog
+            open={openEdit}
+            onClose={() => setOpenEdit(false)}
+            fullWidth
+            maxWidth="lg"
+          >
+            <DialogTitle>
+              <Typography color="GrayText" fontWeight={700}>
+                Edit Client
+              </Typography>
+              <IconButton
+                onClick={() => setOpenEdit(false)}
+                sx={{
+                  position: "absolute",
+                  right: 12,
+                  top: 8,
+                  backgroundColor: "transparent",
+                }}
+              >
+                <IconX size={40} />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <EditClient
+                id={selectedTaskId}
+                onWorkUpdated={fetchClients}
+                open={open}
+                onClose={() => setOpenEdit(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* archive client */}
+          <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+            <DialogTitle>Confirm Archive</DialogTitle>
+            <DialogContent>
+              <Typography color="textSecondary">
+                Are you sure you want to archive client from company?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setOpenDialog(false)}
+                variant="outlined"
+                color="primary"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      id: selectedClientId,
+                    };
+                    const response = await api.post(
+                      "company-clients/archive",
+                      payload
+                    );
+                    toast.success(response.data.message);
+                    setSelectedClientId(null);
+                    await fetchClients();
+                  } catch (error) {
+                    toast.error("Failed to archive client");
+                  } finally {
+                    setOpenDialog(false);
+                  }
+                }}
+                variant="outlined"
+                color="error"
+              >
+                Archive
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Re-active invitation link */}
+          <Dialog
+            open={openActiveDialog}
+            onClose={() => setOpenActiveDialog(false)}
+          >
+            <DialogTitle>Confirm Re-activation</DialogTitle>
+            <DialogContent>
+              <Typography color="textSecondary">
+                Are you sure you want to Re-activation invitation for this
+                client?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setOpenActiveDialog(false)}
+                variant="outlined"
+                color="primary"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      id: selectedClientId,
+                    };
+                    const response = await api.post(
+                      "company-clients/reactivate-invitation",
+                      payload
+                    );
+                    toast.success(response.data.message);
+                    setSelectedClientId(null);
+                    await fetchClients();
+                  } catch (error) {
+                    toast.error("Failed to re-activate invitation");
+                  } finally {
+                    setOpenActiveDialog(false);
+                  }
+                }}
+                variant="outlined"
+                color="error"
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Stack
             gap={1}
             pr={3}

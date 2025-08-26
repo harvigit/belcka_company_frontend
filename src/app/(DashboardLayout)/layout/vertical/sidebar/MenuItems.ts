@@ -38,6 +38,12 @@ const Menuitems: NavGroup[] = [
   },
   {
     id: uniqueId(),
+    title: "Clients",
+    icon: IconUsers,
+    href: "/apps/clients/list",
+  },
+  {
+    id: uniqueId(),
     title: "Settings",
     icon: IconSettings,
     href: "/admin-settings",

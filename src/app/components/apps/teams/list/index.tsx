@@ -233,7 +233,9 @@ const TablePagination = () => {
             }
             onChange={(e) => {
               if (e.target.checked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.team_id)));
+                setSelectedRowIds(
+                  new Set(filteredData.map((row) => row.team_id))
+                );
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -253,7 +255,12 @@ const TablePagination = () => {
           item.company_id !== item.subcontractor_company_id;
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.2 }}
+          >
             <CustomCheckbox
               checked={isChecked}
               disabled={shouldHighlight}
@@ -746,38 +753,46 @@ const TablePagination = () => {
                   ))}
                 </TableHead>
                 <TableBody>
-                  {table.getRowModel().rows.map((row) => {
-                    const item = row.original;
-                    const isDisabled =
-                      item.is_subcontractor === true &&
-                      item.company_id !== item.subcontractor_company_id;
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map((row) => {
+                      const item = row.original;
+                      const isDisabled =
+                        item.is_subcontractor === true &&
+                        item.company_id !== item.subcontractor_company_id;
 
-                    return (
-                      <TableRow
-                        key={row.id}
-                        hover
-                        onClick={() => {
-                          if (!isDisabled) {
-                            router.push(
-                              `/apps/teams/team?team_id=${item.team_id}`
-                            );
-                          }
-                        }}
-                        sx={{
-                          cursor: isDisabled ? "default" : "pointer",
-                        }}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    );
-                  })}
+                      return (
+                        <TableRow
+                          key={row.id}
+                          hover
+                          onClick={() => {
+                            if (!isDisabled) {
+                              router.push(
+                                `/apps/teams/team?team_id=${item.team_id}`
+                              );
+                            }
+                          }}
+                          sx={{
+                            cursor: isDisabled ? "default" : "pointer",
+                          }}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} align="center">
+                        No records found
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
