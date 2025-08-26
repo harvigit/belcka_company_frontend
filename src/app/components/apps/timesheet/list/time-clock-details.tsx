@@ -470,8 +470,12 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                 header: '',
                 size: 36,
                 enableSorting: false,
-                cell: ({row}) => {
+                cell: ({ row }) => {
                     if (row.original.rowType !== 'day') return null;
+
+                    const hasLogs = row.original.userChecklogs && row.original.userChecklogs.length > 0;
+
+                    if (!hasLogs) return null;
 
                     return (
                         <IconButton
@@ -480,9 +484,9 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                             aria-label={row.getIsExpanded() ? 'Collapse' : 'Expand'}
                         >
                             {row.getIsExpanded() ? (
-                                <IconChevronDown size={18}/>
+                                <IconChevronDown size={18} />
                             ) : (
-                                <IconChevronRight size={18}/>
+                                <IconChevronRight size={18} />
                             )}
                         </IconButton>
                     );
@@ -883,18 +887,20 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                                         fontSize: '0.875rem'
                                                                     }}>{rowData.date}</TableCell>}
                                                             
-                                                                {visibleColumnConfigs.expander?.visible &&
+                                                                {visibleColumnConfigs.expander?.visible && 
                                                                     <TableCell sx={{py: 0.5, fontSize: '0.875rem'}}>
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            onClick={() => handleWorklogToggle(log.worklog_id)}
-                                                                            aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
-                                                                            {isWorklogExpanded ? (
-                                                                                <IconChevronDown size={18}/>
-                                                                            ) : (
-                                                                                <IconChevronRight size={18}/>
-                                                                            )}
-                                                                        </IconButton>
+                                                                        { log.user_checklogs.length > 0 ? (
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                onClick={() => handleWorklogToggle(log.worklog_id)}
+                                                                                aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
+                                                                                {isWorklogExpanded ? (
+                                                                                    <IconChevronDown size={18}/>
+                                                                                ) : (
+                                                                                    <IconChevronRight size={18}/>
+                                                                                )}
+                                                                            </IconButton>
+                                                                        ) : null}
                                                                     </TableCell>}
 
                                                                 {visibleColumnConfigs.shift?.visible &&
