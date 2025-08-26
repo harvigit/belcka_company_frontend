@@ -116,35 +116,50 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
     }
   }, [user.company_id, user.id]);
 
-  const handleCopyCode = () => {
+  const handleCopyCode = async () => {
     const codeToCopy = inviteLink ?? "";
 
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(codeToCopy)
-        .then(() => toast.success("Code copied!"))
-        .catch((err) => {
-          console.error("Clipboard API failed:", err);
-          fallbackCopyCode(codeToCopy);
-        });
-    } else {
+    try {
+      if (
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText === "function"
+      ) {
+        await navigator.clipboard.writeText(codeToCopy);
+        toast.success("Code copied!");
+      } else {
+        fallbackCopyCode(codeToCopy);
+      }
+    } catch (err) {
+      console.error("Clipboard API failed:", err);
       fallbackCopyCode(codeToCopy);
     }
   };
 
   const fallbackCopyCode = (codeToCopy: string) => {
-    const textArea = document.createElement("textarea");
-    textArea.value = codeToCopy;
-    document.body.appendChild(textArea);
-    textArea.select();
     try {
-      document.execCommand("copy");
-      toast.success("Code copied!");
+      const textArea = document.createElement("textarea");
+      textArea.value = codeToCopy;
+
+      textArea.style.position = "fixed";
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.opacity = "0";
+
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        toast.success("Code copied!");
+      } else {
+        toast.error("Failed to copy code!");
+      }
     } catch (err) {
       console.error("Fallback failed:", err);
       toast.error("Failed to copy code!");
-    } finally {
-      document.body.removeChild(textArea);
     }
   };
 
