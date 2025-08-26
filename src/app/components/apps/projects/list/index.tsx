@@ -48,6 +48,8 @@ import CreateProjectTask from "../tasks";
 import "react-day-picker/dist/style.css";
 import "../../../../global.css";
 import DynamicGantt from "@/app/components/DynamicGantt";
+import { IconTrash } from "@tabler/icons-react";
+import ArchiveAddress from "./archive-address-list";
 
 dayjs.extend(customParseFormat);
 
@@ -92,6 +94,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   projectId,
   onProjectUpdated,
 }) => {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const handleSelectedRows = (ids: number[]) => {
+    setSelectedIds(ids);
+  };
+
+  const [openDialog, setOpenDialog] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ status: "", sortOrder: "" });
   const [tempFilters, setTempFilters] = useState(filters);
@@ -100,9 +110,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [archiveList, setArchiveList] = useState<boolean>(false);
+
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
-  const [selectedAddressIds, setSelectedAddressIds] = useState<string[]>([]);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -161,24 +172,21 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       }));
     }
   }, [projectId]);
+  const fetchAddresses = async () => {
+    if (!projectId) return;
 
-  useEffect(() => {
-    if (projectId) {
-      const fetchAddresses = async () => {
-        setLoading(true);
-        try {
-          const res = await api.get(`address/get?project_id=${projectId}`);
-          if (res.data) {
-            setData(res.data.info);
-          }
-        } catch (err) {
-          console.error("Failed to fetch addresses", err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchAddresses();
+    try {
+      const res = await api.get(`address/get?project_id=${projectId}`);
+      if (res.data) {
+        setData(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch addresses", err);
+    } finally {
     }
+  };
+  useEffect(() => {
+    fetchAddresses();
   }, [projectId]);
 
   const handleChange = (
@@ -313,7 +321,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       >
         <Grid
           display="flex"
-          width="90%"
+          width="80%"
           gap={1}
           alignItems="center"
           justifyContent="flex-start"
@@ -377,7 +385,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           </IconButton>
         </Grid>
         <Stack
-          width="10%"
+          width="20%"
           display="flex"
           justifyContent="flex-end"
           direction={{ xs: "row", sm: "row" }}
@@ -385,6 +393,19 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           alignItems="center"
           flexWrap="wrap"
         >
+          {selectedIds.length > 0 && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconTrash width={18} />}
+              onClick={() => {
+                setOpenDialog(true);
+              }}
+            >
+              Archive
+            </Button>
+          )}
+
           <IconButton onClick={handleClick} size="small">
             <IconDotsVertical width={18} />
           </IconButton>
@@ -408,7 +429,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   setSidebar(true);
                 }}
                 style={{
-                  width: "100%",
                   color: "#11142D",
                   textTransform: "none",
                   display: "flex",
@@ -443,6 +463,29 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   <IconPlus width={18} />
                 </ListItemIcon>
                 Add Task
+              </Link>
+            </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setArchiveList(true);
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archive address list
               </Link>
             </MenuItem>
             <MenuItem onClick={handleClose}>
@@ -660,6 +703,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           projectId={projectId}
           searchTerm={searchTerm}
           filters={filters}
+          onSelectionChange={handleSelectedRows}
         />
       )}
       {value === 1 && (
@@ -691,6 +735,56 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           companyId={user.company_id ?? null}
         />
       </Drawer>
+
+      {/* archive address */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>Confirm Archive</DialogTitle>
+        <DialogContent>
+          <Typography color="textSecondary">
+            Are you sure you want to archive addresses?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            variant="outlined"
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const payload = {
+                  address_ids: selectedIds.join(" ,"),
+                };
+                const response = await api.post(
+                  "address/archive-addresses",
+                  payload
+                );
+                toast.success(response.data.message);
+                setSelectedIds([]);
+                await fetchAddresses();
+              } catch (error) {
+                toast.error("Failed to archive client");
+              } finally {
+                setOpenDialog(false);
+              }
+            }}
+            variant="outlined"
+            color="error"
+          >
+            Archive
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <ArchiveAddress
+        open={archiveList}
+        projectId={Number(projectID)}
+        onClose={() => setArchiveList(false)}
+        onWorkUpdated={fetchAddresses}
+      />
     </Box>
   );
 };
