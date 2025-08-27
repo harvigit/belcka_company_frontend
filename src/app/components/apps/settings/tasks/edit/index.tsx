@@ -154,8 +154,27 @@ const EditTask: React.FC<EditTaskProps> = ({
                 <Tabs
                   value={activeTab}
                   onChange={handleTabChange}
-                  sx={{ mt: 3 }}
                   variant="fullWidth"
+                   sx={{
+                    mt: 3,
+                    minHeight: 36,
+                    "& .MuiTabs-indicator": {
+                      backgroundColor: "#007bff",
+                      height: 2,
+                    },
+                    "& .MuiTab-root": {
+                      minHeight: 36,
+                      textTransform: "none",
+                      fontSize: 14,
+                      fontWeight: 400,
+                      color: "#555",
+                      padding: "0 8px",
+                    },
+                    "& .Mui-selected": {
+                      color: "#007bff",
+                      fontWeight: 600,
+                    },
+                  }}
                 >
                   <Tab label="Daywork" />
                   <Tab label="Pricework" />

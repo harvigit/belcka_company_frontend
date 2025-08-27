@@ -121,6 +121,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   variant="fullWidth"
                   aria-label="minimal-tabs"
                   sx={{
+                    mt: 3,
                     minHeight: 36,
                     "& .MuiTabs-indicator": {
                       backgroundColor: "#007bff",
