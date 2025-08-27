@@ -153,80 +153,85 @@ export default function NotificationSettings() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {categories.map((category) => (
-              <React.Fragment key={category.id}>
-                <TableRow sx={{ background: "#f8f9fa" }}>
-                  <TableCell colSpan={1}>
-                    <Typography fontWeight="bold">{category.name}</Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Switch
-                      checked={
-                        getCategorySwitchState(category, "is_push") === "on"
-                      }
-                      onChange={(e) =>
-                        updateNotification(
-                          category.id,
-                          "all",
-                          "is_push",
-                          e.target.checked
-                        )
-                      }
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Switch
-                      checked={isCategorySwitchOn(category, "is_feed")}
-                      onChange={(e) =>
-                        updateNotification(
-                          category.id,
-                          "all",
-                          "is_feed",
-                          e.target.checked
-                        )
-                      }
-                    />
-                  </TableCell>
-                </TableRow>
-
-                {category.notifications.map((notification) => (
-                  <TableRow key={notification.id}>
-                    <TableCell>{notification.name}</TableCell>
-                    <TableCell align="center">
-                      <Switch
-                        checked={notification.is_push}
-                        onChange={(e) =>
-                          updateNotification(
-                            category.id,
-                            notification.id,
-                            "is_push",
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Switch
-                        checked={notification.is_feed}
-                        onChange={(e) =>
-                          updateNotification(
-                            category.id,
-                            notification.id,
-                            "is_feed",
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </React.Fragment>
-            ))}
-            {categories.length == 0 && (
+            {categories.length == 0 ? (
               <>
                 <Typography m={3}>
                   No notifications are found for this company!!
                 </Typography>
+              </>
+            ) : (
+              <>
+                {categories.map((category) => (
+                  <React.Fragment key={category.id}>
+                    <TableRow sx={{ background: "#f8f9fa" }}>
+                      <TableCell colSpan={1}>
+                        <Typography fontWeight="bold">
+                          {category.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Switch
+                          checked={
+                            getCategorySwitchState(category, "is_push") === "on"
+                          }
+                          onChange={(e) =>
+                            updateNotification(
+                              category.id,
+                              "all",
+                              "is_push",
+                              e.target.checked
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Switch
+                          checked={isCategorySwitchOn(category, "is_feed")}
+                          onChange={(e) =>
+                            updateNotification(
+                              category.id,
+                              "all",
+                              "is_feed",
+                              e.target.checked
+                            )
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+
+                    {category.notifications.map((notification) => (
+                      <TableRow key={notification.id}>
+                        <TableCell>{notification.name}</TableCell>
+                        <TableCell align="center">
+                          <Switch
+                            checked={notification.is_push}
+                            onChange={(e) =>
+                              updateNotification(
+                                category.id,
+                                notification.id,
+                                "is_push",
+                                e.target.checked
+                              )
+                            }
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Switch
+                            checked={notification.is_feed}
+                            onChange={(e) =>
+                              updateNotification(
+                                category.id,
+                                notification.id,
+                                "is_feed",
+                                e.target.checked
+                              )
+                            }
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </React.Fragment>
+                ))}
               </>
             )}
           </TableBody>
