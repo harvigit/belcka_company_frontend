@@ -108,6 +108,9 @@ span.MuiTabs-indicator.mui-at3d3q{
     color: #1e4db7;
     border-radius: 7px;
     margin-bottom: 7px;
+    display: flex;
+    gap:10px;
+    justify-content: flex-start;
 }
 
 .admin-settings.Mui-selected {

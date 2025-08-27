@@ -191,18 +191,18 @@ const TablePagination = () => {
   const formatDate = (date: string | undefined) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
-  if (loading == true) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  // if (loading == true) {
+  //   return (
+  //     <Box
+  //       display="flex"
+  //       justifyContent="center"
+  //       alignItems="center"
+  //       minHeight="300px"
+  //     >
+  //       <CircularProgress />
+  //     </Box>
+  //   );
+  // }
 
   return (
     <Grid container spacing={3}>

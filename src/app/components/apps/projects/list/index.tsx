@@ -299,18 +299,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   }, [value]);
 
-  if (loading == true) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  // if (loading == true) {
+  //   return (
+  //     <Box
+  //       display="flex"
+  //       justifyContent="center"
+  //       alignItems="center"
+  //       minHeight="300px"
+  //     >
+  //       <CircularProgress />
+  //     </Box>
+  //   );
+  // }
   return (
     <Box>
       <Stack

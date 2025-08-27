@@ -5,9 +5,10 @@ import {
   Grid,
   IconButton,
   Typography,
-  Switch,
   Button,
   Autocomplete,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -68,7 +69,9 @@ const EditTask: React.FC<EditTaskProps> = ({
   };
 
   const [data, setData] = useState<TaskList[]>([]);
-  // Fetch data
+
+  const activeTab = formData.is_pricework ? 1 : 0;
+
   useEffect(() => {
     if (id) {
       const fetchTasks = async () => {
@@ -83,7 +86,7 @@ const EditTask: React.FC<EditTaskProps> = ({
               trade_id: task.trade_id || null,
               company_id: task.company_id || "",
               duration: task.duration || 0,
-              rate: task.rate || 0,
+              rate: task.is_pricework ? task.rate : 0,
               units: task.units || "",
               is_pricework: task.is_pricework || false,
               repeatable_job: task.repeatable_job || false,
@@ -96,6 +99,22 @@ const EditTask: React.FC<EditTaskProps> = ({
       fetchTasks();
     }
   }, [id]);
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    if (newValue === 0) {
+      setFormData((prev) => ({
+        ...prev,
+        repeatable_job: true,
+        is_pricework: false,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        is_pricework: true,
+        repeatable_job: false,
+      }));
+    }
+  };
 
   return (
     <Drawer
@@ -115,7 +134,6 @@ const EditTask: React.FC<EditTaskProps> = ({
       <Box display="flex" flexDirection="column" height="100%">
         <Box height={"100%"}>
           <form onSubmit={EditTask} className="address-form">
-            {" "}
             <Grid container mt={3}>
               <Grid size={{ lg: 12, xs: 12 }}>
                 <Box
@@ -131,6 +149,18 @@ const EditTask: React.FC<EditTaskProps> = ({
                     Edit Template
                   </Typography>
                 </Box>
+
+                {/* Tabs for Daywork and Pricework */}
+                <Tabs
+                  value={activeTab}
+                  onChange={handleTabChange}
+                  sx={{ mt: 3 }}
+                  variant="fullWidth"
+                >
+                  <Tab label="Daywork" />
+                  <Tab label="Pricework" />
+                </Tabs>
+
                 <Typography variant="h5" mt={2}>
                   Name
                 </Typography>
@@ -143,28 +173,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   variant="outlined"
                   fullWidth
                 />
-                <Typography
-                  variant="h5"
-                  mt={2}
-                  display={"flex"}
-                  justifyContent={"space-between"}
-                  alignItems={"center"}
-                >
-                  Make it as repeatable job?
-                  <Switch
-                    color="success"
-                    checked={formData.repeatable_job === true}
-                    onChange={(e) => {
-                      setFormData((prevData: any) => ({
-                        ...prevData,
-                        repeatable_job: e.target.checked ? true : false,
-                        is_pricework: e.target.checked
-                          ? false
-                          : prevData.is_pricework,
-                      }));
-                    }}
-                  />
-                </Typography>
+
                 <Typography variant="h5" mt={2}>
                   Units
                 </Typography>
@@ -177,6 +186,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   variant="outlined"
                   fullWidth
                 />
+
                 <Typography variant="h5" mt={2}>
                   Recommended duration
                 </Typography>
@@ -194,45 +204,30 @@ const EditTask: React.FC<EditTaskProps> = ({
                   }}
                   fullWidth
                 />
-                <Typography
-                  variant="h5"
-                  mt={2}
-                  display={"flex"}
-                  justifyContent={"space-between"}
-                  alignItems={"center"}
-                >
-                  Does it have price work?
-                  <Switch
-                    color="success"
-                    checked={formData.is_pricework === true}
-                    onChange={(e) => {
-                      setFormData((prevData: any) => ({
-                        ...prevData,
-                        is_pricework: e.target.checked ? true : false,
-                        repeatable_job: e.target.checked
-                          ? false
-                          : prevData.repeatable_job,
-                      }));
-                    }}
-                  />
-                </Typography>
-                <Typography variant="h5" mt={2}>
-                  Rate
-                </Typography>
-                <CustomTextField
-                  id="rate"
-                  name="rate"
-                  type="text"
-                  placeholder="Enter rate.."
-                  value={formData.rate === 0 ? "" : formData.rate}
-                  onChange={handleChange}
-                  inputProps={{
-                    inputMode: "numeric",
-                    pattern: "[0-9]*",
-                  }}
-                  variant="outlined"
-                  fullWidth
-                />
+
+                {/* Show rate field only if Pricework tab */}
+                {activeTab === 1 && (
+                  <>
+                    <Typography variant="h5" mt={2}>
+                      Rate
+                    </Typography>
+                    <CustomTextField
+                      id="rate"
+                      name="rate"
+                      type="text"
+                      placeholder="Enter rate.."
+                      value={formData.rate === 0 ? "" : formData.rate}
+                      onChange={handleChange}
+                      variant="outlined"
+                      inputProps={{
+                        inputMode: "numeric",
+                        pattern: "[0-9]*",
+                      }}
+                      fullWidth
+                    />
+                  </>
+                )}
+
                 <Typography variant="h5" mt={2}>
                   Select Trade
                 </Typography>
@@ -241,8 +236,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   id="trade_id"
                   options={trade}
                   value={
-                    trade.find((user) => user.id === formData.trade_id) ??
-                    null
+                    trade.find((user) => user.id === formData.trade_id) ?? null
                   }
                   onChange={(event, newValue) => {
                     setFormData({
@@ -259,16 +253,18 @@ const EditTask: React.FC<EditTaskProps> = ({
                   )}
                 />
 
-                <Typography variant="body1">
+                <Typography variant="body1" mt={1}>
                   You can choose only one trade
                 </Typography>
               </Grid>
             </Grid>
+
             <Box
               sx={{
                 display: "flex",
                 justifyContent: "space-between",
                 gap: 2,
+                mt: 3,
               }}
             >
               <Button

@@ -1,13 +1,14 @@
-import React, { ChangeEvent } from "react";
+import React from "react";
 import {
   Drawer,
   Box,
   Grid,
   IconButton,
   Typography,
-  Switch,
   Button,
   Autocomplete,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -47,6 +48,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   trade,
   isSaving,
 }) => {
+  const activeTab = formData.is_pricework ? 1 : 0;
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -60,6 +63,22 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       ...prevData,
       [name]: value,
     }));
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    if (newValue === 0) {
+      setFormData((prev) => ({
+        ...prev,
+        repeatable_job: true,
+        is_pricework: false,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        is_pricework: true,
+        repeatable_job: false,
+      }));
+    }
   };
 
   return (
@@ -80,7 +99,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       <Box display="flex" flexDirection="column" height="100%">
         <Box height={"100%"}>
           <form onSubmit={handleSubmit} className="address-form">
-            {" "}
             <Grid container mt={3}>
               <Grid size={{ lg: 12, xs: 12 }}>
                 <Box
@@ -96,6 +114,36 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     Add Template
                   </Typography>
                 </Box>
+
+                <Tabs
+                  value={activeTab}
+                  onChange={handleTabChange}
+                  variant="fullWidth"
+                  aria-label="minimal-tabs"
+                  sx={{
+                    minHeight: 36,
+                    "& .MuiTabs-indicator": {
+                      backgroundColor: "#007bff",
+                      height: 2,
+                    },
+                    "& .MuiTab-root": {
+                      minHeight: 36,
+                      textTransform: "none",
+                      fontSize: 14,
+                      fontWeight: 400,
+                      color: "#555",
+                      padding: "0 8px",
+                    },
+                    "& .Mui-selected": {
+                      color: "#007bff",
+                      fontWeight: 600,
+                    },
+                  }}
+                >
+                  <Tab label="Daywork" />
+                  <Tab label="Pricework" />
+                </Tabs>
+
                 <Typography variant="h5" mt={2}>
                   Name
                 </Typography>
@@ -108,28 +156,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   variant="outlined"
                   fullWidth
                 />
-                <Typography
-                  variant="h5"
-                  mt={2}
-                  display={"flex"}
-                  justifyContent={"space-between"}
-                  alignItems={"center"}
-                >
-                  Make it as repeatable job?
-                  <Switch
-                    color="success"
-                    checked={formData.repeatable_job === true}
-                    onChange={(e) => {
-                      setFormData((prevData: any) => ({
-                        ...prevData,
-                        repeatable_job: e.target.checked ? true : false,
-                        is_pricework: e.target.checked
-                          ? false
-                          : prevData.is_pricework,
-                      }));
-                    }}
-                  />
-                </Typography>
+
                 <Typography variant="h5" mt={2}>
                   Units
                 </Typography>
@@ -142,6 +169,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   variant="outlined"
                   fullWidth
                 />
+
                 <Typography variant="h5" mt={2}>
                   Recommended duration
                 </Typography>
@@ -159,45 +187,30 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   variant="outlined"
                   fullWidth
                 />
-                <Typography
-                  variant="h5"
-                  mt={2}
-                  display={"flex"}
-                  justifyContent={"space-between"}
-                  alignItems={"center"}
-                >
-                  Does it have price work?
-                  <Switch
-                    color="success"
-                    checked={formData.is_pricework === true}
-                    onChange={(e) => {
-                      setFormData((prevData: any) => ({
-                        ...prevData,
-                        is_pricework: e.target.checked ? true : false,
-                        repeatable_job: e.target.checked
-                          ? false
-                          : prevData.repeatable_job,
-                      }));
-                    }}
-                  />
-                </Typography>
-                <Typography variant="h5" mt={2}>
-                  Rate
-                </Typography>
-                <CustomTextField
-                  id="rate"
-                  name="rate"
-                  type="text"
-                  placeholder="Enter rate.."
-                  value={formData.rate === 0 ? "" : formData.rate}
-                  onChange={handleChange}
-                  variant="outlined"
-                  inputProps={{
-                    inputMode: "numeric",
-                    pattern: "[0-9]*",
-                  }}
-                  fullWidth
-                />
+
+                {/* Show rate input only on Pricework tab */}
+                {activeTab === 1 && (
+                  <>
+                    <Typography variant="h5" mt={2}>
+                      Rate
+                    </Typography>
+                    <CustomTextField
+                      id="rate"
+                      name="rate"
+                      type="text"
+                      placeholder="Enter rate.."
+                      value={formData.rate === 0 ? "" : formData.rate}
+                      onChange={handleChange}
+                      variant="outlined"
+                      inputProps={{
+                        inputMode: "numeric",
+                        pattern: "[0-9]*",
+                      }}
+                      fullWidth
+                    />
+                  </>
+                )}
+
                 <Typography variant="h5" mt={2}>
                   Select Trade
                 </Typography>
@@ -206,8 +219,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   id="trade_id"
                   options={trade}
                   value={
-                    trade.find((user) => user.id === formData.trade_id) ??
-                    null
+                    trade.find((user) => user.id === formData.trade_id) ?? null
                   }
                   onChange={(event, newValue) => {
                     setFormData({
@@ -223,16 +235,18 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     <CustomTextField {...params} placeholder="Trades" />
                   )}
                 />
-                <Typography variant="body1">
+                <Typography variant="body1" mt={1}>
                   You can choose only one trade
                 </Typography>
               </Grid>
             </Grid>
+
             <Box
               sx={{
                 display: "flex",
                 justifyContent: "space-between",
                 gap: 2,
+                mt: 3,
               }}
             >
               <Button

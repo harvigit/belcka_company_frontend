@@ -238,7 +238,10 @@ const AddressesList = ({
         header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
-              checked={selectedRowIds.size === currentFilteredData.length && currentFilteredData.length > 0}
+              checked={
+                selectedRowIds.size === currentFilteredData.length &&
+                currentFilteredData.length > 0
+              }
               // indeterminate={
               //   selectedRowIds.size > 0 && selectedRowIds.size < data.length
               // }
