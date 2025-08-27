@@ -9,6 +9,7 @@ import {
   Paper,
   Switch,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
@@ -133,6 +134,19 @@ export default function NotificationSettings() {
     if (allOff) return "off";
     return "indeterminate";
   };
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="300px"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
