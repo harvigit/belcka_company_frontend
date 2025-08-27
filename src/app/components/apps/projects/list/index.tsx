@@ -174,7 +174,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   }, [projectId]);
   const fetchAddresses = async () => {
     if (!projectId) return;
-
+    setLoading(true);
     try {
       const res = await api.get(`address/get?project_id=${projectId}`);
       if (res.data) {
@@ -183,6 +183,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     } catch (err) {
       console.error("Failed to fetch addresses", err);
     } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {

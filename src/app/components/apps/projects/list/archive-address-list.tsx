@@ -52,7 +52,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
 
     try {
       const res = await api.get(
-        `address/archive-list?project_id=${Number(projectId)}`
+        `address/archive-list?project_id=${projectId}`
       );
 
       if (res.data) {
