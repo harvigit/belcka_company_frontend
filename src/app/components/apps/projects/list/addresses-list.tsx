@@ -64,6 +64,7 @@ interface AddressesListProps {
     sortOrder: string;
   };
   onProjectUpdated?: () => void;
+  onSelectionChange: (ids: number[]) => void;
 }
 
 export interface TradeList {
@@ -76,6 +77,7 @@ const AddressesList = ({
   searchTerm,
   filters,
   onProjectUpdated,
+  onSelectionChange,
 }: AddressesListProps) => {
   const [data, setData] = useState<ProjectList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
@@ -85,6 +87,10 @@ const AddressesList = ({
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  useEffect(() => {
+    onSelectionChange(Array.from(selectedRowIds));
+  }, [selectedRowIds]);
 
   const openMenu = Boolean(anchorEl);
 
@@ -232,13 +238,13 @@ const AddressesList = ({
         header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
-              checked={selectedRowIds.size === data.length && data.length > 0}
+              checked={selectedRowIds.size === currentFilteredData.length && currentFilteredData.length > 0}
               // indeterminate={
               //   selectedRowIds.size > 0 && selectedRowIds.size < data.length
               // }
               onChange={(e) => {
                 if (e.target.checked) {
-                  setSelectedRowIds(new Set(data.map((_, i) => i)));
+                  setSelectedRowIds(new Set(currentFilteredData.map((row) => row.id)));
                 } else {
                   setSelectedRowIds(new Set());
                 }
@@ -252,7 +258,7 @@ const AddressesList = ({
         enableSorting: true,
         cell: ({ row }) => {
           const item = row.original;
-          const isChecked = selectedRowIds.has(row.index);
+          const isChecked = selectedRowIds.has(item.id);
 
           return (
             <Stack
@@ -265,8 +271,8 @@ const AddressesList = ({
                 checked={isChecked}
                 onChange={() => {
                   const newSelected = new Set(selectedRowIds);
-                  if (isChecked) newSelected.delete(row.index);
-                  else newSelected.add(row.index);
+                  if (isChecked) newSelected.delete(item.id);
+                  else newSelected.add(item.id);
                   setSelectedRowIds(newSelected);
                 }}
               />
