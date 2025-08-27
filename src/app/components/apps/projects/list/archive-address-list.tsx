@@ -46,23 +46,22 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
     id: number;
     action: "restore" | "delete";
   } | null>(null);
-
-  console.log(projectId,projectId)
   // Fetch data
   const fetchTeams = useCallback(async () => {
     if (!projectId) return;
-    
+
     try {
-      const res = await api.get(`address/archive-list?project_id=${projectId}`);
+      const res = await api.get(
+        `address/archive-list?project_id=${Number(projectId)}`
+      );
 
       if (res.data) {
         setData(res.data.info);
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);
-    } finally {
     }
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     fetchTeams();
@@ -82,7 +81,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
           toast.success(response.data.message);
           fetchTeams();
           onWorkUpdated?.();
-          onClose()
+          onClose();
         }
       } else if (selectedItem.action === "delete") {
         const response = await api.delete(
