@@ -146,6 +146,10 @@ const TimeClock = () => {
     const closeDetails = () => {
         setDetailsOpen(false);
         setSelectedTimeClock(null);
+       
+        if (startDate && endDate) {
+            fetchData(startDate, endDate);
+        }
     };
 
     const filteredData = useMemo(() => {

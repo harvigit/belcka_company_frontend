@@ -365,7 +365,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                 if (response.data.IsSuccess) {
                     const defaultStartDate = startDate || defaultStart;
                     const defaultEndDate = endDate || defaultEnd;
-                    fetchTimeClockData(defaultStartDate, defaultEndDate);
+                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
 
                     setSelectedRows(new Set());
                 } else {
@@ -399,16 +399,18 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
 
         setSavingWorklogs(prev => new Set(prev).add(worklogId));
         try {
-            const response = await api.post('/request-worklog-change', {
+            await api.post('/time-clock/edit-worklog', {
                 user_worklog_id: originalLog.worklog_id,
                 date: originalLog.date_added,
                 start_time: editedData.start,
                 end_time: editedData.end,
             });
+            
+            cancelEditingField(worklogId);
 
-            if (response.data.IsSuccess === false) {
-                cancelEditingField(worklogId);
-            }
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
         } catch (error) {
             console.error('Error saving worklog:', error);
         } finally {
@@ -1081,10 +1083,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                             >
                                                                 {isFirstRow && visibleColumnConfigs.select?.visible && (
                                                                     <TableCell rowSpan={rowSpan}
-                                                                               sx={{
-                                                                                   width: `${visibleColumnConfigs.select.width}px`,
-                                                                                   py: 0.5,
-                                                                               }}>
+                                                                        sx={{
+                                                                            width: `${visibleColumnConfigs.select.width}px`,
+                                                                            py: 0.5,
+                                                                        }}
+                                                                    >
                                                                         <CustomCheckbox
                                                                             checked={selectedRows.has(`row-${row.index}`)}
                                                                             onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
@@ -1210,6 +1213,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                             }
                                                         </>)
                                                 })
+                                            
                                             })() :
                                             <>
                                                 <TableRow
