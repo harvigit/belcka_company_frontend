@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
     Avatar, Box, Button, Chip, IconButton, InputAdornment,
-    TextField, Typography
+    TextField, Typography, Tooltip
 } from '@mui/material';
 import { Stack } from '@mui/system';
 import { IconChevronRight, IconFilter, IconSearch } from '@tabler/icons-react';
@@ -42,6 +42,11 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
         const h = Math.floor(num);
         const m = Math.round((num - h) * 60);
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    };
+
+    const truncateText = (text: string, maxLength: number = 12) => {
+        if (!text) return '';
+        return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
     };
 
     useEffect(() => {
@@ -103,82 +108,92 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                 },
                             }}
                         >
-                            {/* Badge for Trade */}
+                            {/* Badges Container with Flexible Positioning */}
                             <Box
                                 sx={{
                                     position: 'absolute',
                                     top: -10,
                                     left: 16,
-                                    backgroundColor: '#FF7A00',
-                                    border: '1px solid #FF7A00',
-                                    color: '#fff',
-                                    fontSize: '11px',
-                                    fontWeight: 500,
-                                    px: 1,
-                                    py: 0.2,
-                                    borderRadius: '999px',
+                                    right: 16,
+                                    display: 'flex',
+                                    gap: 1,
+                                    flexWrap: 'wrap',
+                                    zIndex: 1,
                                 }}
                             >
-                                {work.trade_name}
-                            </Box>
+                                <Tooltip title={work.trade_name || ''} arrow>
+                                    <Box
+                                        sx={{
+                                            backgroundColor: '#FF7A00',
+                                            border: '1px solid #FF7A00',
+                                            color: '#fff',
+                                            fontSize: '11px',
+                                            fontWeight: 500,
+                                            px: 1,
+                                            py: 0.2,
+                                            borderRadius: '999px',
+                                            maxWidth: '80px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {truncateText(work.trade_name)}
+                                    </Box>
+                                </Tooltip>
 
-                            {/* Badge for Duration */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    top: -10,
-                                    left: 98,
-                                    backgroundColor: '#7523D3',
-                                    border: '1px solid #7523D3',
-                                    color: '#fff',
-                                    fontSize: '11px',
-                                    fontWeight: 500,
-                                    px: 1,
-                                    py: 0.2,
-                                    borderRadius: '999px',
-                                }}
-                            >
-                                {work.duration}
-                            </Box>
-                            
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    top: -10,
-                                    left: 166,
-                                    backgroundColor: work.repeatable_job === 'Task' ? '#32A852' : '#FF008C',
-                                    border: work.repeatable_job === 'Task' ? '1px solid #32A852' : '1px solid #FF008C',
-                                    color: '#fff',
-                                    fontSize: '11px',
-                                    fontWeight: 500,
-                                    px: 1,
-                                    py: 0.2,
-                                    borderRadius: '999px',
-                                }}
-                            >
-                                {work.repeatable_job === 'Task' ? work.rate : 'Job'}
-                            </Box>
-                            
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    top: -10,
-                                    left: 213,
-                                    backgroundColor: work.status_color,
-                                    border: `1px solid ${work.status_color}`,
-                                    color: '#fff',
-                                    fontSize: '11px',
-                                    fontWeight: 500,
-                                    px: 1,
-                                    py: 0.2,
-                                    borderRadius: '999px',
-                                }}
-                            >
-                                {work.status_text}
+                                {/* Badge for Duration */}
+                                <Box
+                                    sx={{
+                                        backgroundColor: '#7523D3',
+                                        border: '1px solid #7523D3',
+                                        color: '#fff',
+                                        fontSize: '11px',
+                                        fontWeight: 500,
+                                        px: 1,
+                                        py: 0.2,
+                                        borderRadius: '999px',
+                                    }}
+                                >
+                                    {work.duration}
+                                </Box>
+
+                                {/* Badge for Task/Job Rate */}
+                                <Box
+                                    sx={{
+                                        backgroundColor: work.repeatable_job === 'Task' ? '#32A852' : '#FF008C',
+                                        border: work.repeatable_job === 'Task' ? '1px solid #32A852' : '1px solid #FF008C',
+                                        color: '#fff',
+                                        fontSize: '11px',
+                                        fontWeight: 500,
+                                        px: 1,
+                                        py: 0.2,
+                                        borderRadius: '999px',
+                                    }}
+                                >
+                                    {work.repeatable_job === 'Task' ? work.rate : 'Job'}
+                                </Box>
+
+                                {/* Badge for Status */}
+                                <Box
+                                    sx={{
+                                        backgroundColor: work.status_color,
+                                        border: `1px solid ${work.status_color}`,
+                                        color: '#fff',
+                                        fontSize: '11px',
+                                        fontWeight: 500,
+                                        px: 1,
+                                        py: 0.2,
+                                        borderRadius: '999px',
+                                    }}
+                                >
+                                    {work.status_text}
+                                </Box>
                             </Box>
 
                             {/* Work Name and Total Hours */}
-                            <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', mt: 1 }}>
                                 <Box sx={{ flexGrow: 1 }}>
                                     <Typography fontWeight="bold" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
                                         {work.name}

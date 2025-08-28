@@ -211,7 +211,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 header: () => 'Start date',
                 cell: (info) => (
                     <Typography variant="h5" color="textPrimary">
-                        {formatDate(info.getValue())}
+                        {info.getValue()}
                     </Typography>
                 ),
             }),
@@ -221,7 +221,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 header: () => 'End date',
                 cell: (info) => (
                     <Typography variant="h5" color="textPrimary">
-                        {formatDate(info.getValue())}
+                        {info.getValue()}
                     </Typography>
                 ),
             }),
