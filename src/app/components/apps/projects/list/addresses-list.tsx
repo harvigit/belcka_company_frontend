@@ -238,7 +238,10 @@ const AddressesList = ({
         header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
-              checked={selectedRowIds.size === currentFilteredData.length && currentFilteredData.length > 0}
+              checked={
+                selectedRowIds.size === currentFilteredData.length &&
+                currentFilteredData.length > 0
+              }
               // indeterminate={
               //   selectedRowIds.size > 0 && selectedRowIds.size < data.length
               // }
@@ -450,7 +453,8 @@ const AddressesList = ({
                   ))}
                 </TableHead>
                 <TableBody>
-                  {table.getRowModel().rows.length ? (
+                  {
+                  // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
@@ -463,13 +467,14 @@ const AddressesList = ({
                         ))}
                       </TableRow>
                     ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  // ) : (
+                  //   <TableRow>
+                  //     <TableCell colSpan={columns.length} align="center">
+                  //       No records found
+                  //     </TableCell>
+                  //   </TableRow>
+                  // )
+                  }
                 </TableBody>
               </Table>
             </TableContainer>

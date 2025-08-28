@@ -788,7 +788,8 @@ const TablePagination = () => {
                   ))}
                 </TableHead>
                 <TableBody>
-                  {table.getRowModel().rows.length ? (
+                  {
+                    // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
@@ -801,13 +802,14 @@ const TablePagination = () => {
                         ))}
                       </TableRow>
                     ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  )}
+                    // ) : (
+                    //   <TableRow>
+                    //     <TableCell colSpan={columns.length} align="center">
+                    //       No records found
+                    //     </TableCell>
+                    //   </TableRow>
+                    // )
+                  }
                 </TableBody>
               </Table>
             </TableContainer>

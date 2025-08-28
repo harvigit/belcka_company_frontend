@@ -382,6 +382,7 @@ const TablePagination = () => {
       },
     },
   });
+  const rows = table.getRowModel().rows;
 
   // Reset to first page when search term changes
   useEffect(() => {
@@ -753,7 +754,8 @@ const TablePagination = () => {
                   ))}
                 </TableHead>
                 <TableBody>
-                  {table.getRowModel().rows.length ? (
+                  {
+                    // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => {
                       const item = row.original;
                       const isDisabled =
@@ -786,13 +788,14 @@ const TablePagination = () => {
                         </TableRow>
                       );
                     })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  )}
+                    // ) : (
+                    //   <TableRow>
+                    //     <TableCell colSpan={columns.length} align="center">
+                    //       No records found
+                    //     </TableCell>
+                    //   </TableRow>
+                    // )
+                  }
                 </TableBody>
               </Table>
             </TableContainer>
