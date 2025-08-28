@@ -75,6 +75,7 @@ type Timesheet = {
 type TimesheetResponse = {
     IsSuccess: boolean;
     info: Timesheet[];
+    currency: string;
 };
 
 type FilterState = {
@@ -101,6 +102,7 @@ const TimesheetList = () => {
 
     const [data, setData] = useState<Timesheet[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [currency, setCurrency] = useState<string>('');
     const [open, setOpen] = useState<boolean>(false);
     const [filters, setFilters] = useState<FilterState>({type: ''});
     const [tempFilters, setTempFilters] = useState<FilterState>(filters);
@@ -129,6 +131,7 @@ const TimesheetList = () => {
 
             if (response.data.IsSuccess) {
                 setData(response.data.info);
+                setCurrency(response.data.currency);
             }
         } catch (error) {
             console.error('Error fetching timesheet data');
@@ -291,7 +294,9 @@ const TimesheetList = () => {
                     cell: (info: any) => {
                         const value = info.getValue();
                         const row = info.row.original;
+
                         if (value === '-' || !value) return <div>-</div>;
+
                         return (
                             <div
                                 onClick={() => {
@@ -301,7 +306,10 @@ const TimesheetList = () => {
                                 }}
                                 style={{cursor: 'pointer', color: `${value.color}`}}
                             >
-                                {formatHour(value.hours)}
+                                {row.type === 'P'
+                                    ? `${currency}${value.pricework_amount || 0}`
+                                    : formatHour(value.hours)
+                                }
                             </div>
                         );
                     },
@@ -309,7 +317,18 @@ const TimesheetList = () => {
             ),
             columnHelper.accessor('payable_total_hours', {
                 header: 'Payable Hours',
-                cell: (info: any) => formatHour(info.getValue()) || '-',
+                cell: (info: any) => {
+                    const row = info.row.original;
+                    return row.type === 'T' ? formatHour(info.getValue()) || '-' : '-';
+                },
+            }),
+            
+            columnHelper.accessor('total_pricework_amount', {
+                header: 'Pricework Amount',
+                cell: (info: any) => {
+                    const row = info.row.original;
+                    return row.type === 'P' ? `${currency}${info.getValue() || 0}` : '-';
+                },
             }),
             columnHelper.accessor('status_text', {
                 header: 'Status',
@@ -322,7 +341,7 @@ const TimesheetList = () => {
                 },
             }),
         ],
-        []
+        [currency]
     );
 
     const table = useReactTable({

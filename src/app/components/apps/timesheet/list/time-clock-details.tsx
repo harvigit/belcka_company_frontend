@@ -66,6 +66,7 @@ type DailyBreakdown = {
 
     date?: string;
     shift?: string;
+    project?: string;
     typeOfWork?: string;
     start?: string;
     end?: string;
@@ -106,6 +107,7 @@ type TimeClockDetailResponse = {
     info: TimeClock[];
     type_of_works: any[];
     shifts: any[];
+    projects: any[];
     total_hours?: number;
     total_break_hours?: number;
     payable_hours?: number;
@@ -493,7 +495,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                             timesheet_id: day.timesheet_id,
                             date_added: log.date_added,
                             worklog_id: log.worklog_id,
-                            shift: log.shift_name || 'Shift',
+                            shift: log.shift_name || '--',
+                            project: log.project_name || '--',
                             start: sanitizeDateTime(log.start),
                             end: sanitizeDateTime(log.end),
                             priceWorkAmount: `${currency}${log.pricework_amount || 0}`,
@@ -529,6 +532,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                         date: day.date ?? '--',
                         timesheet_id: day.timesheet_id ?? '--',
                         shift: '--',
+                        project: '--',
                         start: '--',
                         end: '--',
                         priceWorkAmount: '--',
@@ -558,6 +562,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                     date: day.date ?? '--',
                     timesheet_id: day.timesheet_id ?? null,
                     shift: '--',
+                    project: '--',
                     start: '--',
                     end: '--',
                     priceWorkAmount: '--',
@@ -674,6 +679,13 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                 },
             },
             {
+                id: 'project',
+                accessorKey: 'project',
+                header: 'Project',
+                cell: ({row}) =>
+                    row.original.rowType === 'day' ? row.original.project : null,
+            },
+            {
                 id: 'shift',
                 accessorKey: 'shift',
                 header: 'Shift',
@@ -771,7 +783,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
         if (isEditing && !isLocked) {
             return (
                 <Box sx={{
-                    border: '1px solid #1976d2',
+                    border: '1px solid #e0e0e0',
                     borderRadius: '4px',
                     p: 0.5,
                     minHeight: '24px',
@@ -827,9 +839,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                     display: 'flex',
                     alignItems: 'center',
                     opacity: isLocked ? 0.6 : 1,
-                    backgroundColor: isLocked ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
                     '&:hover': !isLocked ? {
-                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
                         borderRadius: '4px',
                     } : {},
                 }}
@@ -1120,11 +1130,17 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                                         ) : null}
                                                                     </TableCell>}
 
+                                                                {visibleColumnConfigs.project?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                    }}>{log.project_name || '--'}</TableCell>}
+                                                                
                                                                 {visibleColumnConfigs.shift?.visible &&
                                                                     <TableCell sx={{
                                                                         py: 0.5,
                                                                         fontSize: '0.875rem',
-                                                                    }}>{log.shift_name || 'Shift'}</TableCell>}
+                                                                    }}>{log.shift_name || '--'}</TableCell>}
 
                                                                 {visibleColumnConfigs.start?.visible && (
                                                                     <TableCell sx={{
