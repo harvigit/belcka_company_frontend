@@ -110,7 +110,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
 
   const handleCopyCode = () => {
     const codeToCopy = inviteLink ?? "";
-
+    console.log(inviteLink,'inviteLink')
     if (navigator.clipboard) {
       navigator.clipboard
         .writeText(codeToCopy)
