@@ -55,12 +55,12 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     }
   };
 
-  const handleCopyCode = () => {
-    const codeToCopy = code ?? ''; 
-  
+  const handleCopyCode = (code: string) => {
+    const codeToCopy = code ?? "";
+
     if (navigator.clipboard) {
       navigator.clipboard
-        .writeText(codeToCopy) 
+        .writeText(codeToCopy)
         .then(() => toast.success("Code copied!"))
         .catch((err) => {
           console.error("Clipboard API failed:", err);
@@ -70,14 +70,14 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       fallbackCopyCode(codeToCopy);
     }
   };
-  
+
   const fallbackCopyCode = (codeToCopy: string) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = codeToCopy; 
+    const textArea = document.createElement("textarea");
+    textArea.value = codeToCopy;
     document.body.appendChild(textArea);
     textArea.select();
     try {
-      document.execCommand('copy');
+      document.execCommand("copy");
       toast.success("Code copied!");
     } catch (err) {
       console.error("Fallback failed:", err);
@@ -183,7 +183,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
               variant="outlined"
               startIcon={<ContentCopyIcon />}
               sx={{ mt: 2 }}
-              onClick={handleCopyCode}
+              onClick={() => handleCopyCode(code)}
             >
               Copy Code
             </Button>

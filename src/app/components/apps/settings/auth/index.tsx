@@ -127,7 +127,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const fallbackCopyCode = (codeToCopy: string) => {
     const textArea = document.createElement("textarea");
     textArea.value = codeToCopy;
-    textArea.style.position = "fixed"; 
+    textArea.style.position = "fixed";
     textArea.style.left = "-9999px";
     document.body.appendChild(textArea);
     textArea.focus();
@@ -274,9 +274,8 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                     variant="outlined"
                     onClick={() => handleCopyCode(inviteLink)}
                   >
-                    Copy Code
+                    <ContentCopyIcon />
                   </Button>
-                  <ContentCopyIcon />
                 </Box>
               </DialogContent>
             </Dialog>
