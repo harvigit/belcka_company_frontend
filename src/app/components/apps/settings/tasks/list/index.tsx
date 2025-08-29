@@ -65,6 +65,7 @@ dayjs.extend(customParseFormat);
 export interface TradeList {
   id: number;
   name: string;
+  trade_id: number;
 }
 
 export type TaskList = {
