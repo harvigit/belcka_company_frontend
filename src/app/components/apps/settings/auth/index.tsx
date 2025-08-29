@@ -110,8 +110,9 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
 
   const handleCopyCode = () => {
     const codeToCopy = inviteLink ?? "";
-    console.log(inviteLink,'inviteLink')
-    if (navigator.clipboard) {
+    console.log(inviteLink, "inviteLink");
+
+    if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard
         .writeText(codeToCopy)
         .then(() => toast.success("Code copied!"))
@@ -127,11 +128,19 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const fallbackCopyCode = (codeToCopy: string) => {
     const textArea = document.createElement("textarea");
     textArea.value = codeToCopy;
+    textArea.style.position = "fixed"; // avoid scrolling
+    textArea.style.left = "-9999px";
     document.body.appendChild(textArea);
+    textArea.focus();
     textArea.select();
+
     try {
-      document.execCommand("copy");
-      toast.success("Code copied!");
+      const success = document.execCommand("copy");
+      if (success) {
+        toast.success("Code copied!");
+      } else {
+        toast.error("Failed to copy code!");
+      }
     } catch (err) {
       console.error("Fallback failed:", err);
       toast.error("Failed to copy code!");
