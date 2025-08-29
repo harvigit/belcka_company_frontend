@@ -273,7 +273,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   id="trade_id"
                   options={trade}
                   value={
-                    trade.find((trade) => trade.trade_id === formData.trade_id) ?? null
+                    trade.find((trade) => trade.id === formData.trade_id) ?? null
                   }
                   onChange={(event, newValue) => {
                     setFormData({
