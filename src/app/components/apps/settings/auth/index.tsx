@@ -108,9 +108,8 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
     }
   }, [user.company_id, user.id]);
 
-  const handleCopyCode = () => {
-    const codeToCopy = inviteLink ?? "";
-    console.log(inviteLink, "inviteLink");
+  const handleCopyCode = (invite_link: string | null) => {
+    const codeToCopy = invite_link ?? "";
 
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard
@@ -128,7 +127,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const fallbackCopyCode = (codeToCopy: string) => {
     const textArea = document.createElement("textarea");
     textArea.value = codeToCopy;
-    textArea.style.position = "fixed"; // avoid scrolling
+    textArea.style.position = "fixed"; 
     textArea.style.left = "-9999px";
     document.body.appendChild(textArea);
     textArea.focus();
@@ -271,9 +270,13 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                     variant="outlined"
                     InputProps={{ readOnly: true }}
                   />
-                  <Button variant="outlined" onClick={handleCopyCode}>
-                    <ContentCopyIcon />
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleCopyCode(inviteLink)}
+                  >
+                    Copy Code
                   </Button>
+                  <ContentCopyIcon />
                 </Box>
               </DialogContent>
             </Dialog>
