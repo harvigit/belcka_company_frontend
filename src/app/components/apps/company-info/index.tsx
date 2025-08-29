@@ -1,27 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import {
-  Box,
-  Divider,
-  Stack,
-  TextField,
-  InputAdornment,
-  CircularProgress,
-  CardContent,
-  Typography,
-} from "@mui/material";
-import { IconSearch } from "@tabler/icons-react";
+import { Box, CircularProgress } from "@mui/material";
 import { useRouter } from "next/navigation";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { Grid } from "@mui/system";
-import BlankCard from "../../shared/BlankCard";
-import CustomFormLabel from "../../forms/theme-elements/CustomFormLabel";
-import CustomTextField from "../../forms/theme-elements/CustomTextField";
-import CustomSelect from "../../forms/theme-elements/CustomSelect";
 
 dayjs.extend(customParseFormat);
 
@@ -65,8 +50,6 @@ const TablePagination = () => {
     fetchCompany();
   }, [api]);
 
-  console.log(data, "datadata");
-
   if (loading) {
     return (
       <Box
@@ -80,11 +63,7 @@ const TablePagination = () => {
     );
   }
 
-  return (
-    <Box>
-      {/* Render the search and table */}
-    </Box>
-  );
+  return <Box>{/* Render the search and table */}</Box>;
 };
 
 export default TablePagination;

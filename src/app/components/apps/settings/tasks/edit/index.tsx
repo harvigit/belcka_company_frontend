@@ -18,6 +18,7 @@ import { TaskList } from "../list";
 interface Trade {
   id: string | number | null;
   name: string;
+  trade_id: number;
 }
 
 interface FormData {
@@ -87,7 +88,7 @@ const EditTask: React.FC<EditTaskProps> = ({
               company_id: task.company_id || "",
               duration: task.duration || 0,
               rate: task.is_pricework ? task.rate : 0,
-              units: task.units || "",
+              units: task.is_pricework  ? task.units : null,
               is_pricework: task.is_pricework || false,
               repeatable_job: task.repeatable_job || false,
             });
@@ -150,34 +151,48 @@ const EditTask: React.FC<EditTaskProps> = ({
                   </Typography>
                 </Box>
 
-                {/* Tabs for Daywork and Pricework */}
                 <Tabs
+                  className="address-sidebar-tabs"
                   value={activeTab}
                   onChange={handleTabChange}
+                  aria-label="Sidebar Tabs"
                   variant="fullWidth"
-                   sx={{
-                    mt: 3,
-                    minHeight: 36,
-                    "& .MuiTabs-indicator": {
-                      backgroundColor: "#007bff",
-                      height: 2,
-                    },
-                    "& .MuiTab-root": {
-                      minHeight: 36,
-                      textTransform: "none",
-                      fontSize: 14,
-                      fontWeight: 400,
-                      color: "#555",
-                      padding: "0 8px",
-                    },
-                    "& .Mui-selected": {
-                      color: "#007bff",
-                      fontWeight: 600,
-                    },
+                  TabIndicatorProps={{ style: { display: "none" } }}
+                  sx={{
+                    backgroundColor: "#E0E0E0",
+                    borderRadius: "12px",
+                    minHeight: "40px",
+                    padding: "4px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 2,
+                    mt: 1,
                   }}
                 >
-                  <Tab label="Daywork" />
-                  <Tab label="Pricework" />
+                  {["Daywork", "Pricework"].map((label, index) => (
+                    <Tab
+                      key={label}
+                      label={label}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: "10px",
+                        minHeight: "32px",
+                        minWidth: "auto",
+                        px: 3,
+                        py: 0.5,
+                        fontSize: "14px",
+                        fontWeight: activeTab === index ? "600" : "400",
+                        color: activeTab === index ? "#000 !important" : "#888",
+                        backgroundColor:
+                          activeTab === index ? "#fff" : "transparent",
+                        boxShadow:
+                          activeTab === index
+                            ? "0px 2px 4px rgba(0,0,0,0.1)"
+                            : "none",
+                        transition: "all 0.3s ease",
+                      }}
+                    />
+                  ))}
                 </Tabs>
 
                 <Typography variant="h5" mt={2}>
@@ -193,19 +208,22 @@ const EditTask: React.FC<EditTaskProps> = ({
                   fullWidth
                 />
 
-                <Typography variant="h5" mt={2}>
-                  Units
-                </Typography>
-                <CustomTextField
-                  id="units"
-                  name="units"
-                  placeholder="Enter units.."
-                  value={formData.units}
-                  onChange={handleChange}
-                  variant="outlined"
-                  fullWidth
-                />
-
+                {activeTab === 1 && (
+                  <>
+                    <Typography variant="h5" mt={2}>
+                      Units
+                    </Typography>
+                    <CustomTextField
+                      id="units"
+                      name="units"
+                      placeholder="Enter units.."
+                      value={formData.units}
+                      onChange={handleChange}
+                      variant="outlined"
+                      fullWidth
+                    />
+                  </>
+                )}
                 <Typography variant="h5" mt={2}>
                   Recommended duration
                 </Typography>
@@ -255,7 +273,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   id="trade_id"
                   options={trade}
                   value={
-                    trade.find((user) => user.id === formData.trade_id) ?? null
+                    trade.find((trade) => trade.trade_id === formData.trade_id) ?? null
                   }
                   onChange={(event, newValue) => {
                     setFormData({

@@ -65,6 +65,9 @@ interface AddressesListProps {
   };
   onProjectUpdated?: () => void;
   onSelectionChange: (ids: number[]) => void;
+  processedIds: number[];
+  // onParentActionPerformed?: (fetchAddresses: Function) => void;
+  shouldRefresh: boolean;
 }
 
 export interface TradeList {
@@ -78,6 +81,8 @@ const AddressesList = ({
   filters,
   onProjectUpdated,
   onSelectionChange,
+  processedIds,
+  shouldRefresh,
 }: AddressesListProps) => {
   const [data, setData] = useState<ProjectList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
@@ -136,24 +141,24 @@ const AddressesList = ({
     setDrawerOpen(true);
   };
 
-  useEffect(() => {
-    if (projectId) {
-      const fetchAddresses = async () => {
-        setLoading(true);
-        try {
-          const res = await api.get(`address/get?project_id=${projectId}`);
-          if (res.data) {
-            setData(res.data.info);
-          }
-        } catch (err) {
-          console.error("Failed to fetch addresses", err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchAddresses();
+  const fetchAddresses = async () => {
+    if (!projectId) return;
+    setLoading(true);
+    try {
+      const res = await api.get(`address/get?project_id=${projectId}`);
+      if (res.data) {
+        setData(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch addresses", err);
+    } finally {
+      setLoading(false);
     }
-  }, [projectId]);
+  };
+  
+  useEffect(() => {
+    fetchAddresses();
+  }, [projectId, processedIds, shouldRefresh]);
 
   useEffect(() => {
     if (sidebarData !== null) {
@@ -231,6 +236,16 @@ const AddressesList = ({
     setValue(newValue);
   };
 
+  useEffect(() => {
+    // remove processed IDs from selectedRowIds
+    setSelectedRowIds((prev) => {
+      const updated = new Set(
+        [...prev].filter((id) => !processedIds.includes(id))
+      );
+      return updated;
+    });
+  }, [processedIds]);
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
@@ -247,7 +262,9 @@ const AddressesList = ({
               // }
               onChange={(e) => {
                 if (e.target.checked) {
-                  setSelectedRowIds(new Set(currentFilteredData.map((row) => row.id)));
+                  setSelectedRowIds(
+                    new Set(currentFilteredData.map((row) => row.id))
+                  );
                 } else {
                   setSelectedRowIds(new Set());
                 }
@@ -262,7 +279,7 @@ const AddressesList = ({
         cell: ({ row }) => {
           const item = row.original;
           const isChecked = selectedRowIds.has(item.id);
-
+          const isProcessed = processedIds.includes(item.id);
           return (
             <Stack
               direction="row"
@@ -273,12 +290,15 @@ const AddressesList = ({
               <CustomCheckbox
                 checked={isChecked}
                 onChange={() => {
+                  if (isProcessed) return;
+
                   const newSelected = new Set(selectedRowIds);
                   if (isChecked) newSelected.delete(item.id);
                   else newSelected.add(item.id);
                   setSelectedRowIds(newSelected);
                 }}
               />
+
               <Typography
                 variant="h5"
                 onClick={() => {
@@ -366,18 +386,18 @@ const AddressesList = ({
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <Box
+  //       display="flex"
+  //       justifyContent="center"
+  //       alignItems="center"
+  //       minHeight="300px"
+  //     >
+  //       <CircularProgress />
+  //     </Box>
+  //   );
+  // }
 
   return (
     <Box>
@@ -454,7 +474,7 @@ const AddressesList = ({
                 </TableHead>
                 <TableBody>
                   {
-                  // table.getRowModel().rows.length ? (
+                    // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
@@ -467,13 +487,13 @@ const AddressesList = ({
                         ))}
                       </TableRow>
                     ))
-                  // ) : (
-                  //   <TableRow>
-                  //     <TableCell colSpan={columns.length} align="center">
-                  //       No records found
-                  //     </TableCell>
-                  //   </TableRow>
-                  // )
+                    // ) : (
+                    //   <TableRow>
+                    //     <TableCell colSpan={columns.length} align="center">
+                    //       No records found
+                    //     </TableCell>
+                    //   </TableRow>
+                    // )
                   }
                 </TableBody>
               </Table>

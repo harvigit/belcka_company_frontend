@@ -151,6 +151,27 @@ const TablePagination = () => {
     fetchTasks();
   }, [api]);
 
+  // Fetch data
+  const fetchArchiveAddress = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(
+        `type-works/archive-works-list?company_id=${id.company_id}`
+      );
+      // if (res.data?.info) {
+      //   setData(res.data.info);
+      // }
+    } catch (err) {
+      console.error("Failed to fetch archive addresses", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchArchiveAddress();
+  }, []);
+
   useEffect(() => {
     const fetchTrades = async () => {
       try {
@@ -185,6 +206,7 @@ const TablePagination = () => {
     try {
       const payload = {
         ...formData,
+        units: formData.is_pricework ? formData.units : null,
         duration: Number(formData.duration),
         rate: Number(formData.rate),
       };
@@ -598,6 +620,7 @@ const TablePagination = () => {
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
                     await fetchTasks();
+                    await fetchArchiveAddress();
                   } catch (error) {
                     toast.error("Failed to remove works");
                   } finally {
