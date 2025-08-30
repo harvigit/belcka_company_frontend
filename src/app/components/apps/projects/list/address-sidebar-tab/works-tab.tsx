@@ -108,7 +108,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                 },
                             }}
                         >
-                            {/* Badges Container with Flexible Positioning */}
                             <Box
                                 sx={{
                                     position: 'absolute',
@@ -143,7 +142,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                     </Box>
                                 </Tooltip>
 
-                                {/* Badge for Duration */}
                                 <Box
                                     sx={{
                                         backgroundColor: '#7523D3',
@@ -159,7 +157,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                     {work.duration}
                                 </Box>
 
-                                {/* Badge for Task/Job Rate */}
                                 <Box
                                     sx={{
                                         backgroundColor: work.repeatable_job === 'Task' ? '#32A852' : '#FF008C',
@@ -175,7 +172,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                     {work.repeatable_job === 'Task' ? work.rate : 'Job'}
                                 </Box>
 
-                                {/* Badge for Status */}
                                 <Box
                                     sx={{
                                         backgroundColor: work.status_color,
@@ -192,7 +188,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                 </Box>
                             </Box>
 
-                            {/* Work Name and Total Hours */}
                             <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', mt: 1 }}>
                                 <Box sx={{ flexGrow: 1 }}>
                                     <Typography fontWeight="bold" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>

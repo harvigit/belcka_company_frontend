@@ -143,10 +143,20 @@ const TimeClock = () => {
         setDetailsOpen(true);
     };
 
+    const handleUserChange = (newUser: TimeClock) => {
+        // Update the selected user with the same date range
+        const updatedUser = {
+            ...newUser,
+            start_date: selectedTimeClock?.start_date || startDate?.toISOString() || '',
+            end_date: selectedTimeClock?.end_date || endDate?.toISOString() || '',
+        };
+        setSelectedTimeClock(updatedUser);
+    };
+
     const closeDetails = () => {
         setDetailsOpen(false);
         setSelectedTimeClock(null);
-       
+
         if (startDate && endDate) {
             fetchData(startDate, endDate);
         }
@@ -470,7 +480,7 @@ const TimeClock = () => {
                 PaperProps={{
                     sx: {
                         borderRadius: 0,
-                        height: '95vh',
+                        height: '90vh',
                         boxShadow: 'none',
                         borderTopLeftRadius: 12,
                         borderTopRightRadius: 12,
@@ -483,7 +493,9 @@ const TimeClock = () => {
                     timeClock={selectedTimeClock}
                     user_id={selectedTimeClock?.user_id}
                     currency={currency}
+                    allUsers={filteredData} // Pass all users for navigation
                     onClose={closeDetails}
+                    onUserChange={handleUserChange} // Pass the user change handler
                 />
             </Drawer>
         </Box>

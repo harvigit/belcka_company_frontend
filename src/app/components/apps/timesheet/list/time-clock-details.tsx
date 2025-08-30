@@ -29,6 +29,7 @@ import {
     IconLock,
     IconLockOpen,
     IconTrash,
+    IconChevronLeft,
 } from '@tabler/icons-react';
 import {
     useReactTable,
@@ -99,7 +100,9 @@ interface TimeClockDetailsProps {
     timeClock: TimeClock | null;
     user_id: any;
     currency: string;
+    allUsers: TimeClock[]; // Add this prop to get all users list
     onClose: () => void;
+    onUserChange?: (user: TimeClock) => void; // Add callback for user change
 }
 
 type TimeClockDetailResponse = {
@@ -143,7 +146,15 @@ interface CheckLogRowsProps {
     isMultiRow?: boolean;
 }
 
-const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, user_id, currency, onClose}) => {
+const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
+                                                               open,
+                                                               timeClock,
+                                                               user_id,
+                                                               currency,
+                                                               allUsers = [], // Default to empty array
+                                                               onClose,
+                                                               onUserChange
+                                                           }) => {
     const today = new Date();
 
     const defaultStart = new Date(today);
@@ -165,6 +176,29 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
 
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
+
+    // Get current user index and navigation functions
+    const currentUserIndex = useMemo(() => {
+        if (!timeClock || !allUsers.length) return -1;
+        return allUsers.findIndex(user => user.user_id === timeClock.user_id);
+    }, [timeClock, allUsers]);
+
+    const canGoToPrevious = currentUserIndex > 0;
+    const canGoToNext = currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1;
+
+    const handlePreviousUser = () => {
+        if (canGoToPrevious && onUserChange) {
+            const previousUser = allUsers[currentUserIndex - 1];
+            onUserChange(previousUser);
+        }
+    };
+
+    const handleNextUser = () => {
+        if (canGoToNext && onUserChange) {
+            const nextUser = allUsers[currentUserIndex + 1];
+            onUserChange(nextUser);
+        }
+    };
 
     const handleWorklogToggle = (worklogId: string) => {
         setExpandedWorklogsIds(prevIds => {
@@ -220,6 +254,17 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
 
     const isRecordUnlocked = (log: any): boolean => {
         return log?.status === 7 || log?.status === '7' || (log?.status && log.status !== 6 && log.status !== '6');
+    };
+
+    // Helper function to check if a day has valid worklog data
+    const hasValidWorklogData = (row: DailyBreakdown): boolean => {
+        return !!(row.worklog_id || row.timesheet_light_id) &&
+            row.start !== '--' &&
+            row.end !== '--' &&
+            row.start !== null &&
+            row.end !== null &&
+            row.start !== undefined &&
+            row.end !== undefined;
     };
 
     const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -407,7 +452,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                 start_time: editedData.start,
                 end_time: editedData.end,
             });
-            
+
             cancelEditingField(worklogId);
 
             const defaultStartDate = startDate || defaultStart;
@@ -879,48 +924,129 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
 
     return (
         <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', position: 'relative'}}>
-            {/* Header */}
             <Box
                 sx={{
                     p: 2,
                     borderBottom: '1px solid #e0e0e0',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                    gap: 2,
                 }}
             >
-                <Stack direction="row" alignItems="center" spacing={2}>
-                    <Avatar
-                        src={timeClock.user_thumb_image}
-                        alt={timeClock.user_name}
-                        sx={{width: 40, height: 40}}
-                    />
-                    <Box>
-                        <Typography variant="h6" fontWeight={600}>
-                            {timeClock.user_name}
-                        </Typography>
-                        <Typography color="textSecondary" variant="body2">
-                            {timeClock.trade_name}
-                        </Typography>
-                    </Box>
-
-                    <Stack
-                        mt={3}
-                        mx={2}
-                        mb={3}
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={{ xs: 1.5, sm: 2 }}
-                        alignItems="center"
-                        flexWrap="wrap"
+                {/* Top Navigation Row */}
+                {allUsers.length > 1 && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            mb: 1,
+                        }}
                     >
-                        <DateRangePickerBox from={startDate} to={endDate} onChange={handleDateRangeChange} />
-                    </Stack>
-                </Stack>
-                <IconButton onClick={onClose} size="small">
-                    <IconX/>
-                </IconButton>
-            </Box>
+                        {canGoToPrevious ? (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    px: 2,
+                                    py: 1,
+                                    borderRadius: '25px',
+                                    backgroundColor: 'white',
+                                    border: '2px solid #e0e0e0',
+                                    transition: 'all 0.2s ease',
+                                }}
+                                onClick={handlePreviousUser}
+                            >
+                                <IconChevronLeft size={20} color="#8b8a8a" />
+                                <Avatar
+                                    src={allUsers[currentUserIndex - 1]?.user_thumb_image}
+                                    alt={allUsers[currentUserIndex - 1]?.user_name}
+                                    sx={{ width: 28, height: 28, mx: 1 }}
+                                />
+                                <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    sx={{ fontSize: '0.85rem' }}
+                                >
+                                    {allUsers[currentUserIndex - 1]?.user_name}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Box sx={{ width: '200px' }} />
+                        )}
 
+                        {canGoToNext ? (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    px: 2,
+                                    py: 1,
+                                    borderRadius: '25px',
+                                    backgroundColor: 'white',
+                                    border: '2px solid #e0e0e0',
+                                    transition: 'all 0.2s ease',
+                                }}
+                                onClick={handleNextUser}
+                            >
+                                <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    sx={{ fontSize: '0.85rem' }}
+                                >
+                                    {allUsers[currentUserIndex + 1]?.user_name}
+                                </Typography>
+                                <Avatar
+                                    src={allUsers[currentUserIndex + 1]?.user_thumb_image}
+                                    alt={allUsers[currentUserIndex + 1]?.user_name}
+                                    sx={{ width: 28, height: 28, mx: 1 }}
+                                />
+                                <IconChevronRight size={20} color="#8b8a8a" />
+                            </Box>
+                        ) : (
+                            <Box sx={{ width: '200px' }} />
+                        )}
+                    </Box>
+                )}
+
+                {/* Main Header Content Row */}
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Avatar
+                            src={timeClock.user_thumb_image}
+                            alt={timeClock.user_name}
+                            sx={{width: 40, height: 40}}
+                        />
+                        <Box>
+                            <Typography variant="h6" fontWeight={600}>
+                                {timeClock.user_name}
+                            </Typography>
+                            <Typography color="textSecondary" variant="body2">
+                                {timeClock.trade_name}
+                            </Typography>
+                        </Box>
+
+                        <Stack
+                            mt={3}
+                            mx={2}
+                            mb={3}
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={{ xs: 1.5, sm: 2 }}
+                            alignItems="center"
+                            flexWrap="wrap"
+                        >
+                            <DateRangePickerBox from={startDate} to={endDate} onChange={handleDateRangeChange} />
+                        </Stack>
+                    </Stack>
+
+                    <IconButton onClick={onClose} size="small">
+                        <IconX/>
+                    </IconButton>
+                </Stack>
+            </Box>
+            
             <Box
                 sx={{
                     p: 2,
@@ -1093,10 +1219,10 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                             >
                                                                 {isFirstRow && visibleColumnConfigs.select?.visible && (
                                                                     <TableCell rowSpan={rowSpan}
-                                                                        sx={{
-                                                                            width: `${visibleColumnConfigs.select.width}px`,
-                                                                            py: 0.5,
-                                                                        }}
+                                                                               sx={{
+                                                                                   width: `${visibleColumnConfigs.select.width}px`,
+                                                                                   py: 0.5,
+                                                                               }}
                                                                     >
                                                                         <CustomCheckbox
                                                                             checked={selectedRows.has(`row-${row.index}`)}
@@ -1135,7 +1261,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                                         py: 0.5,
                                                                         fontSize: '0.875rem',
                                                                     }}>{log.project_name || '--'}</TableCell>}
-                                                                
+
                                                                 {visibleColumnConfigs.shift?.visible &&
                                                                     <TableCell sx={{
                                                                         py: 0.5,
@@ -1229,7 +1355,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                             }
                                                         </>)
                                                 })
-                                            
+
                                             })() :
                                             <>
                                                 <TableRow
@@ -1251,7 +1377,17 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({open, timeClock, use
                                                                     fontSize: '0.875rem',
                                                                     borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                                 }}>
-                                                                    {renderEditableTimeCell(cellId, column.id as 'start' | 'end', row.original[column.id as keyof DailyBreakdown] as string, row.original)}
+                                                                    {hasValidWorklogData(row.original) ?
+                                                                        renderEditableTimeCell(cellId, column.id as 'start' | 'end', row.original[column.id as keyof DailyBreakdown] as string, row.original)
+                                                                        :
+                                                                        <Box sx={{
+                                                                            py: 0.5,
+                                                                            fontSize: '0.875rem',
+                                                                            opacity: 0.6
+                                                                        }}>
+                                                                            {row.original[column.id as keyof DailyBreakdown] as string || '--'}
+                                                                        </Box>
+                                                                    }
                                                                 </TableCell>
                                                             );
                                                         }
