@@ -137,7 +137,6 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
         first_name: firstName,
         last_name: lastName,
         email,
-        phone: nationalPhone,
         extension,
         user_role_id: 3,
         company_id: user.company_id,
@@ -159,7 +158,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   };
 
   return (
-    <Box sx={{ p: 3, marginBottom: 4, height: "auto" }}>
+    <Box sx={{ p: 3, marginBottom: 4 }}>
       <Grid size={{ xs: 12, lg: 12 }}>
         <Box>
           <form onSubmit={handleEditClient}>
@@ -200,26 +199,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
                   />
                 </Box>
                 <Box className="form_inputs" mt={3}>
-                  <Typography variant="caption">Mobile Number</Typography>
-                  <PhoneInput
-                    country={"gb"}
-                    value={phone}
-                    onChange={(value, country: any) => {
-                      setPhone(value);
-                      setExtension("+" + country.dialCode);
-                      const national = value.replace(country.dialCode, "");
-                      setNationalPhone(national);
-                    }}
-                    inputStyle={{ width: "100%" }}
-                    enableSearch
-                    inputProps={{ required: true }}
-                  />
-                </Box>
-              </Box>
-
-              <Box display={"flex"} gap={3}>
-                <Box className="form_inputs" mt={3}>
-                  <Typography mt={3}>Select Projects</Typography>
+                  <Typography>Select Projects</Typography>
                   <Autocomplete
                     fullWidth
                     multiple

@@ -20,10 +20,11 @@ import {
   Menu,
   ListItemIcon,
   Drawer,
-  CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import {
   IconChartPie,
+  IconChevronRight,
   IconDotsVertical,
   IconFilter,
   IconLocation,
@@ -50,6 +51,7 @@ import "../../../../global.css";
 import DynamicGantt from "@/app/components/DynamicGantt";
 import { IconTrash } from "@tabler/icons-react";
 import ArchiveAddress from "./archive-address-list";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 dayjs.extend(customParseFormat);
 
@@ -78,20 +80,8 @@ export interface TradeList {
   name: string;
 }
 
-type Task = {
-  id: string;
-  name: string;
-  start: Date;
-  end: Date;
-  progress: number;
-  status: "Pending" | "In Progress" | "Completed";
-  type: "project" | "task";
-  parentId?: string;
-  created_at?: Date;
-};
 // const ProjectListing: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
 const TablePagination: React.FC<ProjectListingProps> = ({
-  projectId,
   onProjectUpdated,
 }) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -111,25 +101,33 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [archiveList, setArchiveList] = useState<boolean>(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
+  const [project, setProject] = useState<ProjectList[]>([]);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
-
+  const [projectId, setProjectId] = useState<number | null>(null);
+  const [processedIds, setProcessedIds] = useState<number[]>([]);
+  const [shouldRefresh, setShouldRefresh] = useState(false);
   const openMenu = Boolean(anchorEl);
   const status = ["Completed", "To Do", "In Progress"];
   const [isSaving, setIsSaving] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const COOKIE_PREFIX = "project_";
-  const projectID = Cookies.get(COOKIE_PREFIX + user.id);
+  const projectID = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
   const [formData, setFormData] = useState<any>({
     project_id: Number(projectID),
     company_id: user.company_id,
     name: "",
   });
+
+  const triggerRefresh = () => {
+    setShouldRefresh((prev) => !prev);
+  };
 
   const handleRowClick = () => {
     setDetailsOpen(true);
@@ -172,11 +170,48 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       }));
     }
   }, [projectId]);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`project/get?company_id=${user.company_id}`);
+      if (res.data?.info) {
+        setProject(res.data.info);
+
+        const cookieProjectId = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
+        const validProjectId = res.data.info.some(
+          (p: any) => p.id === Number(cookieProjectId)
+        )
+          ? Number(cookieProjectId)
+          : res.data.info[0]?.id;
+
+        setProjectId(validProjectId);
+      }
+    } catch (err) {
+      console.error("Failed to fetch projects", err);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (user.company_id) {
+      fetchProjects();
+    }
+  }, [user.company_id, user.id]);
+
+  useEffect(() => {
+    if (projectId && user?.id) {
+      Cookies.set(COOKIE_PREFIX + user.id + user.company_id, projectId.toString(), {
+        expires: 30,
+      });
+    }
+  }, [projectId, user?.id]);
+
   const fetchAddresses = async () => {
-    if (!projectId) return;
+    if (!projectID) return;
     setLoading(true);
     try {
-      const res = await api.get(`address/get?project_id=${projectId}`);
+      const res = await api.get(`address/get?project_id=${Number(projectID)}`);
       if (res.data) {
         setData(res.data.info);
       }
@@ -187,7 +222,29 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   };
   useEffect(() => {
-    fetchAddresses();
+    if (projectID) {
+      fetchAddresses();
+    }
+  }, [projectID, user?.id]);
+
+  const fetchArchiveAddress = async () => {
+    if (!projectId) return;
+
+    try {
+      const res = await api.get(`address/archive-list?project_id=${projectId}`);
+
+      if (res.data) {
+        setData(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    }
+  };
+
+  useEffect(() => {
+    if (projectId) {
+      fetchArchiveAddress();
+    }
   }, [projectId]);
 
   const handleChange = (
@@ -272,6 +329,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         setSidebar(false);
         setLoading(true);
         onProjectUpdated?.();
+        triggerRefresh();
         setTimeout(() => {
           setLoading(false);
         }, 100);
@@ -289,7 +347,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // Scroll active tab into view whenever value changes
   useEffect(() => {
     if (tabRefs.current[value]) {
       tabRefs.current[value]?.scrollIntoView({
@@ -298,6 +355,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       });
     }
   }, [value]);
+
+  useEffect(() => {
+    if (projectId && archiveList == false) {
+      triggerRefresh();
+    }
+  }, [project, archiveList]);
 
   // if (loading == true) {
   //   return (
@@ -329,6 +392,24 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           flexWrap="wrap"
           className="project_wrapper"
         >
+          <Autocomplete
+            id="project_id"
+            options={[]}
+            open={false}
+            onOpen={() => setDialogOpen(true)}
+            value={project.find((project) => project.id === projectId) ?? null}
+            getOptionLabel={(option) => option.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => (
+              <CustomTextField
+                {...params}
+                placeholder="Projects"
+                className="project-selection"
+                onClick={() => setDialogOpen(true)}
+              />
+            )}
+          />
+
           <Box display="flex" alignItems="center">
             <Tabs
               value={value}
@@ -701,10 +782,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({
 
       {value === 0 && (
         <AddressesList
-          projectId={projectId}
+          projectId={Number(projectID)}
           searchTerm={searchTerm}
           filters={filters}
           onSelectionChange={handleSelectedRows}
+          processedIds={processedIds}
+          shouldRefresh={shouldRefresh}
         />
       )}
       {value === 1 && (
@@ -757,13 +840,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             onClick={async () => {
               try {
                 const payload = {
-                  address_ids: selectedIds.join(" ,"),
+                  address_ids: selectedIds.join(","),
                 };
                 const response = await api.post(
                   "address/archive-addresses",
                   payload
                 );
                 toast.success(response.data.message);
+                setProcessedIds((prev) => [...prev, ...selectedIds]);
                 setSelectedIds([]);
                 await fetchAddresses();
               } catch (error) {
@@ -782,10 +866,104 @@ const TablePagination: React.FC<ProjectListingProps> = ({
 
       <ArchiveAddress
         open={archiveList}
-        projectId={Number(projectID)}
+        projectId={projectId}
         onClose={() => setArchiveList(false)}
         onWorkUpdated={fetchAddresses}
       />
+      <Drawer
+        anchor="left"
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            width: 250,
+            maxWidth: "100%",
+          },
+        }}
+      >
+        <Box sx={{ position: "relative", p: 2 }}>
+          {/* Close Button */}
+          <IconButton
+            aria-label="close"
+            onClick={() => setDialogOpen(false)}
+            size="small"
+            sx={{
+              position: "absolute",
+              right: 0,
+              top: 8,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <IconX size={18} />
+          </IconButton>
+
+          {/* Add Project Button */}
+          <Button
+            color="primary"
+            variant="outlined"
+            onClick={() => {
+              setDrawerOpen(true);
+              setDialogOpen(false);
+            }}
+            startIcon={<IconPlus size={18} />}
+            sx={{ mb: 1, ml: 2 }}
+          >
+            Add Project
+          </Button>
+
+          {/* Project List */}
+          <Grid container spacing={2} display="block">
+            {project.map((project) => (
+              <Grid
+                mt={2}
+                key={project.id}
+                display="flex"
+                textAlign="start"
+                alignItems="center"
+              >
+                <CustomCheckbox
+                  onClick={() => {
+                    setProjectId(project.id);
+                    setDialogOpen(false);
+                  }}
+                />
+                <Box
+                  onClick={() => {
+                    setProjectId(project.id);
+                    setDialogOpen(false);
+                  }}
+                  sx={{
+                    boxShadow: "0px 1px 4px 0px #00000040",
+                    borderRadius: "20px",
+                    height: "50px",
+                    width: "100%",
+                    "&:hover": {
+                      cursor: "pointer",
+                    },
+                  }}
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Typography
+                    variant="subtitle1"
+                    ml={2}
+                    className="multi-ellipsis"
+                    maxWidth={"110px"}
+                  >
+                    {project.name}
+                  </Typography>
+                  <IconChevronRight style={{ color: "GrayText" }} />
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      </Drawer>
     </Box>
   );
 };

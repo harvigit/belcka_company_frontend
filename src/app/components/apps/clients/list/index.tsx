@@ -24,6 +24,7 @@ import {
   DialogActions,
   Menu,
   ListItemIcon,
+  Chip,
 } from "@mui/material";
 import {
   flexRender,
@@ -43,6 +44,7 @@ import {
   IconNotes,
   IconPlus,
   IconSearch,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -52,7 +54,6 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { format } from "date-fns";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import ArchiveClient from "../archive";
@@ -75,6 +76,7 @@ export type ClientList = {
   company_name: string;
   phone: number;
   invite_link: string;
+  logged_in_at: Date;
 };
 
 const TablePagination = () => {
@@ -88,6 +90,8 @@ const TablePagination = () => {
   const [openActiveDialog, setOpenActiveDialog] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>();
   const [selectedTaskId, setSelectedTaskId] = useState<number>(0);
+  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+
   const [filters, setFilters] = useState({
     team: "",
     supervisor: "",
@@ -151,6 +155,38 @@ const TablePagination = () => {
       return matchesTeam && matchesSearch;
     });
   }, [data, filters, searchTerm]);
+
+  const handleCopy = (link: string) => {
+    const codeToCopy = link ?? "";
+
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(codeToCopy)
+        .then(() => toast.success("Invitation link copied!"))
+        .catch((err) => {
+          console.error("Clipboard API failed:", err);
+          fallbackCopyCode(codeToCopy);
+        });
+    } else {
+      fallbackCopyCode(codeToCopy);
+    }
+  };
+
+  const fallbackCopyCode = (codeToCopy: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = codeToCopy;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand("copy");
+      toast.success("Invitation link copied!");
+    } catch (err) {
+      console.error("Fallback failed:", err);
+      toast.error("Failed to copy invitation link!");
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  };
 
   const columnHelper = createColumnHelper<ClientList>();
   const columns = [
@@ -220,23 +256,20 @@ const TablePagination = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.phone, {
-      id: "phone",
-      header: () => "Phone",
-      cell: (info) => {
-        return (
-          <Typography variant="h5" color="textPrimary">
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
-
     columnHelper.accessor((row) => row?.invite_link, {
       id: "invite_link",
       header: () => "Invite Link",
       cell: (info) => {
-        return <Typography variant="h5"> {info.getValue() ?? "-"} </Typography>;
+        const link = info.getValue();
+        if (!link) return "-";
+
+        return (
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button color="primary" onClick={() => handleCopy(link)}>
+              Invite
+            </Button>
+          </Stack>
+        );
       },
     }),
 
@@ -310,11 +343,7 @@ const TablePagination = () => {
         const diffInMs = expiry.diff(now);
 
         if (diffInMs <= 0) {
-          return (
-            <Typography variant="h5">
-              -
-            </Typography>
-          );
+          return <Typography variant="h5">-</Typography>;
         }
 
         const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
@@ -338,44 +367,90 @@ const TablePagination = () => {
       header: "Actions",
       cell: ({ row }) => {
         const item = row.original;
-        const { expired_on } = item;
+        const { expired_on, logged_in_at } = item;
+
+        const formattedLogin = logged_in_at
+          ? dayjs(logged_in_at).format("DD/MM/YYYY")
+          : null;
+
+        const isExpired = expired_on === "expired";
+        const isLoggedIn = !!logged_in_at;
 
         return (
-          <Box display={"flex"} gap={1}>
-            <Box>
-              <Tooltip title="Edit">
-                <IconButton onClick={() => handleEdit(item.id)} color="primary">
-                  <IconEdit size={18} />
-                </IconButton>
-              </Tooltip>
-            </Box>
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={1}
+            position="relative"
+            alignItems="baseline"
+            justifyContent="space-between"
+            width={"80%"}
+          >
+            <Stack
+              direction="row"
+              alignItems="center"
+              flexWrap="wrap"
+              position="absolute"
+              top={!isLoggedIn && isExpired ? "-15px" : ""}
+              left="44px"
+              px={0.5}
+              py={0.5}
+              borderRadius="10px"
+              zIndex={1}
+              gap="2px"
+            >
+              {(logged_in_at || expired_on === "expired") && (
+                <Chip
+                  label={
+                    logged_in_at ? `Logged in at ${formattedLogin}` : "Expired"
+                  }
+                  color={logged_in_at ? "success" : "error"}
+                  size="small"
+                  sx={{ fontSize: 10, mb: 1 }}
+                  variant="outlined"
+                />
+              )}
+            </Stack>
 
-            <Box>
-              {expired_on !== "expired" ? (
-                <Tooltip title="Reactivate">
-                  <Button
+            <Box display="flex" gap={1} justifyContent={"space-between"}>
+              <Box>
+                <Tooltip title="Edit">
+                  <IconButton
+                    onClick={() => handleEdit(item.id)}
                     color="primary"
-                    onClick={() => {
-                      setSelectedClientId(item.id);
-                      setOpenActiveDialog(true);
-                    }}
                   >
-                    Re-Activate
-                  </Button>
+                    <IconEdit size={18} />
+                  </IconButton>
                 </Tooltip>
-              ) : expired_on === "expired" ? (
-                <Tooltip title="Archive">
-                  <Button
-                    color="error"
-                    onClick={() => {
-                      setSelectedClientId(item.id);
-                      setOpenDialog(true);
-                    }}
-                  >
-                    Archive
-                  </Button>
-                </Tooltip>
-              ) : null}
+              </Box>
+
+              <Box>
+                {!isLoggedIn && isExpired && (
+                  <Tooltip title="Expired">
+                    <Button
+                      sx={{ mt: 2 }}
+                      color="primary"
+                      onClick={() => {
+                        setSelectedClientId(item.id);
+                        setOpenActiveDialog(true);
+                      }}
+                    >
+                      Re-Invite
+                    </Button>
+                  </Tooltip>
+                )}
+
+                {!isLoggedIn && !isExpired && (
+                  <Tooltip title="Invited">
+                    <Button
+                      color="success"
+                      sx={{ "&:hover": { cursor: "default" } }}
+                    >
+                      Invited
+                    </Button>
+                  </Tooltip>
+                )}
+              </Box>
             </Box>
           </Box>
         );
@@ -445,15 +520,21 @@ const TablePagination = () => {
           justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
         >
-          <Button
-            variant="outlined"
-            color="primary"
-            sx={{ display: "flex", justifyItems: "center" }}
-            onClick={() => setOpen(true)}
-          >
-            <IconPlus width={18} />
-            Add Client
-          </Button>
+          {selectedRowIds.size > 0 && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconTrash width={18} />}
+              onClick={() => {
+                const selectedIds = Array.from(selectedRowIds);
+                setUsersToDelete(selectedIds);
+                setOpenDialog(true);
+              }}
+            >
+              Archive
+            </Button>
+          )}
+
           <IconButton
             sx={{ margin: "0px" }}
             id="basic-button"
@@ -475,6 +556,30 @@ const TablePagination = () => {
               },
             }}
           >
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setOpen(true);
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconPlus width={18} />
+                </ListItemIcon>
+                Add Client
+              </Link>
+            </MenuItem>
+
             <MenuItem onClick={handleClose}>
               <Link
                 color="body1"
@@ -587,7 +692,7 @@ const TablePagination = () => {
                 </TableHead>
                 <TableBody>
                   {
-                  // table.getRowModel().rows.length ? (
+                    // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
@@ -600,13 +705,13 @@ const TablePagination = () => {
                         ))}
                       </TableRow>
                     ))
-                  // ) : (
-                  //   <TableRow>
-                  //     <TableCell colSpan={columns.length} align="center">
-                  //       No records found
-                  //     </TableCell>
-                  //   </TableRow>
-                  // )
+                    // ) : (
+                    //   <TableRow>
+                    //     <TableCell colSpan={columns.length} align="center">
+                    //       No records found
+                    //     </TableCell>
+                    //   </TableRow>
+                    // )
                   }
                 </TableBody>
               </Table>
@@ -699,14 +804,14 @@ const TablePagination = () => {
                 onClick={async () => {
                   try {
                     const payload = {
-                      id: selectedClientId,
+                      client_ids: usersToDelete.join(","),
                     };
                     const response = await api.post(
                       "company-clients/archive",
                       payload
                     );
                     toast.success(response.data.message);
-                    setSelectedClientId(null);
+                    setSelectedRowIds(new Set());
                     await fetchClients();
                   } catch (error) {
                     toast.error("Failed to archive client");

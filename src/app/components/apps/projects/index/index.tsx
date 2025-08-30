@@ -77,7 +77,9 @@ const TablePagination = () => {
       if (res.data?.info) {
         setData(res.data.info);
 
-        const cookieProjectId = Cookies.get(COOKIE_PREFIX + user.id);
+        const cookieProjectId = Cookies.get(
+          COOKIE_PREFIX + user.id + user.company_id
+        );
         const validProjectId = res.data.info.some(
           (p: any) => p.id === Number(cookieProjectId)
         )
@@ -99,9 +101,13 @@ const TablePagination = () => {
 
   useEffect(() => {
     if (projectId && user?.id) {
-      Cookies.set(COOKIE_PREFIX + user.id, projectId.toString(), {
-        expires: 30,
-      });
+      Cookies.set(
+        COOKIE_PREFIX + user.id + user.company_id,
+        projectId.toString(),
+        {
+          expires: 30,
+        }
+      );
     }
   }, [projectId, user?.id]);
 
@@ -206,224 +212,6 @@ const TablePagination = () => {
 
   return (
     <Grid container spacing={3}>
-      <Grid
-        size={{
-          xs: 12,
-          lg: 2,
-        }}
-      >
-        <Box textAlign="center">
-          <Box
-            textAlign="center"
-            display="flex"
-            justifyContent="start"
-            alignItems={"center"}
-            mt={4}
-            gap={2}
-          >
-            <Autocomplete
-              fullWidth
-              id="project_id"
-              options={[]}
-              open={false}
-              onOpen={() => setDialogOpen(true)}
-              value={data.find((project) => project.id === projectId) ?? null}
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              renderInput={(params) => (
-                <CustomTextField
-                  {...params}
-                  placeholder="Projects"
-                  className="project-selection"
-                  onClick={() => setDialogOpen(true)}
-                />
-              )}
-            />
-          </Box>
-          <Box mt={3}>
-            <Typography textAlign={"start"} mb={2} ml={1} fontWeight={700}>
-              Cashflow
-            </Typography>
-            <Box
-              mb={1}
-              pr={2}
-              pl={2}
-              display={"flex"}
-              justifyContent={"space-between"}
-              alignItems={"center"}
-              textAlign={"center"}
-              sx={{
-                lineHeight: "16px",
-                height: "35px",
-                borderRadius: "25px",
-                border: "1px solid #CCCCCC",
-              }}
-            >
-              <Typography>Budget</Typography>
-              <Typography color="#000000" fontWeight={700}>
-                {data[0]?.currency ?? "£"}
-                {budget ? budget : data[0]?.budget ?? 0}
-              </Typography>
-            </Box>
-            <Box
-              mb={1}
-              pr={2}
-              pl={2}
-              display={"flex"}
-              justifyContent={"space-between"}
-              alignItems={"center"}
-              textAlign={"center"}
-              sx={{
-                lineHeight: "16px",
-                height: "35px",
-                borderRadius: "25px",
-                border: "1px solid #CCCCCC",
-              }}
-            >
-              <Typography>Salary:</Typography>
-              <Typography color="#FF484B" fontWeight={700}>
-                {data[0]?.currency ?? "£"}
-                {data[0]?.salary ?? 0}
-              </Typography>
-            </Box>
-            <Box
-              mb={1}
-              pr={2}
-              pl={2}
-              display={"flex"}
-              justifyContent={"space-between"}
-              alignItems={"center"}
-              textAlign={"center"}
-              sx={{
-                lineHeight: "16px",
-                height: "35px",
-                borderRadius: "25px",
-                border: "1px solid #CCCCCC",
-              }}
-            >
-              <Typography>Materials:</Typography>
-              <Typography color="#FF7F00" fontWeight={700}>
-                {data[0]?.currency ?? "£"}
-                {data[0]?.materials ?? 0}
-              </Typography>
-            </Box>
-            <Box
-              mb={1}
-              pr={2}
-              pl={2}
-              display={"flex"}
-              justifyContent={"space-between"}
-              alignItems={"center"}
-              textAlign={"center"}
-              sx={{
-                lineHeight: "16px",
-                height: "35px",
-                borderRadius: "25px",
-                border: "1px solid #CCCCCC",
-              }}
-            >
-              <Typography>Profit:</Typography>
-              <Typography color="#32A852" fontWeight={700}>
-                {data[0]?.currency ?? "£"}
-                {data[0]?.profit ?? budget ? budget : data[0]?.budget ?? 0}
-              </Typography>
-            </Box>
-          </Box>
-
-          {address.length > 0 && (
-            <Box mt={3}>
-              <Typography textAlign="start" mb={2} ml={1} fontWeight={700}>
-                Activity
-              </Typography>
-              <Box
-                sx={{
-                  maxHeight: address.length > 3 ? "310px" : "350px",
-                  overflow: address.length > 3 ? "auto" : "visible",
-                  pr: 0,
-                }}
-              >
-                {address.map((addr, index) => {
-                  let color = "";
-
-                  switch (addr.status_int) {
-                    case 13:
-                      color = "#A600FF";
-                      break;
-                    case 14:
-                      color = "#A600FF";
-                      break;
-                    case 3:
-                      color = "#FF7F00";
-                      break;
-                    case 4:
-                      color = "#32A852";
-                      break;
-                    default:
-                      color = "#999";
-                  }
-
-                  return (
-                    <Box
-                      key={addr.id ?? index}
-                      mb={index === address.length - 1 ? 0 : 2}
-                      pl={2}
-                      pr={2}
-                      mt={2}
-                      position="relative"
-                      display="flex"
-                      alignItems="center"
-                      sx={{
-                        width: "100%",
-                        lineHeight: "10px",
-                        height: "100px",
-                        borderRadius: "25px",
-                        boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
-                        border: "1px solid rgb(240 240 240)",
-                      }}
-                    >
-                      <Box
-                        position="absolute"
-                        top="-10px"
-                        left="15px"
-                        bgcolor={color}
-                        px={1.5}
-                        borderRadius="10px"
-                        zIndex={1}
-                      >
-                        <Typography
-                          variant="caption"
-                          fontWeight={700}
-                          fontSize={"12px !important"}
-                          color="#fff"
-                        >
-                          {addr.status_text}
-                        </Typography>
-                      </Box>
-                      <Box
-                        display="initial"
-                        width="100%"
-                        textAlign="start"
-                        mt={1}
-                      >
-                        <Typography fontSize="14px" className="multi-ellipsis">
-                          {addr.message}
-                        </Typography>
-                        <p
-                          style={{ fontSize: "12px", textAlign: "end" , color:"GrayText"}}
-                          color="textSecondary"
-                        >
-                          {formatDate(addr.date_added)}
-                        </p>
-                      </Box>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-          )}
-        </Box>
-      </Grid>
-
       <Drawer
         anchor="left"
         open={dialogOpen}
@@ -532,7 +320,7 @@ const TablePagination = () => {
       <Grid
         size={{
           xs: 12,
-          lg: 10,
+          lg: 12,
         }}
       >
         <BlankCard>

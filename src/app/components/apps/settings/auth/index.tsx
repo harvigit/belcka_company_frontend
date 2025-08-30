@@ -48,9 +48,6 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const [email, setEmail] = useState("");
   const [firstName, setfirstName] = useState("");
   const [lastName, setlastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [extension, setExtension] = useState("+44");
-  const [nationalPhone, setNationalPhone] = useState("");
   const session = useSession();
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<ProjectList[]>([]);
@@ -71,8 +68,6 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
         first_name: firstName,
         last_name: lastName,
         email,
-        phone: nationalPhone,
-        extension,
         user_role_id: 3,
         company_id: user.company_id,
         project_ids: selectedIds,
@@ -88,9 +83,6 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
         setfirstName("");
         setlastName("");
         setEmail("");
-        setPhone("");
-        setExtension("+44");
-        setNationalPhone("");
         setSelectedProjects([]);
       }
     } catch (error: any) {
@@ -116,43 +108,34 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
     }
   }, [user.company_id, user.id]);
 
-  const handleCopyCode = async () => {
-    const codeToCopy = inviteLink ?? "";
+  const handleCopyCode = (invite_link: string | null) => {
+    const codeToCopy = invite_link ?? "";
 
-    try {
-      if (
-        navigator.clipboard &&
-        typeof navigator.clipboard.writeText === "function"
-      ) {
-        await navigator.clipboard.writeText(codeToCopy);
-        toast.success("Code copied!");
-      } else {
-        fallbackCopyCode(codeToCopy);
-      }
-    } catch (err) {
-      console.error("Clipboard API failed:", err);
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard
+        .writeText(codeToCopy)
+        .then(() => toast.success("Code copied!"))
+        .catch((err) => {
+          console.error("Clipboard API failed:", err);
+          fallbackCopyCode(codeToCopy);
+        });
+    } else {
       fallbackCopyCode(codeToCopy);
     }
   };
 
   const fallbackCopyCode = (codeToCopy: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = codeToCopy;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
     try {
-      const textArea = document.createElement("textarea");
-      textArea.value = codeToCopy;
-
-      textArea.style.position = "fixed";
-      textArea.style.top = "0";
-      textArea.style.left = "0";
-      textArea.style.opacity = "0";
-
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-
-      const successful = document.execCommand("copy");
-      document.body.removeChild(textArea);
-
-      if (successful) {
+      const success = document.execCommand("copy");
+      if (success) {
         toast.success("Code copied!");
       } else {
         toast.error("Failed to copy code!");
@@ -160,12 +143,14 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
     } catch (err) {
       console.error("Fallback failed:", err);
       toast.error("Failed to copy code!");
+    } finally {
+      document.body.removeChild(textArea);
     }
   };
 
   return (
     <>
-      <Box sx={{ p: 3, marginBottom: 4, height: "400px" }}>
+      <Box sx={{ p: 3, marginBottom: 4 }}>
         <Grid
           size={{
             xs: 12,
@@ -219,27 +204,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                     />
                   </Box>
                   <Box className="form_inputs" mt={3}>
-                    <Typography variant="caption">Mobile Number</Typography>
-
-                    <PhoneInput
-                      country={"gb"}
-                      value={phone}
-                      onChange={(value, country: any) => {
-                        setPhone(value);
-                        setExtension("+" + country.dialCode);
-
-                        const numberOnly = value.replace(country.dialCode, "");
-                        setNationalPhone(numberOnly);
-                      }}
-                      inputStyle={{ width: "100%" }}
-                      enableSearch
-                      inputProps={{ required: true }}
-                    />
-                  </Box>
-                </Box>
-                <Box display={"flex"} gap={3}>
-                  <Box className="form_inputs" mt={3}>
-                    <Typography mt={3}>Select Projects</Typography>
+                    <Typography>Select Projects</Typography>
                     <Autocomplete
                       fullWidth
                       multiple
@@ -265,7 +230,6 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                       )}
                     />
                   </Box>
-                  <Box className="form_inputs" mt={3}></Box>
                 </Box>
               </Stack>
               <Button
@@ -306,7 +270,10 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                     variant="outlined"
                     InputProps={{ readOnly: true }}
                   />
-                  <Button variant="outlined" onClick={handleCopyCode}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleCopyCode(inviteLink)}
+                  >
                     <ContentCopyIcon />
                   </Button>
                 </Box>

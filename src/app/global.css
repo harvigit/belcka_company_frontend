@@ -154,6 +154,7 @@ input#project_id::placeholder {
     font-weight: 600;
     border-radius: 15px;
     height: 45px;
+    width: 200px;
 }
 
 /* .project_search {
@@ -237,4 +238,7 @@ input#project_id::placeholder {
   }
   .form_inputs{
     width: 100%;
+  }
+  .share_link:hover{
+    color: white !important;
   }

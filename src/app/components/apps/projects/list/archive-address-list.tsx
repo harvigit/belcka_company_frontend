@@ -39,7 +39,6 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
   onWorkUpdated,
   projectId,
 }) => {
-  const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<TeamList[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
@@ -51,9 +50,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
     if (!projectId) return;
 
     try {
-      const res = await api.get(
-        `address/archive-list?project_id=${projectId}`
-      );
+      const res = await api.get(`address/archive-list?project_id=${projectId}`);
 
       if (res.data) {
         setData(res.data.info);
@@ -65,7 +62,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
 
   useEffect(() => {
     fetchTeams();
-  }, [fetchTeams]);
+  }, [open]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;
@@ -81,7 +78,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
           toast.success(response.data.message);
           fetchTeams();
           onWorkUpdated?.();
-          onClose();
+          onClose?.();
         }
       } else if (selectedItem.action === "delete") {
         const response = await api.delete(
@@ -90,6 +87,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
           fetchTeams();
+          onWorkUpdated?.();
         }
       }
     } catch (err) {
@@ -171,7 +169,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                       >
                         <IconArrowBackUp />
                       </IconButton>
-                      {/* <IconButton
+                      <IconButton
                         color="error"
                         size="small"
                         onClick={() => {
@@ -180,7 +178,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                         }}
                       >
                         <IconTrash />
-                      </IconButton> */}
+                      </IconButton>
                     </Box>
                   </Box>
                 </Box>
