@@ -295,7 +295,13 @@ const TimesheetList = () => {
                         const value = info.getValue();
                         const row = info.row.original;
 
-                        if (value === '-' || !value) return <div>-</div>;
+                        if (!value) return <div>-</div>;
+
+                        const textColor = value.is_working ? "#1e4db7" : value.color;
+
+                        if (value.hours === 0 && value.pricework_amount === 0) {
+                            return <div style={{ color: textColor }}>-</div>;
+                        }
 
                         return (
                             <div
@@ -304,7 +310,7 @@ const TimesheetList = () => {
                                         fetchSidebarData(value.worklog_ids);
                                     }
                                 }}
-                                style={{cursor: 'pointer', color: `${value.color}`}}
+                                style={{ cursor: "pointer", color: textColor }}
                             >
                                 {row.type === 'P'
                                     ? `${currency}${value.pricework_amount || 0}`
