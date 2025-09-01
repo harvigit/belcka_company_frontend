@@ -10,6 +10,7 @@ import {
   Switch,
   Typography,
   CircularProgress,
+  Button,
 } from "@mui/material";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
@@ -58,18 +59,16 @@ export default function NotificationSettings() {
     }
   }, [user?.company_id]);
 
-  const updateNotification = async (
+  const updateNotificationState = (
     categoryId: number,
     notificationId: number | "all",
     field: "is_push" | "is_feed",
     value: boolean
   ) => {
-    let updatedCategory: NotificationCategory | undefined;
-
     setCategories((prev) =>
       prev.map((cat) => {
         if (cat.id === categoryId) {
-          updatedCategory = {
+          return {
             ...cat,
             notifications: cat.notifications.map((n) =>
               notificationId === "all"
@@ -79,24 +78,26 @@ export default function NotificationSettings() {
                 : n
             ),
           };
-          return updatedCategory;
         }
         return cat;
       })
     );
+  };
 
-    if (!updatedCategory) return;
+  const saveNotifications = async () => {
     setLoading(true);
     try {
       const response = await api.post(
         `notifications/change-company-bulk-notifications`,
         {
           company_id: user.company_id,
-          notifications: updatedCategory.notifications.map((n) => ({
-            notification_id: n.id,
-            is_push: n.is_push,
-            is_feed: n.is_feed,
-          })),
+          notifications: categories.flatMap((cat) =>
+            cat.notifications.map((n) => ({
+              notification_id: n.id,
+              is_push: n.is_push,
+              is_feed: n.is_feed,
+            }))
+          ),
         }
       );
 
@@ -111,16 +112,6 @@ export default function NotificationSettings() {
       fetchNotifications();
     }
     setLoading(false);
-  };
-
-  const isCategorySwitchOn = (
-    category: NotificationCategory,
-    field: "is_push" | "is_feed"
-  ) => {
-    if (!category.notifications || category.notifications.length === 0) {
-      return false;
-    }
-    return category.notifications.every((n) => n[field]);
   };
 
   const getCategorySwitchState = (
@@ -150,9 +141,16 @@ export default function NotificationSettings() {
 
   return (
     <Box>
-      <Typography mb={2} fontWeight={500}>
-        Notification Settings
-      </Typography>
+      <Box display={"flex"} justifyContent={"space-between"} mb={1}>
+        <Typography fontWeight={500}>Notification Settings</Typography>
+        {categories.length > 0 && (
+          <>
+            <Button onClick={saveNotifications} disabled={loading}>
+              {loading ? "Updating..." : "Update"}
+            </Button>
+          </>
+        )}
+      </Box>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -189,7 +187,7 @@ export default function NotificationSettings() {
                             getCategorySwitchState(category, "is_push") === "on"
                           }
                           onChange={(e) =>
-                            updateNotification(
+                            updateNotificationState(
                               category.id,
                               "all",
                               "is_push",
@@ -200,9 +198,11 @@ export default function NotificationSettings() {
                       </TableCell>
                       <TableCell align="center">
                         <Switch
-                          checked={isCategorySwitchOn(category, "is_feed")}
+                          checked={
+                            getCategorySwitchState(category, "is_feed") === "on"
+                          }
                           onChange={(e) =>
-                            updateNotification(
+                            updateNotificationState(
                               category.id,
                               "all",
                               "is_feed",
@@ -220,7 +220,7 @@ export default function NotificationSettings() {
                           <Switch
                             checked={notification.is_push}
                             onChange={(e) =>
-                              updateNotification(
+                              updateNotificationState(
                                 category.id,
                                 notification.id,
                                 "is_push",
@@ -233,7 +233,7 @@ export default function NotificationSettings() {
                           <Switch
                             checked={notification.is_feed}
                             onChange={(e) =>
-                              updateNotification(
+                              updateNotificationState(
                                 category.id,
                                 notification.id,
                                 "is_feed",
