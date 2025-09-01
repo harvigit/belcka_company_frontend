@@ -151,8 +151,8 @@ export default function NotificationSettings() {
           </>
         )}
       </Box>
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer sx={{ maxHeight: 700 }} component={Paper}>
+        <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow sx={{ background: "#e5e8ed" }}>
               <TableCell>
