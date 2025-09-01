@@ -30,6 +30,7 @@ import {
     IconLockOpen,
     IconTrash,
     IconChevronLeft,
+    IconExclamationMark
 } from '@tabler/icons-react';
 import {
     useReactTable,
@@ -55,6 +56,7 @@ declare module '@tanstack/react-table' {
 }
 
 type DailyBreakdown = {
+    is_requested: boolean;
     timesheet_light_id: number;
     rowsData?: any[];
     checkin_time: any;
@@ -146,15 +148,7 @@ interface CheckLogRowsProps {
     isMultiRow?: boolean;
 }
 
-const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
-                                                               open,
-                                                               timeClock,
-                                                               user_id,
-                                                               currency,
-                                                               allUsers = [], // Default to empty array
-                                                               onClose,
-                                                               onUserChange
-                                                           }) => {
+const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, user_id, currency, allUsers = [], onClose, onUserChange }) => {
     const today = new Date();
 
     const defaultStart = new Date(today);
@@ -521,6 +515,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             const weekRows: DailyBreakdown[] = [];
 
             weekRows.push({
+                is_requested: false,
                 timesheet_light_id: 0,
                 checkin_time: '--',
                 checkout_time: '--',
@@ -561,6 +556,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                             rowSpan: idx === 0 ? day.worklogs.length : 0,
                             userChecklogs: log.user_checklogs ?? [],
                             status: log.status || day.status,
+                            is_requested: log.is_requested,
                             timesheet_light_id: log.timesheet_light_id || day.timesheet_light_id,
                         }));
                     }
@@ -598,6 +594,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                         rowSpan: 1,
                         allUserChecklogs: allChecklogs,
                         status: day.status,
+                        is_requested: false,
                         timesheet_light_id: day.timesheet_light_id,
                     }];
                 }
@@ -627,6 +624,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                     rowSpan: 1,
                     allUserChecklogs: [],
                     status: day.status,
+                    is_requested: false,
                     timesheet_light_id: day.timesheet_light_id,
                 }];
             });
@@ -699,6 +697,35 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 header: 'Date',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.date : null,
+            },
+            {
+                id: 'exclamation',
+                header: '',
+                meta: { label: 'Exclamation' },
+                size: 36,
+                enableSorting: false,
+                cell: ({ row }) => {
+                    if (row.original.rowType !== 'day') return null;
+                    
+                    const hasLogs = row.original.is_requested;
+                    if (!hasLogs) return null;
+                    
+                    return (
+                        <IconButton
+                            size="small"
+                            color="error"
+                            aria-label="error"
+                            sx={{
+                                '&:hover': {
+                                    backgroundColor: 'transparent',
+                                    color: '#fc4b6c',
+                                },
+                            }}
+                        >
+                           <IconExclamationMark />
+                        </IconButton>
+                    );
+                },
             },
             {
                 id: 'expander',
@@ -1237,6 +1264,28 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                                         fontSize: '0.875rem'
                                                                     }}>{rowData.date}</TableCell>}
 
+                                                                {visibleColumnConfigs.exclamation?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}>
+                                                                        { log.is_requested == true ? (
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                color="error"
+                                                                                aria-label="error"
+                                                                                sx={{
+                                                                                    '&:hover': {
+                                                                                        backgroundColor: 'transparent',
+                                                                                        color: '#fc4b6c',
+                                                                                    },
+                                                                                }}
+                                                                            >
+                                                                                <IconExclamationMark />
+                                                                            </IconButton>
+                                                                        ) : null}
+                                                                    </TableCell>}
+                                                                
                                                                 {visibleColumnConfigs.expander?.visible &&
                                                                     <TableCell sx={{
                                                                         py: 0.5,
@@ -1502,6 +1551,7 @@ const CheckLogRows = ({logs, currency, formatHour, visibleColumnConfigs, getVisi
             {!isMultiRow && visibleColumnConfigs.status?.visible && <TableCell></TableCell>}
             {!isMultiRow && visibleColumnConfigs.date?.visible && <TableCell></TableCell>}
             {!isMultiRow && visibleColumnConfigs.expander?.visible && <TableCell></TableCell>}
+            {!isMultiRow && visibleColumnConfigs.exclamation?.visible && <TableCell></TableCell>}
             <TableCell sx={{padding: 0}} colSpan={getVisibleCellsLength}>
                 {logs?.length > 0 ? (
                     <Table size="small">
