@@ -207,6 +207,7 @@ const TablePagination = () => {
     try {
       const payload = {
         ...formData,
+        repeatable_job: formData.is_pricework ? false: true,
         units: formData.is_pricework ? formData.units : null,
         duration: Number(formData.duration),
         rate: Number(formData.rate),
@@ -241,6 +242,7 @@ const TablePagination = () => {
     try {
       const payload = {
         ...formData,
+        repeatable_job: formData.is_pricework ? false: true,
         duration: Number(formData.duration),
         rate: Number(formData.rate),
       };
