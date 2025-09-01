@@ -57,6 +57,7 @@ declare module '@tanstack/react-table' {
 
 type DailyBreakdown = {
     is_requested: boolean;
+    is_edited: boolean;
     timesheet_light_id: number;
     rowsData?: any[];
     checkin_time: any;
@@ -204,8 +205,12 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
         });
     };
 
-    const formatHour = (val: string | number | null | undefined): string => {
-        if (val === null || val === undefined) return '00:00';
+    const formatHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
+        if (val === null || val === undefined) return isPricework ? '--' : '00:00';
+
+        // If it's pricework, return '--' instead of formatted time
+        if (isPricework) return '--';
+
         const str = val.toString().trim();
 
         if (/^\d{1,2}:\d{1,2}(\.\d+)?$/.test(str)) {
@@ -222,7 +227,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
             const m = Math.round((num - h) * 60);
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
-        return '00:00';
+        return isPricework ? '--' : '00:00';
     };
 
     const parseDate = (dateString: string): Date | null => {
@@ -516,6 +521,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
 
             weekRows.push({
                 is_requested: false,
+                is_edited: false,
                 timesheet_light_id: 0,
                 checkin_time: '--',
                 checkout_time: '--',
@@ -557,6 +563,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                             userChecklogs: log.user_checklogs ?? [],
                             status: log.status || day.status,
                             is_requested: log.is_requested,
+                            is_edited: log.is_edited,
                             timesheet_light_id: log.timesheet_light_id || day.timesheet_light_id,
                         }));
                     }
@@ -595,6 +602,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                         allUserChecklogs: allChecklogs,
                         status: day.status,
                         is_requested: false,
+                        is_edited: false,
                         timesheet_light_id: day.timesheet_light_id,
                     }];
                 }
@@ -625,6 +633,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                     allUserChecklogs: [],
                     status: day.status,
                     is_requested: false,
+                    is_edited: false,
                     timesheet_light_id: day.timesheet_light_id,
                 }];
             });
@@ -782,8 +791,24 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                 id: 'totalHours',
                 accessorKey: 'totalHours',
                 header: 'Total hours',
-                cell: ({row}) =>
-                    row.original.rowType === 'day' ? row.original.totalHours : null,
+                cell: ({row}) => {
+                    if (row.original.rowType !== 'day') return null;
+
+                    const totalHours = row.original.totalHours;
+                    const isEdited = row.original.is_edited;
+
+                    const isPricework = row.original.rowsData ?
+                        row.original.rowsData.some((log: any) => log.is_pricework) :
+                        false;
+
+                    return (
+                        <span style={{
+                            color: isEdited ? '#ff0000' : 'inherit'
+                        }}>
+                {isPricework ? '--' : totalHours}
+            </span>
+                    );
+                },
             },
             {
                 id: 'priceWorkAmount',
@@ -1358,8 +1383,12 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                                                             {visibleColumnConfigs.totalHours?.visible &&
                                                                 <TableCell sx={{
                                                                     py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>{formatHour(log.total_hours)}</TableCell>}
+                                                                    fontSize: '0.875rem',
+                                                                    color: log.is_edited ? '#ff0000' : 'inherit'
+                                                                }}>
+                                                                    {log.is_pricework ? '--' : formatHour(log.total_hours)}
+                                                                </TableCell>
+                                                            }
 
                                                             {visibleColumnConfigs.priceWorkAmount?.visible &&
                                                                 <TableCell sx={{

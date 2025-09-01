@@ -262,12 +262,29 @@ const TimesheetList = () => {
                 header: 'Name',
                 cell: (info: any) => {
                     const row = info.row.original;
+
                     return (
-                        <Stack direction="row" alignItems="center" spacing={2}>
-                            <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{width: 36, height: 36}}/>
-                            <Box textAlign="left">
-                                <Typography>{row.user_name}</Typography>
-                                <Typography color="textSecondary" variant="subtitle1">
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%' }}>
+                            <Avatar
+                                src={row.user_thumb_image}
+                                alt={row.user_name}
+                                sx={{ width: 36, height: 36 }}
+                            />
+                            <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                    variant="body2"
+                                    noWrap
+                                    title={row.user_name}
+                                >
+                                    {row.user_name}
+                                </Typography>
+
+                                <Typography
+                                    variant="caption"
+                                    color="textSecondary"
+                                    noWrap
+                                    title={row.trade_name}
+                                >
                                     {row.trade_name}
                                 </Typography>
                             </Box>

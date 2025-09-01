@@ -212,9 +212,21 @@ const TimeClock = () => {
                     return (
                         <Stack direction="row" alignItems="center" spacing={2}>
                             <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
-                            <Box textAlign="left">
-                                <Typography>{row.user_name}</Typography>
-                                <Typography color="textSecondary" variant="subtitle1">
+                            <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                    variant="body2"
+                                    noWrap
+                                    title={row.user_name}
+                                >
+                                    {row.user_name}
+                                </Typography>
+
+                                <Typography
+                                    variant="caption"
+                                    color="textSecondary"
+                                    noWrap
+                                    title={row.trade_name}
+                                >
                                     {row.trade_name}
                                 </Typography>
                             </Box>
@@ -493,9 +505,9 @@ const TimeClock = () => {
                     timeClock={selectedTimeClock}
                     user_id={selectedTimeClock?.user_id}
                     currency={currency}
-                    allUsers={filteredData} // Pass all users for navigation
+                    allUsers={filteredData} 
                     onClose={closeDetails}
-                    onUserChange={handleUserChange} // Pass the user change handler
+                    onUserChange={handleUserChange}
                 />
             </Drawer>
         </Box>
