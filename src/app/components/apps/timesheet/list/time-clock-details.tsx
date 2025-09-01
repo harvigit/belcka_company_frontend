@@ -722,7 +722,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                                 },
                             }}
                         >
-                           <IconExclamationMark />
+                           <IconExclamationMark size={18} />
                         </IconButton>
                     );
                 },
@@ -1146,7 +1146,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
 
             {/* Table */}
             <Box sx={{flex: 1, overflow: 'auto', paddingBottom: selectedRows.size > 0 ? '80px' : '0px'}}>
-                <TableContainer>
+                <TableContainer sx={{ overflowY: 'hidden' }}>
                     <Table size="small" stickyHeader>
                         <TableHead>
                             {table.getHeaderGroups().map((hg) => (
@@ -1224,188 +1224,188 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                                 return (
                                     <React.Fragment key={row.id}>
                                         {row.original.rowsData ? (() => {
-                                                const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
-                                                const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
-                                                    worklogIds.includes(id)
-                                                ).length;
-                                                const rowSpan = row.original.rowsData.length + expandedWorklogsCount;
+                                            const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
+                                            const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
+                                                worklogIds.includes(id)
+                                            ).length;
+                                            const rowSpan = row.original.rowsData.length + expandedWorklogsCount;
 
-                                                return row.original.rowsData.map((log: any, index: number) => {
-                                                    const worklogId = `${row.id}-${log.worklog_id}`;
-                                                    const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
-                                                    const isFirstRow = index === 0;
-                                                    const isLogLocked = isRecordLocked(log);
+                                            return row.original.rowsData.map((log: any, index: number) => {
+                                                const worklogId = `${row.id}-${log.worklog_id}`;
+                                                const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
+                                                const isFirstRow = index === 0;
+                                                const isLogLocked = isRecordLocked(log);
 
-                                                    return (
-                                                        <>
-                                                            <TableRow
-                                                                key={log.worklog_id}
-                                                                sx={{
-                                                                    backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
-                                                                }}
-                                                            >
-                                                                {isFirstRow && visibleColumnConfigs.select?.visible && (
-                                                                    <TableCell rowSpan={rowSpan}
-                                                                               sx={{
-                                                                                   width: `${visibleColumnConfigs.select.width}px`,
-                                                                                   py: 0.5,
-                                                                               }}
-                                                                    >
-                                                                        <CustomCheckbox
-                                                                            checked={selectedRows.has(`row-${row.index}`)}
-                                                                            onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
-                                                                        />
-                                                                    </TableCell>
-                                                                )}
+                                                return (
+                                                    <>
+                                                        <TableRow
+                                                            key={log.worklog_id}
+                                                            sx={{
+                                                                backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
+                                                            }}
+                                                        >
+                                                            {isFirstRow && visibleColumnConfigs.select?.visible && (
+                                                                <TableCell rowSpan={rowSpan}
+                                                                           sx={{
+                                                                               width: `${visibleColumnConfigs.select.width}px`,
+                                                                               py: 0.5,
+                                                                           }}
+                                                                >
+                                                                    <CustomCheckbox
+                                                                        checked={selectedRows.has(`row-${row.index}`)}
+                                                                        onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
+                                                                    />
+                                                                </TableCell>
+                                                            )}
 
-                                                                {isFirstRow && visibleColumnConfigs.date?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>{rowData.date}</TableCell>}
+                                                            {isFirstRow && visibleColumnConfigs.date?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>{rowData.date}</TableCell>}
 
-                                                                {visibleColumnConfigs.exclamation?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>
-                                                                        { log.is_requested == true ? (
-                                                                            <IconButton
-                                                                                size="small"
-                                                                                color="error"
-                                                                                aria-label="error"
-                                                                                sx={{
-                                                                                    '&:hover': {
-                                                                                        backgroundColor: 'transparent',
-                                                                                        color: '#fc4b6c',
-                                                                                    },
-                                                                                }}
-                                                                            >
-                                                                                <IconExclamationMark />
-                                                                            </IconButton>
-                                                                        ) : null}
-                                                                    </TableCell>}
-                                                                
-                                                                {visibleColumnConfigs.expander?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>
-                                                                        { log.user_checklogs && log.user_checklogs.length > 0 ? (
-                                                                            <IconButton
-                                                                                size="small"
-                                                                                onClick={() => handleWorklogToggle(log.worklog_id)}
-                                                                                aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
-                                                                                {isWorklogExpanded ? (
-                                                                                    <IconChevronDown size={18}/>
-                                                                                ) : (
-                                                                                    <IconChevronRight size={18}/>
-                                                                                )}
-                                                                            </IconButton>
-                                                                        ) : null}
-                                                                    </TableCell>}
+                                                            {visibleColumnConfigs.exclamation?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>
+                                                                    { log.is_requested == true ? (
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            color="error"
+                                                                            aria-label="error"
+                                                                            sx={{
+                                                                                '&:hover': {
+                                                                                    backgroundColor: 'transparent',
+                                                                                    color: '#fc4b6c',
+                                                                                },
+                                                                            }}
+                                                                        >
+                                                                            <IconExclamationMark size={18}/>
+                                                                        </IconButton>
+                                                                    ) : null}
+                                                                </TableCell>}
+                                                            
+                                                            {visibleColumnConfigs.expander?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>
+                                                                    { log.user_checklogs && log.user_checklogs.length > 0 ? (
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleWorklogToggle(log.worklog_id)}
+                                                                            aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
+                                                                            {isWorklogExpanded ? (
+                                                                                <IconChevronDown size={18}/>
+                                                                            ) : (
+                                                                                <IconChevronRight size={18}/>
+                                                                            )}
+                                                                        </IconButton>
+                                                                    ) : null}
+                                                                </TableCell>}
 
-                                                                {visibleColumnConfigs.project?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>{log.project_name || '--'}</TableCell>}
+                                                            {visibleColumnConfigs.project?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>{log.project_name || '--'}</TableCell>}
 
-                                                                {visibleColumnConfigs.shift?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>{log.shift_name || '--'}</TableCell>}
+                                                            {visibleColumnConfigs.shift?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>{log.shift_name || '--'}</TableCell>}
 
-                                                                {visibleColumnConfigs.start?.visible && (
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>
-                                                                        {log.is_pricework || isLogLocked ? (
-                                                                            <Box sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                opacity: isLogLocked ? 0.6 : 1
-                                                                            }}>
-                                                                                {sanitizeDateTime(log.start)}
-                                                                            </Box>
-                                                                        ) : (
-                                                                            renderEditableTimeCell(worklogId, 'start', log.start, log)
-                                                                        )}
-                                                                    </TableCell>
-                                                                )}
+                                                            {visibleColumnConfigs.start?.visible && (
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>
+                                                                    {log.is_pricework || isLogLocked ? (
+                                                                        <Box sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            opacity: isLogLocked ? 0.6 : 1
+                                                                        }}>
+                                                                            {sanitizeDateTime(log.start)}
+                                                                        </Box>
+                                                                    ) : (
+                                                                        renderEditableTimeCell(worklogId, 'start', log.start, log)
+                                                                    )}
+                                                                </TableCell>
+                                                            )}
 
-                                                                {visibleColumnConfigs.end?.visible && (
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>
-                                                                        {log.is_pricework || isLogLocked ? (
-                                                                            <Box sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                opacity: isLogLocked ? 0.6 : 1
-                                                                            }}>
-                                                                                {sanitizeDateTime(log.end)}
-                                                                            </Box>
-                                                                        ) : (
-                                                                            renderEditableTimeCell(worklogId, 'end', log.end, log)
-                                                                        )}
-                                                                    </TableCell>
-                                                                )}
+                                                            {visibleColumnConfigs.end?.visible && (
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>
+                                                                    {log.is_pricework || isLogLocked ? (
+                                                                        <Box sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            opacity: isLogLocked ? 0.6 : 1
+                                                                        }}>
+                                                                            {sanitizeDateTime(log.end)}
+                                                                        </Box>
+                                                                    ) : (
+                                                                        renderEditableTimeCell(worklogId, 'end', log.end, log)
+                                                                    )}
+                                                                </TableCell>
+                                                            )}
 
-                                                                {visibleColumnConfigs.totalHours?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>{formatHour(log.total_hours)}</TableCell>}
+                                                            {visibleColumnConfigs.totalHours?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>{formatHour(log.total_hours)}</TableCell>}
 
-                                                                {visibleColumnConfigs.priceWorkAmount?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
+                                                            {visibleColumnConfigs.priceWorkAmount?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
 
-                                                                {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.dailyTotal} </TableCell>}
+                                                            {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.dailyTotal} </TableCell>}
 
-                                                                {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.payableAmount} </TableCell>}
+                                                            {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.payableAmount} </TableCell>}
 
-                                                                {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.employeeNotes} </TableCell>}
+                                                            {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.employeeNotes} </TableCell>}
 
-                                                                {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.managerNotes} </TableCell>}
+                                                            {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.managerNotes} </TableCell>}
 
-                                                            </TableRow>
-                                                            {isWorklogExpanded &&
-                                                                <CheckLogRows
-                                                                    logs={log.user_checklogs}
-                                                                    currency={currency}
-                                                                    visibleColumnConfigs={visibleColumnConfigs}
-                                                                    formatHour={formatHour}
-                                                                    isMultiRow={true}
-                                                                    getVisibleCellsLength={5}
-                                                                />
-                                                            }
-                                                        </>)
-                                                })
+                                                        </TableRow>
+                                                        {isWorklogExpanded &&
+                                                            <CheckLogRows
+                                                                logs={log.user_checklogs}
+                                                                currency={currency}
+                                                                formatHour={formatHour}
+                                                                visibleColumnConfigs={visibleColumnConfigs}
+                                                                getVisibleCellsLength={6}
+                                                                isMultiRow={true}
+                                                            />
+                                                        }
+                                                    </>)
+                                            })
 
-                                            })() :
+                                        })() :
                                             <>
                                                 <TableRow
                                                     key={row.id}
@@ -1548,10 +1548,12 @@ const CheckLogRows = ({logs, currency, formatHour, visibleColumnConfigs, getVisi
     return (
         <TableRow>
             {visibleColumnConfigs.select?.visible && <TableCell></TableCell>}
-            {!isMultiRow && visibleColumnConfigs.status?.visible && <TableCell></TableCell>}
+            {isMultiRow && visibleColumnConfigs.date?.visible && <TableCell></TableCell>}
+            {/*{!isMultiRow && visibleColumnConfigs.status?.visible && <TableCell></TableCell>}*/}
             {!isMultiRow && visibleColumnConfigs.date?.visible && <TableCell></TableCell>}
-            {!isMultiRow && visibleColumnConfigs.expander?.visible && <TableCell></TableCell>}
             {!isMultiRow && visibleColumnConfigs.exclamation?.visible && <TableCell></TableCell>}
+            {!isMultiRow && visibleColumnConfigs.expander?.visible && <TableCell></TableCell>}
+            
             <TableCell sx={{padding: 0}} colSpan={getVisibleCellsLength}>
                 {logs?.length > 0 ? (
                     <Table size="small">
