@@ -57,6 +57,36 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 
 const columnHelper = createColumnHelper();
 
+const STORAGE_KEY = 'timesheet-date-range';
+
+const saveDateRangeToStorage = (startDate: Date, endDate: Date) => {
+    try {
+        const dateRange = {
+            startDate: startDate ? startDate.toDateString() : null,
+            endDate: endDate ? endDate.toDateString() : null
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
+    } catch (error) {
+        console.error('Error saving date range to localStorage:', error);
+    }
+};
+
+const loadDateRangeFromStorage = () => {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+                endDate: parsed.endDate ? new Date(parsed.endDate) : null
+            };
+        }
+    } catch (error) {
+        console.error('Error loading date range from localStorage:', error);
+    }
+    return null;
+};
+
 type Timesheet = {
     user_name: string;
     trade_name: string;
@@ -100,6 +130,23 @@ const TimesheetList = () => {
     const defaultEnd = new Date(today);
     defaultEnd.setDate(today.getDate() - today.getDay() + 7);
 
+    // Load from localStorage or use defaults
+    const getInitialDates = () => {
+        const stored = loadDateRangeFromStorage();
+        if (stored && stored.startDate && stored.endDate) {
+            return {
+                startDate: stored.startDate,
+                endDate: stored.endDate
+            };
+        }
+        return {
+            startDate: defaultStart,
+            endDate: defaultEnd
+        };
+    };
+
+    const initialDates = getInitialDates();
+
     const [data, setData] = useState<Timesheet[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [currency, setCurrency] = useState<string>('');
@@ -109,9 +156,11 @@ const TimesheetList = () => {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [pagination, setPagination] = useState<PaginationState>({pageIndex: 0, pageSize: 50});
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
-    const [startDate, setStartDate] = useState<Date | null>(defaultStart);
-    const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
-    
+
+    // Use initial dates from localStorage or defaults
+    const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
+    const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
+
     const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
 
     const [sidebarData, setSidebarData] = useState<any>(null);
@@ -139,13 +188,17 @@ const TimesheetList = () => {
     };
 
     useEffect(() => {
-        if (startDate && endDate) fetchData(startDate, endDate);
+        if (startDate && endDate) {
+            fetchData(startDate, endDate);
+        }
     }, [startDate, endDate]);
 
     const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (range.from && range.to) {
             setStartDate(range.from);
             setEndDate(range.to);
+
+            saveDateRangeToStorage(range.from, range.to);
         }
     };
 
@@ -274,7 +327,6 @@ const TimesheetList = () => {
                                 <Typography
                                     variant="body2"
                                     noWrap
-                                    title={row.user_name}
                                 >
                                     {row.user_name}
                                 </Typography>
@@ -283,7 +335,6 @@ const TimesheetList = () => {
                                     variant="caption"
                                     color="textSecondary"
                                     noWrap
-                                    title={row.trade_name}
                                 >
                                     {row.trade_name}
                                 </Typography>
@@ -345,7 +396,7 @@ const TimesheetList = () => {
                     return row.type === 'T' ? formatHour(info.getValue()) || '-' : '-';
                 },
             }),
-            
+
             columnHelper.accessor('total_pricework_amount', {
                 header: 'Pricework Amount',
                 cell: (info: any) => {

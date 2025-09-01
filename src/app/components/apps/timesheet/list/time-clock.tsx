@@ -42,6 +42,36 @@ import '../../../../global.css';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
+const STORAGE_KEY = 'timesheet-date-range';
+
+const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null) => {
+    try {
+        const dateRange = {
+            startDate: startDate ? startDate.toDateString() : null,
+            endDate: endDate ? endDate.toDateString() : null
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
+    } catch (error) {
+        console.error('Error saving date range to localStorage:', error);
+    }
+};
+
+const loadDateRangeFromStorage = () => {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+                endDate: parsed.endDate ? new Date(parsed.endDate) : null
+            };
+        }
+    } catch (error) {
+        console.error('Error loading date range from localStorage:', error);
+    }
+    return null;
+};
+
 export type TimeClock = {
     weekly_payable_amount: number;
     company_id: string;
@@ -91,6 +121,23 @@ const TimeClock = () => {
     const defaultEnd = new Date(today);
     defaultEnd.setDate(today.getDate() - today.getDay() + 7);
 
+    // Load from localStorage or use defaults
+    const getInitialDates = () => {
+        const stored = loadDateRangeFromStorage();
+        if (stored && stored.startDate && stored.endDate) {
+            return {
+                startDate: stored.startDate,
+                endDate: stored.endDate
+            };
+        }
+        return {
+            startDate: defaultStart,
+            endDate: defaultEnd
+        };
+    };
+
+    const initialDates = getInitialDates();
+
     // State management
     const [data, setData] = useState<TimeClock[]>([]);
     const [currency, setCurrency] = useState<string>('');
@@ -99,8 +146,11 @@ const TimeClock = () => {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
     const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-    const [startDate, setStartDate] = useState<Date | null>(defaultStart);
-    const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
+
+    // Use initial dates from localStorage or defaults
+    const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
+    const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
+
     const [hoveredRow, setHoveredRow] = useState<string | null>(null);
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
@@ -135,6 +185,8 @@ const TimeClock = () => {
         if (range.from && range.to) {
             setStartDate(range.from);
             setEndDate(range.to);
+            // Save to localStorage whenever dates change
+            saveDateRangeToStorage(range.from, range.to);
         }
     };
 
@@ -216,7 +268,6 @@ const TimeClock = () => {
                                 <Typography
                                     variant="body2"
                                     noWrap
-                                    title={row.user_name}
                                 >
                                     {row.user_name}
                                 </Typography>
@@ -225,7 +276,6 @@ const TimeClock = () => {
                                     variant="caption"
                                     color="textSecondary"
                                     noWrap
-                                    title={row.trade_name}
                                 >
                                     {row.trade_name}
                                 </Typography>
