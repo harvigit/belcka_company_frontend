@@ -36,6 +36,7 @@ export type ProjectList = {
   materials: number | null;
   profit: number | null;
   date_added: string;
+  expire_date: string;
 };
 
 interface Props {
@@ -48,6 +49,8 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const [email, setEmail] = useState("");
   const [firstName, setfirstName] = useState("");
   const [lastName, setlastName] = useState("");
+  const [expireDate, setExpireDate] = useState("");
+
   const session = useSession();
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<ProjectList[]>([]);
@@ -71,6 +74,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
         user_role_id: 3,
         company_id: user.company_id,
         project_ids: selectedIds,
+        expire_date: expireDate,
       };
 
       const response = await api.post("company-clients/registration", payload);
@@ -83,6 +87,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
         setfirstName("");
         setlastName("");
         setEmail("");
+        setExpireDate("");
         setSelectedProjects([]);
       }
     } catch (error: any) {
@@ -230,6 +235,23 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                       )}
                     />
                   </Box>
+                </Box>
+                <Box display={"flex"} gap={3}>
+                  <Box className="form_inputs" mt={3}>
+                    <Typography>Select Expiry time</Typography>
+                    <CustomTextField
+                      type="date"
+                      id="invite_date"
+                      placeholder="Choose Expiry date"
+                      fullWidth
+                      value={expireDate}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const newDate = e.target.value;
+                        setExpireDate(newDate);
+                      }}
+                    />
+                  </Box>
+                  <Box className="form_inputs" mt={3}></Box>
                 </Box>
               </Stack>
               <Button

@@ -402,7 +402,9 @@ const TablePagination = () => {
               {(logged_in_at || expired_on === "expired") && (
                 <Chip
                   label={
-                    logged_in_at ? `Logged in at ${formattedLogin}` : "Expired"
+                    logged_in_at 
+                      ? `Logged in at ${formattedLogin}`
+                      : "Expired"
                   }
                   color={logged_in_at ? "success" : "error"}
                   size="small"

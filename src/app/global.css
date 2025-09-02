@@ -1,4 +1,11 @@
 /* global.css or any global stylesheet */
+*{
+    font-family: 'Roboto', 'Roboto Fallback';
+    font-style: normal;
+    h5{
+        font-weight: normal;
+    }
+}
 .toast-success {
     background-color: #4caf50 !important;
     color: white !important;

@@ -1,5 +1,6 @@
 import React from "react";
 import { CustomizerContextProvider } from "./context/customizerContext";
+import { Roboto } from 'next/font/google';
 
 import MyApp from "./app";
 import "./global.css";
@@ -11,10 +12,16 @@ export const metadata = {
   description: "OTMS System",
 };
 
+const roboto = Roboto({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-roboto',     
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={roboto.className}>
         <NextTopLoader color="#1e4db7" />
         <CustomizerContextProvider>
             <MyApp session={undefined}>

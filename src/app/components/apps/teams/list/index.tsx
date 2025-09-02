@@ -354,7 +354,10 @@ const TablePagination = () => {
             <Tooltip title="Edit">
               <IconButton
                 disabled={subcontractor}
-                onClick={() => handleEdit(item.team_id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(item.team_id);
+                }}
                 color="primary"
               >
                 <IconEdit size={18} />

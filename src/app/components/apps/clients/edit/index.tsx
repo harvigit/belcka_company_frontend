@@ -37,6 +37,7 @@ export type ClientList = {
   last_name?: string;
   extension?: string;
   project_ids: string;
+  expire_date: string;
 };
 
 interface Props {
@@ -53,9 +54,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   const [email, setEmail] = useState("");
   const [firstName, setfirstName] = useState("");
   const [lastName, setlastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [extension, setExtension] = useState("+44");
-  const [nationalPhone, setNationalPhone] = useState("");
+  const [expireDate, setExpireDate] = useState("");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<ProjectList[]>([]);
@@ -90,12 +89,10 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
         setfirstName(client.first_name || "");
         setlastName(client.last_name || "");
         setEmail(client.email || "");
-
-        const ext = client.extension || "+44";
-        const rawPhone = String(client.phone || "");
-        setExtension(ext);
-        setNationalPhone(rawPhone);
-        setPhone(ext.replace("+", "") + rawPhone);
+        // When setting expireDate from API
+        setExpireDate(
+          client.expire_date ? client.expire_date.split("T")[0] : ""
+        );
 
         const clientProjectIds = client.project_ids
           .split(",")
@@ -137,10 +134,10 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
         first_name: firstName,
         last_name: lastName,
         email,
-        extension,
         user_role_id: 3,
         company_id: user.company_id,
         project_ids: selectedIds,
+        expire_date: expireDate
       };
 
       const response = await api.post("company-clients/edit", payload);
@@ -225,6 +222,31 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
                     )}
                   />
                 </Box>
+              </Box>
+              <Box display={"flex"} gap={3}>
+                <Box className="form_inputs" mt={3}>
+                  <Typography>Select Expiry time</Typography>
+                  <CustomTextField
+                    type="date"
+                    id="invite_date"
+                    placeholder="Choose Expiry date"
+                    fullWidth
+                    value={expireDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const newDate = e.target.value;
+                      setExpireDate(newDate);
+
+                      setData((prev) => {
+                        const updated = [...prev];
+                        if (updated[0]) {
+                          updated[0].expire_date = newDate;
+                        }
+                        return updated;
+                      });
+                    }}
+                  />
+                </Box>
+                <Box className="form_inputs" mt={3}></Box>
               </Box>
             </Stack>
             <Button
