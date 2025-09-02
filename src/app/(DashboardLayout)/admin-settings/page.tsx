@@ -5,7 +5,7 @@ import PageContainer from "@/app/components/container/PageContainer";
 import { Grid, Tabs, Tab, Box, Stack } from "@mui/material";
 import CreateWork from "@/app/components/apps/settings/tasks/list";
 import LocationList from "@/app/components/apps/settings/locations/list";
-import { IconExclamationCircle, IconMap, IconNotebook } from "@tabler/icons-react";
+import { IconBell, IconMap, IconNotebook } from "@tabler/icons-react";
 import BlankCard from "@/app/components/shared/BlankCard";
 import NotificationSettings from "@/app/components/apps/settings/notifications";
 
@@ -66,7 +66,7 @@ const AdminSetting = () => {
             }}
           >
             <BlankCard className="tab-balnkcard">
-              <Stack direction="row" mt={3} ml={2} mb={3}>
+              <Stack direction="row" mt={3} ml={2} mb={3} mr={2}>
                 <Tabs
                   className="admin-settings-tabs"
                   orientation="vertical"
@@ -92,7 +92,7 @@ const AdminSetting = () => {
                   <Tab
                     className="admin-settings"
                     iconPosition="start"
-                    icon={<IconExclamationCircle size="20" />}
+                    icon={<IconBell size="20" />}
                     label="Notification Setting"
                     {...a11yProps(2)}
                   />
