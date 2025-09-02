@@ -435,10 +435,17 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
 
         const originalStart = sanitizeDateTime(originalLog.start);
         const originalEnd = sanitizeDateTime(originalLog.end);
-        const newStart = editedData.start || '';
-        const newEnd = editedData.end || '';
+
+        const newStart = editedData.start ? validateAndFormatTime(editedData.start) : '';
+        const newEnd = editedData.end ? validateAndFormatTime(editedData.end) : '';
 
         if (originalStart === newStart && originalEnd === newEnd) {
+            cancelEditingField(worklogId);
+            return;
+        }
+
+        if ((newStart && !timeRegex.test(newStart)) || (newEnd && !timeRegex.test(newEnd))) {
+            console.error('Invalid time format before API call');
             cancelEditingField(worklogId);
             return;
         }
@@ -448,8 +455,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
             await api.post('/time-clock/edit-worklog', {
                 user_worklog_id: originalLog.worklog_id,
                 date: originalLog.date_added,
-                start_time: editedData.start,
-                end_time: editedData.end,
+                start_time: newStart,
+                end_time: newEnd,
             });
 
             cancelEditingField(worklogId);
@@ -860,10 +867,55 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     const formatTimeInput = (value: string): string => {
         const digits = value.replace(/\D/g, '');
-        if (digits.length === 4) {
-            return digits.slice(0, 2) + ':' + digits.slice(2, 4);
+
+        if (digits.length === 0) return '';
+        if (digits.length <= 2) {
+            const hours = parseInt(digits);
+            if (hours > 23) return '23:00';
+            return digits;
         }
+        if (digits.length === 3) {
+            const hours = parseInt(digits.slice(0, 1));
+            const minutes = parseInt(digits.slice(1, 3));
+            if (minutes > 59) return `${hours}:59`;
+            return `${hours}:${digits.slice(1, 3)}`;
+        }
+        if (digits.length >= 4) {
+            const hours = parseInt(digits.slice(0, 2));
+            const minutes = parseInt(digits.slice(2, 4));
+            if (hours > 23) return '23:59';
+            if (minutes > 59) return `${hours.toString().padStart(2, '0')}:59`;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
+
         return value;
+    };
+
+    const validateAndFormatTime = (value: string): string => {
+        if (!value || value.trim() === '') return '';
+
+        const digits = value.replace(/\D/g, '');
+
+        if (digits.length === 0) return '';
+
+        let hours: number;
+        let minutes: number;
+
+        if (digits.length <= 2) {
+            hours = parseInt(digits);
+            minutes = 0;
+        } else if (digits.length === 3) {
+            hours = parseInt(digits.slice(0, 1));
+            minutes = parseInt(digits.slice(1, 3));
+        } else {
+            hours = parseInt(digits.slice(0, 2));
+            minutes = parseInt(digits.slice(2, 4));
+        }
+
+        if (hours > 23) hours = 23;
+        if (minutes > 59) minutes = 59;
+
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     };
 
     const renderEditableTimeCell = (
@@ -890,7 +942,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                     <TextField
                         type="text"
                         value={editingData[field] || ''}
-                        placeholder="HH:mm"
+                        placeholder="HH:MM"
                         variant="standard"
                         InputProps={{
                             disableUnderline: true,
@@ -900,16 +952,36 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                             updateEditingField(worklogId, field, formatted);
                         }}
                         onBlur={() => {
-                            const newValue = editingData[field] || '';
+                            const inputValue = editingData[field] || '';
+                            const formattedTime = validateAndFormatTime(inputValue);
                             const originalValue = sanitizeDateTime(currentValue);
 
-                            if (timeRegex.test(newValue) && newValue !== originalValue) {
+                            if (formattedTime && formattedTime !== originalValue) {
+                                // Update the editing state with formatted time before saving
+                                updateEditingField(worklogId, field, formattedTime);
                                 saveFieldChanges(worklogId, log);
                             } else {
                                 cancelEditingField(worklogId);
                             }
                         }}
-                        onKeyDown={(e) => handleKeyPress(e, worklogId, log)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const inputValue = editingData[field] || '';
+                                const formattedTime = validateAndFormatTime(inputValue);
+                                const originalValue = sanitizeDateTime(currentValue);
+
+                                if (formattedTime && formattedTime !== originalValue) {
+                                    updateEditingField(worklogId, field, formattedTime);
+                                    saveFieldChanges(worklogId, log);
+                                } else {
+                                    cancelEditingField(worklogId);
+                                }
+                            } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                cancelEditingField(worklogId);
+                            }
+                        }}
                         autoFocus
                         disabled={isSaving}
                         sx={{
