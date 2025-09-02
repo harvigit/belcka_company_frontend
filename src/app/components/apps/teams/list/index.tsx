@@ -259,7 +259,7 @@ const TablePagination = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.2 }}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -295,7 +295,7 @@ const TablePagination = () => {
       header: () => "Company",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -317,7 +317,7 @@ const TablePagination = () => {
               alt={name}
               sx={{ width: 36, height: 36 }}
             />
-            <Box>
+            <Box sx={{px: 1.5}}>
               <Typography className="f-14" color="textPrimary">
                 {name ?? "-"}
               </Typography>
@@ -335,7 +335,7 @@ const TablePagination = () => {
         const users = row.working_member_count;
 
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {users + `/` + info.getValue()}
           </Typography>
         );
