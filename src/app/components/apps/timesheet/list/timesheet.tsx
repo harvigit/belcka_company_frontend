@@ -325,7 +325,7 @@ const TimesheetList = () => {
                             />
                             <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
                                 <Typography
-                                   className="f-17"
+                                   className="f-14"
                                     noWrap
                                 >
                                     {row.user_name}
@@ -349,7 +349,7 @@ const TimesheetList = () => {
                     const row = info.row.original;
                     return (
                         <Tooltip title={`${row.start_date_month} - ${row.end_date_month}`}>
-                            <Typography className="f-17">{info.getValue()}</Typography>
+                            <Typography className="f-14">{info.getValue()}</Typography>
                         </Tooltip>
                     );
                 },
@@ -410,7 +410,7 @@ const TimesheetList = () => {
                     const value = info.getValue();
                     const color = value === 'Locked' ? 'green' : 'red';
                     return (
-                        <Typography style={{color: color}} className="f-17"> {value} </Typography>
+                        <Typography style={{color: color}} className="f-14"> {value} </Typography>
                     );
                 },
             }),

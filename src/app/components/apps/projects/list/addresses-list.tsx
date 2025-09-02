@@ -300,7 +300,7 @@ const AddressesList = ({
               />
 
               <Typography
-                className="f-17"
+                className="f-14"
                 onClick={() => {
                   setSidebarData({
                     addressName: item.name,
@@ -332,7 +332,7 @@ const AddressesList = ({
           else if (statusInt === 3) color = "#FF7F00";
 
           return (
-            <Typography className="f-17" color={color} fontWeight={700}>
+            <Typography className="f-14" color={color} fontWeight={700}>
               {info.getValue() ?? "-"}
             </Typography>
           );
@@ -342,7 +342,7 @@ const AddressesList = ({
         id: "check_ins",
         header: () => "Check-ins",
         cell: (info) => (
-          <Typography className="f-17" color={"#007AFF"} fontWeight={700}>
+          <Typography className="f-14" color={"#007AFF"} fontWeight={700}>
             {info.getValue() ?? "-"}
           </Typography>
         ),
@@ -351,7 +351,7 @@ const AddressesList = ({
         id: "start_date",
         header: () => "Start date",
         cell: (info) => (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {formatDate(info.getValue())}
           </Typography>
         ),
@@ -360,7 +360,7 @@ const AddressesList = ({
         id: "end_date",
         header: () => "End date",
         cell: (info) => (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {formatDate(info.getValue())}
           </Typography>
         ),

@@ -266,7 +266,7 @@ const TimeClock = () => {
                             <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
                             <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
                                 <Typography
-                                   className="f-17"
+                                   className="f-14"
                                     noWrap
                                 >
                                     {row.user_name}

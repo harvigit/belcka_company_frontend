@@ -154,7 +154,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                                     setSelectedRowIds(newSelected);
                                 }}
                             />
-                            <Typography className="f-17">{item.company_task_name ?? '-'}</Typography>
+                            <Typography className="f-14">{item.company_task_name ?? '-'}</Typography>
                         </Stack>
                     );
                 },
@@ -164,7 +164,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 id: 'address_name',
                 header: () => 'Address',
                 cell: (info) => (
-                    <Typography className="f-17">
+                    <Typography className="f-14">
                         {info.getValue() ?? '-'}
                     </Typography>
                 ),
@@ -181,7 +181,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                     else if (statusInt === 3) color = '#FF7F00';
 
                     return (
-                        <Typography className="f-17" color={color} fontWeight={500}>
+                        <Typography className="f-14" color={color} fontWeight={500}>
                             {info.getValue() ?? '-'}
                         </Typography>
                     );
@@ -199,7 +199,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                     else if (statusInt === 3) color = '#FF7F00';
 
                     return (
-                        <Typography className="f-17" color={color} fontWeight={500}>
+                        <Typography className="f-14" color={color} fontWeight={500}>
                             {info.getValue() ?? '-'}
                         </Typography>
                     );
@@ -210,7 +210,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 id: 'start_date',
                 header: () => 'Start date',
                 cell: (info) => (
-                    <Typography className="f-17" color="textPrimary">
+                    <Typography className="f-14" color="textPrimary">
                         {info.getValue()}
                     </Typography>
                 ),
@@ -220,7 +220,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 id: 'end_date',
                 header: () => 'End date',
                 cell: (info) => (
-                    <Typography className="f-17" color="textPrimary">
+                    <Typography className="f-14" color="textPrimary">
                         {info.getValue()}
                     </Typography>
                 ),

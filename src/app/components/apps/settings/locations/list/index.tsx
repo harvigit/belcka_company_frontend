@@ -255,7 +255,7 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-17">{item.name ?? "-"}</Typography>
+              <Typography className="f-14">{item.name ?? "-"}</Typography>
             </Stack>
           </Stack>
         );

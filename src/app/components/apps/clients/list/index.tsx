@@ -240,7 +240,7 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-17">{item.name ?? "-"}</Typography>
+              <Typography className="f-14">{item.name ?? "-"}</Typography>
             </Stack>
           </Stack>
         );
@@ -252,7 +252,7 @@ const TablePagination = () => {
       header: () => "Email",
       cell: (info) => {
         return (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -280,7 +280,7 @@ const TablePagination = () => {
       header: () => "Status",
       cell: (info) => {
         return (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -301,7 +301,7 @@ const TablePagination = () => {
 
         const value = item.projects;
         return (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {value.length <= 0 ? "-" : value}
           </Typography>
         );
@@ -313,7 +313,7 @@ const TablePagination = () => {
       header: () => "Invite Date",
       cell: (info) => {
         return (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {formatDate(info.getValue())}
           </Typography>
         );
@@ -334,7 +334,7 @@ const TablePagination = () => {
         const value = item.expire_date;
 
         return (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {formatDate(value.split("T")[0])}
           </Typography>
         );
@@ -820,6 +820,7 @@ const TablePagination = () => {
                 client?
               </Typography>
 
+                <Typography mb={1}>Login expires on</Typography>
               <CustomTextField
                 type="date"
                 id="invite_date"

@@ -179,7 +179,7 @@ const TablePagination = () => {
               <Box>
                 <Link href={`/apps/users/user?user_id=${user.id}`} passHref>
                   <Typography
-                    className="f-17"
+                    className="f-14"
                     color="textPrimary"
                     sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
                   >
@@ -200,7 +200,7 @@ const TablePagination = () => {
       id: "team_name",
       header: () => "Team Name",
       cell: (info) => (
-        <Typography className="f-17" color="textPrimary">
+        <Typography className="f-14" color="textPrimary">
           {info.getValue() ?? "-"}
         </Typography>
       ),

@@ -277,7 +277,7 @@ const TablePagination = () => {
             <Stack direction="row" alignItems="center" spacing={1}>
               <Link href={`/apps/teams/team?team_id=${item.team_id}`} passHref>
                 <Typography
-                  className="f-17"
+                  className="f-14"
                   color={shouldHighlight ? "secondary" : "textPrimary"}
                   sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
                 >
@@ -295,7 +295,7 @@ const TablePagination = () => {
       header: () => "Company",
       cell: (info) => {
         return (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -318,7 +318,7 @@ const TablePagination = () => {
               sx={{ width: 36, height: 36 }}
             />
             <Box>
-              <Typography className="f-17" color="textPrimary">
+              <Typography className="f-14" color="textPrimary">
                 {name ?? "-"}
               </Typography>
             </Box>
@@ -335,7 +335,7 @@ const TablePagination = () => {
         const users = row.working_member_count;
 
         return (
-          <Typography className="f-17" color="textPrimary">
+          <Typography className="f-14" color="textPrimary">
             {users + `/` + info.getValue()}
           </Typography>
         );
