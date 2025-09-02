@@ -240,7 +240,7 @@ const TablePagination = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.2 }}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}

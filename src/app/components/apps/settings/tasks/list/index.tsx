@@ -335,7 +335,7 @@ const TablePagination = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.2 }}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -349,8 +349,8 @@ const TablePagination = () => {
                 setSelectedRowIds(newSelected);
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-14">{item.name ?? "-"}</Typography>
+            <Stack direction="row" alignItems="center" spacing={1} >
+              <Typography className="f-14" >{item.name ?? "-"}</Typography>
             </Stack>
           </Stack>
         );
@@ -362,7 +362,7 @@ const TablePagination = () => {
       header: () => "Trade",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -375,7 +375,7 @@ const TablePagination = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Box>
-              <Typography className="f-14" color="textPrimary">
+              <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}> 
                 {info.getValue() ?? "-"}
               </Typography>
             </Box>
@@ -389,7 +389,7 @@ const TablePagination = () => {
       header: () => "Duration",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary" fontWeight={500}>
+          <Typography className="f-14" color="textPrimary" fontWeight={500} sx={{px: 1.5}}>
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -401,7 +401,7 @@ const TablePagination = () => {
       header: () => "Rate",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -413,7 +413,7 @@ const TablePagination = () => {
       header: () => "Units",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {info.getValue() ?? "-"}
           </Typography>
         );
