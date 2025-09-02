@@ -60,6 +60,7 @@ import ArchiveClient from "../archive";
 import AuthRegister from "../../settings/auth";
 import EditClient from "@/app/components/apps/clients/edit";
 import relativeTime from "dayjs/plugin/relativeTime";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 dayjs.extend(relativeTime);
 
 dayjs.extend(customParseFormat);
@@ -77,6 +78,7 @@ export type ClientList = {
   phone: number;
   invite_link: string;
   logged_in_at: Date;
+  expire_date: string;
 };
 
 const TablePagination = () => {
@@ -103,6 +105,7 @@ const TablePagination = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
+  const [expireDate, setExpireDate] = useState("");
 
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
@@ -237,7 +240,7 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="h5">{item.name ?? "-"}</Typography>
+              <Typography className="f-17">{item.name ?? "-"}</Typography>
             </Stack>
           </Stack>
         );
@@ -249,7 +252,7 @@ const TablePagination = () => {
       header: () => "Email",
       cell: (info) => {
         return (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -277,7 +280,7 @@ const TablePagination = () => {
       header: () => "Status",
       cell: (info) => {
         return (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -298,7 +301,7 @@ const TablePagination = () => {
 
         const value = item.projects;
         return (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {value.length <= 0 ? "-" : value}
           </Typography>
         );
@@ -310,15 +313,15 @@ const TablePagination = () => {
       header: () => "Invite Date",
       cell: (info) => {
         return (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {formatDate(info.getValue())}
           </Typography>
         );
       },
     }),
 
-    columnHelper.accessor(() => "expired_on", {
-      id: "expired_on",
+    columnHelper.accessor(() => "expire_date", {
+      id: "expire_date",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
@@ -328,35 +331,11 @@ const TablePagination = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const value = item.expired_on;
-
-        if (!value || value === "expired") {
-          return (
-            <Typography variant="h5" color="textPrimary">
-              -
-            </Typography>
-          );
-        }
-
-        const now = dayjs();
-        const expiry = dayjs(value);
-        const diffInMs = expiry.diff(now);
-
-        if (diffInMs <= 0) {
-          return <Typography variant="h5">-</Typography>;
-        }
-
-        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-        const diffInHours = Math.floor(diffInMinutes / 60);
-
-        const display =
-          diffInHours >= 1
-            ? `${diffInHours} hour${diffInHours > 1 ? "s" : ""}`
-            : `${diffInMinutes} minute${diffInMinutes > 1 ? "s" : ""}`;
+        const value = item.expire_date;
 
         return (
-          <Typography variant="h5" color="textPrimary">
-            {display}
+          <Typography className="f-17" color="textPrimary">
+            {formatDate(value.split("T")[0])}
           </Typography>
         );
       },
@@ -698,7 +677,7 @@ const TablePagination = () => {
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
+                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
@@ -836,10 +815,23 @@ const TablePagination = () => {
           >
             <DialogTitle>Confirm Re-activation</DialogTitle>
             <DialogContent>
-              <Typography color="textSecondary">
+              <Typography color="textSecondary" mb={2}>
                 Are you sure you want to Re-activation invitation for this
                 client?
               </Typography>
+
+              <CustomTextField
+                type="date"
+                id="invite_date"
+                placeholder="Choose Expiry date"
+                fullWidth
+                required
+                value={expireDate}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const newDate = e.target.value;
+                  setExpireDate(newDate);
+                }}
+              />
             </DialogContent>
             <DialogActions>
               <Button
@@ -854,6 +846,7 @@ const TablePagination = () => {
                   try {
                     const payload = {
                       id: selectedClientId,
+                      expire_date: expireDate,
                     };
                     const response = await api.post(
                       "company-clients/reactivate-invitation",
@@ -862,10 +855,9 @@ const TablePagination = () => {
                     toast.success(response.data.message);
                     setSelectedClientId(null);
                     await fetchClients();
-                  } catch (error) {
-                    toast.error("Failed to re-activate invitation");
-                  } finally {
                     setOpenActiveDialog(false);
+                  } catch (error) {
+                    setOpenActiveDialog(true);
                   }
                 }}
                 variant="outlined"

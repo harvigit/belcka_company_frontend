@@ -179,7 +179,7 @@ const TablePagination = () => {
               <Box>
                 <Link href={`/apps/users/user?user_id=${user.id}`} passHref>
                   <Typography
-                    variant="h5"
+                    className="f-17"
                     color="textPrimary"
                     sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
                   >
@@ -200,7 +200,7 @@ const TablePagination = () => {
       id: "team_name",
       header: () => "Team Name",
       cell: (info) => (
-        <Typography variant="h5" color="textPrimary">
+        <Typography className="f-17" color="textPrimary">
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -488,7 +488,7 @@ const TablePagination = () => {
                   {table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()

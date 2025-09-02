@@ -350,7 +350,7 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="h5">{item.name ?? "-"}</Typography>
+              <Typography className="f-17">{item.name ?? "-"}</Typography>
             </Stack>
           </Stack>
         );
@@ -362,7 +362,7 @@ const TablePagination = () => {
       header: () => "Trade",
       cell: (info) => {
         return (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -375,7 +375,7 @@ const TablePagination = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Box>
-              <Typography variant="h5" color="textPrimary">
+              <Typography className="f-17" color="textPrimary">
                 {info.getValue() ?? "-"}
               </Typography>
             </Box>
@@ -389,7 +389,7 @@ const TablePagination = () => {
       header: () => "Duration",
       cell: (info) => {
         return (
-          <Typography variant="h5" color="textPrimary" fontWeight={700}>
+          <Typography className="f-17" color="textPrimary" fontWeight={500}>
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -401,7 +401,7 @@ const TablePagination = () => {
       header: () => "Rate",
       cell: (info) => {
         return (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -413,7 +413,7 @@ const TablePagination = () => {
       header: () => "Units",
       cell: (info) => {
         return (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -819,7 +819,7 @@ const TablePagination = () => {
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
+                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()

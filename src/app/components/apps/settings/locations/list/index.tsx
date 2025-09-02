@@ -255,7 +255,7 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="h5">{item.name ?? "-"}</Typography>
+              <Typography className="f-17">{item.name ?? "-"}</Typography>
             </Stack>
           </Stack>
         );
@@ -578,7 +578,7 @@ const TablePagination = () => {
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
+                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()

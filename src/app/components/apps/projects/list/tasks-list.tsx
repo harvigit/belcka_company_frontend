@@ -154,7 +154,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                                     setSelectedRowIds(newSelected);
                                 }}
                             />
-                            <Typography variant="h5">{item.company_task_name ?? '-'}</Typography>
+                            <Typography className="f-17">{item.company_task_name ?? '-'}</Typography>
                         </Stack>
                     );
                 },
@@ -164,7 +164,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 id: 'address_name',
                 header: () => 'Address',
                 cell: (info) => (
-                    <Typography variant="h5" fontWeight={500}>
+                    <Typography className="f-17">
                         {info.getValue() ?? '-'}
                     </Typography>
                 ),
@@ -181,7 +181,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                     else if (statusInt === 3) color = '#FF7F00';
 
                     return (
-                        <Typography variant="h5" color={color} fontWeight={700}>
+                        <Typography className="f-17" color={color} fontWeight={500}>
                             {info.getValue() ?? '-'}
                         </Typography>
                     );
@@ -199,7 +199,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                     else if (statusInt === 3) color = '#FF7F00';
 
                     return (
-                        <Typography variant="h5" color={color} fontWeight={700}>
+                        <Typography className="f-17" color={color} fontWeight={500}>
                             {info.getValue() ?? '-'}
                         </Typography>
                     );
@@ -210,7 +210,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 id: 'start_date',
                 header: () => 'Start date',
                 cell: (info) => (
-                    <Typography variant="h5" color="textPrimary">
+                    <Typography className="f-17" color="textPrimary">
                         {info.getValue()}
                     </Typography>
                 ),
@@ -220,7 +220,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 id: 'end_date',
                 header: () => 'End date',
                 cell: (info) => (
-                    <Typography variant="h5" color="textPrimary">
+                    <Typography className="f-17" color="textPrimary">
                         {info.getValue()}
                     </Typography>
                 ),
@@ -334,7 +334,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow key={row.id}>
                                             {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id}>
+                                                <TableCell key={cell.id} sx={{ padding: "10px" }}>
                                                     {flexRender(
                                                         cell.column.columnDef.cell,
                                                         cell.getContext()

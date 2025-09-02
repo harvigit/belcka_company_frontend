@@ -176,12 +176,12 @@ export default function NotificationSettings() {
                 {categories.map((category) => (
                   <React.Fragment key={category.id}>
                     <TableRow sx={{ background: "#f8f9fa" }}>
-                      <TableCell colSpan={1}>
+                      <TableCell colSpan={1} sx={{ padding: "10px"}}>
                         <Typography fontWeight="bold">
                           {category.name}
                         </Typography>
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell align="center" sx={{ padding: "10px"}}>
                         <Switch
                           checked={
                             getCategorySwitchState(category, "is_push") === "on"
@@ -196,7 +196,7 @@ export default function NotificationSettings() {
                           }
                         />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell align="center" sx={{ padding: "10px"}}>
                         <Switch
                           checked={
                             getCategorySwitchState(category, "is_feed") === "on"
@@ -215,8 +215,8 @@ export default function NotificationSettings() {
 
                     {category.notifications.map((notification) => (
                       <TableRow key={notification.id}>
-                        <TableCell>{notification.name}</TableCell>
-                        <TableCell align="center">
+                        <TableCell sx={{ padding: "10px"}}>{notification.name}</TableCell>
+                        <TableCell align="center" sx={{ padding: "10px"}}>
                           <Switch
                             checked={notification.is_push}
                             onChange={(e) =>
@@ -229,7 +229,7 @@ export default function NotificationSettings() {
                             }
                           />
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ padding: "10px"}}>
                           <Switch
                             checked={notification.is_feed}
                             onChange={(e) =>

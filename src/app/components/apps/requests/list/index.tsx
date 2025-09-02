@@ -119,7 +119,7 @@ const TablePagination = () => {
       cell: (info) => (
         <Stack direction="row" alignItems="center" spacing={2}>
           <Box>
-            <Typography variant="h6" color="textSecondary">
+            <Typography className="f-17" color="textSecondary">
               {info.getValue() ?? "-"}
             </Typography>
           </Box>
@@ -133,7 +133,7 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center" spacing={2}>
           <Box>
             <Typography
-              variant="h6"
+              className="f-17"
               color="textSecondary"
               sx={{ textTransform: "capitalize" }}
             >
@@ -148,7 +148,7 @@ const TablePagination = () => {
       id: "requested_user",
       header: () => "Requested User",
       cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
+        <Typography className="f-17" color="textSecondary">
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -158,7 +158,7 @@ const TablePagination = () => {
       id: "company",
       header: () => "Company",
       cell: (info) => (
-        <Typography variant="h6" color="textSecondary">
+        <Typography className="f-17" color="textSecondary">
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -183,7 +183,7 @@ const TablePagination = () => {
           ? date.format("DD MMMM, YYYY")
           : "-";
         return (
-          <Typography variant="h6" color="textSecondary">
+          <Typography className="f-17" color="textSecondary">
             {formattedDate}
           </Typography>
         );
@@ -197,7 +197,7 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center" spacing={2}>
           <Box>
             <Typography
-              variant="h6"
+              className="f-17"
               color="textSecondary"
               sx={{
                 whiteSpace: "nowrap",
@@ -221,7 +221,7 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center" spacing={2}>
           <Box>
             <Typography
-              variant="h6"
+              className="f-17"
               color="textSecondary"
               sx={{
                 whiteSpace: "nowrap",
@@ -372,7 +372,7 @@ const TablePagination = () => {
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
+                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()

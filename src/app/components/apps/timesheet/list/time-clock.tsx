@@ -266,7 +266,7 @@ const TimeClock = () => {
                             <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
                             <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
                                 <Typography
-                                    variant="body2"
+                                   className="f-17"
                                     noWrap
                                 >
                                     {row.user_name}
@@ -456,7 +456,7 @@ const TimeClock = () => {
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} align="center">
+                                        <TableCell key={cell.id} sx={{ padding: "10px" }} align="center">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}

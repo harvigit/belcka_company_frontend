@@ -155,7 +155,7 @@ const AddressesList = ({
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchAddresses();
   }, [projectId, processedIds, shouldRefresh]);
@@ -300,7 +300,7 @@ const AddressesList = ({
               />
 
               <Typography
-                variant="h5"
+                className="f-17"
                 onClick={() => {
                   setSidebarData({
                     addressName: item.name,
@@ -332,7 +332,7 @@ const AddressesList = ({
           else if (statusInt === 3) color = "#FF7F00";
 
           return (
-            <Typography variant="h5" color={color} fontWeight={700}>
+            <Typography className="f-17" color={color} fontWeight={700}>
               {info.getValue() ?? "-"}
             </Typography>
           );
@@ -342,7 +342,7 @@ const AddressesList = ({
         id: "check_ins",
         header: () => "Check-ins",
         cell: (info) => (
-          <Typography variant="h5" color={"#007AFF"} fontWeight={700}>
+          <Typography className="f-17" color={"#007AFF"} fontWeight={700}>
             {info.getValue() ?? "-"}
           </Typography>
         ),
@@ -351,7 +351,7 @@ const AddressesList = ({
         id: "start_date",
         header: () => "Start date",
         cell: (info) => (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {formatDate(info.getValue())}
           </Typography>
         ),
@@ -360,7 +360,7 @@ const AddressesList = ({
         id: "end_date",
         header: () => "End date",
         cell: (info) => (
-          <Typography variant="h5" color="textPrimary">
+          <Typography className="f-17" color="textPrimary">
             {formatDate(info.getValue())}
           </Typography>
         ),
@@ -478,7 +478,7 @@ const AddressesList = ({
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
+                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()

@@ -389,7 +389,7 @@ const TablePagination = () => {
                 sx={{ width: 36, height: 36 }}
               />
               <Box>
-                <Typography variant="h5" color="body2">
+                <Typography className="f-17" color="body2">
                   {item.name ?? "-"}
                 </Typography>
               </Box>
@@ -403,7 +403,7 @@ const TablePagination = () => {
       id: "trade_name",
       header: () => "Trade",
       cell: (info) => (
-        <Typography variant="h5" color="body2">
+        <Typography className="f-17" color="body2">
           {info.row.original.trade_name ?? "-"}
         </Typography>
       ),
@@ -899,7 +899,7 @@ const TablePagination = () => {
                         table.getRowModel().rows.map((row) => (
                           <TableRow key={row.id}>
                             {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
+                              <TableCell key={cell.id} sx={{ padding: "10px" }}>
                                 {flexRender(
                                   cell.column.columnDef.cell,
                                   cell.getContext()
