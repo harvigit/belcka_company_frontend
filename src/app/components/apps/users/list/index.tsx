@@ -157,7 +157,7 @@ const TablePagination = () => {
         const isChecked = selectedRowIds.has(user.id);
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 0.2 }}>
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
             <CustomCheckbox
               checked={isChecked}
               onChange={() => {

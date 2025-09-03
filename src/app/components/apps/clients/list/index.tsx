@@ -225,7 +225,7 @@ const TablePagination = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.2 }}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -267,7 +267,7 @@ const TablePagination = () => {
         if (!link) return "-";
 
         return (
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center" sx={{px: 1.5}}>
             <Button color="primary" onClick={() => handleCopy(link)}>
               Invite
             </Button>
@@ -280,7 +280,7 @@ const TablePagination = () => {
       header: () => "Status",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -291,7 +291,7 @@ const TablePagination = () => {
       id: "projects",
       header: () => (
         <Stack direction="row" alignItems="center">
-          <Typography variant="subtitle2" fontWeight="inherit">
+          <Typography variant="subtitle2" fontWeight="inherit" sx={{px: 1.5}}>
             Project
           </Typography>
         </Stack>
@@ -301,7 +301,7 @@ const TablePagination = () => {
 
         const value = item.projects;
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {value.length <= 0 ? "-" : value}
           </Typography>
         );
@@ -313,7 +313,7 @@ const TablePagination = () => {
       header: () => "Invite Date",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {formatDate(info.getValue())}
           </Typography>
         );

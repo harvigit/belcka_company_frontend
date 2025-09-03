@@ -938,8 +938,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   }}
                   sx={{
                     boxShadow: "0px 1px 4px 0px #00000040",
-                    borderRadius: "20px",
-                    height: "50px",
+                    borderRadius: "9px",
+                    height: "42px",
                     width: "100%",
                     "&:hover": {
                       cursor: "pointer",

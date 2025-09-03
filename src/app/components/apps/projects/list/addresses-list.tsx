@@ -257,9 +257,6 @@ const AddressesList = ({
                 selectedRowIds.size === currentFilteredData.length &&
                 currentFilteredData.length > 0
               }
-              // indeterminate={
-              //   selectedRowIds.size > 0 && selectedRowIds.size < data.length
-              // }
               onChange={(e) => {
                 if (e.target.checked) {
                   setSelectedRowIds(
@@ -285,7 +282,7 @@ const AddressesList = ({
               direction="row"
               alignItems="center"
               spacing={4}
-              sx={{ pl: 0.2 }}
+              sx={{ pl: 1 }}
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -332,7 +329,7 @@ const AddressesList = ({
           else if (statusInt === 3) color = "#FF7F00";
 
           return (
-            <Typography className="f-14" color={color} fontWeight={700}>
+            <Typography className="f-14" color={color} fontWeight={700} sx={{px: 1.5}}>
               {info.getValue() ?? "-"}
             </Typography>
           );
@@ -342,7 +339,7 @@ const AddressesList = ({
         id: "check_ins",
         header: () => "Check-ins",
         cell: (info) => (
-          <Typography className="f-14" color={"#007AFF"} fontWeight={700}>
+          <Typography className="f-14" color={"#007AFF"} fontWeight={700} sx={{px: 1.5}}>
             {info.getValue() ?? "-"}
           </Typography>
         ),
@@ -351,7 +348,7 @@ const AddressesList = ({
         id: "start_date",
         header: () => "Start date",
         cell: (info) => (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {formatDate(info.getValue())}
           </Typography>
         ),
@@ -360,7 +357,7 @@ const AddressesList = ({
         id: "end_date",
         header: () => "End date",
         cell: (info) => (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
             {formatDate(info.getValue())}
           </Typography>
         ),
@@ -427,7 +424,7 @@ const AddressesList = ({
                           >
                             <Box
                               onClick={header.column.getToggleSortingHandler()}
-                              p={0}
+                              p={0}                                                    
                               sx={{
                                 cursor: isSortable ? "pointer" : "default",
                                 border: "2px solid transparent",
