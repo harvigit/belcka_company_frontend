@@ -17,7 +17,7 @@ import {
     Popover,
     FormGroup,
     FormControlLabel,
-    Checkbox, Button,
+    Checkbox, Button, Drawer,
 } from '@mui/material';
 import {
     IconX,
@@ -48,6 +48,7 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 import {TimeClock} from './time-clock';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
+import RequestDetails from './request-details';
 
 declare module '@tanstack/react-table' {
     interface ColumnMeta<TData extends RowData, TValue> {
@@ -103,9 +104,9 @@ interface TimeClockDetailsProps {
     timeClock: TimeClock | null;
     user_id: any;
     currency: string;
-    allUsers: TimeClock[]; // Add this prop to get all users list
+    allUsers: TimeClock[];
     onClose: () => void;
-    onUserChange?: (user: TimeClock) => void; // Add callback for user change
+    onUserChange?: (user: TimeClock) => void;
 }
 
 type TimeClockDetailResponse = {
@@ -119,6 +120,13 @@ type TimeClockDetailResponse = {
     payable_hours?: number;
     total_payable_amount?: number;
     worked_days?: number;
+    pending_request_count?: number;
+};
+
+type RequestListResponse = {
+    IsSuccess: boolean;
+    requests: any[];
+    message?: string;
 };
 
 type CheckLog = {
@@ -149,7 +157,15 @@ interface CheckLogRowsProps {
     isMultiRow?: boolean;
 }
 
-const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, user_id, currency, allUsers = [], onClose, onUserChange }) => {
+const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
+                                                               open,
+                                                               timeClock,
+                                                               user_id,
+                                                               currency,
+                                                               allUsers = [],
+                                                               onClose,
+                                                               onUserChange
+                                                           }) => {
     const today = new Date();
 
     const defaultStart = new Date(today);
@@ -171,6 +187,9 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
 
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
+
+    const [pendingRequestCount, setPendingRequestCount] = useState<number>(0);
+    const [requestListOpen, setRequestListOpen] = useState<boolean>(false);
 
     // Get current user index and navigation functions
     const currentUserIndex = useMemo(() => {
@@ -208,7 +227,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
     const formatHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
 
-        // If it's pricework, return '--' instead of formatted time
         if (isPricework) return '--';
 
         const str = val.toString().trim();
@@ -255,7 +273,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
         return log?.status === 7 || log?.status === '7' || (log?.status && log.status !== 6 && log.status !== '6');
     };
 
-    // Helper function to check if a day has valid worklog data
     const hasValidWorklogData = (row: DailyBreakdown): boolean => {
         return !!(row.worklog_id || row.timesheet_light_id) &&
             row.start !== '--' &&
@@ -344,6 +361,14 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
         });
 
         return { hasLockedRows, hasUnlockedRows };
+    };
+
+    const handlePendingRequest = async () => {
+        setRequestListOpen(true);
+    };
+
+    const closeRequestList = () => {
+        setRequestListOpen(false);
     };
 
     const handleLockClick = () => {
@@ -499,6 +524,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
             if (response.data.IsSuccess) {
                 setData(response.data.info || []);
                 setHeaderDetail(response.data);
+                setPendingRequestCount(response.data.pending_request_count || 0);
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
@@ -722,10 +748,10 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                 enableSorting: false,
                 cell: ({ row }) => {
                     if (row.original.rowType !== 'day') return null;
-                    
+
                     const hasLogs = row.original.is_requested;
                     if (!hasLogs) return null;
-                    
+
                     return (
                         <IconButton
                             size="small"
@@ -738,7 +764,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                                 },
                             }}
                         >
-                           <IconExclamationMark size={18} />
+                            <IconExclamationMark size={18} />
                         </IconButton>
                     );
                 },
@@ -812,8 +838,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                         <span style={{
                             color: isEdited ? '#ff0000' : 'inherit'
                         }}>
-                {isPricework ? '--' : totalHours}
-            </span>
+                            {isPricework ? '--' : totalHours}
+                        </span>
                     );
                 },
             },
@@ -865,6 +891,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
     });
 
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
     const formatTimeInput = (value: string): string => {
         const digits = value.replace(/\D/g, '');
 
@@ -957,7 +984,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                             const originalValue = sanitizeDateTime(currentValue);
 
                             if (formattedTime && formattedTime !== originalValue) {
-                                // Update the editing state with formatted time before saving
                                 updateEditingField(worklogId, field, formattedTime);
                                 saveFieldChanges(worklogId, log);
                             } else {
@@ -1165,12 +1191,30 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                         </Stack>
                     </Stack>
 
-                    <IconButton onClick={onClose} size="small">
-                        <IconX/>
-                    </IconButton>
+                    {pendingRequestCount > 0 && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            color="warning"
+                            sx={{
+                                px: 2,
+                                '&:hover': {
+                                    backgroundColor: 'transparent',
+                                    borderColor: 'inherit',
+                                    boxShadow: 'none',
+                                    color: '#fdc90f'
+                                }
+                            }}
+                            onClick={handlePendingRequest}
+                        >
+                            <Typography sx={{ ml: 0.5, fontWeight: 600 }}>
+                                Pending Requests ({pendingRequestCount})
+                            </Typography>
+                        </Button>
+                    )}
                 </Stack>
             </Box>
-            
+
             <Box
                 sx={{
                     p: 2,
@@ -1321,192 +1365,192 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                                 return (
                                     <React.Fragment key={row.id}>
                                         {row.original.rowsData ? (() => {
-                                            const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
-                                            const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
-                                                worklogIds.includes(id)
-                                            ).length;
-                                            const rowSpan = row.original.rowsData.length + expandedWorklogsCount;
+                                                const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
+                                                const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
+                                                    worklogIds.includes(id)
+                                                ).length;
+                                                const rowSpan = row.original.rowsData.length + expandedWorklogsCount;
 
-                                            return row.original.rowsData.map((log: any, index: number) => {
-                                                const worklogId = `${row.id}-${log.worklog_id}`;
-                                                const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
-                                                const isFirstRow = index === 0;
-                                                const isLogLocked = isRecordLocked(log);
+                                                return row.original.rowsData.map((log: any, index: number) => {
+                                                    const worklogId = `${row.id}-${log.worklog_id}`;
+                                                    const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
+                                                    const isFirstRow = index === 0;
+                                                    const isLogLocked = isRecordLocked(log);
 
-                                                return (
-                                                    <>
-                                                        <TableRow
-                                                            key={log.worklog_id}
-                                                            sx={{
-                                                                backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
-                                                            }}
-                                                        >
-                                                            {isFirstRow && visibleColumnConfigs.select?.visible && (
-                                                                <TableCell rowSpan={rowSpan}
-                                                                           sx={{
-                                                                               width: `${visibleColumnConfigs.select.width}px`,
-                                                                               py: 0.5,
-                                                                           }}
-                                                                >
-                                                                    <CustomCheckbox
-                                                                        checked={selectedRows.has(`row-${row.index}`)}
-                                                                        onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
-                                                                    />
-                                                                </TableCell>
-                                                            )}
+                                                    return (
+                                                        <>
+                                                            <TableRow
+                                                                key={log.worklog_id}
+                                                                sx={{
+                                                                    backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
+                                                                }}
+                                                            >
+                                                                {isFirstRow && visibleColumnConfigs.select?.visible && (
+                                                                    <TableCell rowSpan={rowSpan}
+                                                                               sx={{
+                                                                                   width: `${visibleColumnConfigs.select.width}px`,
+                                                                                   py: 0.5,
+                                                                               }}
+                                                                    >
+                                                                        <CustomCheckbox
+                                                                            checked={selectedRows.has(`row-${row.index}`)}
+                                                                            onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
+                                                                        />
+                                                                    </TableCell>
+                                                                )}
 
-                                                            {isFirstRow && visibleColumnConfigs.date?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>{rowData.date}</TableCell>}
+                                                                {isFirstRow && visibleColumnConfigs.date?.visible &&
+                                                                    <TableCell rowSpan={rowSpan} sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}>{rowData.date}</TableCell>}
 
-                                                            {visibleColumnConfigs.exclamation?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>
-                                                                    { log.is_requested == true ? (
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            color="error"
-                                                                            aria-label="error"
-                                                                            sx={{
-                                                                                '&:hover': {
-                                                                                    backgroundColor: 'transparent',
-                                                                                    color: '#fc4b6c',
-                                                                                },
-                                                                            }}
-                                                                        >
-                                                                            <IconExclamationMark size={18}/>
-                                                                        </IconButton>
-                                                                    ) : null}
-                                                                </TableCell>}
-                                                            
-                                                            {visibleColumnConfigs.expander?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>
-                                                                    { log.user_checklogs && log.user_checklogs.length > 0 ? (
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            onClick={() => handleWorklogToggle(log.worklog_id)}
-                                                                            aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
-                                                                            {isWorklogExpanded ? (
-                                                                                <IconChevronDown size={18}/>
-                                                                            ) : (
-                                                                                <IconChevronRight size={18}/>
-                                                                            )}
-                                                                        </IconButton>
-                                                                    ) : null}
-                                                                </TableCell>}
+                                                                {visibleColumnConfigs.exclamation?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}>
+                                                                        { log.is_requested == true ? (
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                color="error"
+                                                                                aria-label="error"
+                                                                                sx={{
+                                                                                    '&:hover': {
+                                                                                        backgroundColor: 'transparent',
+                                                                                        color: '#fc4b6c',
+                                                                                    },
+                                                                                }}
+                                                                            >
+                                                                                <IconExclamationMark size={18}/>
+                                                                            </IconButton>
+                                                                        ) : null}
+                                                                    </TableCell>}
 
-                                                            {visibleColumnConfigs.project?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>{log.project_name || '--'}</TableCell>}
+                                                                {visibleColumnConfigs.expander?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}>
+                                                                        { log.user_checklogs && log.user_checklogs.length > 0 ? (
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                onClick={() => handleWorklogToggle(log.worklog_id)}
+                                                                                aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
+                                                                                {isWorklogExpanded ? (
+                                                                                    <IconChevronDown size={18}/>
+                                                                                ) : (
+                                                                                    <IconChevronRight size={18}/>
+                                                                                )}
+                                                                            </IconButton>
+                                                                        ) : null}
+                                                                    </TableCell>}
 
-                                                            {visibleColumnConfigs.shift?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>{log.shift_name || '--'}</TableCell>}
+                                                                {visibleColumnConfigs.project?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                    }}>{log.project_name || '--'}</TableCell>}
 
-                                                            {visibleColumnConfigs.start?.visible && (
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>
-                                                                    {log.is_pricework || isLogLocked ? (
-                                                                        <Box sx={{
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            opacity: isLogLocked ? 0.6 : 1
-                                                                        }}>
-                                                                            {sanitizeDateTime(log.start)}
-                                                                        </Box>
-                                                                    ) : (
-                                                                        renderEditableTimeCell(worklogId, 'start', log.start, log)
-                                                                    )}
-                                                                </TableCell>
-                                                            )}
+                                                                {visibleColumnConfigs.shift?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                    }}>{log.shift_name || '--'}</TableCell>}
 
-                                                            {visibleColumnConfigs.end?.visible && (
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>
-                                                                    {log.is_pricework || isLogLocked ? (
-                                                                        <Box sx={{
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            opacity: isLogLocked ? 0.6 : 1
-                                                                        }}>
-                                                                            {sanitizeDateTime(log.end)}
-                                                                        </Box>
-                                                                    ) : (
-                                                                        renderEditableTimeCell(worklogId, 'end', log.end, log)
-                                                                    )}
-                                                                </TableCell>
-                                                            )}
+                                                                {visibleColumnConfigs.start?.visible && (
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                    }}>
+                                                                        {log.is_pricework || isLogLocked ? (
+                                                                            <Box sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                opacity: isLogLocked ? 0.6 : 1
+                                                                            }}>
+                                                                                {sanitizeDateTime(log.start)}
+                                                                            </Box>
+                                                                        ) : (
+                                                                            renderEditableTimeCell(worklogId, 'start', log.start, log)
+                                                                        )}
+                                                                    </TableCell>
+                                                                )}
 
-                                                            {visibleColumnConfigs.totalHours?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                    color: log.is_edited ? '#ff0000' : 'inherit'
-                                                                }}>
-                                                                    {log.is_pricework ? '--' : formatHour(log.total_hours)}
-                                                                </TableCell>
+                                                                {visibleColumnConfigs.end?.visible && (
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                    }}>
+                                                                        {log.is_pricework || isLogLocked ? (
+                                                                            <Box sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                opacity: isLogLocked ? 0.6 : 1
+                                                                            }}>
+                                                                                {sanitizeDateTime(log.end)}
+                                                                            </Box>
+                                                                        ) : (
+                                                                            renderEditableTimeCell(worklogId, 'end', log.end, log)
+                                                                        )}
+                                                                    </TableCell>
+                                                                )}
+
+                                                                {visibleColumnConfigs.totalHours?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                        color: log.is_edited ? '#ff0000' : 'inherit'
+                                                                    }}>
+                                                                        {log.is_pricework ? '--' : formatHour(log.total_hours)}
+                                                                    </TableCell>
+                                                                }
+
+                                                                {visibleColumnConfigs.priceWorkAmount?.visible &&
+                                                                    <TableCell sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
+
+                                                                {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
+                                                                    <TableCell rowSpan={rowSpan} sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}> {rowData.dailyTotal} </TableCell>}
+
+                                                                {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
+                                                                    <TableCell rowSpan={rowSpan} sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}> {rowData.payableAmount} </TableCell>}
+
+                                                                {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
+                                                                    <TableCell rowSpan={rowSpan} sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}> {rowData.employeeNotes} </TableCell>}
+
+                                                                {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
+                                                                    <TableCell rowSpan={rowSpan} sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem'
+                                                                    }}> {rowData.managerNotes} </TableCell>}
+
+                                                            </TableRow>
+                                                            {isWorklogExpanded &&
+                                                                <CheckLogRows
+                                                                    logs={log.user_checklogs}
+                                                                    currency={currency}
+                                                                    formatHour={formatHour}
+                                                                    visibleColumnConfigs={visibleColumnConfigs}
+                                                                    getVisibleCellsLength={6}
+                                                                    isMultiRow={true}
+                                                                />
                                                             }
+                                                        </>)
+                                                })
 
-                                                            {visibleColumnConfigs.priceWorkAmount?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.dailyTotal} </TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.payableAmount} </TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.employeeNotes} </TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.managerNotes} </TableCell>}
-
-                                                        </TableRow>
-                                                        {isWorklogExpanded &&
-                                                            <CheckLogRows
-                                                                logs={log.user_checklogs}
-                                                                currency={currency}
-                                                                formatHour={formatHour}
-                                                                visibleColumnConfigs={visibleColumnConfigs}
-                                                                getVisibleCellsLength={6}
-                                                                isMultiRow={true}
-                                                            />
-                                                        }
-                                                    </>)
-                                            })
-
-                                        })() :
+                                            })() :
                                             <>
                                                 <TableRow
                                                     key={row.id}
@@ -1579,18 +1623,24 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                         transform: 'translateX(-50%)',
                         backgroundColor: 'white',
                         borderRadius: '12px',
-                        boxShadow: '0 2px 20px rgba(0,0,0,0.15)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                         px: 3,
-                        py: 1,
+                        py: 1.5,
                         zIndex: 1000,
                         minWidth: '400px',
+                        border: '1px solid #e0e0e0',
                     }}
                 >
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <IconButton
                             size="small"
                             onClick={() => setSelectedRows(new Set())}
-                            sx={{ color: '#666' }}
+                            sx={{
+                                color: '#666',
+                                '&:hover': {
+                                    bgcolor: 'grey.100'
+                                }
+                            }}
                         >
                             <IconX size={16} />
                         </IconButton>
@@ -1601,7 +1651,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
 
                         <Box sx={{ flexGrow: 1 }} />
 
-                        <Stack direction="row" spacing={1}>
+                        <Stack direction="row" spacing={1.5}>
                             {(() => {
                                 const { hasLockedRows, hasUnlockedRows } = getSelectedRowsLockStatus();
 
@@ -1611,7 +1661,15 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                                             size="small"
                                             variant="outlined"
                                             color="success"
-                                            sx={{ px: 2 }}
+                                            sx={{
+                                                px: 2.5,
+                                                textTransform: 'none',
+                                                fontWeight: 600,
+                                                borderRadius: '8px',
+                                                '&:hover': {
+                                                    boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)'
+                                                }
+                                            }}
                                             onClick={handleLockClick}
                                             disabled={!hasUnlockedRows}
                                         >
@@ -1625,7 +1683,15 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                                             size="small"
                                             variant="outlined"
                                             color="error"
-                                            sx={{ px: 2 }}
+                                            sx={{
+                                                px: 2.5,
+                                                textTransform: 'none',
+                                                fontWeight: 600,
+                                                borderRadius: '8px',
+                                                '&:hover': {
+                                                    boxShadow: '0 2px 8px rgba(211, 47, 47, 0.2)'
+                                                }
+                                            }}
                                             onClick={handleUnlockClick}
                                             disabled={!hasLockedRows}
                                         >
@@ -1641,20 +1707,45 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({ open,   timeClock, 
                     </Stack>
                 </Box>
             )}
+
+            <Drawer
+                anchor="bottom"
+                open={requestListOpen}
+                onClose={closeRequestList}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        height: '90vh',
+                        boxShadow: 'none',
+                        borderTopLeftRadius: 12,
+                        borderTopRightRadius: 12,
+                        overflow: 'hidden',
+                    },
+                }}
+            >
+                <RequestDetails
+                    open={requestListOpen}
+                    timeClock={timeClock}
+                    user_id={user_id}
+                    currency={currency}
+                    allUsers={allUsers}
+                    onClose={closeRequestList}
+                    onUserChange={onUserChange}
+                />
+            </Drawer>
         </Box>
     );
 };
 
-const CheckLogRows = ({logs, currency, formatHour, visibleColumnConfigs, getVisibleCellsLength, isMultiRow = false }: any) => {
+const CheckLogRows = ({logs, currency, formatHour, visibleColumnConfigs, getVisibleCellsLength, isMultiRow = false }: CheckLogRowsProps) => {
     return (
         <TableRow>
             {visibleColumnConfigs.select?.visible && <TableCell></TableCell>}
             {isMultiRow && visibleColumnConfigs.date?.visible && <TableCell></TableCell>}
-            {/*{!isMultiRow && visibleColumnConfigs.status?.visible && <TableCell></TableCell>}*/}
             {!isMultiRow && visibleColumnConfigs.date?.visible && <TableCell></TableCell>}
             {!isMultiRow && visibleColumnConfigs.exclamation?.visible && <TableCell></TableCell>}
             {!isMultiRow && visibleColumnConfigs.expander?.visible && <TableCell></TableCell>}
-            
+
             <TableCell sx={{padding: 0}} colSpan={getVisibleCellsLength}>
                 {logs?.length > 0 ? (
                     <Table size="small">
