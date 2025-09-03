@@ -57,7 +57,7 @@ const TablePagination = () => {
   const user = session.data?.user as User & { company_id?: number | null };
   const [address, setAddress] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [projectOpen, setProjectOpen] = useState(false);
   const [budget, setBudget] = useState<number | null>(null);
   const [formData, setFormData] = useState<any>({
     name: "",
@@ -177,7 +177,7 @@ const TablePagination = () => {
           repeatable_job: false,
         });
         fetchProjects();
-        setDrawerOpen(false);
+        setProjectOpen(false);
       } else {
         toast.error(result.data.message);
       }
@@ -212,111 +212,6 @@ const TablePagination = () => {
 
   return (
     <Grid container spacing={3}>
-      <Drawer
-        anchor="left"
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            width: 250,
-            maxWidth: "100%",
-          },
-        }}
-      >
-        <Box sx={{ position: "relative", p: 2 }}>
-          {/* Close Button */}
-          <IconButton
-            aria-label="close"
-            onClick={() => setDialogOpen(false)}
-            size="small"
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 8,
-              color: (theme) => theme.palette.grey[900],
-              backgroundColor: "transparent",
-              zIndex: 10,
-              width: 50,
-              height: 50,
-            }}
-          >
-            <IconX size={18} />
-          </IconButton>
-
-          {/* Add Project Button */}
-          <Button
-            color="primary"
-            variant="outlined"
-            onClick={() => {
-              setDrawerOpen(true);
-              setDialogOpen(false);
-            }}
-            startIcon={<IconPlus size={18} />}
-            sx={{ mb: 1, ml: 2 }}
-          >
-            Add Project
-          </Button>
-
-          {/* Project List */}
-          <Grid container spacing={2} display="block">
-            {data.map((project) => (
-              <Grid
-                mt={2}
-                key={project.id}
-                display="flex"
-                textAlign="start"
-                alignItems="center"
-              >
-                <CustomCheckbox
-                  onClick={() => {
-                    setProjectId(project.id);
-                    setDialogOpen(false);
-                  }}
-                />
-                <Box
-                  onClick={() => {
-                    setProjectId(project.id);
-                    setDialogOpen(false);
-                  }}
-                  sx={{
-                    boxShadow: "0px 1px 4px 0px #00000040",
-                    borderRadius: "20px",
-                    height: "50px",
-                    width: "100%",
-                    "&:hover": {
-                      cursor: "pointer",
-                    },
-                  }}
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    variant="subtitle1"
-                    ml={2}
-                    className="multi-ellipsis"
-                    maxWidth={"110px"}
-                  >
-                    {project.name}
-                  </Typography>
-                  <IconChevronRight style={{ color: "GrayText" }} />
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      </Drawer>
-
-      {/* Add Project */}
-      <CreateProject
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        formData={formData}
-        setFormData={setFormData}
-        handleSubmit={handleSubmit}
-        isSaving={isSaving}
-      />
-
       <Grid
         size={{
           xs: 12,

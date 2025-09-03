@@ -52,6 +52,7 @@ import DynamicGantt from "@/app/components/DynamicGantt";
 import { IconTrash } from "@tabler/icons-react";
 import ArchiveAddress from "./archive-address-list";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import CreateProject from "../create";
 
 dayjs.extend(customParseFormat);
 
@@ -102,6 +103,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [archiveList, setArchiveList] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [projectOpen, setProjectOpen] = useState(false);
 
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
@@ -340,6 +342,43 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     } catch (error) {
       console.error("Error creating address:", error);
       setLoading(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+   const handleProjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        company_id: user.company_id,
+        budget: Number(formData.budget),
+      };
+
+      const result = await api.post("project/create", payload);
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setFormData({
+          name: "",
+          address: "",
+          budget: "",
+          description: "",
+          code: "",
+          shift_ids: "",
+          team_ids: "",
+          company_id: user.company_id,
+          is_pricework: false,
+          repeatable_job: false,
+        });
+        fetchProjects();
+        setProjectOpen(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
     } finally {
       setIsSaving(false);
     }
@@ -906,8 +945,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             color="primary"
             variant="outlined"
             onClick={() => {
-              setDrawerOpen(true);
-              setDialogOpen(false);
+              setProjectOpen(true);
+              // setDialogOpen(false);
             }}
             startIcon={<IconPlus size={18} />}
             sx={{ mb: 1, ml: 2 }}
@@ -962,6 +1001,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               </Grid>
             ))}
           </Grid>
+           <CreateProject
+            open={projectOpen}
+            onClose={() => setProjectOpen(false)}
+            formData={formData}
+            setFormData={setFormData}
+            handleSubmit={handleProjectSubmit}
+            isSaving={isSaving}
+          />
+          
         </Box>
       </Drawer>
     </Box>

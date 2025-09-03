@@ -6,6 +6,7 @@ import MyApp from "./app";
 import "./global.css";
 import NextTopLoader from 'nextjs-toploader';
 import { RouteLoadingProvider } from "./context/RouteLoadingContext/RouteLoadingContext";
+import NotificationClient from "./notifications/NotificationClient";
 
 export const metadata = {
   title: "OTMS System",
@@ -24,11 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={roboto.className}>
         <NextTopLoader color="#1e4db7" />
         <CustomizerContextProvider>
-            <MyApp session={undefined}>
-            <RouteLoadingProvider>
-              {children}
-            </RouteLoadingProvider>
-            </MyApp>
+          <MyApp session={undefined}>
+            <RouteLoadingProvider>{children}</RouteLoadingProvider>
+          </MyApp>
         </CustomizerContextProvider>
       </body>
     </html>
