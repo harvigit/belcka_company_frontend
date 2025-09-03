@@ -8,6 +8,7 @@ import {
   Messaging,
 } from "firebase/messaging";
 
+// ✅ Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAdLpTcvwOWzhK4maBtriznqiw5MwBNcZw",
   authDomain: "belcka-8f2cd.firebaseapp.com",
@@ -18,50 +19,59 @@ const firebaseConfig = {
   measurementId: "G-N8MFZ6274S",
 };
 
+// ✅ Initialize app (safe globally)
 export const app = initializeApp(firebaseConfig);
 
 /**
- * Lazy init messaging so SSR/unsupported browsers don’t crash
+ * Lazy init messaging so SSR / unsupported browsers don’t break
  */
 export const initMessaging = async (): Promise<Messaging | null> => {
   if (typeof window === "undefined") return null; // SSR safe
   const supported = await isSupported();
   if (!supported) {
-    console.warn("FCM not supported in this browser");
+    console.warn("⚠️ FCM not supported in this browser");
     return null;
   }
   return getMessaging(app);
 };
 
-export const getFcmToken = async () => {
+/**
+ * Get FCM token for this client
+ */
+export const getFcmToken = async (): Promise<string | null> => {
   if (typeof window === "undefined") return null;
 
   const messaging = await initMessaging();
   if (!messaging) return null;
 
-  const registration = await navigator.serviceWorker.register(
-    "/firebase-messaging-sw.js"
-  );
-
   try {
+    const registration = await navigator.serviceWorker.register(
+      "/firebase-messaging-sw.js"
+    );
+
     const token = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: registration,
     });
+
     return token;
   } catch (err) {
-    console.error("Error getting FCM token:", err);
+    console.error("❌ Error getting FCM token:", err);
     return null;
   }
 };
 
-/**
- * Listen for foreground messages
- */
-export const onForegroundMessage = async (
+
+export const onForegroundMessage = (
   cb: (payload: any) => void
-): Promise<() => void> => {
-  const messaging = await initMessaging();
-  if (!messaging) return () => {};
-  return onMessage(messaging, cb);
+): (() => void) => {
+  let unsub: () => void = () => {};
+
+  initMessaging().then((messaging) => {
+    if (messaging) {
+      unsub = onMessage(messaging, cb);
+    }
+  });
+
+  return () => unsub();
 };
