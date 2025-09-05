@@ -17,7 +17,7 @@ import {
     Popover,
     FormGroup,
     FormControlLabel,
-    Checkbox, Button, Drawer,
+    Checkbox, Button, Drawer, Select, MenuItem, FormControl,
 } from '@mui/material';
 import {
     IconX,
@@ -48,7 +48,9 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 import {TimeClock} from './time-clock';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
-import RequestDetails from './request-details';
+import RequestDetails from './time-clocl-details/request-details';
+import CheckLogRows from './time-clocl-details/check-log-list';
+import {DateTime} from 'luxon';
 
 declare module '@tanstack/react-table' {
     interface ColumnMeta<TData extends RowData, TValue> {
@@ -71,6 +73,7 @@ type DailyBreakdown = {
 
     date?: string;
     shift?: string;
+    shift_id?: number | string;
     project?: string;
     typeOfWork?: string;
     start?: string;
@@ -110,6 +113,7 @@ interface TimeClockDetailsProps {
 }
 
 type TimeClockDetailResponse = {
+    company_id: number;
     IsSuccess: boolean;
     info: TimeClock[];
     type_of_works: any[];
@@ -123,11 +127,15 @@ type TimeClockDetailResponse = {
     pending_request_count?: number;
 };
 
-type RequestListResponse = {
+type TimeClockResourcesResponse = {
     IsSuccess: boolean;
-    requests: any[];
-    message?: string;
+    shifts: Shift[];
 };
+
+interface Shift {
+    id: number;
+    name: string;
+}
 
 type CheckLog = {
     pricework_amount: React.ReactNode;
@@ -145,17 +153,16 @@ type EditingWorklog = {
     worklogId: string;
     start: string;
     end: string;
-    editingField?: 'start' | 'end';
+    shift_id: number | string;
+    editingField?: 'start' | 'end' | 'shift';
 };
 
-interface CheckLogRowsProps {
-    logs: CheckLog[];
-    currency: string;
-    formatHour: (val: string | number | null | undefined) => string;
-    visibleColumnConfigs: { [key: string]: { width: number; visible: boolean } };
-    getVisibleCellsLength: number;
-    isMultiRow?: boolean;
-}
+type NewRecord = {
+    date: string;
+    shift_id: number | string;
+    start: string;
+    end: string;
+};
 
 const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                                open,
@@ -184,12 +191,17 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
     const [editingWorklogs, setEditingWorklogs] = useState<{ [key: string]: EditingWorklog }>({});
     const [savingWorklogs, setSavingWorklogs] = useState<Set<string>>(new Set());
+    const [editingShifts, setEditingShifts] = useState<{ [key: string]: { shift_id: number | string; editingField: 'shift' } }>({});
+    const [newRecords, setNewRecords] = useState<{ [key: string]: NewRecord }>({});
+    const [savingNewRecords, setSavingNewRecords] = useState<Set<string>>(new Set());
 
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
 
     const [pendingRequestCount, setPendingRequestCount] = useState<number>(0);
     const [requestListOpen, setRequestListOpen] = useState<boolean>(false);
+
+    const [shifts, setShifts] = useState<Shift[]>([]);
 
     // Get current user index and navigation functions
     const currentUserIndex = useMemo(() => {
@@ -205,6 +217,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             const previousUser = allUsers[currentUserIndex - 1];
             onUserChange(previousUser);
         }
+
+        setNewRecords({})
     };
 
     const handleNextUser = () => {
@@ -212,6 +226,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             const nextUser = allUsers[currentUserIndex + 1];
             onUserChange(nextUser);
         }
+
+        setNewRecords({})
     };
 
     const handleWorklogToggle = (worklogId: string) => {
@@ -307,13 +323,36 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 worklogId,
                 start: log.start || '',
                 end: log.end || '',
+                shift_id: log.shift_id || '',
                 editingField: field,
+            }
+        }));
+    };
+
+    const startEditingShift = (worklogId: string, currentShiftId: number | string, log: any) => {
+        if (isRecordLocked(log)) {
+            return;
+        }
+
+        setEditingShifts(prev => ({
+            ...prev,
+            [worklogId]: {
+                shift_id: currentShiftId || '',
+                editingField: 'shift',
             }
         }));
     };
 
     const cancelEditingField = (worklogId: string) => {
         setEditingWorklogs(prev => {
+            const newState = {...prev};
+            delete newState[worklogId];
+            return newState;
+        });
+    };
+
+    const cancelEditingShift = (worklogId: string) => {
+        setEditingShifts(prev => {
             const newState = {...prev};
             delete newState[worklogId];
             return newState;
@@ -328,6 +367,106 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 [field]: value
             }
         }));
+    };
+
+    const updateEditingShift = (worklogId: string, shiftId: number | string) => {
+        setEditingShifts(prev => ({
+            ...prev,
+            [worklogId]: {
+                ...prev[worklogId],
+                shift_id: shiftId
+            }
+        }));
+    };
+
+    // New record management functions
+    const startAddingNewRecord = (date: string) => {
+        const recordKey = `new-${date}`;
+        setNewRecords(prev => ({
+            ...prev,
+            [recordKey]: {
+                date,
+                shift_id: '',
+                start: '',
+                end: ''
+            }
+        }));
+    };
+
+    const updateNewRecord = (recordKey: string, field: keyof NewRecord, value: string | number) => {
+        setNewRecords(prev => ({
+            ...prev,
+            [recordKey]: {
+                ...prev[recordKey],
+                [field]: value
+            }
+        }));
+    };
+
+    const cancelNewRecord = (recordKey: string) => {
+        setNewRecords(prev => {
+            const newState = {...prev};
+            delete newState[recordKey];
+            return newState;
+        });
+    };
+
+    const saveNewRecord = async (recordKey: string) => {
+        const newRecord = newRecords[recordKey];
+        if (!newRecord) return;
+
+        if (!newRecord.shift_id || !newRecord.start || !newRecord.end) {
+            console.error('All fields are required');
+            return;
+        }
+
+        const formattedStart = validateAndFormatTime(newRecord.start);
+        const formattedEnd = validateAndFormatTime(newRecord.end);
+
+        if (!timeRegex.test(formattedStart) || !timeRegex.test(formattedEnd)) {
+            console.error('Invalid time format');
+            return;
+        }
+
+        const parsedDate = DateTime.fromFormat(newRecord.date, "ccc d/M");
+        if (!parsedDate.isValid) {
+            console.error("Invalid date format:", newRecord.date);
+            return;
+        }
+        const formattedDate = parsedDate.toFormat("yyyy-MM-dd");
+        
+        setSavingNewRecords(prev => new Set(prev).add(recordKey));
+
+        try {
+            const params = {
+                user_id: user_id,
+                device_type: 3,
+                device_model_type: 'web',
+                date: formattedDate,
+                shift_id: newRecord.shift_id,
+                start_time: formattedStart,
+                end_time: formattedEnd,
+            }
+            
+            const response = await api.post('/time-clock/add-worklog', params);
+
+            console.log(response, 'response')
+            if (response.data.IsSuccess) {
+                cancelNewRecord(recordKey);
+            }
+
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+        } catch (error) {
+            console.error('Error saving new record:', error);
+        } finally {
+            setSavingNewRecords(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(recordKey);
+                return newSet;
+            });
+        }
     };
 
     const getSelectedRowsLockStatus = () => {
@@ -367,8 +506,13 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         setRequestListOpen(true);
     };
 
-    const closeRequestList = () => {
+    const closeRequestList = async () => {
         setRequestListOpen(false);
+
+        const defaultStartDate = startDate || defaultStart;
+        const defaultEndDate = endDate || defaultEnd;
+
+        await fetchTimeClockData(defaultStartDate, defaultEndDate);
     };
 
     const handleLockClick = () => {
@@ -500,13 +644,43 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         }
     };
 
-    const handleKeyPress = (event: React.KeyboardEvent, worklogId: string, originalLog: any) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            saveFieldChanges(worklogId, originalLog);
-        } else if (event.key === 'Escape') {
-            event.preventDefault();
-            cancelEditingField(worklogId);
+    const saveShiftChanges = async (worklogId: string, originalLog: any) => {
+        const editedData = editingShifts[worklogId];
+        if (!editedData) return;
+
+        if (isRecordLocked(originalLog)) {
+            cancelEditingShift(worklogId);
+            return;
+        }
+
+        const originalShiftId = originalLog.shift_id;
+        const newShiftId = editedData.shift_id;
+
+        if (originalShiftId === newShiftId) {
+            cancelEditingShift(worklogId);
+            return;
+        }
+
+        setSavingWorklogs(prev => new Set(prev).add(worklogId));
+        try {
+            await api.post('/time-clock/edit-worklog-shift', {
+                user_worklog_id: originalLog.worklog_id,
+                shift_id: newShiftId,
+            });
+
+            cancelEditingShift(worklogId);
+
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+        } catch (error) {
+            console.error('Error saving shift:', error);
+        } finally {
+            setSavingWorklogs(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(worklogId);
+                return newSet;
+            });
         }
     };
 
@@ -518,13 +692,29 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 end_date: format(end, 'dd/MM/yyyy'),
             };
             const response: AxiosResponse<TimeClockDetailResponse> = await api.get(
-                '/timesheet/time-clock-details',
+                '/time-clock/details',
                 {params}
             );
             if (response.data.IsSuccess) {
                 setData(response.data.info || []);
                 setHeaderDetail(response.data);
                 setPendingRequestCount(response.data.pending_request_count || 0);
+
+                fetchTimeClockResources(response.data.company_id);
+            }
+        } catch (error) {
+            console.error('Error fetching timeClock data:', error);
+        }
+    };
+
+    const fetchTimeClockResources = async (companyId: number): Promise<void> => {
+        try {
+            const response: AxiosResponse<TimeClockResourcesResponse> = await api.get(
+                '/time-clock/resources',
+                { params: { companyId } }
+            );
+            if (response.data.IsSuccess) {
+                setShifts(response.data.shifts || []);
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
@@ -575,6 +765,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                             date_added: log.date_added,
                             worklog_id: log.worklog_id,
                             shift: log.shift_name || '--',
+                            shift_id: log.shift_id || '',
                             project: log.project_name || '--',
                             start: sanitizeDateTime(log.start),
                             end: sanitizeDateTime(log.end),
@@ -732,13 +923,14 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                     );
                 },
                 enableSorting: false,
-                size: 40,
+                size: 50,
             },
             {
                 id: 'date',
                 header: 'Date',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.date : null,
+                size: 100,
             },
             {
                 id: 'exclamation',
@@ -763,6 +955,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                     color: '#fc4b6c',
                                 },
                             }}
+                            onClick={handlePendingRequest}
                         >
                             <IconExclamationMark size={18} />
                         </IconButton>
@@ -798,6 +991,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 header: 'Project',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.project : null,
+                size: 120,
             },
             {
                 id: 'shift',
@@ -805,6 +999,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 header: 'Shift',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.shift : null,
+                size: 120, // Fixed width for shift column
             },
             {
                 id: 'start',
@@ -812,6 +1007,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 header: 'Start',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.start : null,
+                size: 80, // Fixed width for time columns
             },
             {
                 id: 'end',
@@ -819,6 +1015,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 header: 'End',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.end : null,
+                size: 80, // Fixed width for time columns
             },
             {
                 id: 'totalHours',
@@ -838,10 +1035,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                         <span style={{
                             color: isEdited ? '#ff0000' : 'inherit'
                         }}>
-                            {isPricework ? '--' : totalHours}
-                        </span>
+                    {isPricework ? '--' : totalHours}
+                </span>
                     );
                 },
+                size: 100,
             },
             {
                 id: 'priceWorkAmount',
@@ -849,12 +1047,14 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 header: 'Pricework Amount',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
+                size: 140,
             },
             {
                 id: 'dailyTotal',
                 header: 'Daily total',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.dailyTotal : null,
+                size: 100,
             },
             {
                 id: 'payableAmount',
@@ -862,18 +1062,21 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 header: 'Payable Amount',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.payableAmount : null,
+                size: 140,
             },
             {
                 id: 'employeeNotes',
                 header: 'Employee notes',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.employeeNotes : null,
+                size: 150,
             },
             {
                 id: 'managerNotes',
                 header: 'Manager notes',
                 cell: ({row}) =>
                     row.original.rowType === 'day' ? row.original.managerNotes : null,
+                size: 150,
             },
         ],
         [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect]
@@ -894,25 +1097,47 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
     const formatTimeInput = (value: string): string => {
         const digits = value.replace(/\D/g, '');
-
         if (digits.length === 0) return '';
-        if (digits.length <= 2) {
+
+        if (digits.length === 1) {
+            // H -> 0H:00
             const hours = parseInt(digits);
-            if (hours > 23) return '23:00';
-            return digits;
+            return `${hours.toString().padStart(2, '0')}:00`;
         }
+
+        if (digits.length === 2) {
+            // HH or Hm
+            const num = parseInt(digits);
+            if (num <= 23) {
+                return `${num.toString().padStart(2, '0')}:00`;
+            } else {
+                const hours = parseInt(digits[0]);
+                const minutes = parseInt(digits[1]) * 10;
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+        }
+
         if (digits.length === 3) {
-            const hours = parseInt(digits.slice(0, 1));
-            const minutes = parseInt(digits.slice(1, 3));
-            if (minutes > 59) return `${hours}:59`;
-            return `${hours}:${digits.slice(1, 3)}`;
+            const firstTwo = parseInt(digits.slice(0, 2));
+            if (firstTwo <= 23) {
+                // HH + M0
+                const hours = firstTwo;
+                const minutes = parseInt(digits[2]) * 10;
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            } else {
+                // H + MM
+                const hours = parseInt(digits[0]);
+                const minutes = parseInt(digits.slice(1, 3));
+                return `${hours.toString().padStart(2, '0')}:${Math.min(minutes, 59).toString().padStart(2, '0')}`;
+            }
         }
+
         if (digits.length >= 4) {
             const hours = parseInt(digits.slice(0, 2));
             const minutes = parseInt(digits.slice(2, 4));
-            if (hours > 23) return '23:59';
-            if (minutes > 59) return `${hours.toString().padStart(2, '0')}:59`;
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            const safeHours = Math.min(hours, 23);
+            const safeMinutes = Math.min(minutes, 59);
+            return `${safeHours.toString().padStart(2, '0')}:${safeMinutes.toString().padStart(2, '0')}`;
         }
 
         return value;
@@ -922,25 +1147,40 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         if (!value || value.trim() === '') return '';
 
         const digits = value.replace(/\D/g, '');
-
         if (digits.length === 0) return '';
 
-        let hours: number;
-        let minutes: number;
+        let hours = 0;
+        let minutes = 0;
 
-        if (digits.length <= 2) {
+        if (digits.length === 1) {
+            // H -> 0H:00
             hours = parseInt(digits);
             minutes = 0;
+        } else if (digits.length === 2) {
+            const num = parseInt(digits);
+            if (num <= 23) {
+                hours = num;
+                minutes = 0;
+            } else {
+                hours = parseInt(digits[0]);
+                minutes = parseInt(digits[1]) * 10;
+            }
         } else if (digits.length === 3) {
-            hours = parseInt(digits.slice(0, 1));
-            minutes = parseInt(digits.slice(1, 3));
+            const firstTwo = parseInt(digits.slice(0, 2));
+            if (firstTwo <= 23) {
+                hours = firstTwo;
+                minutes = parseInt(digits[2]) * 10;
+            } else {
+                hours = parseInt(digits[0]);
+                minutes = parseInt(digits.slice(1, 3));
+            }
         } else {
             hours = parseInt(digits.slice(0, 2));
             minutes = parseInt(digits.slice(2, 4));
         }
 
-        if (hours > 23) hours = 23;
-        if (minutes > 59) minutes = 59;
+        hours = Math.min(hours, 23);
+        minutes = Math.min(minutes, 59);
 
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     };
@@ -959,24 +1199,19 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         if (isEditing && !isLocked) {
             return (
                 <Box sx={{
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '4px',
-                    p: 0.5,
-                    minHeight: '24px',
                     display: 'flex',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    width: '100%',
+                    minHeight: '32px',
                 }}>
                     <TextField
                         type="text"
                         value={editingData[field] || ''}
                         placeholder="HH:MM"
-                        variant="standard"
-                        InputProps={{
-                            disableUnderline: true,
-                        }}
+                        variant="outlined"
+                        size="small"
                         onChange={(e) => {
-                            const formatted = formatTimeInput(e.target.value);
-                            updateEditingField(worklogId, field, formatted);
+                            updateEditingField(worklogId, field, e.target.value);
                         }}
                         onBlur={() => {
                             const inputValue = editingData[field] || '';
@@ -1011,11 +1246,14 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                         autoFocus
                         disabled={isSaving}
                         sx={{
-                            width: '60px',
+                            width: '70px',
+                            '& .MuiInputBase-root': {
+                                height: '32px',
+                            },
                             '& .MuiInputBase-input': {
                                 fontSize: '0.875rem',
                                 textAlign: 'center',
-                                p: 0,
+                                p: '6px 8px',
                             }
                         }}
                     />
@@ -1030,17 +1268,104 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                     py: 0.5,
                     fontSize: '0.875rem',
                     cursor: isLocked ? 'not-allowed' : 'pointer',
-                    minHeight: '24px',
+                    minHeight: '32px', // Fixed minimum height
                     display: 'flex',
                     alignItems: 'center',
                     opacity: isLocked ? 0.6 : 1,
                     '&:hover': !isLocked ? {
                         borderRadius: '4px',
+                        backgroundColor: 'rgba(0,0,0,0.04)',
                     } : {},
                 }}
                 title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit'}
             >
                 {sanitizeDateTime(currentValue)}
+            </Box>
+        );
+    };
+
+    // Enhanced shift dropdown renderer with fixed dimensions
+    const renderEditableShiftCell = (
+        worklogId: string,
+        currentShiftId: number | string,
+        currentShiftName: string,
+        log: any
+    ) => {
+        const editingData = editingShifts[worklogId];
+        const isEditing = editingData && editingData.editingField === 'shift';
+        const isSaving = savingWorklogs.has(worklogId);
+        const isLocked = isRecordLocked(log);
+
+        if (isEditing && !isLocked) {
+            return (
+                <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%',
+                    minHeight: '32px', 
+                }}>
+                    <FormControl size="small" sx={{
+                        minWidth: '100px',
+                        width: '100%',
+                        maxWidth: '100px',
+                    }}>
+                        <Select
+                            value={editingData.shift_id || ''}
+                            onChange={(e) => updateEditingShift(worklogId, e.target.value)}
+                            onBlur={() => saveShiftChanges(worklogId, log)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    saveShiftChanges(worklogId, log);
+                                } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    cancelEditingShift(worklogId);
+                                }
+                            }}
+                            autoFocus
+                            disabled={isSaving}
+                            sx={{
+                                height: '32px', // Fixed height
+                                '& .MuiSelect-select': {
+                                    fontSize: '0.875rem',
+                                    py: '6px',
+                                    px: '8px',
+                                },
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#e0e0e0',
+                                }
+                            }}
+                        >
+                            {shifts.map((shift) => (
+                                <MenuItem key={shift.id} value={shift.id}>
+                                    {shift.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
+            );
+        }
+
+        return (
+            <Box
+                onClick={() => !isLocked && startEditingShift(worklogId, currentShiftId, log)}
+                sx={{
+                    py: 0.5,
+                    fontSize: '0.875rem',
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    minHeight: '32px', // Fixed minimum height
+                    display: 'flex',
+                    alignItems: 'center',
+                    opacity: isLocked ? 0.6 : 1,
+                    '&:hover': !isLocked ? {
+                        borderRadius: '4px',
+                        backgroundColor: 'rgba(0,0,0,0.04)',
+                    } : {},
+                }}
+                title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit shift'}
+            >
+                {currentShiftName || '--'}
             </Box>
         );
     };
@@ -1285,10 +1610,10 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 </Stack>
             </Box>
 
-            {/* Table */}
+            {/* Table with fixed layout */}
             <Box sx={{flex: 1, overflow: 'auto', paddingBottom: selectedRows.size > 0 ? '80px' : '0px'}}>
                 <TableContainer sx={{ overflowY: 'hidden' }}>
-                    <Table size="small" stickyHeader>
+                    <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                         <TableHead>
                             {table.getHeaderGroups().map((hg) => (
                                 <TableRow key={hg.id}>
@@ -1302,6 +1627,9 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                 position: 'sticky',
                                                 top: 0,
                                                 zIndex: 10,
+                                                width: `${header.column.columnDef.size || 100}px`,
+                                                minWidth: `${header.column.columnDef.size || 100}px`,
+                                                maxWidth: `${header.column.columnDef.size || 100}px`,
                                             }}
                                         >
                                             {flexRender(
@@ -1361,196 +1689,393 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                     );
                                 }
 
+                                // Check if we're adding a new record for this empty day
+                                if (rowData.rowType === 'day' && !rowData.rowsData && rowData.start === '--') {
+                                    const recordKey = `new-${rowData.date}`;
+                                    const newRecord = newRecords[recordKey];
+                                    const isSaving = savingNewRecords.has(recordKey);
+
+                                    // If we're adding a new record for this date, render the editable row
+                                    if (newRecord) {
+                                        return (
+                                            <TableRow key={`${row.id}-adding`} sx={{ backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
+                                                {row.getVisibleCells().map((cell) => {
+                                                    const { column } = cell;
+
+                                                    if (column.id === 'select') {
+                                                        return <TableCell key={cell.id} sx={{ py: 0.5 }}></TableCell>;
+                                                    }
+
+                                                    if (column.id === 'date') {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{ py: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
+                                                                {rowData.date}
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    if (column.id === 'exclamation' || column.id === 'expander') {
+                                                        return <TableCell key={cell.id} sx={{ py: 0.5 }}></TableCell>;
+                                                    }
+
+                                                    if (column.id === 'project') {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                                --
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    if (column.id === 'shift') {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{ 
+                                                                py: 0.5,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                width: '100%',
+                                                                minHeight: '45px'
+                                                            }}>
+                                                                <FormControl size="small" sx={{ minWidth: '100px',
+                                                                    width: '100%',
+                                                                    maxWidth: '100px', }}>
+                                                                    <Select
+                                                                        value={newRecord.shift_id}
+                                                                        onChange={(e) => updateNewRecord(recordKey, 'shift_id', e.target.value)}
+                                                                        disabled={isSaving}
+                                                                        displayEmpty
+                                                                        sx={{
+                                                                            height: '32px',
+                                                                            '& .MuiSelect-select': {
+                                                                                fontSize: '0.875rem',
+                                                                                py: '6px',
+                                                                                px: '8px',
+                                                                            },
+                                                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                                                borderColor: '#e0e0e0',
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <MenuItem value="">Select Shift</MenuItem>
+                                                                        {shifts.map((shift) => (
+                                                                            <MenuItem key={shift.id} value={shift.id}>
+                                                                                {shift.name}
+                                                                            </MenuItem>
+                                                                        ))}
+                                                                    </Select>
+                                                                </FormControl>
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    if (column.id === 'start') {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                <TextField
+                                                                    type="text"
+                                                                    value={newRecord.start}
+                                                                    placeholder="HH:MM"
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    onChange={(e) => {
+                                                                        const raw = e.target.value.replace(/[^\d:]/g, '');
+                                                                        updateNewRecord(recordKey, 'start', raw);
+                                                                    }}
+                                                                    onBlur={() => {
+                                                                        const formattedTime = validateAndFormatTime(newRecord.start);
+                                                                        updateNewRecord(recordKey, 'start', formattedTime);
+                                                                    }}
+                                                                    disabled={isSaving}
+                                                                    sx={{
+                                                                        width: '70px',
+                                                                        '& .MuiInputBase-input': {
+                                                                            fontSize: '0.875rem',
+                                                                            textAlign: 'center',
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    if (column.id === 'end') {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                <TextField
+                                                                    type="text"
+                                                                    value={newRecord.end}
+                                                                    placeholder="HH:MM"
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    onChange={(e) => {
+                                                                        const raw = e.target.value.replace(/[^\d:]/g, '');
+                                                                        updateNewRecord(recordKey, 'end', raw);
+                                                                    }}
+                                                                    onBlur={() => {
+                                                                        const formattedTime = validateAndFormatTime(newRecord.end);
+                                                                        updateNewRecord(recordKey, 'end', formattedTime);
+                                                                    }}
+                                                                    disabled={isSaving}
+                                                                    sx={{
+                                                                        width: '70px',
+                                                                        '& .MuiInputBase-input': {
+                                                                            fontSize: '0.875rem',
+                                                                            textAlign: 'center',
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    if (column.id === 'totalHours') {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="contained"
+                                                                        color="primary"
+                                                                        onClick={() => saveNewRecord(recordKey)}
+                                                                        disabled={isSaving || !newRecord.shift_id || !newRecord.start || !newRecord.end}
+                                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                                    >
+                                                                        {isSaving ? 'Saving...' : 'Save'}
+                                                                    </Button>
+                                                                </Stack>
+                                                            </TableCell>
+                                                        );
+                                                    }
+                                                    
+                                                    if (column.id === 'priceWorkAmount') {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        onClick={() => cancelNewRecord(recordKey)}
+                                                                        disabled={isSaving}
+                                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                </Stack>
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    // For all other columns, render empty cells
+                                                    return <TableCell key={cell.id} sx={{ py: 0.5 }}>--</TableCell>;
+                                                })}
+                                            </TableRow>
+                                        );
+                                    }
+                                }
+
                                 // Day rows
                                 return (
                                     <React.Fragment key={row.id}>
                                         {row.original.rowsData ? (() => {
-                                                const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
-                                                const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
-                                                    worklogIds.includes(id)
-                                                ).length;
-                                                const rowSpan = row.original.rowsData.length + expandedWorklogsCount;
+                                            const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
+                                            const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
+                                                worklogIds.includes(id)
+                                            ).length;
+                                            const rowSpan = row.original.rowsData.length + expandedWorklogsCount;
 
-                                                return row.original.rowsData.map((log: any, index: number) => {
-                                                    const worklogId = `${row.id}-${log.worklog_id}`;
-                                                    const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
-                                                    const isFirstRow = index === 0;
-                                                    const isLogLocked = isRecordLocked(log);
+                                            return row.original.rowsData.map((log: any, index: number) => {
+                                                const worklogId = `${row.id}-${log.worklog_id}`;
+                                                const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
+                                                const isFirstRow = index === 0;
+                                                const isLogLocked = isRecordLocked(log);
 
-                                                    return (
-                                                        <>
-                                                            <TableRow
-                                                                key={log.worklog_id}
-                                                                sx={{
-                                                                    backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
-                                                                }}
-                                                            >
-                                                                {isFirstRow && visibleColumnConfigs.select?.visible && (
-                                                                    <TableCell rowSpan={rowSpan}
-                                                                               sx={{
-                                                                                   width: `${visibleColumnConfigs.select.width}px`,
-                                                                                   py: 0.5,
-                                                                               }}
-                                                                    >
-                                                                        <CustomCheckbox
-                                                                            checked={selectedRows.has(`row-${row.index}`)}
-                                                                            onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
-                                                                        />
-                                                                    </TableCell>
-                                                                )}
+                                                return (
+                                                    <>
+                                                        <TableRow
+                                                            key={log.worklog_id}
+                                                            sx={{
+                                                                backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
+                                                            }}
+                                                        >
+                                                            {isFirstRow && visibleColumnConfigs.select?.visible && (
+                                                                <TableCell rowSpan={rowSpan}
+                                                                           sx={{
+                                                                               width: `${visibleColumnConfigs.select.width}px`,
+                                                                               py: 0.5,
+                                                                           }}
+                                                                >
+                                                                    <CustomCheckbox
+                                                                        checked={selectedRows.has(`row-${row.index}`)}
+                                                                        onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
+                                                                    />
+                                                                </TableCell>
+                                                            )}
 
-                                                                {isFirstRow && visibleColumnConfigs.date?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>{rowData.date}</TableCell>}
+                                                            {isFirstRow && visibleColumnConfigs.date?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>{rowData.date}</TableCell>}
 
-                                                                {visibleColumnConfigs.exclamation?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>
-                                                                        { log.is_requested == true ? (
-                                                                            <IconButton
-                                                                                size="small"
-                                                                                color="error"
-                                                                                aria-label="error"
-                                                                                sx={{
-                                                                                    '&:hover': {
-                                                                                        backgroundColor: 'transparent',
-                                                                                        color: '#fc4b6c',
-                                                                                    },
-                                                                                }}
-                                                                            >
-                                                                                <IconExclamationMark size={18}/>
-                                                                            </IconButton>
-                                                                        ) : null}
-                                                                    </TableCell>}
+                                                            {visibleColumnConfigs.exclamation?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>
+                                                                    { log.is_requested == true ? (
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            color="error"
+                                                                            onClick={handlePendingRequest}
+                                                                            aria-label="error"
+                                                                            sx={{
+                                                                                '&:hover': {
+                                                                                    backgroundColor: 'transparent',
+                                                                                    color: '#fc4b6c',
+                                                                                },
+                                                                            }}
+                                                                        >
+                                                                            <IconExclamationMark size={18}/>
+                                                                        </IconButton>
+                                                                    ) : null}
+                                                                </TableCell>}
 
-                                                                {visibleColumnConfigs.expander?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>
-                                                                        { log.user_checklogs && log.user_checklogs.length > 0 ? (
-                                                                            <IconButton
-                                                                                size="small"
-                                                                                onClick={() => handleWorklogToggle(log.worklog_id)}
-                                                                                aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
-                                                                                {isWorklogExpanded ? (
-                                                                                    <IconChevronDown size={18}/>
-                                                                                ) : (
-                                                                                    <IconChevronRight size={18}/>
-                                                                                )}
-                                                                            </IconButton>
-                                                                        ) : null}
-                                                                    </TableCell>}
+                                                            {visibleColumnConfigs.expander?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>
+                                                                    { log.user_checklogs && log.user_checklogs.length > 0 ? (
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleWorklogToggle(log.worklog_id)}
+                                                                            aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
+                                                                            {isWorklogExpanded ? (
+                                                                                <IconChevronDown size={18}/>
+                                                                            ) : (
+                                                                                <IconChevronRight size={18}/>
+                                                                            )}
+                                                                        </IconButton>
+                                                                    ) : null}
+                                                                </TableCell>}
 
-                                                                {visibleColumnConfigs.project?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>{log.project_name || '--'}</TableCell>}
+                                                            {visibleColumnConfigs.project?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>{log.project_name || '--'}</TableCell>}
 
-                                                                {visibleColumnConfigs.shift?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>{log.shift_name || '--'}</TableCell>}
+                                                            {visibleColumnConfigs.shift?.visible && (
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>
+                                                                    {log.is_pricework || isLogLocked ? (
+                                                                        <Box sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            opacity: isLogLocked ? 0.6 : 1
+                                                                        }}>
+                                                                            {log.shift_name || '--'}
+                                                                        </Box>
+                                                                    ) : (
+                                                                        renderEditableShiftCell(worklogId, log.shift_id, log.shift_name, log)
+                                                                    )}
+                                                                </TableCell>
+                                                            )}
 
-                                                                {visibleColumnConfigs.start?.visible && (
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>
-                                                                        {log.is_pricework || isLogLocked ? (
-                                                                            <Box sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                opacity: isLogLocked ? 0.6 : 1
-                                                                            }}>
-                                                                                {sanitizeDateTime(log.start)}
-                                                                            </Box>
-                                                                        ) : (
-                                                                            renderEditableTimeCell(worklogId, 'start', log.start, log)
-                                                                        )}
-                                                                    </TableCell>
-                                                                )}
+                                                            {visibleColumnConfigs.start?.visible && (
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>
+                                                                    {log.is_pricework || isLogLocked ? (
+                                                                        <Box sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            opacity: isLogLocked ? 0.6 : 1
+                                                                        }}>
+                                                                            {sanitizeDateTime(log.start)}
+                                                                        </Box>
+                                                                    ) : (
+                                                                        renderEditableTimeCell(worklogId, 'start', log.start, log)
+                                                                    )}
+                                                                </TableCell>
+                                                            )}
 
-                                                                {visibleColumnConfigs.end?.visible && (
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                    }}>
-                                                                        {log.is_pricework || isLogLocked ? (
-                                                                            <Box sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                opacity: isLogLocked ? 0.6 : 1
-                                                                            }}>
-                                                                                {sanitizeDateTime(log.end)}
-                                                                            </Box>
-                                                                        ) : (
-                                                                            renderEditableTimeCell(worklogId, 'end', log.end, log)
-                                                                        )}
-                                                                    </TableCell>
-                                                                )}
+                                                            {visibleColumnConfigs.end?.visible && (
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                }}>
+                                                                    {log.is_pricework || isLogLocked ? (
+                                                                        <Box sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            opacity: isLogLocked ? 0.6 : 1
+                                                                        }}>
+                                                                            {sanitizeDateTime(log.end)}
+                                                                        </Box>
+                                                                    ) : (
+                                                                        renderEditableTimeCell(worklogId, 'end', log.end, log)
+                                                                    )}
+                                                                </TableCell>
+                                                            )}
 
-                                                                {visibleColumnConfigs.totalHours?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem',
-                                                                        color: log.is_edited ? '#ff0000' : 'inherit'
-                                                                    }}>
-                                                                        {log.is_pricework ? '--' : formatHour(log.total_hours)}
-                                                                    </TableCell>
-                                                                }
-
-                                                                {visibleColumnConfigs.priceWorkAmount?.visible &&
-                                                                    <TableCell sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
-
-                                                                {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.dailyTotal} </TableCell>}
-
-                                                                {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.payableAmount} </TableCell>}
-
-                                                                {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.employeeNotes} </TableCell>}
-
-                                                                {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
-                                                                    <TableCell rowSpan={rowSpan} sx={{
-                                                                        py: 0.5,
-                                                                        fontSize: '0.875rem'
-                                                                    }}> {rowData.managerNotes} </TableCell>}
-
-                                                            </TableRow>
-                                                            {isWorklogExpanded &&
-                                                                <CheckLogRows
-                                                                    logs={log.user_checklogs}
-                                                                    currency={currency}
-                                                                    formatHour={formatHour}
-                                                                    visibleColumnConfigs={visibleColumnConfigs}
-                                                                    getVisibleCellsLength={6}
-                                                                    isMultiRow={true}
-                                                                />
+                                                            {visibleColumnConfigs.totalHours?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                    color: log.is_edited ? '#ff0000' : 'inherit'
+                                                                }}>
+                                                                    {log.is_pricework ? '--' : formatHour(log.total_hours)}
+                                                                </TableCell>
                                                             }
-                                                        </>)
-                                                })
 
-                                            })() :
+                                                            {visibleColumnConfigs.priceWorkAmount?.visible &&
+                                                                <TableCell sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
+
+                                                            {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.dailyTotal} </TableCell>}
+
+                                                            {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.payableAmount} </TableCell>}
+
+                                                            {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.employeeNotes} </TableCell>}
+
+                                                            {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
+                                                                <TableCell rowSpan={rowSpan} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem'
+                                                                }}> {rowData.managerNotes} </TableCell>}
+
+                                                        </TableRow>
+                                                        {isWorklogExpanded &&
+                                                            <CheckLogRows
+                                                                logs={log.user_checklogs}
+                                                                currency={currency}
+                                                                formatHour={formatHour}
+                                                                visibleColumnConfigs={visibleColumnConfigs}
+                                                                getVisibleCellsLength={6}
+                                                                isMultiRow={true}
+                                                            />
+                                                        }
+                                                    </>
+                                                )
+                                            });
+                                        })() :
                                             <>
                                                 <TableRow
                                                     key={row.id}
@@ -1561,6 +2086,62 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                     {row.getVisibleCells().map((cell) => {
                                                         const {column} = cell;
                                                         const cellId = `${row.id}-single-${column.id}`;
+
+                                                        if (column.id === 'date' && row.original.rowType === 'day' && !row.original.rowsData && row.original.start === '--') {
+                                                            const recordKey = `new-${row.original.date}`;
+                                                            const isAddingRecord = newRecords[recordKey];
+
+                                                            if (!isAddingRecord) {
+                                                                return (
+                                                                    <TableCell key={cell.id} sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                        borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                                        position: 'relative',
+                                                                    }}>
+                                                                        <Box
+                                                                            onClick={() => startAddingNewRecord(row.original.date as string)}
+                                                                            sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'space-between',
+                                                                                cursor: 'pointer',
+                                                                                borderRadius: '4px',
+                                                                                '&:hover': {
+                                                                                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                                                                },
+                                                                            }}
+                                                                            title="Click to add new record"
+                                                                        >
+                                                                            <span>{row.original.date}</span>
+                                                                            <IconPlus size={16} color="#1976d2" />
+                                                                        </Box>
+                                                                    </TableCell>
+                                                                );
+                                                            }
+                                                        }
+
+                                                        if (column.id === 'shift' && row.original.rowType === 'day' && !row.original.rowsData) {
+                                                            return (
+                                                                <TableCell key={cell.id} sx={{
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                    borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                                }}>
+                                                                    {hasValidWorklogData(row.original) ?
+                                                                        renderEditableShiftCell(cellId, row.original.shift_id ?? '', row.original.shift as string, row.original)
+                                                                        :
+                                                                        <Box sx={{
+                                                                            py: 0.5,
+                                                                            fontSize: '0.875rem',
+                                                                            opacity: 0.6
+                                                                        }}>
+                                                                            {row.original.shift || '--'}
+                                                                        </Box>
+                                                                    }
+                                                                </TableCell>
+                                                            );
+                                                        }
 
                                                         if ((column.id === 'start' || column.id === 'end') &&
                                                             row.original.rowType === 'day' &&
@@ -1604,7 +2185,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                     visibleColumnConfigs={visibleColumnConfigs}
                                                     getVisibleCellsLength={row.getVisibleCells().length}
                                                 />}
-                                            </>}
+                                            </>
+                                        }
                                     </React.Fragment>
                                 );
                             })}
@@ -1734,104 +2316,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 />
             </Drawer>
         </Box>
-    );
-};
-
-const CheckLogRows = ({logs, currency, formatHour, visibleColumnConfigs, getVisibleCellsLength, isMultiRow = false }: CheckLogRowsProps) => {
-    return (
-        <TableRow>
-            {visibleColumnConfigs.select?.visible && <TableCell></TableCell>}
-            {isMultiRow && visibleColumnConfigs.date?.visible && <TableCell></TableCell>}
-            {!isMultiRow && visibleColumnConfigs.date?.visible && <TableCell></TableCell>}
-            {!isMultiRow && visibleColumnConfigs.exclamation?.visible && <TableCell></TableCell>}
-            {!isMultiRow && visibleColumnConfigs.expander?.visible && <TableCell></TableCell>}
-
-            <TableCell sx={{padding: 0}} colSpan={getVisibleCellsLength}>
-                {logs?.length > 0 ? (
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
-                                    Address
-                                </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
-                                    Task
-                                </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
-                                    Check In
-                                </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
-                                    Check Out
-                                </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
-                                    Hours
-                                </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
-                                    Amount
-                                </TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {logs.map((checklog: CheckLog) => (
-                                <TableRow key={checklog.checklog_id}>
-                                    <TableCell sx={{py: 0.5}}>
-                                        {checklog.address_name}
-                                    </TableCell>
-                                    <TableCell sx={{py: 0.5}}>
-                                        {checklog.task_name || '--'}
-                                    </TableCell>
-                                    <TableCell sx={{py: 0.5}}>
-                                        {checklog.checkin_time}
-                                    </TableCell>
-                                    <TableCell sx={{py: 0.5}}>
-                                        {checklog.checkout_time}
-                                    </TableCell>
-                                    <TableCell sx={{py: 0.5}}>
-                                        {formatHour(checklog.total_hours)}
-                                    </TableCell>
-                                    <TableCell sx={{py: 0.5}}>
-                                        {checklog.pricework_amount ? `${currency}${checklog.pricework_amount}` : `${currency}0`}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        fontStyle="italic"
-                        sx={{ p: 1 }}
-                    >
-                        This worklog has no checklogs
-                    </Typography>
-                )}
-            </TableCell>
-        </TableRow>
     );
 };
 
