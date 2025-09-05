@@ -24,8 +24,6 @@ import { CustomizerContext } from "@/app/context/customizerContext";
 import { useTheme } from "@mui/material/styles";
 import { useState } from "react";
 import Navigation from "./Navigation";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
 
 const Header = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
@@ -74,14 +72,6 @@ const Header = () => {
 
   const [isVisible, setIsVisible] = useState(false);
 
-  const session = useSession();
-
-  const user = session.data?.user as User & { company_id?: string | null } & {
-    company_name?: string | null;
-  } & {
-    company_image?: number | null;
-  } & { id: number };
-
   return (
     <AppBarStyled position="sticky" color="default">
       <ToolbarStyled>
@@ -118,7 +108,7 @@ const Header = () => {
         ) : null}
 
         <Box flexGrow={1} />
-        <Stack direction="row" gap={1} alignItems="center">
+        <Stack direction="row" alignItems="center">
           <Company />
 
           <IconButton color="inherit">

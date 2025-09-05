@@ -6,8 +6,9 @@ import { User } from "next-auth";
 
 export default function NotificationClient() {
   const { data: session } = useSession();
-  const userId = session?.user as User & { id: number };
-
+  const user = session?.user as User & { id: number };
+  const userId = user?.id;
+  const is_web = true;
   useEffect(() => {
     if (!userId) return;
 
@@ -22,17 +23,20 @@ export default function NotificationClient() {
         if (!token) return;
 
         // send token to backend
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}notifications/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, token }),
-        });
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}notifications/save-token`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, token, is_web }),
+          }
+        );
 
         // listen for foreground messages
         unsub = onForegroundMessage((payload: any) => {
           const title = payload?.notification?.title || "Notification";
           const body = payload?.notification?.body || "";
-          const icon = "/icon.png"; // you can put a custom icon in /public
+          const icon = "/images/logos/belcka_logo.png";
 
           if (Notification.permission === "granted") {
             new Notification(title, {
