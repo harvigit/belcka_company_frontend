@@ -6,7 +6,6 @@ import MyApp from "./app";
 import "./global.css";
 import NextTopLoader from 'nextjs-toploader';
 import { RouteLoadingProvider } from "./context/RouteLoadingContext/RouteLoadingContext";
-import NotificationClient from "./notifications/NotificationClient";
 
 export const metadata = {
   title: "OTMS System",

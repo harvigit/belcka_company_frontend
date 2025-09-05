@@ -176,7 +176,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 cell: (info) => {
                     const statusInt = info.row.original.status_int;
                     let color = 'textPrimary';
-                    if (statusInt === 13) color = '#999999';
+                    if (statusInt === 1) color = '#1854d8';
                     else if (statusInt === 4) color = '#32A852';
                     else if (statusInt === 3) color = '#FF7F00';
 
@@ -194,7 +194,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 cell: (info) => {
                     const statusInt = info.row.original.status_int;
                     let color = 'textPrimary';
-                    if (statusInt === 13 || statusInt === 14 ) color = '#999999';
+                    if (statusInt === 1 || statusInt === 14 ) color = '#1854d8';
                     else if (statusInt === 4) color = '#32A852';
                     else if (statusInt === 3) color = '#FF7F00';
 

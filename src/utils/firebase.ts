@@ -35,25 +35,24 @@ export const initMessaging = async (): Promise<Messaging | null> => {
   return getMessaging(app);
 };
 
-/**
- * Get FCM token for this client
- */
 export const getFcmToken = async (): Promise<string | null> => {
   if (typeof window === "undefined") return null;
+
+  if (Notification.permission !== "granted") {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return null;
+  }
 
   const messaging = await initMessaging();
   if (!messaging) return null;
 
   try {
-    const registration = await navigator.serviceWorker.register(
-      "/firebase-messaging-sw.js"
-    );
+    await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-    const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-      serviceWorkerRegistration: registration,
+     const token = await getToken(messaging, {
+      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, // Web push certificate
     });
-
+    
     return token;
   } catch (err) {
     console.error("❌ Error getting FCM token:", err);
