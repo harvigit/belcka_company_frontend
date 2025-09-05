@@ -26,12 +26,14 @@ import {
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { AxiosResponse } from 'axios';
-import { TimeClock } from './time-clock';
+import { TimeClock } from '../time-clock';
 import api from '@/utils/axios';
 import { DateTime } from 'luxon';
 
 // Move interfaces to top for better organization
 interface RequestItem {
+    old_payable_hour: string | null;
+    new_payable_hour: string | null;
     id: number;
     user_id: number;
     date: string;
@@ -121,15 +123,31 @@ const RequestCard = React.memo<{
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
     formatDate: (val: string | number | null | undefined) => string;
 }>(({ request, isProcessing, onApprove, onReject, formatHour, formatDate }) => {
-    const calculateHours = useCallback((startTime: string, endTime: string): string => {
-        if (!startTime || !endTime) return '00:00 hours';
+    
+    const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
+        console.log(val, 'val')
+        if (val === null || val === undefined) return isPricework ? '--' : '00:00';
 
-        const start = parseFloat(startTime.replace(':', '.'));
-        const end = parseFloat(endTime.replace(':', '.'));
-        const diff = end - start;
+        if (isPricework) return '--';
 
-        return `${diff.toFixed(2)} hours`;
-    }, []);
+        const str = val.toString().trim();
+
+        if (/^\d{1,2}:\d{1,2}(\.\d+)?$/.test(str)) {
+            const [h, m] = str.split(':');
+            const minutes = parseFloat(m) || 0;
+            return `${h.padStart(2, '0')}:${Math.floor(minutes)
+                .toString()
+                .padStart(2, '0')}`;
+        }
+
+        const num = parseFloat(str);
+        if (!isNaN(num)) {
+            const h = Math.floor(num);
+            const m = Math.round((num - h) * 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
+        return isPricework ? '--' : '00:00';
+    };
 
     const getStatusLabel = useCallback((status: number) => {
         return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || 'Unknown';
@@ -204,10 +222,7 @@ const RequestCard = React.memo<{
                             </Box>
 
                             <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 0.5 }}>
-                                ({calculateHours(
-                                formatHour(request.old_data?.start_time),
-                                formatHour(request.old_data?.end_time)
-                            )})
+                                {formatPayableHour(request.old_payable_hour)}
                             </Typography>
                         </Box>
 
@@ -228,10 +243,7 @@ const RequestCard = React.memo<{
                                 </Typography>
                             </Box>
                             <Typography variant="caption" color="success.main" sx={{ display: 'block' }}>
-                                ({calculateHours(
-                                formatHour(request.new_data?.start_time),
-                                formatHour(request.new_data?.end_time)
-                            )})
+                                {formatPayableHour(request.new_payable_hour)}
                             </Typography>
 
                             {request.note && (
@@ -325,12 +337,7 @@ const RequestCard = React.memo<{
 
 RequestCard.displayName = 'RequestCard';
 
-const RequestDetails: React.FC<RequestDetailsProps> = ({
-                                                           open,
-                                                           timeClock,
-                                                           user_id,
-                                                           onClose
-                                                       }) => {
+const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_id, onClose }) => {
     // State management
     const [requestList, setRequestList] = useState<RequestItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -419,7 +426,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({
             };
 
             const response: AxiosResponse<RequestListResponse> = await api.get(
-                '/timesheet/time-clock-request-details',
+                '/time-clock/request-details',
                 { params }
             );
 

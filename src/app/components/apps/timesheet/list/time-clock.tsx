@@ -162,7 +162,7 @@ const TimeClock = () => {
                 end_date: format(end, 'dd/MM/yyyy'),
             };
 
-            const response: AxiosResponse<TimeClockResponse> = await api.get('/timesheet/get-time-clock', {
+            const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {
                 params,
             });
 
