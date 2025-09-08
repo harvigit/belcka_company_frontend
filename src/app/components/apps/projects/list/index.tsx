@@ -268,7 +268,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       company_id: user?.company_id || 0,
       duration: 0,
       rate: 0,
-      is_attchment: false,
+      is_attchment: true,
     });
     setDrawerOpen(true);
   };
@@ -298,7 +298,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           company_id: user?.company_id || 0,
           duration: 0,
           rate: 0,
-          is_attchment: false,
+          is_attchment: true,
         });
       } else {
         toast.error(result.data.message);

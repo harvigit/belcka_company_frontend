@@ -18,6 +18,7 @@ messaging.onBackgroundMessage(function(payload) {
   const options = {
     body: payload.notification?.body || '',
     icon: '/images/logos/belcka_logo.png',
+    sound: "default", 
   };
   self.registration.showNotification(title, options);
 });

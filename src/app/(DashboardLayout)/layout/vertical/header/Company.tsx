@@ -99,11 +99,13 @@ const Company = () => {
         setFeed(feeds);
         setCount(feeds?.[0]?.unread_feeds);
 
-        const unreadIds = feeds
+        if(feeds){
+          const unreadIds = feeds
           .filter((feed: any) => feed.status === false)
           .map((feed: any) => feed.id)
           .join(",");
-        setUnreedFeed(unreadIds);
+          setUnreedFeed(unreadIds);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch feeds", err);
@@ -249,7 +251,7 @@ const Company = () => {
                     </IconButton>
 
                     <Typography variant="h5" fontWeight={700}>
-                      Feeds ({filteredFeeds.length})
+                      Feeds ({filteredFeeds ? filteredFeeds.length : 0})
                     </Typography>
 
                     <TextField
@@ -277,7 +279,7 @@ const Company = () => {
                     </IconButton>
                   </Box>
                 </Box>
-                {filteredFeeds.length > 0 ? (
+                {filteredFeeds?.length > 0 ? (
                   <>
                     {filteredFeeds.map((item, index) => (
                       <Box>
