@@ -24,13 +24,11 @@ import {
     IconTableColumn,
     IconChevronRight,
     IconChevronDown,
-    IconSearch,
     IconPlus,
     IconLock,
     IconLockOpen,
-    IconTrash,
     IconChevronLeft,
-    IconExclamationMark
+    IconExclamationMark,
 } from '@tabler/icons-react';
 import {
     useReactTable,
@@ -49,6 +47,7 @@ import {TimeClock} from './time-clock';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import RequestDetails from './time-clocl-details/request-details';
+import Conflicts from './time-clocl-details/conflicts';
 import CheckLogRows from './time-clocl-details/check-log-list';
 import {DateTime} from 'luxon';
 
@@ -113,6 +112,7 @@ interface TimeClockDetailsProps {
 }
 
 type TimeClockDetailResponse = {
+    // conflicts: any[];
     company_id: number;
     IsSuccess: boolean;
     info: TimeClock[];
@@ -125,6 +125,7 @@ type TimeClockDetailResponse = {
     total_payable_amount?: number;
     worked_days?: number;
     pending_request_count?: number;
+    total_conflicts?: number;
 };
 
 type TimeClockResourcesResponse = {
@@ -199,7 +200,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
     const [endDate, setEndDate] = useState<Date | null>(null);
 
     const [pendingRequestCount, setPendingRequestCount] = useState<number>(0);
+    const [totalConflicts, setTotalConflicts] = useState<number>(0);
     const [requestListOpen, setRequestListOpen] = useState<boolean>(false);
+    
+    const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
+    const [conflictDetails, setConflictDetails] = useState<[]>([]);
 
     const [shifts, setShifts] = useState<Shift[]>([]);
 
@@ -213,6 +218,9 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
     const canGoToNext = currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1;
 
     const handlePreviousUser = () => {
+        setTotalConflicts(0)
+        setPendingRequestCount(0)
+        
         if (canGoToPrevious && onUserChange) {
             const previousUser = allUsers[currentUserIndex - 1];
             onUserChange(previousUser);
@@ -222,6 +230,9 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
     };
 
     const handleNextUser = () => {
+        setTotalConflicts(0)
+        setPendingRequestCount(0)
+        
         if (canGoToNext && onUserChange) {
             const nextUser = allUsers[currentUserIndex + 1];
             onUserChange(nextUser);
@@ -379,16 +390,17 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         }));
     };
 
-    // New record management functions
     const startAddingNewRecord = (date: string) => {
-        const recordKey = `new-${date}`;
+        const recordKey = `new-${date}-${Date.now()}`;
+
+        console.log(recordKey, 'recordKey')
         setNewRecords(prev => ({
             ...prev,
             [recordKey]: {
                 date,
                 shift_id: '',
                 start: '',
-                end: ''
+                end: '',
             }
         }));
     };
@@ -434,7 +446,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             return;
         }
         const formattedDate = parsedDate.toFormat("yyyy-MM-dd");
-        
+
         setSavingNewRecords(prev => new Set(prev).add(recordKey));
 
         try {
@@ -447,7 +459,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 start_time: formattedStart,
                 end_time: formattedEnd,
             }
-            
+
             const response = await api.post('/time-clock/add-worklog', params);
 
             console.log(response, 'response')
@@ -502,6 +514,19 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         return { hasLockedRows, hasUnlockedRows };
     };
 
+    const handleConflicts = async () => {
+        setConflictSidebar(true);
+    };
+
+    const closeConflictSidebar = async () => {
+        setConflictSidebar(false);
+
+        const defaultStartDate = startDate || defaultStart;
+        const defaultEndDate = endDate || defaultEnd;
+
+        await fetchTimeClockData(defaultStartDate, defaultEndDate);
+    };
+    
     const handlePendingRequest = async () => {
         setRequestListOpen(true);
     };
@@ -699,6 +724,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 setData(response.data.info || []);
                 setHeaderDetail(response.data);
                 setPendingRequestCount(response.data.pending_request_count || 0);
+                setTotalConflicts(response.data.total_conflicts || 0);
+                // setConflictDetails(response.data.conflicts);
 
                 fetchTimeClockResources(response.data.company_id);
             }
@@ -756,42 +783,9 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             });
 
             const dayRows = (week.days || []).flatMap((day: any) => {
-                if (day.worklogs && day.worklogs.length > 0) {
-                    if (day.worklogs.length === 1) {
-                        return day.worklogs.map((log: any, idx: number) => ({
-                            rowType: 'day' as const,
-                            date: day.date,
-                            timesheet_id: day.timesheet_id,
-                            date_added: log.date_added,
-                            worklog_id: log.worklog_id,
-                            shift: log.shift_name || '--',
-                            shift_id: log.shift_id || '',
-                            project: log.project_name || '--',
-                            start: sanitizeDateTime(log.start),
-                            end: sanitizeDateTime(log.end),
-                            priceWorkAmount: `${currency}${log.pricework_amount || 0}`,
-                            totalHours: log.total_hours != '--' ? formatHour(log.total_hours) : '--',
-                            dailyTotal: formatHour(day.daily_total),
-                            payableAmount: `${currency}${log.payable_amount || 0}`,
-                            regular: formatHour(log.regular),
-                            employeeNotes: (log.employee_notes || '--'),
-                            managerNotes: (log.manager_notes || '--'),
-                            weekLabel: week.week_range,
-                            weeklyTotalHours: formatHour(week.weekly_total_hours),
-                            weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
-                            parsedDate: parseDate(day.date),
-                            address: log.address || '--',
-                            check_in: sanitizeDateTime(log.check_in),
-                            check_out: sanitizeDateTime(log.check_out),
-                            rowSpan: idx === 0 ? day.worklogs.length : 0,
-                            userChecklogs: log.user_checklogs ?? [],
-                            status: log.status || day.status,
-                            is_requested: log.is_requested,
-                            is_edited: log.is_edited,
-                            timesheet_light_id: log.timesheet_light_id || day.timesheet_light_id,
-                        }));
-                    }
+                const hasWorklogs = day.worklogs && day.worklogs.length > 0;
 
+                if (hasWorklogs) {
                     const allChecklogs = day.worklogs.reduce((acc: CheckLog[], log: any) => {
                         if (log.user_checklogs && Array.isArray(log.user_checklogs)) {
                             return [...acc, ...log.user_checklogs];
@@ -1302,7 +1296,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     width: '100%',
-                    minHeight: '32px', 
+                    minHeight: '32px',
                 }}>
                     <FormControl size="small" sx={{
                         minWidth: '100px',
@@ -1516,27 +1510,77 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                         </Stack>
                     </Stack>
 
-                    {pendingRequestCount > 0 && (
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            color="warning"
-                            sx={{
-                                px: 2,
-                                '&:hover': {
-                                    backgroundColor: 'transparent',
-                                    borderColor: 'inherit',
-                                    boxShadow: 'none',
-                                    color: '#fdc90f'
-                                }
-                            }}
-                            onClick={handlePendingRequest}
-                        >
-                            <Typography sx={{ ml: 0.5, fontWeight: 600 }}>
-                                Pending Requests ({pendingRequestCount})
-                            </Typography>
-                        </Button>
-                    )}
+                    <Stack direction="row" spacing={1}>
+                        {totalConflicts > 0 && (
+                            
+                            <Button
+                                variant="outlined"
+                                sx={{
+                                    borderRadius: "50px",
+                                    borderColor: "#f28b82",
+                                    px: 1.5,
+                                    py: 0.5,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                    textTransform: "none",
+                                    "&:hover": {
+                                        backgroundColor: "transparent",
+                                        borderColor: "#f28b82",
+                                    },
+                                }}
+                                onClick={handleConflicts}
+                            >
+                                <Box
+                                    sx={{
+                                        backgroundColor: "#e53935",
+                                        color: "white",
+                                        fontSize: "12px",
+                                        fontWeight: "bold",
+                                        width: 20,
+                                        height: 20,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        borderRadius: "50%",
+                                    }}
+                                >
+                                    {totalConflicts}
+                                </Box>
+                                <Typography
+                                    sx={{
+                                        fontWeight: 600,
+                                        color: "#e53935",
+                                        fontSize: "14px",
+                                    }}
+                                >
+                                    Conflicts
+                                </Typography>
+                            </Button>
+                        )}
+
+                        {pendingRequestCount > 0 && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="warning"
+                                sx={{
+                                    px: 2,
+                                    '&:hover': {
+                                        backgroundColor: 'transparent',
+                                        borderColor: 'inherit',
+                                        boxShadow: 'none',
+                                        color: '#fdc90f',
+                                    },
+                                }}
+                                onClick={handlePendingRequest}
+                            >
+                                <Typography sx={{ ml: 0.5, fontWeight: 600 }}>
+                                    Pending Requests ({pendingRequestCount})
+                                </Typography>
+                            </Button>
+                        )}
+                    </Stack>
                 </Stack>
             </Box>
 
@@ -1687,508 +1731,651 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                             </TableCell>
                                         </TableRow>
                                     );
-                                }
+                                } 
 
-                                // Check if we're adding a new record for this empty day
-                                if (rowData.rowType === 'day' && !rowData.rowsData && rowData.start === '--') {
-                                    const recordKey = `new-${rowData.date}`;
-                                    const newRecord = newRecords[recordKey];
-                                    const isSaving = savingNewRecords.has(recordKey);
-
-                                    // If we're adding a new record for this date, render the editable row
-                                    if (newRecord) {
-                                        return (
-                                            <TableRow key={`${row.id}-adding`} sx={{ backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
-                                                {row.getVisibleCells().map((cell) => {
-                                                    const { column } = cell;
-
-                                                    if (column.id === 'select') {
-                                                        return <TableCell key={cell.id} sx={{ py: 0.5 }}></TableCell>;
-                                                    }
-
-                                                    if (column.id === 'date') {
-                                                        return (
-                                                            <TableCell key={cell.id} sx={{ py: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
-                                                                {rowData.date}
-                                                            </TableCell>
-                                                        );
-                                                    }
-
-                                                    if (column.id === 'exclamation' || column.id === 'expander') {
-                                                        return <TableCell key={cell.id} sx={{ py: 0.5 }}></TableCell>;
-                                                    }
-
-                                                    if (column.id === 'project') {
-                                                        return (
-                                                            <TableCell key={cell.id} sx={{ py: 0.5, fontSize: '0.875rem' }}>
-                                                                --
-                                                            </TableCell>
-                                                        );
-                                                    }
-
-                                                    if (column.id === 'shift') {
-                                                        return (
-                                                            <TableCell key={cell.id} sx={{ 
-                                                                py: 0.5,
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                width: '100%',
-                                                                minHeight: '45px'
-                                                            }}>
-                                                                <FormControl size="small" sx={{ minWidth: '100px',
-                                                                    width: '100%',
-                                                                    maxWidth: '100px', }}>
-                                                                    <Select
-                                                                        value={newRecord.shift_id}
-                                                                        onChange={(e) => updateNewRecord(recordKey, 'shift_id', e.target.value)}
-                                                                        disabled={isSaving}
-                                                                        displayEmpty
-                                                                        sx={{
-                                                                            height: '32px',
-                                                                            '& .MuiSelect-select': {
-                                                                                fontSize: '0.875rem',
-                                                                                py: '6px',
-                                                                                px: '8px',
-                                                                            },
-                                                                            '& .MuiOutlinedInput-notchedOutline': {
-                                                                                borderColor: '#e0e0e0',
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        <MenuItem value="">Select Shift</MenuItem>
-                                                                        {shifts.map((shift) => (
-                                                                            <MenuItem key={shift.id} value={shift.id}>
-                                                                                {shift.name}
-                                                                            </MenuItem>
-                                                                        ))}
-                                                                    </Select>
-                                                                </FormControl>
-                                                            </TableCell>
-                                                        );
-                                                    }
-
-                                                    if (column.id === 'start') {
-                                                        return (
-                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
-                                                                <TextField
-                                                                    type="text"
-                                                                    value={newRecord.start}
-                                                                    placeholder="HH:MM"
-                                                                    variant="outlined"
-                                                                    size="small"
-                                                                    onChange={(e) => {
-                                                                        const raw = e.target.value.replace(/[^\d:]/g, '');
-                                                                        updateNewRecord(recordKey, 'start', raw);
-                                                                    }}
-                                                                    onBlur={() => {
-                                                                        const formattedTime = validateAndFormatTime(newRecord.start);
-                                                                        updateNewRecord(recordKey, 'start', formattedTime);
-                                                                    }}
-                                                                    disabled={isSaving}
-                                                                    sx={{
-                                                                        width: '70px',
-                                                                        '& .MuiInputBase-input': {
-                                                                            fontSize: '0.875rem',
-                                                                            textAlign: 'center',
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </TableCell>
-                                                        );
-                                                    }
-
-                                                    if (column.id === 'end') {
-                                                        return (
-                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
-                                                                <TextField
-                                                                    type="text"
-                                                                    value={newRecord.end}
-                                                                    placeholder="HH:MM"
-                                                                    variant="outlined"
-                                                                    size="small"
-                                                                    onChange={(e) => {
-                                                                        const raw = e.target.value.replace(/[^\d:]/g, '');
-                                                                        updateNewRecord(recordKey, 'end', raw);
-                                                                    }}
-                                                                    onBlur={() => {
-                                                                        const formattedTime = validateAndFormatTime(newRecord.end);
-                                                                        updateNewRecord(recordKey, 'end', formattedTime);
-                                                                    }}
-                                                                    disabled={isSaving}
-                                                                    sx={{
-                                                                        width: '70px',
-                                                                        '& .MuiInputBase-input': {
-                                                                            fontSize: '0.875rem',
-                                                                            textAlign: 'center',
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </TableCell>
-                                                        );
-                                                    }
-
-                                                    if (column.id === 'totalHours') {
-                                                        return (
-                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
-                                                                <Stack direction="row" spacing={1} alignItems="center">
-                                                                    <Button
-                                                                        size="small"
-                                                                        variant="contained"
-                                                                        color="primary"
-                                                                        onClick={() => saveNewRecord(recordKey)}
-                                                                        disabled={isSaving || !newRecord.shift_id || !newRecord.start || !newRecord.end}
-                                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
-                                                                    >
-                                                                        {isSaving ? 'Saving...' : 'Save'}
-                                                                    </Button>
-                                                                </Stack>
-                                                            </TableCell>
-                                                        );
-                                                    }
-                                                    
-                                                    if (column.id === 'priceWorkAmount') {
-                                                        return (
-                                                            <TableCell key={cell.id} sx={{ py: 0.5 }}>
-                                                                <Stack direction="row" spacing={1} alignItems="center">
-                                                                    <Button
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        onClick={() => cancelNewRecord(recordKey)}
-                                                                        disabled={isSaving}
-                                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
-                                                                    >
-                                                                        Cancel
-                                                                    </Button>
-                                                                </Stack>
-                                                            </TableCell>
-                                                        );
-                                                    }
-
-                                                    // For all other columns, render empty cells
-                                                    return <TableCell key={cell.id} sx={{ py: 0.5 }}>--</TableCell>;
-                                                })}
-                                            </TableRow>
-                                        );
-                                    }
-                                }
+                                // Collect new records for this date
+                                const dateNewRecords = Object.entries(newRecords).filter(
+                                    ([_, rec]) => rec.date === rowData.date
+                                );
 
                                 // Day rows
-                                return (
-                                    <React.Fragment key={row.id}>
-                                        {row.original.rowsData ? (() => {
-                                            const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
-                                            const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
-                                                worklogIds.includes(id)
-                                            ).length;
-                                            const rowSpan = row.original.rowsData.length + expandedWorklogsCount;
+                                if (row.original.rowsData) {
+                                    const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
+                                    const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
+                                        worklogIds.includes(id)
+                                    ).length;
+                                    const rowSpan = row.original.rowsData.length + expandedWorklogsCount + dateNewRecords.length;
 
-                                            return row.original.rowsData.map((log: any, index: number) => {
-                                                const worklogId = `${row.id}-${log.worklog_id}`;
-                                                const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
-                                                const isFirstRow = index === 0;
-                                                const isLogLocked = isRecordLocked(log);
+                                    const subRows = row.original.rowsData.map((log: any, index: number) => {
+                                        const worklogId = `${row.id}-${log.worklog_id}`;
+                                        const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
+                                        const isFirstRow = index === 0;
+                                        const isLogLocked = isRecordLocked(log);
 
-                                                return (
-                                                    <>
-                                                        <TableRow
-                                                            key={log.worklog_id}
-                                                            sx={{
-                                                                backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
-                                                            }}
-                                                        >
-                                                            {isFirstRow && visibleColumnConfigs.select?.visible && (
-                                                                <TableCell rowSpan={rowSpan}
-                                                                           sx={{
-                                                                               width: `${visibleColumnConfigs.select.width}px`,
-                                                                               py: 0.5,
-                                                                           }}
-                                                                >
-                                                                    <CustomCheckbox
-                                                                        checked={selectedRows.has(`row-${row.index}`)}
-                                                                        onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
-                                                                    />
-                                                                </TableCell>
-                                                            )}
-
-                                                            {isFirstRow && visibleColumnConfigs.date?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>{rowData.date}</TableCell>}
-
-                                                            {visibleColumnConfigs.exclamation?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>
-                                                                    { log.is_requested == true ? (
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            color="error"
-                                                                            onClick={handlePendingRequest}
-                                                                            aria-label="error"
-                                                                            sx={{
-                                                                                '&:hover': {
-                                                                                    backgroundColor: 'transparent',
-                                                                                    color: '#fc4b6c',
-                                                                                },
-                                                                            }}
-                                                                        >
-                                                                            <IconExclamationMark size={18}/>
-                                                                        </IconButton>
-                                                                    ) : null}
-                                                                </TableCell>}
-
-                                                            {visibleColumnConfigs.expander?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>
-                                                                    { log.user_checklogs && log.user_checklogs.length > 0 ? (
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            onClick={() => handleWorklogToggle(log.worklog_id)}
-                                                                            aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
-                                                                            {isWorklogExpanded ? (
-                                                                                <IconChevronDown size={18}/>
-                                                                            ) : (
-                                                                                <IconChevronRight size={18}/>
-                                                                            )}
-                                                                        </IconButton>
-                                                                    ) : null}
-                                                                </TableCell>}
-
-                                                            {visibleColumnConfigs.project?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>{log.project_name || '--'}</TableCell>}
-
-                                                            {visibleColumnConfigs.shift?.visible && (
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>
-                                                                    {log.is_pricework || isLogLocked ? (
-                                                                        <Box sx={{
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            opacity: isLogLocked ? 0.6 : 1
-                                                                        }}>
-                                                                            {log.shift_name || '--'}
-                                                                        </Box>
-                                                                    ) : (
-                                                                        renderEditableShiftCell(worklogId, log.shift_id, log.shift_name, log)
-                                                                    )}
-                                                                </TableCell>
-                                                            )}
-
-                                                            {visibleColumnConfigs.start?.visible && (
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>
-                                                                    {log.is_pricework || isLogLocked ? (
-                                                                        <Box sx={{
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            opacity: isLogLocked ? 0.6 : 1
-                                                                        }}>
-                                                                            {sanitizeDateTime(log.start)}
-                                                                        </Box>
-                                                                    ) : (
-                                                                        renderEditableTimeCell(worklogId, 'start', log.start, log)
-                                                                    )}
-                                                                </TableCell>
-                                                            )}
-
-                                                            {visibleColumnConfigs.end?.visible && (
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                }}>
-                                                                    {log.is_pricework || isLogLocked ? (
-                                                                        <Box sx={{
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            opacity: isLogLocked ? 0.6 : 1
-                                                                        }}>
-                                                                            {sanitizeDateTime(log.end)}
-                                                                        </Box>
-                                                                    ) : (
-                                                                        renderEditableTimeCell(worklogId, 'end', log.end, log)
-                                                                    )}
-                                                                </TableCell>
-                                                            )}
-
-                                                            {visibleColumnConfigs.totalHours?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                    color: log.is_edited ? '#ff0000' : 'inherit'
-                                                                }}>
-                                                                    {log.is_pricework ? '--' : formatHour(log.total_hours)}
-                                                                </TableCell>
-                                                            }
-
-                                                            {visibleColumnConfigs.priceWorkAmount?.visible &&
-                                                                <TableCell sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.dailyTotal} </TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.payableAmount} </TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.employeeNotes} </TableCell>}
-
-                                                            {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
-                                                                <TableCell rowSpan={rowSpan} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem'
-                                                                }}> {rowData.managerNotes} </TableCell>}
-
-                                                        </TableRow>
-                                                        {isWorklogExpanded &&
-                                                            <CheckLogRows
-                                                                logs={log.user_checklogs}
-                                                                currency={currency}
-                                                                formatHour={formatHour}
-                                                                visibleColumnConfigs={visibleColumnConfigs}
-                                                                getVisibleCellsLength={6}
-                                                                isMultiRow={true}
-                                                            />
-                                                        }
-                                                    </>
-                                                )
-                                            });
-                                        })() :
+                                        return (
                                             <>
                                                 <TableRow
-                                                    key={row.id}
+                                                    key={log.worklog_id}
                                                     sx={{
-                                                        backgroundColor: isRecordLocked(row.original) ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
+                                                        backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
                                                     }}
                                                 >
-                                                    {row.getVisibleCells().map((cell) => {
-                                                        const {column} = cell;
-                                                        const cellId = `${row.id}-single-${column.id}`;
+                                                    {isFirstRow && visibleColumnConfigs.select?.visible && (
+                                                        <TableCell rowSpan={rowSpan}
+                                                                   sx={{
+                                                                       width: `${visibleColumnConfigs.select.width}px`,
+                                                                       py: 0.5,
+                                                                   }}
+                                                        >
+                                                            <CustomCheckbox
+                                                                checked={selectedRows.has(`row-${row.index}`)}
+                                                                onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
+                                                            />
+                                                        </TableCell>
+                                                    )}
 
-                                                        if (column.id === 'date' && row.original.rowType === 'day' && !row.original.rowsData && row.original.start === '--') {
-                                                            const recordKey = `new-${row.original.date}`;
-                                                            const isAddingRecord = newRecords[recordKey];
+                                                    {isFirstRow && visibleColumnConfigs.date?.visible &&
+                                                        <TableCell rowSpan={rowSpan} sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}>
+                                                            <Box
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'space-between',
+                                                                }}
+                                                            >
+                                                                <span>{rowData.date}</span>
+                                                                <IconButton
+                                                                    onClick={() => startAddingNewRecord(rowData.date as string)}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        '&:hover': {
+                                                                            backgroundColor: 'transparent',
+                                                                        },
+                                                                    }}
+                                                                    title="Add new record"
+                                                                >
+                                                                    <IconPlus size={16} color="#1976d2" />
+                                                                </IconButton>
+                                                            </Box>
+                                                        </TableCell>}
 
-                                                            if (!isAddingRecord) {
-                                                                return (
-                                                                    <TableCell key={cell.id} sx={{
-                                                                        py: 0.5,
+                                                    {visibleColumnConfigs.exclamation?.visible &&
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}>
+                                                            { log.is_requested == true ? (
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="error"
+                                                                    onClick={handlePendingRequest}
+                                                                    aria-label="error"
+                                                                    sx={{
+                                                                        '&:hover': {
+                                                                            backgroundColor: 'transparent',
+                                                                            color: '#fc4b6c',
+                                                                        },
+                                                                    }}
+                                                                >
+                                                                    <IconExclamationMark size={18}/>
+                                                                </IconButton>
+                                                            ) : null}
+                                                        </TableCell>}
+
+                                                    {visibleColumnConfigs.expander?.visible &&
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}>
+                                                            { log.user_checklogs && log.user_checklogs.length > 0 ? (
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => handleWorklogToggle(log.worklog_id)}
+                                                                    aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}>
+                                                                    {isWorklogExpanded ? (
+                                                                        <IconChevronDown size={18}/>
+                                                                    ) : (
+                                                                        <IconChevronRight size={18}/>
+                                                                    )}
+                                                                </IconButton>
+                                                            ) : null}
+                                                        </TableCell>}
+
+                                                    {visibleColumnConfigs.project?.visible &&
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                        }}>{log.project_name || '--'}</TableCell>}
+
+                                                    {visibleColumnConfigs.shift?.visible && (
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                        }}>
+                                                            {log.is_pricework || isLogLocked ? (
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    opacity: isLogLocked ? 0.6 : 1
+                                                                }}>
+                                                                    {log.shift_name || '--'}
+                                                                </Box>
+                                                            ) : (
+                                                                renderEditableShiftCell(worklogId, log.shift_id, log.shift_name, log)
+                                                            )}
+                                                        </TableCell>
+                                                    )}
+
+                                                    {visibleColumnConfigs.start?.visible && (
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                        }}>
+                                                            {log.is_pricework || isLogLocked ? (
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    opacity: isLogLocked ? 0.6 : 1
+                                                                }}>
+                                                                    {sanitizeDateTime(log.start)}
+                                                                </Box>
+                                                            ) : (
+                                                                renderEditableTimeCell(worklogId, 'start', log.start, log)
+                                                            )}
+                                                        </TableCell>
+                                                    )}
+
+                                                    {visibleColumnConfigs.end?.visible && (
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                        }}>
+                                                            {log.is_pricework || isLogLocked ? (
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    opacity: isLogLocked ? 0.6 : 1
+                                                                }}>
+                                                                    {sanitizeDateTime(log.end)}
+                                                                </Box>
+                                                            ) : (
+                                                                renderEditableTimeCell(worklogId, 'end', log.end, log)
+                                                            )}
+                                                        </TableCell>
+                                                    )}
+
+                                                    {visibleColumnConfigs.totalHours?.visible &&
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            color: log.is_edited ? '#ff0000' : 'inherit'
+                                                        }}>
+                                                            {log.is_pricework ? '--' : formatHour(log.total_hours)}
+                                                        </TableCell>
+                                                    }
+
+                                                    {visibleColumnConfigs.priceWorkAmount?.visible &&
+                                                        <TableCell sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}>{`${currency}${log.pricework_amount || 0}`}</TableCell>}
+
+                                                    {isFirstRow && visibleColumnConfigs.dailyTotal?.visible &&
+                                                        <TableCell rowSpan={rowSpan} sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}> {rowData.dailyTotal} </TableCell>}
+
+                                                    {isFirstRow && visibleColumnConfigs.payableAmount?.visible &&
+                                                        <TableCell rowSpan={rowSpan} sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}> {rowData.payableAmount} </TableCell>}
+
+                                                    {isFirstRow && visibleColumnConfigs.employeeNotes?.visible &&
+                                                        <TableCell rowSpan={rowSpan} sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}> {rowData.employeeNotes} </TableCell>}
+
+                                                    {isFirstRow && visibleColumnConfigs.managerNotes?.visible &&
+                                                        <TableCell rowSpan={rowSpan} sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem'
+                                                        }}> {rowData.managerNotes} </TableCell>}
+
+                                                </TableRow>
+                                                {isWorklogExpanded &&
+                                                    <CheckLogRows
+                                                        logs={log.user_checklogs}
+                                                        currency={currency}
+                                                        formatHour={formatHour}
+                                                        visibleColumnConfigs={visibleColumnConfigs}
+                                                        getVisibleCellsLength={6}
+                                                        isMultiRow={true}
+                                                    />
+                                                }
+                                            </>
+                                        )
+                                    });
+
+                                    const newSubRows = dateNewRecords.map(([recordKey, newRecord]) => {
+                                        const isSaving = savingNewRecords.has(recordKey);
+
+                                        return (
+                                            <TableRow key={recordKey} sx={{ backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
+                                                {visibleColumnConfigs.exclamation?.visible && <TableCell sx={{ py: 0.5 }}></TableCell>}
+                                                {visibleColumnConfigs.expander?.visible && <TableCell sx={{ py: 0.5 }}></TableCell>}
+                                                {visibleColumnConfigs.project?.visible && <TableCell sx={{ py: 0.5, fontSize: '0.875rem' }}>--</TableCell>}
+                                                {visibleColumnConfigs.shift?.visible && (
+                                                    <TableCell sx={{
+                                                        py: 0.5,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        width: '100%',
+                                                        minHeight: '45px'
+                                                    }}>
+                                                        <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                                                            <Select
+                                                                value={newRecord.shift_id}
+                                                                onChange={(e) => updateNewRecord(recordKey, 'shift_id', e.target.value)}
+                                                                disabled={isSaving}
+                                                                displayEmpty
+                                                                sx={{
+                                                                    height: '32px',
+                                                                    '& .MuiSelect-select': {
                                                                         fontSize: '0.875rem',
-                                                                        borderBottom: '1px solid rgba(224, 224, 224, 1)',
-                                                                        position: 'relative',
-                                                                    }}>
-                                                                        <Box
-                                                                            onClick={() => startAddingNewRecord(row.original.date as string)}
-                                                                            sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                justifyContent: 'space-between',
-                                                                                cursor: 'pointer',
-                                                                                borderRadius: '4px',
-                                                                                '&:hover': {
-                                                                                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                                                                                },
-                                                                            }}
-                                                                            title="Click to add new record"
-                                                                        >
-                                                                            <span>{row.original.date}</span>
-                                                                            <IconPlus size={16} color="#1976d2" />
-                                                                        </Box>
-                                                                    </TableCell>
-                                                                );
-                                                            }
-                                                        }
-
-                                                        if (column.id === 'shift' && row.original.rowType === 'day' && !row.original.rowsData) {
-                                                            return (
-                                                                <TableCell key={cell.id} sx={{
-                                                                    py: 0.5,
-                                                                    fontSize: '0.875rem',
-                                                                    borderBottom: '1px solid rgba(224, 224, 224, 1)',
-                                                                }}>
-                                                                    {hasValidWorklogData(row.original) ?
-                                                                        renderEditableShiftCell(cellId, row.original.shift_id ?? '', row.original.shift as string, row.original)
-                                                                        :
-                                                                        <Box sx={{
-                                                                            py: 0.5,
-                                                                            fontSize: '0.875rem',
-                                                                            opacity: 0.6
-                                                                        }}>
-                                                                            {row.original.shift || '--'}
-                                                                        </Box>
+                                                                        py: '6px',
+                                                                        px: '8px',
+                                                                    },
+                                                                    '& .MuiOutlinedInput-notchedOutline': {
+                                                                        borderColor: '#e0e0e0',
                                                                     }
-                                                                </TableCell>
-                                                            );
-                                                        }
-
-                                                        if ((column.id === 'start' || column.id === 'end') &&
-                                                            row.original.rowType === 'day' &&
-                                                            !row.original.rowsData) {
-                                                            return (
-                                                                <TableCell key={cell.id} sx={{
-                                                                    py: 0.5,
+                                                                }}
+                                                            >
+                                                                <MenuItem value="">Select Shift</MenuItem>
+                                                                {shifts.map((shift) => (
+                                                                    <MenuItem key={shift.id} value={shift.id}>
+                                                                        {shift.name}
+                                                                    </MenuItem>
+                                                                ))}
+                                                            </Select>
+                                                        </FormControl>
+                                                    </TableCell>
+                                                )}
+                                                {visibleColumnConfigs.start?.visible && (
+                                                    <TableCell sx={{ py: 0.5 }}>
+                                                        <TextField
+                                                            type="text"
+                                                            value={newRecord.start}
+                                                            placeholder="HH:MM"
+                                                            variant="outlined"
+                                                            size="small"
+                                                            onChange={(e) => {
+                                                                const raw = e.target.value.replace(/[^\d:]/g, '');
+                                                                updateNewRecord(recordKey, 'start', raw);
+                                                            }}
+                                                            onBlur={() => {
+                                                                const formattedTime = validateAndFormatTime(newRecord.start);
+                                                                updateNewRecord(recordKey, 'start', formattedTime);
+                                                            }}
+                                                            disabled={isSaving}
+                                                            sx={{
+                                                                width: '70px',
+                                                                '& .MuiInputBase-input': {
                                                                     fontSize: '0.875rem',
-                                                                    borderBottom: '1px solid rgba(224, 224, 224, 1)',
-                                                                }}>
-                                                                    {hasValidWorklogData(row.original) ?
-                                                                        renderEditableTimeCell(cellId, column.id as 'start' | 'end', row.original[column.id as keyof DailyBreakdown] as string, row.original)
-                                                                        :
-                                                                        <Box sx={{
-                                                                            py: 0.5,
-                                                                            fontSize: '0.875rem',
-                                                                            opacity: 0.6
-                                                                        }}>
-                                                                            {row.original[column.id as keyof DailyBreakdown] as string || '--'}
-                                                                        </Box>
-                                                                    }
-                                                                </TableCell>
-                                                            );
-                                                        }
+                                                                    textAlign: 'center',
+                                                                }
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                                {visibleColumnConfigs.end?.visible && (
+                                                    <TableCell sx={{ py: 0.5 }}>
+                                                        <TextField
+                                                            type="text"
+                                                            value={newRecord.end}
+                                                            placeholder="HH:MM"
+                                                            variant="outlined"
+                                                            size="small"
+                                                            onChange={(e) => {
+                                                                const raw = e.target.value.replace(/[^\d:]/g, '');
+                                                                updateNewRecord(recordKey, 'end', raw);
+                                                            }}
+                                                            onBlur={() => {
+                                                                const formattedTime = validateAndFormatTime(newRecord.end);
+                                                                updateNewRecord(recordKey, 'end', formattedTime);
+                                                            }}
+                                                            disabled={isSaving}
+                                                            sx={{
+                                                                width: '70px',
+                                                                '& .MuiInputBase-input': {
+                                                                    fontSize: '0.875rem',
+                                                                    textAlign: 'center',
+                                                                }
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                                {visibleColumnConfigs.totalHours?.visible && (
+                                                    <TableCell sx={{ py: 0.5 }}>
+                                                        <Stack direction="row" spacing={1} alignItems="center">
+                                                            <Button
+                                                                size="small"
+                                                                variant="contained"
+                                                                color="primary"
+                                                                onClick={() => saveNewRecord(recordKey)}
+                                                                disabled={isSaving || !newRecord.shift_id || !newRecord.start || !newRecord.end}
+                                                                sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                            >
+                                                                {isSaving ? 'Saving...' : 'Save'}
+                                                            </Button>
+                                                        </Stack>
+                                                    </TableCell>
+                                                )}
+                                                {visibleColumnConfigs.priceWorkAmount?.visible && (
+                                                    <TableCell sx={{ py: 0.5 }}>
+                                                        <Stack direction="row" spacing={1} alignItems="center">
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                onClick={() => cancelNewRecord(recordKey)}
+                                                                disabled={isSaving}
+                                                                sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </Stack>
+                                                    </TableCell>
+                                                )}
+                                            </TableRow>
+                                        );
+                                    });
 
+                                    return (
+                                        <React.Fragment key={row.id}>
+                                            {subRows}
+                                            {newSubRows}
+                                        </React.Fragment>
+                                    );
+                                } else {
+                                    // Single or empty day
+                                    return (
+                                        <React.Fragment key={row.id}>
+                                            <TableRow
+                                                key={row.id}
+                                                sx={{
+                                                    backgroundColor: isRecordLocked(row.original) ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
+                                                }}
+                                            >
+                                                {row.getVisibleCells().map((cell) => {
+                                                    const {column} = cell;
+                                                    const cellId = `${row.id}-single-${column.id}`;
+
+                                                    // Check if this date has new records being added
+                                                    const dateNewRecords = Object.entries(newRecords).filter(
+                                                        ([_, rec]) => rec.date === row.original.date
+                                                    );
+                                                    const hasNewRecords = dateNewRecords.length > 0;
+                                                    const isEmptyDay = !hasValidWorklogData(row.original);
+
+                                                    // For empty days with new records, modify the rendering
+                                                    if (column.id === 'date' && row.original.rowType === 'day' && !row.original.rowsData) {
                                                         return (
                                                             <TableCell key={cell.id} sx={{
                                                                 py: 0.5,
                                                                 fontSize: '0.875rem',
                                                                 borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             }}>
-                                                                {flexRender(column.columnDef.cell, cell.getContext())}
+                                                                <Box
+                                                                    sx={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'space-between',
+                                                                    }}
+                                                                >
+                                                                    <span>{row.original.date}</span>
+                                                                    {/* Only show plus button if no new records are being added */}
+                                                                    {!hasNewRecords && (
+                                                                        <IconButton
+                                                                            onClick={() => startAddingNewRecord(row.original.date as string)}
+                                                                            size="small"
+                                                                            sx={{
+                                                                                '&:hover': {
+                                                                                    backgroundColor: 'transparent',
+                                                                                },
+                                                                            }}
+                                                                            title="Add new record"
+                                                                        >
+                                                                            <IconPlus size={16} color="#1976d2" />
+                                                                        </IconButton>
+                                                                    )}
+                                                                </Box>
                                                             </TableCell>
-                                                        )
-                                                    })}
-                                                </TableRow>
-                                                {row.getIsExpanded() && <CheckLogRows
+                                                        );
+                                                    }
+
+                                                    // For empty days with new records, render the form inputs in the same row
+                                                    if (hasNewRecords && isEmptyDay && dateNewRecords.length === 1) {
+                                                        const [recordKey, newRecord] = dateNewRecords[0];
+                                                        const isSaving = savingNewRecords.has(recordKey);
+
+                                                        if (column.id === 'shift') {
+                                                            return (
+                                                                <TableCell key={cell.id} sx={{
+                                                                    py: 0.5,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    width: '100%',
+                                                                    minHeight: '45px'
+                                                                }}>
+                                                                    <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                                                                        <Select
+                                                                            value={newRecord.shift_id}
+                                                                            onChange={(e) => updateNewRecord(recordKey, 'shift_id', e.target.value)}
+                                                                            disabled={isSaving}
+                                                                            displayEmpty
+                                                                            sx={{
+                                                                                height: '32px',
+                                                                                '& .MuiSelect-select': {
+                                                                                    fontSize: '0.875rem',
+                                                                                    py: '6px',
+                                                                                    px: '8px',
+                                                                                },
+                                                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                                                    borderColor: '#e0e0e0',
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <MenuItem value="">Select Shift</MenuItem>
+                                                                            {shifts.map((shift) => (
+                                                                                <MenuItem key={shift.id} value={shift.id}>
+                                                                                    {shift.name}
+                                                                                </MenuItem>
+                                                                            ))}
+                                                                        </Select>
+                                                                    </FormControl>
+                                                                </TableCell>
+                                                            );
+                                                        }
+
+                                                        if (column.id === 'start') {
+                                                            return (
+                                                                <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                    <TextField
+                                                                        type="text"
+                                                                        value={newRecord.start}
+                                                                        placeholder="HH:MM"
+                                                                        variant="outlined"
+                                                                        size="small"
+                                                                        onChange={(e) => {
+                                                                            const raw = e.target.value.replace(/[^\d:]/g, '');
+                                                                            updateNewRecord(recordKey, 'start', raw);
+                                                                        }}
+                                                                        onBlur={() => {
+                                                                            const formattedTime = validateAndFormatTime(newRecord.start);
+                                                                            updateNewRecord(recordKey, 'start', formattedTime);
+                                                                        }}
+                                                                        disabled={isSaving}
+                                                                        sx={{
+                                                                            width: '70px',
+                                                                            '& .MuiInputBase-input': {
+                                                                                fontSize: '0.875rem',
+                                                                                textAlign: 'center',
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </TableCell>
+                                                            );
+                                                        }
+
+                                                        if (column.id === 'end') {
+                                                            return (
+                                                                <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                    <TextField
+                                                                        type="text"
+                                                                        value={newRecord.end}
+                                                                        placeholder="HH:MM"
+                                                                        variant="outlined"
+                                                                        size="small"
+                                                                        onChange={(e) => {
+                                                                            const raw = e.target.value.replace(/[^\d:]/g, '');
+                                                                            updateNewRecord(recordKey, 'end', raw);
+                                                                        }}
+                                                                        onBlur={() => {
+                                                                            const formattedTime = validateAndFormatTime(newRecord.end);
+                                                                            updateNewRecord(recordKey, 'end', formattedTime);
+                                                                        }}
+                                                                        disabled={isSaving}
+                                                                        sx={{
+                                                                            width: '70px',
+                                                                            '& .MuiInputBase-input': {
+                                                                                fontSize: '0.875rem',
+                                                                                textAlign: 'center',
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </TableCell>
+                                                            );
+                                                        }
+
+                                                        if (column.id === 'totalHours') {
+                                                            return (
+                                                                <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="contained"
+                                                                            color="primary"
+                                                                            onClick={() => saveNewRecord(recordKey)}
+                                                                            disabled={isSaving || !newRecord.shift_id || !newRecord.start || !newRecord.end}
+                                                                            sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                                        >
+                                                                            {isSaving ? 'Saving...' : 'Save'}
+                                                                        </Button>
+                                                                    </Stack>
+                                                                </TableCell>
+                                                            );
+                                                        }
+
+                                                        if (column.id === 'priceWorkAmount') {
+                                                            return (
+                                                                <TableCell key={cell.id} sx={{ py: 0.5 }}>
+                                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            onClick={() => cancelNewRecord(recordKey)}
+                                                                            disabled={isSaving}
+                                                                            sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                                        >
+                                                                            Cancel
+                                                                        </Button>
+                                                                    </Stack>
+                                                                </TableCell>
+                                                            );
+                                                        }
+
+                                                        if (column.id === 'project') {
+                                                            return <TableCell key={cell.id} sx={{ py: 0.5, fontSize: '0.875rem' }}>--</TableCell>;
+                                                        }
+                                                    }
+
+                                                    // Default rendering for other cases
+                                                    if (column.id === 'shift' && row.original.rowType === 'day' && !row.original.rowsData) {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{
+                                                                py: 0.5,
+                                                                fontSize: '0.875rem',
+                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                            }}>
+                                                                {hasValidWorklogData(row.original) ?
+                                                                    renderEditableShiftCell(cellId, row.original.shift_id ?? '', row.original.shift as string, row.original)
+                                                                    :
+                                                                    <Box sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                        opacity: 0.6
+                                                                    }}>
+                                                                        {row.original.shift || '--'}
+                                                                    </Box>
+                                                                }
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    if ((column.id === 'start' || column.id === 'end') &&
+                                                        row.original.rowType === 'day' &&
+                                                        !row.original.rowsData) {
+                                                        return (
+                                                            <TableCell key={cell.id} sx={{
+                                                                py: 0.5,
+                                                                fontSize: '0.875rem',
+                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                            }}>
+                                                                {hasValidWorklogData(row.original) ?
+                                                                    renderEditableTimeCell(cellId, column.id as 'start' | 'end', row.original[column.id as keyof DailyBreakdown] as string, row.original)
+                                                                    :
+                                                                    <Box sx={{
+                                                                        py: 0.5,
+                                                                        fontSize: '0.875rem',
+                                                                        opacity: 0.6
+                                                                    }}>
+                                                                        {row.original[column.id as keyof DailyBreakdown] as string || '--'}
+                                                                    </Box>
+                                                                }
+                                                            </TableCell>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <TableCell key={cell.id} sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                        }}>
+                                                            {flexRender(column.columnDef.cell, cell.getContext())}
+                                                        </TableCell>
+                                                    )
+                                                })}
+                                            </TableRow>
+                                            {/* Only show expanded rows for days that have existing data and are expanded */}
+                                            {row.getIsExpanded() && row.original.userChecklogs && row.original.userChecklogs.length > 0 && (
+                                                <CheckLogRows
                                                     logs={row.original.userChecklogs || []}
                                                     currency={currency}
                                                     formatHour={formatHour}
                                                     visibleColumnConfigs={visibleColumnConfigs}
                                                     getVisibleCellsLength={row.getVisibleCells().length}
-                                                />}
-                                            </>
-                                        }
-                                    </React.Fragment>
-                                );
+                                                />
+                                            )}
+                                            {/* Remove the separate new record rows for empty days - they're now inline */}
+                                        </React.Fragment>
+                                    );
+                                }
                             })}
                         </TableBody>
                     </Table>
@@ -2289,6 +2476,30 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                     </Stack>
                 </Box>
             )}
+
+            {/*<Drawer*/}
+            {/*    anchor="right"*/}
+            {/*    open={conflictSidebar}*/}
+            {/*    onClose={closeConflictSidebar}*/}
+            {/*    PaperProps={{*/}
+            {/*        sx: {*/}
+            {/*            borderRadius: 0,*/}
+            {/*            boxShadow: 'none',*/}
+            {/*            overflow: 'hidden',*/}
+            {/*            width: '504px',*/}
+            {/*            borderTopLeftRadius: 18,*/}
+            {/*            borderBottomLeftRadius: 18,*/}
+            {/*        },*/}
+            {/*    }}*/}
+            {/*>*/}
+            {/*    */}
+            
+            {/*    <Conflicts*/}
+            {/*        totalConflicts={totalConflicts}*/}
+            {/*        onClose={closeConflictSidebar}*/}
+            {/*        conflictDetails={conflictDetails}*/}
+            {/*    />*/}
+            {/*</Drawer>*/}
 
             <Drawer
                 anchor="bottom"
