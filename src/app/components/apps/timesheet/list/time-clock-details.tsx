@@ -47,7 +47,6 @@ import {TimeClock} from './time-clock';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import RequestDetails from './time-clocl-details/request-details';
-import Conflicts from './time-clocl-details/conflicts';
 import CheckLogRows from './time-clocl-details/check-log-list';
 import {DateTime} from 'luxon';
 
