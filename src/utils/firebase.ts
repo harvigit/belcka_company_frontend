@@ -5,7 +5,7 @@ import {
   getToken,
   onMessage,
   isSupported,
-  Messaging,
+  type Messaging,
 } from "firebase/messaging";
 
 // ✅ Firebase config
@@ -19,25 +19,34 @@ const firebaseConfig = {
   measurementId: "G-N8MFZ6274S",
 };
 
-// ✅ Initialize app (safe globally)
+// ✅ Initialize app once
 export const app = initializeApp(firebaseConfig);
 
 /**
  * Lazy init messaging so SSR / unsupported browsers don’t break
  */
 export const initMessaging = async (): Promise<Messaging | null> => {
-  if (typeof window === "undefined") return null; // SSR safe
-  const supported = await isSupported();
-  if (!supported) {
-    console.warn("⚠️ FCM not supported in this browser");
+  if (typeof window === "undefined") return null; // 🚀 SSR safe
+
+  try {
+    const supported = await isSupported();
+    if (!supported) {
+      return null; // 🚀 no console.warn, just silent skip
+    }
+    return getMessaging(app);
+  } catch (err) {
+    console.error("❌ Messaging not supported:", err);
     return null;
   }
-  return getMessaging(app);
 };
 
+/**
+ * Request and return FCM token
+ */
 export const getFcmToken = async (): Promise<string | null> => {
   if (typeof window === "undefined") return null;
 
+  // ✅ ask for permission
   if (Notification.permission !== "granted") {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return null;
@@ -47,12 +56,19 @@ export const getFcmToken = async (): Promise<string | null> => {
   if (!messaging) return null;
 
   try {
-    await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    // ✅ ensure service worker exists
+    if (!("serviceWorker" in navigator)) {
+      console.warn("❌ Service workers not supported in this browser");
+      return null;
+    }
 
-     const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, // Web push certificate
+    const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+
+    const token = await getToken(messaging, {
+      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: reg, // ✅ attach worker explicitly
     });
-    
+
     return token;
   } catch (err) {
     console.error("❌ Error getting FCM token:", err);
@@ -60,10 +76,10 @@ export const getFcmToken = async (): Promise<string | null> => {
   }
 };
 
-
-export const onForegroundMessage = (
-  cb: (payload: any) => void
-): (() => void) => {
+/**
+ * Foreground message listener
+ */
+export const onForegroundMessage = (cb: (payload: any) => void): (() => void) => {
   let unsub: () => void = () => {};
 
   initMessaging().then((messaging) => {
