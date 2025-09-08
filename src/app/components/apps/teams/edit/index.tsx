@@ -184,7 +184,7 @@ const EditTeamPage = () => {
       router.push("/apps/teams/list");
     } catch (error: any) {
       const message =
-        error?.response?.data?.message || error?.message || "Unknown error";
+        error?.response?.data?.message;
       toast.error(message);
     } finally {
       setIsSaving(false);

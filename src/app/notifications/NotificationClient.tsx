@@ -9,7 +9,9 @@ export default function NotificationClient() {
   const user = session?.user as User & { id: number };
   const userId = user?.id;
   const is_web = true;
-  useEffect(() => {
+
+useEffect(() => {
+  if (is_web) {
     if (!userId) return;
 
     let unsub: (() => void) | undefined;
@@ -55,7 +57,8 @@ export default function NotificationClient() {
     return () => {
       if (typeof unsub === "function") unsub();
     };
-  }, [userId]);
+  }
+  }, [userId,is_web]);
 
   return null;
 }
