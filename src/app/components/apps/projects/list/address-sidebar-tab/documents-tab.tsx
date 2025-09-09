@@ -52,7 +52,7 @@ export const DocumentsTab = ({ addressId, projectId }: DocumentsTabProps) => {
   const handleDownloadZip = async (addressId: number, taskId: number) => {
     try {
       const response = await api.get(
-        `address/download-tasks-zip/${addressId}/${taskId}`,
+        `address/download-tasks-zip/${addressId}?taskId=${taskId}`,
         {
           responseType: "blob",
         }
