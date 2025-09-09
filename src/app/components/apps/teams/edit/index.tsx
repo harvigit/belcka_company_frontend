@@ -172,20 +172,22 @@ const EditTeamPage = () => {
     setIsSaving(true);
 
     try {
-      await updateTeam({
+      const payload = {
         id: formData.id,
         name: formData.name,
         supervisor_id: formData.supervisor_id,
-        team_member_ids: formData.team_member_ids,
-        team_id: 0,
-      });
+        company_id: id.company_id,
+        team_member_ids: formData.team_member_ids.join(",") ?? [],
+      };
+      const res = await api.put(`team/update-team`, payload);
 
-      toast.success("Team updated successfully.");
-      router.push("/apps/teams/list");
+      if (res.data.IsSuccess == true) {
+        toast.success("Team updated successfully.");
+        router.push("/apps/teams/list");
+      } else {
+        toast.error(res.data.message);
+      }
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message;
-      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -200,7 +202,6 @@ const EditTeamPage = () => {
         minHeight="300px"
       >
         <CircularProgress />
-        {/* <Typography ml={2}>Loading team data...</Typography> */}
       </Box>
     );
   }

@@ -387,7 +387,7 @@ const TablePagination = () => {
                   }
                   color={logged_in_at ? "success" : "error"}
                   size="small"
-                  sx={{ fontSize: 10, mb: 1 }}
+                  sx={{ fontSize: 10, mb: 1 ,mt: 0.5,height:22}}
                   variant="outlined"
                 />
               )}
