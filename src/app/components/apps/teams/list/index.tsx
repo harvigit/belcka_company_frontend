@@ -233,6 +233,7 @@ const TablePagination = () => {
             }
             onChange={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               if (e.target.checked) {
                 setSelectedRowIds(
                   new Set(filteredData.map((row) => row.team_id))
@@ -262,6 +263,7 @@ const TablePagination = () => {
               disabled={shouldHighlight}
               onChange={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
                   newSelected.delete(item.team_id);
@@ -766,25 +768,37 @@ const TablePagination = () => {
                         <TableRow
                           key={row.id}
                           hover
-                          onClick={() => {
-                            if (!isDisabled) {
-                              router.push(
-                                `/apps/teams/team?team_id=${item.team_id}`
-                              );
-                            }
-                          }}
                           sx={{
                             cursor: isDisabled ? "default" : "pointer",
                           }}
                         >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
+                          {row.getVisibleCells().map((cell) => {
+                            const isActionCell = cell.column.id === "actions"; 
+                            const isCheckboxCell = cell.column.id === "name";
+
+                            return (
+                              <TableCell
+                                key={cell.id}
+                                sx={{ padding: "10px" }}
+                                onClick={() => {
+                                  if (
+                                    !isDisabled &&
+                                    !isActionCell &&
+                                    !isCheckboxCell
+                                  ) {
+                                    router.push(
+                                      `/apps/teams/team?team_id=${row.original.team_id}`
+                                    );
+                                  }
+                                }}
+                              >
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       );
                     })
