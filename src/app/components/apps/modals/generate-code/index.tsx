@@ -55,10 +55,10 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     }
   };
 
-  const handleCopyCode = (code: string) => {
+  const handleCopyCode = (code: string | null) => {
     const codeToCopy = code ?? "";
 
-    if (navigator.clipboard) {
+    if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard
         .writeText(codeToCopy)
         .then(() => toast.success("Code copied!"))
@@ -74,11 +74,19 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const fallbackCopyCode = (codeToCopy: string) => {
     const textArea = document.createElement("textarea");
     textArea.value = codeToCopy;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
     document.body.appendChild(textArea);
+    textArea.focus();
     textArea.select();
+
     try {
-      document.execCommand("copy");
-      toast.success("Code copied!");
+      const success = document.execCommand("copy");
+      if (success) {
+        toast.success("Code copied!");
+      } else {
+        toast.error("Failed to copy code!");
+      }
     } catch (err) {
       console.error("Fallback failed:", err);
       toast.error("Failed to copy code!");

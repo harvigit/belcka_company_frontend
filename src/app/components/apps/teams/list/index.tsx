@@ -232,6 +232,7 @@ const TablePagination = () => {
               filteredData.length > 0
             }
             onChange={(e) => {
+              e.stopPropagation();
               if (e.target.checked) {
                 setSelectedRowIds(
                   new Set(filteredData.map((row) => row.team_id))
@@ -255,16 +256,12 @@ const TablePagination = () => {
           item.company_id !== item.subcontractor_company_id;
 
         return (
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
-          >
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
             <CustomCheckbox
               checked={isChecked}
               disabled={shouldHighlight}
-              onChange={() => {
+              onChange={(e) => {
+                e.stopPropagation();
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
                   newSelected.delete(item.team_id);
@@ -295,7 +292,7 @@ const TablePagination = () => {
       header: () => "Company",
       cell: (info) => {
         return (
-          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
             {info.getValue() ?? "-"}
           </Typography>
         );
@@ -317,7 +314,7 @@ const TablePagination = () => {
               alt={name}
               sx={{ width: 36, height: 36 }}
             />
-            <Box sx={{px: 1.5}}>
+            <Box sx={{ px: 1.5 }}>
               <Typography className="f-14" color="textPrimary">
                 {name ?? "-"}
               </Typography>
@@ -335,7 +332,7 @@ const TablePagination = () => {
         const users = row.working_member_count;
 
         return (
-          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
             {users + `/` + info.getValue()}
           </Typography>
         );

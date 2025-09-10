@@ -1,58 +1,28 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  TableContainer,
-  Table,
-  TableRow,
-  TableCell,
-  TableBody,
-  TableHead,
   Typography,
   Box,
   Grid,
-  Button,
   Divider,
-  IconButton,
   Stack,
-  TextField,
-  InputAdornment,
-  MenuItem,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
   Chip,
   CircularProgress,
   CardContent,
+  Button,
 } from "@mui/material";
 import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  createColumnHelper,
-} from "@tanstack/react-table";
-import {
-    IconChevronLeft,
-    IconChevronRight,
-    IconChevronsLeft,
-    IconChevronsRight,
-    IconFilter,
+  IconArrowBack,
+    IconArrowBarLeft,
+    IconArrowLeft,
     IconMedal,
-    IconSearch,
 } from '@tabler/icons-react';
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
 
 import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 
@@ -78,13 +48,10 @@ export interface TradeList {
 
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
-  const [trade, setTrade] = useState<TradeList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
-  const [user, setUser] = useState([]);
+  const router = useRouter();
 
   const [openIdCard, setOpenIdCard] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -136,7 +103,8 @@ const TablePagination = () => {
       >
         <BlankCard>
           <CardContent>
-            {data[0].status}
+           <Box display={"flex"} justifyContent={"space-between"} alignItems={"center"}>
+             <Button variant="outlined" onClick={() => router.back()}> Back</Button>
             <Chip
               size="small"
               label={data[0].status ? "Working" : "Not Working"}
@@ -154,6 +122,7 @@ const TablePagination = () => {
                 px: 1.5,
               }}
             />
+           </Box>
             <Box textAlign="center" display="flex" justifyContent="center">
               <Box>
                 <Avatar

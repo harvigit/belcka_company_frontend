@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Badge,
   Box,
   Button,
   IconButton,
@@ -139,14 +140,22 @@ export const DocumentsTab = ({ addressId, projectId }: DocumentsTabProps) => {
                         : "-"}
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton
-                        color="primary"
-                        onClick={() =>
-                          handleDownloadZip(doc.address_id, doc.id)
-                        }
+                      <Badge
+                        badgeContent={doc.count}
+                        color="error"
+                        overlap="circular"
                       >
-                        <IconDownload size={18} />
-                      </IconButton>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={() =>
+                            handleDownloadZip(doc.address_id, doc.id)
+                          }
+                        >
+                          <IconDownload size={18} />
+                        </Button>
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))

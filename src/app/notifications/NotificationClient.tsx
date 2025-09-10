@@ -11,7 +11,6 @@ export default function NotificationClient() {
   const is_web = true;
 
 useEffect(() => {
-  if (is_web) {
     if (!userId) return;
 
     let unsub: (() => void) | undefined;
@@ -57,8 +56,7 @@ useEffect(() => {
     return () => {
       if (typeof unsub === "function") unsub();
     };
-  }
-  }, [userId,is_web]);
+  }, [userId]);
 
   return null;
 }
