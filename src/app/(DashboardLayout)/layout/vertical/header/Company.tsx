@@ -5,6 +5,7 @@ import {
   Avatar,
   Badge,
   Button,
+  CircularProgress,
   Divider,
   Drawer,
   IconButton,
@@ -44,6 +45,9 @@ const Company = () => {
   const session = useSession();
   const [filterRequest, setFilterRequest] = useState<string>("all");
 
+  const [page, setPage] = useState<number>(1);
+  const limit = 20;
+
   const user = session.data?.user as User & { company_id?: string | null } & {
     company_name?: string | null;
   } & {
@@ -53,7 +57,6 @@ const Company = () => {
   // Fetch user companies
   useEffect(() => {
     const fetchCompanies = async () => {
-      setLoading(true);
       try {
         const response = await api.get(
           `user/switch-company-list?user_id=${user.id}`
@@ -62,7 +65,6 @@ const Company = () => {
       } catch (error) {
         console.error("Error fetching companies:", error);
       }
-      setLoading(false);
     };
 
     fetchCompanies();
@@ -71,7 +73,7 @@ const Company = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    getFcmToken(); 
+    getFcmToken();
     const unsubscribe = onForegroundMessage((payload) => {
       console.log("📩 New FCM message:", payload);
       if (Notification.permission === "granted") {
@@ -90,6 +92,8 @@ const Company = () => {
   }, []);
 
   const fetchFeeds = async () => {
+    setLoading(true);
+
     try {
       const res = await api.get(
         `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
@@ -99,17 +103,19 @@ const Company = () => {
         setFeed(feeds);
         setCount(feeds?.[0]?.unread_feeds);
 
-        if(feeds){
+        if (feeds) {
           const unreadIds = feeds
-          .filter((feed: any) => feed.status === false)
-          .map((feed: any) => feed.id)
-          .join(",");
+            .filter((feed: any) => feed.status === false)
+            .map((feed: any) => feed.id)
+            .join(",");
           setUnreedFeed(unreadIds);
+          setLoading(false);
         }
       }
     } catch (err) {
       console.error("Failed to fetch feeds", err);
     }
+    setLoading(false);
   };
   useEffect(() => {
     fetchFeeds();
@@ -145,6 +151,7 @@ const Company = () => {
   };
 
   const unreedFeeds = async () => {
+    setLoading(true);
     if (count > 0) {
       try {
         const payload = {
@@ -153,6 +160,7 @@ const Company = () => {
         const res = await api.post("feed/mark-as-read", payload);
         if (res.data) {
           fetchFeeds();
+          setLoading(true);
         } else {
           toast.error(res.data.message);
         }
@@ -162,12 +170,16 @@ const Company = () => {
       setOpenDrawer(false);
     }
     setOpenDrawer(false);
+    setPage(1);
+    setLoading(false);
   };
 
   const filteredFeeds = feed?.filter((item) => {
     if (filterRequest === "all") return true;
     return item.request_name === filterRequest;
   });
+
+  const paginatedFeeds = filteredFeeds?.slice(0, page * limit) || [];
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
@@ -213,7 +225,10 @@ const Company = () => {
       <Drawer
         anchor="bottom"
         open={openDrawer}
-        onClose={() => unreedFeeds()}
+        onClose={() => {
+          unreedFeeds();
+          setPage(1);
+        }}
         PaperProps={{
           sx: {
             borderRadius: 0,
@@ -246,7 +261,12 @@ const Company = () => {
                     flexWrap="wrap"
                     width={"100%"}
                   >
-                    <IconButton onClick={() => unreedFeeds()}>
+                    <IconButton
+                      onClick={() => {
+                        unreedFeeds();
+                        setPage(1);
+                      }}
+                    >
                       <IconArrowLeft />
                     </IconButton>
 
@@ -279,31 +299,24 @@ const Company = () => {
                     </IconButton>
                   </Box>
                 </Box>
-                {filteredFeeds?.length > 0 ? (
+
+                {paginatedFeeds?.length > 0 ? (
                   <>
-                    {filteredFeeds.map((item, index) => (
-                      <Box>
+                    {paginatedFeeds.map((item, index) => (
+                      <Box key={item.id}>
                         <Box
-                          key={index}
                           p={2}
                           ml={1}
                           display="flex"
                           justifyContent="flex-start"
-                          alignContent="center"
                           alignItems="flex-start"
                           gap={2}
                         >
-                          <Box>
-                            <Avatar
-                              src={item.user_image}
-                              alt={item.user_name || ""}
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                // cursor: "pointer",
-                              }}
-                            />
-                          </Box>
+                          <Avatar
+                            src={item.user_image}
+                            alt={item.user_name || ""}
+                            sx={{ width: 40, height: 40 }}
+                          />
                           <Box display={"block"}>
                             <Typography
                               variant="subtitle1"
@@ -327,22 +340,28 @@ const Company = () => {
                         <Divider />
                       </Box>
                     ))}
+
+                    {paginatedFeeds.length < filteredFeeds.length && (
+                      <Box display="flex" justifyContent="center" my={2}>
+                        <Button
+                          variant="outlined"
+                          startIcon={
+                            loading ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : null
+                          }
+                          onClick={() => setPage((prev) => prev + 1)}
+                        >
+                          See More
+                        </Button>
+                      </Box>
+                    )}
                   </>
                 ) : (
-                  <Box>
-                    <Box
-                      sx={{
-                        p: 6,
-                        pt: 3,
-                        textAlign: "center",
-                        display: "flex",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Typography variant="h4" color="text.secondary">
-                        No records found for feeds.
-                      </Typography>
-                    </Box>
+                  <Box sx={{ p: 6, pt: 3, textAlign: "center" }}>
+                    <Typography variant="h4" color="text.secondary">
+                      No records found for feeds.
+                    </Typography>
                   </Box>
                 )}
               </Grid>

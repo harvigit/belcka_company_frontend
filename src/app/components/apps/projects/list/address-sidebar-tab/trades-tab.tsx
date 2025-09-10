@@ -112,7 +112,7 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
                             </InputAdornment>
                         )
                     }}
-                    sx={{ width: '80%', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    sx={{ width: { xs: "100%", sm: "80%" }, mb: { xs: 2, sm: 0 } }}
                 />
                 <Button variant="contained" onClick={() => setOpen(true)}>
                     <IconFilter width={18} />
