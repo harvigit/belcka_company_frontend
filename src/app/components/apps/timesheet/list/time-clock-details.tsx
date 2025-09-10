@@ -47,6 +47,7 @@ import {TimeClock} from './time-clock';
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import RequestDetails from './time-clocl-details/request-details';
+import Conflicts from './time-clocl-details/conflicts/conflicts';
 import CheckLogRows from './time-clocl-details/check-log-list';
 import {DateTime} from 'luxon';
 
@@ -111,7 +112,7 @@ interface TimeClockDetailsProps {
 }
 
 type TimeClockDetailResponse = {
-    // conflicts: any[];
+    conflicts: any[];
     company_id: number;
     IsSuccess: boolean;
     info: TimeClock[];
@@ -135,6 +136,24 @@ type TimeClockResourcesResponse = {
 interface Shift {
     id: number;
     name: string;
+}
+
+interface ConflictItem {
+    user_id: number;
+    date: string;
+    start: string;
+    end: string;
+    shift_name: string;
+    shift_id: string;
+    color?: string;
+    worklog_id?: number;
+    project?: string;
+}
+
+interface ConflictDetail {
+    formatted_date: string; 
+    date: string;
+    items: ConflictItem[];
 }
 
 type CheckLog = {
@@ -203,7 +222,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
     const [requestListOpen, setRequestListOpen] = useState<boolean>(false);
     
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
-    const [conflictDetails, setConflictDetails] = useState<[]>([]);
+    const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
 
     const [shifts, setShifts] = useState<Shift[]>([]);
 
@@ -392,7 +411,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
     const startAddingNewRecord = (date: string) => {
         const recordKey = `new-${date}-${Date.now()}`;
 
-        console.log(recordKey, 'recordKey')
         setNewRecords(prev => ({
             ...prev,
             [recordKey]: {
@@ -461,7 +479,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
             const response = await api.post('/time-clock/add-worklog', params);
 
-            console.log(response, 'response')
             if (response.data.IsSuccess) {
                 cancelNewRecord(recordKey);
             }
@@ -710,6 +727,9 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
     const fetchTimeClockData = async (start: Date, end: Date): Promise<void> => {
         try {
+
+            console.log(start, 'start')
+            console.log(end, 'end')
             const params: Record<string, string> = {
                 user_id: user_id || '',
                 start_date: format(start, 'dd/MM/yyyy'),
@@ -724,7 +744,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 setHeaderDetail(response.data);
                 setPendingRequestCount(response.data.pending_request_count || 0);
                 setTotalConflicts(response.data.total_conflicts || 0);
-                // setConflictDetails(response.data.conflicts);
+                setConflictDetails(response.data.conflicts || []);
 
                 fetchTimeClockResources(response.data.company_id);
             }
@@ -2476,29 +2496,30 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 </Box>
             )}
 
-            {/*<Drawer*/}
-            {/*    anchor="right"*/}
-            {/*    open={conflictSidebar}*/}
-            {/*    onClose={closeConflictSidebar}*/}
-            {/*    PaperProps={{*/}
-            {/*        sx: {*/}
-            {/*            borderRadius: 0,*/}
-            {/*            boxShadow: 'none',*/}
-            {/*            overflow: 'hidden',*/}
-            {/*            width: '504px',*/}
-            {/*            borderTopLeftRadius: 18,*/}
-            {/*            borderBottomLeftRadius: 18,*/}
-            {/*        },*/}
-            {/*    }}*/}
-            {/*>*/}
-            {/*    */}
-            
-            {/*    <Conflicts*/}
-            {/*        totalConflicts={totalConflicts}*/}
-            {/*        onClose={closeConflictSidebar}*/}
-            {/*        conflictDetails={conflictDetails}*/}
-            {/*    />*/}
-            {/*</Drawer>*/}
+            <Drawer
+                anchor="right"
+                open={conflictSidebar}
+                onClose={closeConflictSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <Conflicts
+                    conflictDetails={conflictDetails}
+                    totalConflicts={totalConflicts}
+                    onClose={closeConflictSidebar}
+                    fetchTimeClockData={() => fetchTimeClockData(startDate || defaultStart, endDate || defaultEnd)}
+                    startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
+                    endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
+                />
+            </Drawer>
 
             <Drawer
                 anchor="bottom"
