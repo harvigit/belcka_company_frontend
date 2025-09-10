@@ -34,6 +34,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     try {
       const generatedCode = await onGenerate();
       setCode(generatedCode);
+      console.log(generatedCode,'generatedCode', code)
 
       setResendTimer(15 * 60); // 15 minute
       if (intervalRef.current) {
@@ -57,6 +58,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
 
   const handleCopyCode = (code: string | null) => {
     const codeToCopy = code ?? "";
+    console.log(codeToCopy,'codeToCopy')
 
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard
@@ -72,6 +74,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   };
 
   const fallbackCopyCode = (codeToCopy: string) => {
+    console.log(codeToCopy,'codeToCopy 1')
     const textArea = document.createElement("textarea");
     textArea.value = codeToCopy;
     textArea.style.position = "fixed";
