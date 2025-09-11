@@ -156,12 +156,32 @@ export default function NotificationSettings() {
           <TableHead>
             <TableRow sx={{ background: "#e5e8ed" }}>
               <TableCell>
-                <Typography variant="subtitle1" fontWeight="bold">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
+                  color="#8b939c"
+                >
                   Titles
                 </Typography>
               </TableCell>
-              <TableCell align="center">Push</TableCell>
-              <TableCell align="center">Feed</TableCell>
+              <TableCell align="center">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
+                  color="#8b939c"
+                >
+                  Push
+                </Typography>
+              </TableCell>
+              <TableCell align="center">
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
+                  color="#8b939c"
+                >
+                  Feed
+                </Typography>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -176,12 +196,12 @@ export default function NotificationSettings() {
                 {categories.map((category) => (
                   <React.Fragment key={category.id}>
                     <TableRow sx={{ background: "#f8f9fa" }}>
-                      <TableCell colSpan={1} sx={{ padding: "10px"}}>
-                        <Typography fontWeight="bold">
+                      <TableCell colSpan={1} sx={{ padding: "10px" }}>
+                        <Typography fontWeight="bold" color="#8b939c">
                           {category.name}
                         </Typography>
                       </TableCell>
-                      <TableCell align="center" sx={{ padding: "10px"}}>
+                      <TableCell align="center" sx={{ padding: "10px" }}>
                         <Switch
                           checked={
                             getCategorySwitchState(category, "is_push") === "on"
@@ -196,7 +216,7 @@ export default function NotificationSettings() {
                           }
                         />
                       </TableCell>
-                      <TableCell align="center" sx={{ padding: "10px"}}>
+                      <TableCell align="center" sx={{ padding: "10px" }}>
                         <Switch
                           checked={
                             getCategorySwitchState(category, "is_feed") === "on"
@@ -215,8 +235,10 @@ export default function NotificationSettings() {
 
                     {category.notifications.map((notification) => (
                       <TableRow key={notification.id}>
-                        <TableCell sx={{ padding: "10px"}}>{notification.name}</TableCell>
-                        <TableCell align="center" sx={{ padding: "10px"}}>
+                        <TableCell sx={{ padding: "10px" }}>
+                          {notification.name}
+                        </TableCell>
+                        <TableCell align="center" sx={{ padding: "10px" }}>
                           <Switch
                             checked={notification.is_push}
                             onChange={(e) =>
@@ -229,7 +251,7 @@ export default function NotificationSettings() {
                             }
                           />
                         </TableCell>
-                        <TableCell align="center" sx={{ padding: "10px"}}>
+                        <TableCell align="center" sx={{ padding: "10px" }}>
                           <Switch
                             checked={notification.is_feed}
                             onChange={(e) =>

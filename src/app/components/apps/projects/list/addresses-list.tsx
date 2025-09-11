@@ -436,6 +436,7 @@ const AddressesList = ({
                               <Typography
                                 variant="subtitle2"
                                 fontWeight="inherit"
+                                color="#8b939c"
                               >
                                 {flexRender(
                                   header.column.columnDef.header,

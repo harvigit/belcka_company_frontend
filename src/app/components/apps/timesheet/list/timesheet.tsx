@@ -578,7 +578,7 @@ const TimesheetList = () => {
                                                     '&:hover .hoverIcon': {opacity: 1},
                                                 }}
                                             >
-                                                <Typography variant="body2" fontWeight="inherit">
+                                                <Typography variant="body2" fontWeight="inherit" color="#8b939c">
                                                     {flexRender(
                                                         header.column.columnDef.header,
                                                         header.getContext()

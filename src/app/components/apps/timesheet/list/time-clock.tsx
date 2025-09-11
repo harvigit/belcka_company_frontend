@@ -356,7 +356,7 @@ const TimeClock = () => {
             <Box sx={{ transition: 'height 0.3s ease-in-out' }}>
                 {/* Search and Filter Controls */}
                 <Stack
-                    mt={3}
+                    mt={1}
                     mx={2}
                     mb={3}
                     direction={{ xs: 'column', sm: 'row' }}
@@ -421,7 +421,7 @@ const TimeClock = () => {
                                                         '&:hover .hoverIcon': { opacity: 1 },
                                                     }}
                                                 >
-                                                    <Typography variant="body2" fontWeight="inherit">
+                                                    <Typography variant="body2" fontWeight="inherit" color="#8b939c">
                                                         {flexRender(header.column.columnDef.header, header.getContext())}
                                                     </Typography>
                                                     {isSortable && (

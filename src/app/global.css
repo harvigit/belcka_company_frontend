@@ -260,3 +260,7 @@ input#project_id::placeholder {
     padding-top: 4px;
     padding-bottom: 4px;
 }
+
+.timesheet-tabs{
+    width: 20%;
+}

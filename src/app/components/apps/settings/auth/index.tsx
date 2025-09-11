@@ -132,27 +132,18 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   const fallbackCopyCode = (codeToCopy: string) => {
     const textArea = document.createElement("textarea");
     textArea.value = codeToCopy;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-9999px";
     document.body.appendChild(textArea);
-    textArea.focus();
     textArea.select();
-
     try {
-      const success = document.execCommand("copy");
-      if (success) {
-        toast.success("Code copied!");
-      } else {
-        toast.error("Failed to copy code!");
-      }
+      document.execCommand("copy");
+      toast.success("Invitation link copied!");
     } catch (err) {
       console.error("Fallback failed:", err);
-      toast.error("Failed to copy code!");
+      toast.error("Failed to copy invitation link!");
     } finally {
       document.body.removeChild(textArea);
     }
   };
-
   return (
     <>
       <Box sx={{ p: 3, marginBottom: 4 }}>
