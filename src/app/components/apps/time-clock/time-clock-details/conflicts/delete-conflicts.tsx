@@ -184,7 +184,7 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                '&:hover': { backgroundColor: '#f5f5f5' }
+                                '&:hover': { backgroundColor: '#D8E3F2' }
                             }}
                             onClick={(e) => e.stopPropagation()}
                         >

@@ -298,7 +298,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
             await api.post("/time-clock/cut-worklog", { cut_data: cutData });
 
             await fetchTimeClockData(startDate, endDate);
-            
+
             setCutPreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
@@ -446,8 +446,8 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                                 justifyContent: "space-between",
                                 p: 1.5,
                                 borderRadius: "6px",
-                                border: "1px solid #e0e0e0",
-                                backgroundColor: "#f5f5f5",
+                                border: "1px solid #D8E3F2",
+                                backgroundColor: "#D8E3F2",
                             }}
                         >
                             <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
@@ -491,14 +491,12 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                             <Button
                                 size="small"
                                 variant="contained"
+                                color="primary"
                                 onClick={() => longerWorklog.worklog_id && handleCutWorklog(longerWorklog.worklog_id)}
                                 disabled={!longerWorklog.worklog_id}
                                 sx={{
                                     textTransform: "none",
                                     fontSize: "0.75rem",
-                                    backgroundColor: "#666",
-                                    color: "#fff",
-                                    "&:hover": { backgroundColor: "#333" },
                                     borderRadius: "6px",
                                     px: 2,
                                     py: 0.5,
@@ -643,7 +641,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                                 py: 0.75,
                                 borderRadius: "6px",
                                 mb: 1,
-                                backgroundColor: "#f0f0f0",
+                                backgroundColor: "#D8E3F2",
                                 color: "#000",
                                 fontWeight: 500,
                                 fontSize: "0.9rem",
@@ -659,23 +657,22 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 1 }}>
                         <Button
                             size="small"
+                            variant="outlined"
+                            color="error"
                             onClick={handleCancelCut}
-                            sx={{ textTransform: "none", fontSize: "0.85rem", color: "#666" }}
+                            sx={{ textTransform: "none", fontSize: "0.85rem" }}
                         >
                             Cancel
                         </Button>
                         <Button
                             size="small"
                             variant="contained"
+                            color="primary"
                             onClick={handleConfirmCut}
                             sx={{
                                 textTransform: "none",
                                 fontSize: "0.85rem",
-                                backgroundColor: "#666",
-                                color: "#fff",
-                                borderRadius: "18px",
                                 px: 2.5,
-                                "&:hover": { backgroundColor: "#333" },
                             }}
                         >
                             Confirm cut

@@ -38,7 +38,7 @@ import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 
 import 'react-day-picker/dist/style.css';
-import '../../../../global.css';
+import '@/app/global.css'
 
 const columnHelper = createColumnHelper<TimeClock>();
 

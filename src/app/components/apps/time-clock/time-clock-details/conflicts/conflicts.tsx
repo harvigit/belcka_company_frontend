@@ -78,9 +78,15 @@ export const getConflictType = (items: ConflictItem[]): ConflictType => {
         return 'delete-only';
     }
     const { start1, end1, start2, end2 } = times;
+
+    if (start1.equals(start2) && end1.equals(end2)) {
+        return 'delete-only';
+    }
+
     if (start1.equals(start2) || end1.equals(end2)) {
         return 'cut-delete';
     }
+
     const item1ContainsItem2 = start1 <= start2 && end1 >= end2;
     const item2ContainsItem1 = start2 <= start1 && end2 >= end1;
     return (item1ContainsItem2 || item2ContainsItem1) ? 'split-delete' : 'delete-only';
@@ -138,7 +144,7 @@ const ConflictItemDisplay = React.memo(({ items }: { items: ConflictItem[] }) =>
                 <Box
                     sx={{
                         borderRadius: 1,
-                        bgcolor: item.color || '#f0f0f0',
+                        bgcolor: item.color || '#D8E3F2',
                         color: '#000',
                         display: 'flex',
                         alignItems: 'center',

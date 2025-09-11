@@ -8,10 +8,10 @@ import {
 } from '@mui/material';
 
 import 'react-day-picker/dist/style.css';
-import '../../../../global.css';
+import '@/app/global.css'
 
 import TimesheetList from './timesheet';
-import TimeClock from './time-clock';
+import TimeClock from '@/app/components/apps/time-clock/time-clock';
 
 const TimesheetPage = () => {
     const [value, setValue] = useState(0);
