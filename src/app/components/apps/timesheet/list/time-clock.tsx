@@ -17,6 +17,7 @@ import {
     TextField,
     Typography,
     Drawer,
+    InputAdornment,
 } from '@mui/material';
 import { IconSearch, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import {
@@ -369,7 +370,13 @@ const TimeClock = () => {
                         size="small"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{ endAdornment: <IconSearch size={16} /> }}
+                        InputProps={{
+                        endAdornment: (
+                        <InputAdornment position="end">
+                            <IconSearch size={16} />
+                        </InputAdornment>
+                        ),
+                    }}
                     />
                 </Stack>
 

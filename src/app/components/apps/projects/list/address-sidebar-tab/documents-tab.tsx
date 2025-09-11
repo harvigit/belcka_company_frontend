@@ -105,7 +105,7 @@ export const DocumentsTab = ({ addressId, projectId }: DocumentsTabProps) => {
           }}
           sx={{ width: "80%" }}
         />
-        <Button variant="outlined">
+        <Button variant="contained">
           <IconFilter width={18} />
         </Button>
       </Stack>

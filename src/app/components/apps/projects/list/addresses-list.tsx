@@ -307,9 +307,7 @@ const AddressesList = ({
                     info: [true],
                   });
                 }}
-                sx={{
-                  cursor: "pointer",
-                }}
+                sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
               >
                 {" "}
                 {item.name ?? "-"}{" "}
