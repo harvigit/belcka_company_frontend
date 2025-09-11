@@ -253,14 +253,14 @@ input#project_id::placeholder {
   .f-14{
     font-size: 0.875rem !important;
    }
-
-.mui-llwrb1 {
-    color: #5A5B64 !important;
+.check_log_list_cell{
+    background-color: #fafafa;
+    font-weight: 600;
+    color: #4a4a4e !important;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
-.mui-wfeb3i {
-    color: #999BA9 !important;
-}
 
-.mui-joxdze {
-    color: #93959F !important;
+.timesheet-tabs{
+    width: 20%;
 }

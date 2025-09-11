@@ -307,9 +307,7 @@ const AddressesList = ({
                     info: [true],
                   });
                 }}
-                sx={{
-                  cursor: "pointer",
-                }}
+                sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
               >
                 {" "}
                 {item.name ?? "-"}{" "}
@@ -438,6 +436,7 @@ const AddressesList = ({
                               <Typography
                                 variant="subtitle2"
                                 fontWeight="inherit"
+                                color="#7D92A9"
                               >
                                 {flexRender(
                                   header.column.columnDef.header,

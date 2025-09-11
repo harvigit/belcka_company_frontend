@@ -342,26 +342,31 @@ const TablePagination = () => {
                   </MenuItem>
                 ))}
               </TextField>
-
-              <TextField
-                select
-                label="Supervisor"
-                value={tempFilters.supervisor}
-                onChange={(e) =>
-                  setTempFilters({
-                    ...tempFilters,
-                    supervisor: e.target.value,
-                  })
-                }
-                fullWidth
-              >
-                <MenuItem value="">All</MenuItem>
-                {uniqueSupervisors.map((supervisor, i) => (
-                  <MenuItem key={i} value={supervisor}>
-                    {supervisor}
-                  </MenuItem>
-                ))}
-              </TextField>
+              {uniqueSupervisors.length > 0 ? (
+                <>
+                  <TextField
+                    select
+                    label="Supervisor"
+                    value={tempFilters.supervisor}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        supervisor: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    {uniqueSupervisors.map((supervisor, i) => (
+                      <MenuItem key={i} value={supervisor}>
+                        {supervisor}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </>
+              ) : (
+                <></>
+              )}
             </Stack>
           </DialogContent>
 
@@ -453,6 +458,7 @@ const TablePagination = () => {
                               <Typography
                                 variant="subtitle2"
                                 fontWeight="inherit"
+                                color="#7D92A9"
                               >
                                 {flexRender(
                                   header.column.columnDef.header,

@@ -34,47 +34,23 @@ const CheckLogRows = ({logs, currency, formatHour, visibleColumnConfigs, getVisi
                 {logs?.length > 0 ? (
                     <Table size="small">
                         <TableHead>
-                            <TableRow>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
+                            <TableRow sx={{ color: "#4a4a4e !important"}}>
+                                <TableCell className="check_log_list_cell">
                                     Address
                                 </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
+                                <TableCell className="check_log_list_cell">
                                     Task
                                 </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
+                                <TableCell className="check_log_list_cell">
                                     Check In
                                 </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
+                                <TableCell className="check_log_list_cell">
                                     Check Out
                                 </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
+                                <TableCell className="check_log_list_cell">
                                     Hours
                                 </TableCell>
-                                <TableCell sx={{
-                                    backgroundColor: '#fafafa',
-                                    fontWeight: 600,
-                                    py: 0.5,
-                                }}>
+                                <TableCell className="check_log_list_cell">
                                     Amount
                                 </TableCell>
                             </TableRow>

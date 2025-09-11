@@ -403,7 +403,7 @@ const TablePagination = () => {
       id: "trade_name",
       header: () => "Trade",
       cell: (info) => (
-        <Typography className="f-14" color="body2" sx={{px: 1.5}}>
+        <Typography className="f-14" color="body2" sx={{ px: 1.5 }}>
           {info.row.original.trade_name ?? "-"}
         </Typography>
       ),
@@ -863,6 +863,7 @@ const TablePagination = () => {
                                   <Typography
                                     variant="subtitle2"
                                     fontWeight="inherit"
+                                    color="#7D92A9"
                                   >
                                     {flexRender(
                                       header.column.columnDef.header,

@@ -17,6 +17,7 @@ import {
     TextField,
     Typography,
     Drawer,
+    InputAdornment,
 } from '@mui/material';
 import { IconSearch, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import {
@@ -355,7 +356,7 @@ const TimeClock = () => {
             <Box sx={{ transition: 'height 0.3s ease-in-out' }}>
                 {/* Search and Filter Controls */}
                 <Stack
-                    mt={3}
+                    mt={1}
                     mx={2}
                     mb={3}
                     direction={{ xs: 'column', sm: 'row' }}
@@ -369,7 +370,13 @@ const TimeClock = () => {
                         size="small"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{ endAdornment: <IconSearch size={16} /> }}
+                        InputProps={{
+                        endAdornment: (
+                        <InputAdornment position="end">
+                            <IconSearch size={16} />
+                        </InputAdornment>
+                        ),
+                    }}
                     />
                 </Stack>
 
@@ -414,7 +421,7 @@ const TimeClock = () => {
                                                         '&:hover .hoverIcon': { opacity: 1 },
                                                     }}
                                                 >
-                                                    <Typography variant="body2" fontWeight="inherit">
+                                                    <Typography variant="body2" fontWeight="inherit" color="#7D92A9">
                                                         {flexRender(header.column.columnDef.header, header.getContext())}
                                                     </Typography>
                                                     {isSortable && (

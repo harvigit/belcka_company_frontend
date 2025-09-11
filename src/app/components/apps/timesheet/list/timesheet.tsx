@@ -12,6 +12,7 @@ import {
     Divider,
     Drawer,
     IconButton,
+    InputAdornment,
     MenuItem,
     Stack,
     Table,
@@ -464,7 +465,13 @@ const TimesheetList = () => {
                     size="small"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{endAdornment: <IconSearch size={16}/>}}
+                    InputProps={{
+                    endAdornment: (
+                    <InputAdornment position="end">
+                        <IconSearch size={16} />
+                    </InputAdornment>
+                    ),
+                }}
                 />
                 <Button variant="contained" onClick={() => setOpen(true)}>
                     <IconFilter width={18}/>
@@ -571,7 +578,7 @@ const TimesheetList = () => {
                                                     '&:hover .hoverIcon': {opacity: 1},
                                                 }}
                                             >
-                                                <Typography variant="body2" fontWeight="inherit">
+                                                <Typography variant="body2" fontWeight="inherit" color="#7D92A9">
                                                     {flexRender(
                                                         header.column.columnDef.header,
                                                         header.getContext()
