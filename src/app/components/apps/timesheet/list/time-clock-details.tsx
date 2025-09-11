@@ -1615,7 +1615,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 <Stack direction="row" spacing={6} alignItems="center">
                     {headerDetails.map((stat, index) => (
                         <Box key={index} textAlign="center">
-                            <Typography variant="h4" fontWeight={700} color="text.primary">
+                            <Typography fontWeight={700} color="#8b939c">
                                 {stat.value}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
@@ -1685,7 +1685,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                             key={header.id}
                                             sx={{
                                                 backgroundColor: '#fafafa',
-                                                fontWeight: 600,
                                                 fontSize: '0.875rem',
                                                 position: 'sticky',
                                                 top: 0,
@@ -1695,10 +1694,15 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                 maxWidth: `${header.column.columnDef.size || 100}px`,
                                             }}
                                         >
-                                            {flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
+                                            <Typography sx={{
+                                                color: "#203040 !important",
+                                                fontSize: "0.875rem",
+                                                }}>
+                                                {flexRender(
+                                                    header.column.columnDef.header,
+                                                    header.getContext()
+                                                )}
+                                            </Typography>
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -1805,7 +1809,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                                     justifyContent: 'space-between',
                                                                 }}
                                                             >
-                                                                <span>{rowData.date}</span>
+                                                                <Typography variant="h4">{rowData.date}</Typography>
                                                                 <IconButton
                                                                     onClick={() => startAddingNewRecord(rowData.date as string)}
                                                                     size="small"
@@ -2156,7 +2160,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                                                                         justifyContent: 'space-between',
                                                                     }}
                                                                 >
-                                                                    <span>{row.original.date}</span>
+                                                                    <Typography variant="h4">{row.original.date}</Typography>
                                                                     {/* Only show plus button if no new records are being added */}
                                                                     {!hasNewRecords && (
                                                                         <IconButton
