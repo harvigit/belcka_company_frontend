@@ -125,7 +125,6 @@ const RequestCard = React.memo<{
 }>(({ request, isProcessing, onApprove, onReject, formatHour, formatDate }) => {
     
     const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
-        console.log(val, 'val')
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
 
         if (isPricework) return '--';
