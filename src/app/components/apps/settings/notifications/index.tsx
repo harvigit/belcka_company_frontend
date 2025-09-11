@@ -159,7 +159,7 @@ export default function NotificationSettings() {
                 <Typography
                   variant="subtitle1"
                   fontWeight="bold"
-                  color="#8b939c"
+                  color="#7D92A9"
                 >
                   Titles
                 </Typography>
@@ -168,7 +168,7 @@ export default function NotificationSettings() {
                 <Typography
                   variant="subtitle1"
                   fontWeight="bold"
-                  color="#8b939c"
+                  color="#7D92A9"
                 >
                   Push
                 </Typography>
@@ -177,7 +177,7 @@ export default function NotificationSettings() {
                 <Typography
                   variant="subtitle1"
                   fontWeight="bold"
-                  color="#8b939c"
+                  color="#7D92A9"
                 >
                   Feed
                 </Typography>
@@ -197,7 +197,7 @@ export default function NotificationSettings() {
                   <React.Fragment key={category.id}>
                     <TableRow sx={{ background: "#f8f9fa" }}>
                       <TableCell colSpan={1} sx={{ padding: "10px" }}>
-                        <Typography fontWeight="bold" color="#8b939c">
+                        <Typography fontWeight="bold" color="#7D92A9">
                           {category.name}
                         </Typography>
                       </TableCell>
