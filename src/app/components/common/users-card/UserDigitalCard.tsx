@@ -48,7 +48,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
     useEffect(() => {
         const fetchCardData = async () => {
             if (!user?.id) return;
-            setLoading(true);
+            // setLoading(true);
             try {
                 // noinspection JSAnnotator
                 const res = await api.get('/user/get-user-digital-card', {
@@ -62,7 +62,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
             } catch (err) {
                 console.error('Failed to fetch digital card', err);
             } finally {
-                setLoading(false);
+                // setLoading(false);
             }
         };
 

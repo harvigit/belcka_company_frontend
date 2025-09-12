@@ -117,7 +117,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                         key={header.id}
                                         sx={{
                                             backgroundColor: '#fafafa',
-                                            fontWeight: 600,
                                             fontSize: '0.875rem',
                                             position: 'sticky',
                                             top: 0,
@@ -127,7 +126,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             maxWidth: `${header.column.columnDef.size || 100}px`,
                                         }}
                                     >
-                                        {flexRender(header.column.columnDef.header, header.getContext())}
+                                        <Typography>{flexRender(header.column.columnDef.header, header.getContext())}</Typography>
                                     </TableCell>
                                 ))}
                             </TableRow>
@@ -221,7 +220,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {isFirstRow && visibleColumnConfigs.date?.visible && (
                                                     <TableCell rowSpan={rowSpan} align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                                                            <span>{rowData.date}</span>
+                                                            <Typography variant='h4'>{rowData.date}</Typography>
                                                             <IconButton
                                                                 onClick={() => startAddingNewRecord(rowData.date as string)}
                                                                 size="small"
@@ -472,7 +471,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             }}
                                                         >
                                                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <span>{row.original.date}</span>
+                                                            <Typography variant='h4'>{row.original.date}</Typography>
                                                                 {!hasNewRecords && (
                                                                     <IconButton
                                                                         onClick={() => startAddingNewRecord(row.original.date as string)}
