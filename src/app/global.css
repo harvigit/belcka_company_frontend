@@ -57,7 +57,7 @@
 }
 
 .react-tel-input .form-control:hover:hover {
-    border-color: #1e4db7;
+    border-color: #1e4db7 !important;
 }
 
 .react-tel-input .country-list .search-box{
@@ -263,4 +263,28 @@ input#project_id::placeholder {
 
 .timesheet-tabs{
     width: 20%;
+}
+
+.phone-input{
+    height: 47px !important;
+    background-color: transparent !important;
+    color: #7297be !important;
+
+}
+
+.billing_wraper .special-label, .person_info_wrapper .special-label, .health_info_wrapper .special-label{
+    color: #777e89 ;
+}
+
+.custom_color input ,.custom_color{
+    color: #7297be !important;
+}
+
+.billing_wraper .mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input.Mui-disabled{
+    -webkit-text-fill-color: rgb(85, 83, 83);
+    cursor: not-allowed;
+}
+
+.react-tel-input .form-control:focus{
+    box-shadow: 0 0 0 1px #1e4db7;
 }
