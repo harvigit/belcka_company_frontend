@@ -17,10 +17,11 @@ import {
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
+import { useParams } from "next/navigation";
 
 interface ProjectListingProps {
-  userId: number | null;
   companyId: number | null;
+  active: boolean;
 }
 
 interface NotificationItem {
@@ -38,12 +39,13 @@ interface NotificationCategory {
 }
 
 const Notifications: React.FC<ProjectListingProps> = ({
-  userId,
   companyId,
+  active,
 }) => {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
+  const params = useParams();
+  const userId = Number(params?.id);
   const fetchNotifications = async () => {
     setLoading(true);
     try {
@@ -59,10 +61,11 @@ const Notifications: React.FC<ProjectListingProps> = ({
     setLoading(false);
   };
   useEffect(() => {
+    if(!userId || !active) return
     if (companyId) {
       fetchNotifications();
     }
-  }, [companyId]);
+  }, [companyId, active]);
 
   const updateNotificationState = (
     categoryId: number,
@@ -136,14 +139,14 @@ const Notifications: React.FC<ProjectListingProps> = ({
         display="flex"
         justifyContent="center"
         alignItems="center"
-        minHeight="330px"
+        minHeight="370px"
       >
         <CircularProgress />
       </Box>
     );
   }
   return (
-    <Box>
+    <Box m={2} mt={0} ml={5}>
       <Box display={"flex"} justifyContent={"space-between"} mb={1}>
         <Typography fontWeight={500}></Typography>
         {categories.length > 0 && (

@@ -463,260 +463,333 @@ export default function DynamicGantt({
           </Box>
         </Box>
       ) : (
-        <Box sx={{ overflow: "auto", borderColor: "divider", p: 4 }}>
-          {/* HEADER */}
+        <Box sx={{ p: 4 }}>
           <Box
-            sx={{
-              display: "flex",
-              position: "sticky",
-              top: 0,
-              bgcolor: "background.paper",
-              zIndex: 5,
-              minWidth: 640 + timelineWidth,
-            }}
+            sx={{ overflow: "auto", borderColor: "divider" }}
+            className="month_header"
           >
-            {/* Sticky left side */}
+            {/* HEADER */}
             <Box
               sx={{
-                flexShrink: 0,
-                width: 640,
-                position: "sticky",
                 display: "flex",
-                left: 0,
-                backgroundColor: "#fafbfb",
-                zIndex: 2,
-                ml: 2,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 470,
-                  cursor: "pointer",
-                  "&:hover": {
-                    color: "GrayText",
-                  },
-                }}
-                onClick={() => handleSort("name")}
-              >
-                <Typography fontWeight={700}>
-                  Name{" "}
-                  {sortField === "name"
-                    ? sortOrder === "asc"
-                      ? "↑"
-                      : "↓"
-                    : ""}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  width: 150,
-                  cursor: "pointer",
-                  "&:hover": {
-                    color: "GrayText",
-                  },
-                }}
-                onClick={() => handleSort("start")}
-              >
-                <Typography fontWeight={700}>
-                  Start Date{" "}
-                  {sortField === "start"
-                    ? sortOrder === "asc"
-                      ? "↑"
-                      : "↓"
-                    : ""}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  width: 120,
-                  cursor: "pointer",
-                  "&:hover": {
-                    color: "GrayText",
-                  },
-                }}
-                onClick={() => handleSort("end")}
-              >
-                <Typography fontWeight={700}>
-                  End Date{" "}
-                  {sortField === "end" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Timeline header days */}
-            <Box sx={{ flex: 1, display: "flex" }}>
-              {Array.from({ length: totalDays }).map((_, i) => {
-                const date = dayjs(timelineStart).add(i, "day");
-                return (
-                  <Box
-                    key={i}
-                    sx={{
-                      width: dayWidth,
-                      borderLeft: 1,
-                      borderColor: "divider",
-                      textAlign: "center",
-                      fontSize: 12,
-                      py: 0.5,
-                    }}
-                  >
-                    {date.format("D")}
-                  </Box>
-                );
-              })}
-            </Box>
-          </Box>
-          <Divider sx={{ mt: 2 }} />
-
-          {/* BODY */}
-          <Box sx={{ display: "flex", minWidth: 300 + timelineWidth }}>
-            {/* LEFT SIDE */}
-            <Box
-              sx={{
-                flexShrink: 0,
-                width: 640,
                 position: "sticky",
-                left: 0,
+                top: 0,
                 bgcolor: "background.paper",
-                zIndex: 2,
-                ml: 2,
+                zIndex: 5,
+                minWidth: 640 + timelineWidth,
               }}
             >
-              {sortedProjects.map((project) => {
-                const showChildren = expandedProjects.has(project.id);
-                const children = getChildTasks(project.id);
-                return (
-                  <React.Fragment key={project.id}>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      sx={{
-                        borderBottom: 1,
-                        borderColor: "divider",
-                        cursor: "pointer",
-                        py: 1,
-                        "&:hover": { bgcolor: "action.hover" },
-                      }}
-                      onClick={() => toggleExpand(project.id)}
-                    >
+              {/* Sticky left side */}
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  width: 640,
+                  position: "sticky",
+                  display: "flex",
+                  left: 0,
+                  backgroundColor: "#fafbfb",
+                  zIndex: 2,
+                  ml: 2,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 470,
+                    cursor: "pointer",
+                    "&:hover": {
+                      color: "GrayText",
+                    },
+                  }}
+                  onClick={() => handleSort("name")}
+                >
+                  <Typography fontWeight={700}>
+                    Name{" "}
+                    {sortField === "name"
+                      ? sortOrder === "asc"
+                        ? "↑"
+                        : "↓"
+                      : ""}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: 150,
+                    cursor: "pointer",
+                    "&:hover": {
+                      color: "GrayText",
+                    },
+                  }}
+                  onClick={() => handleSort("start")}
+                >
+                  <Typography fontWeight={700}>
+                    Start Date{" "}
+                    {sortField === "start"
+                      ? sortOrder === "asc"
+                        ? "↑"
+                        : "↓"
+                      : ""}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    width: 120,
+                    cursor: "pointer",
+                    "&:hover": {
+                      color: "GrayText",
+                    },
+                  }}
+                  onClick={() => handleSort("end")}
+                >
+                  <Typography fontWeight={700}>
+                    End Date{" "}
+                    {sortField === "end"
+                      ? sortOrder === "asc"
+                        ? "↑"
+                        : "↓"
+                      : ""}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Timeline days with months */}
+              <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                {/* Month Row */}
+                <Box sx={{ display: "flex" }}>
+                  {(() => {
+                    const months: {
+                      name: string;
+                      days: number;
+                      startIndex: number;
+                    }[] = [];
+                    let currentMonth = dayjs(timelineStart).month();
+                    let monthStartIndex = 0;
+                    let dayCount = 0;
+
+                    for (let i = 0; i < totalDays; i++) {
+                      const date = dayjs(timelineStart).add(i, "day");
+                      if (date.month() !== currentMonth) {
+                        months.push({
+                          name: dayjs(timelineStart)
+                            .add(monthStartIndex, "day")
+                            .format("MMM YYYY"),
+                          days: dayCount,
+                          startIndex: monthStartIndex,
+                        });
+                        currentMonth = date.month();
+                        monthStartIndex = i;
+                        dayCount = 1;
+                      } else {
+                        dayCount++;
+                      }
+                    }
+
+                    // Push last month
+                    months.push({
+                      name: dayjs(timelineStart)
+                        .add(monthStartIndex, "day")
+                        .format("MMM YYYY"),
+                      days: dayCount,
+                      startIndex: monthStartIndex,
+                    });
+
+                    return months.map((month, idx) => (
                       <Box
+                        key={idx}
                         sx={{
-                          width: 387,
-                          display: "flex",
-                          alignItems: "center",
-                          mr: 2,
+                          width: month.days * dayWidth,
+                          border: 1,
+                          borderColor: "#dfdfdfff",
+                          textAlign: "center",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          py: 0.5,
+                          bgcolor: "#f5f5f5",
                         }}
                       >
-                        <IconButton size="small" edge="start" sx={{ mr: 1 }}>
-                          {showChildren ? (
-                            <KeyboardArrowDownIcon />
-                          ) : (
-                            <KeyboardArrowRightIcon />
-                          )}
-                        </IconButton>
-                        <Typography fontWeight={600} noWrap width={345}>
-                          {project.name}
+                        <Typography color="textSecondary" fontWeight={600}>
+                          {month.name}
                         </Typography>
                       </Box>
-                      <Box sx={{ width: 150 }}>
-                        <Typography fontWeight={600} noWrap>
-                          {project.start
-                            ? dayjs(project.start).format("ddd D/M")
-                            : "-"}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ width: 120 }}>
-                        <Typography fontWeight={600} noWrap>
-                          {project.end
-                            ? dayjs(project.end).format("ddd D/M")
-                            : "-"}
-                        </Typography>
-                      </Box>
-                    </Stack>
+                    ));
+                  })()}
+                </Box>
 
-                    {showChildren &&
-                      children.map((task) => (
-                        <Stack
-                          key={task.id}
-                          direction="row"
-                          alignItems="center"
-                          sx={{
-                            borderBottom: 1,
-                            borderColor: "divider",
-                            pl: 6,
-                            py: 0.75,
-                          }}
-                        >
-                          <Box sx={{ width: 510 }}>
-                            <Typography noWrap>{task.name}</Typography>
-                          </Box>
-                          <Box sx={{ width: 190 }}>
-                            <Typography noWrap>
-                              {task.start
-                                ? dayjs(task.start).format("ddd D/M")
-                                : "-"}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ width: 150 }}>
-                            <Typography noWrap>
-                              {task.end
-                                ? dayjs(task.end).format("ddd D/M")
-                                : "-"}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      ))}
-                  </React.Fragment>
-                );
-              })}
+                {/* Day Row */}
+                <Box sx={{ display: "flex" }}>
+                  {Array.from({ length: totalDays }).map((_, i) => {
+                    const date = dayjs(timelineStart).add(i, "day");
+                    return (
+                      <Box
+                        key={i}
+                        sx={{
+                          width: dayWidth,
+                          borderLeft: 1,
+                          borderColor: "divider",
+                          textAlign: "center",
+                          fontSize: 12,
+                          py: 0.5,
+                        }}
+                      >
+                        {date.format("D")}
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
             </Box>
+            <Divider sx={{ mt: 2 }} />
 
-            <Box sx={{ flex: 1 }}>
-              <Box sx={{ minWidth: timelineWidth }}>
+            {/* BODY */}
+            <Box sx={{ display: "flex", minWidth: 300 + timelineWidth }}>
+              {/* LEFT SIDE */}
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  width: 640,
+                  position: "sticky",
+                  left: 0,
+                  bgcolor: "background.paper",
+                  zIndex: 2,
+                  ml: 2,
+                }}
+              >
                 {sortedProjects.map((project) => {
                   const showChildren = expandedProjects.has(project.id);
                   const children = getChildTasks(project.id);
                   return (
                     <React.Fragment key={project.id}>
-                      <Box
+                      <Stack
+                        direction="row"
+                        alignItems="center"
                         sx={{
-                          position: "relative",
-                          height: 57,
                           borderBottom: 1,
                           borderColor: "divider",
-                          display: "flex",
-                          alignItems: "center",
+                          cursor: "pointer",
+                          py: 1,
+                          "&:hover": { bgcolor: "action.hover" },
                         }}
+                        onClick={() => toggleExpand(project.id)}
                       >
-                        <BarWithDates
-                          task={project}
-                          timelineStart={timelineStart}
-                          timelineEnd={timelineEnd}
-                        />
-                      </Box>
+                        <Box
+                          sx={{
+                            width: 387,
+                            display: "flex",
+                            alignItems: "center",
+                            mr: 2,
+                          }}
+                        >
+                          <IconButton size="small" edge="start" sx={{ mr: 1 }}>
+                            {showChildren ? (
+                              <KeyboardArrowDownIcon />
+                            ) : (
+                              <KeyboardArrowRightIcon />
+                            )}
+                          </IconButton>
+                          <Typography fontWeight={600} noWrap width={345}>
+                            {project.name}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ width: 150 }}>
+                          <Typography fontWeight={600} noWrap>
+                            {project.start
+                              ? dayjs(project.start).format("ddd D/M")
+                              : "-"}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ width: 120 }}>
+                          <Typography fontWeight={600} noWrap>
+                            {project.end
+                              ? dayjs(project.end).format("ddd D/M")
+                              : "-"}
+                          </Typography>
+                        </Box>
+                      </Stack>
 
                       {showChildren &&
                         children.map((task) => (
-                          <Box
+                          <Stack
                             key={task.id}
+                            direction="row"
+                            alignItems="center"
                             sx={{
-                              position: "relative",
-                              height: 34,
                               borderBottom: 1,
                               borderColor: "divider",
-                              display: "flex",
-                              alignItems: "center",
+                              pl: 6,
+                              py: 0.75,
                             }}
                           >
-                            <BarWithDates
-                              task={task}
-                              timelineStart={timelineStart}
-                              timelineEnd={timelineEnd}
-                            />
-                          </Box>
+                            <Box sx={{ width: 510 }}>
+                              <Typography noWrap>{task.name}</Typography>
+                            </Box>
+                            <Box sx={{ width: 190 }}>
+                              <Typography noWrap>
+                                {task.start
+                                  ? dayjs(task.start).format("ddd D/M")
+                                  : "-"}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ width: 150 }}>
+                              <Typography noWrap>
+                                {task.end
+                                  ? dayjs(task.end).format("ddd D/M")
+                                  : "-"}
+                              </Typography>
+                            </Box>
+                          </Stack>
                         ))}
                     </React.Fragment>
                   );
                 })}
+              </Box>
+
+              <Box sx={{ flex: 1 }}>
+                <Box sx={{ minWidth: timelineWidth }}>
+                  {sortedProjects.map((project) => {
+                    const showChildren = expandedProjects.has(project.id);
+                    const children = getChildTasks(project.id);
+                    return (
+                      <React.Fragment key={project.id}>
+                        <Box
+                          sx={{
+                            position: "relative",
+                            height: 57,
+                            borderBottom: 1,
+                            borderColor: "divider",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <BarWithDates
+                            task={project}
+                            timelineStart={timelineStart}
+                            timelineEnd={timelineEnd}
+                          />
+                        </Box>
+
+                        {showChildren &&
+                          children.map((task) => (
+                            <Box
+                              key={task.id}
+                              sx={{
+                                position: "relative",
+                                height: 34,
+                                borderBottom: 1,
+                                borderColor: "divider",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                            >
+                              <BarWithDates
+                                task={task}
+                                timelineStart={timelineStart}
+                                timelineEnd={timelineEnd}
+                              />
+                            </Box>
+                          ))}
+                      </React.Fragment>
+                    );
+                  })}
+                </Box>
               </Box>
             </Box>
           </Box>

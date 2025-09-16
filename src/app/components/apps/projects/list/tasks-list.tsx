@@ -15,6 +15,8 @@ import {
     Stack,
     MenuItem,
     CircularProgress,
+    Badge,
+    Button,
 } from '@mui/material';
 import {
     flexRender,
@@ -35,6 +37,7 @@ import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
+import { IconDownload } from '@tabler/icons-react';
 
 dayjs.extend(customParseFormat);
 
@@ -47,6 +50,9 @@ export type TaskList = {
     status_int: number;
     status_text: string;
     progress: string;
+    image_count: string;
+    address_id: number;
+    company_task_id: number;
 };
 
 interface TasksListProps {
@@ -112,6 +118,29 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
         return filtered;
     }, [data, searchTerm, filters]);
 
+    const handleDownloadZip = async (addressId: number,taskId: number) => {
+        console.log(taskId,'taskId')
+        try {
+          const response = await api.get(
+            `address/download-tasks-zip/${addressId}?taskId=${taskId}`,
+            {
+              responseType: "blob",
+            }
+          );
+    
+          const blob = new Blob([response.data], { type: "application/zip" });
+          const url = window.URL.createObjectURL(blob);
+    
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `tasks_address_${addressId}.zip`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } catch (error) {
+          console.error("Download failed", error);
+        }
+      };
     const columnHelper = createColumnHelper<TaskList>();
 
     const columns = useMemo(() => {
@@ -216,14 +245,40 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 ),
             }),
 
-            columnHelper.accessor('end_date', {
-                id: 'end_date',
-                header: () => 'End date',
-                cell: (info) => (
-                    <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
-                        {info.getValue()}
+              columnHelper.accessor("end_date", {
+                id: "end_date",
+                header: () => "End date",
+                cell: (info) => {
+                const rowIndex = info.row.index;
+                const isRowSelected = selectedRowIds.has(rowIndex);
+                    console.log(info.row.original,'row.original.id')
+                return (
+                    <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={6}
+                    justifyContent={"space-between"}
+                    >
+                    <Typography variant="h5" color="textPrimary">
+                        {formatDate(info.getValue())}
                     </Typography>
-                ),
+                    <Badge
+                        badgeContent={info.row.original.image_count}
+                        color="error"
+                        overlap="circular"
+                    >
+                        <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => handleDownloadZip(info.row.original.address_id, info.row.original.company_task_id)}
+                        >
+                        <IconDownload size={24} />
+                        </Button>
+                    </Badge>
+                    </Box>
+                );
+                },
             }),
         ];
     }, [data, selectedRowIds]);

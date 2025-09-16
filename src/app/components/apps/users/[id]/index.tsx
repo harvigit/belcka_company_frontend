@@ -1,10 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Typography,
   Box,
   Grid,
-  CircularProgress,
   CardContent,
   Button,
   Tab,
@@ -17,7 +16,7 @@ import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
 
 import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
@@ -29,7 +28,7 @@ import { User } from "next-auth";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import Notifications from "../../user-profile-setting/notifications";
-import theme from "@/utils/theme";
+import toast from "react-hot-toast";
 
 dayjs.extend(customParseFormat);
 
@@ -62,7 +61,7 @@ interface TabPanelProps {
 }
 
 const TablePagination = () => {
-  const [data, setData] = useState<TeamList[]>([]);
+  const [data, setData] = useState<TeamList>();
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
@@ -73,70 +72,103 @@ const TablePagination = () => {
   const [openIdCard, setOpenIdCard] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
-  const searchParams = useSearchParams();
-  const userId = searchParams ? searchParams.get("user_id") : "";
+  const param = useParams();
+  const userId = param?.id;
   const [value, setValue] = useState<number>(0);
 
   const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
 
-  function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    extension: "+44",
+    phone: "",
+  });
 
-    return (
-      <div
-        role="tabpanel"
-        hidden={value !== index}
-        id={`vertical-tabpanel-${index}`}
-        aria-labelledby={`vertical-tab-${index}`}
-        {...other}
-      >
-        {value === index && <Box sx={{ p: 2 }}>{children}</Box>}
-      </div>
-    );
-  }
+  const handleFieldChange = (key: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const fetchData = async () => {
+    if (!userId) return;
+    try {
+      const res = await api.get(`user/get-user-lists?user_id=${userId}`);
+      if (res.data?.info) {
+        const data = res.data.info[0];
+        setData(res.data.info[0]);
+        const ext = data.extension || "";
+        const number = data.phone || "";
+        const userInfo = data;
+        setFormData({
+          first_name: userInfo.first_name || "",
+          last_name: userInfo.last_name || "",
+          email: userInfo.email || "",
+          extension: ext,
+          phone: number,
+        });
+        if (ext && number) {
+          const combined = ext.replace("+", "") + number;
+          setPhone(combined);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(`user/get-user-lists?user_id=${userId}`);
-        if (res.data?.info) {
-          setData(res.data.info);
-          const ext = res.data.info[0].extension || "";
-          const number = res.data.info[0].phone || "";
-          if (ext && number) {
-            const combined = ext.replace("+", "") + number;
-            setPhone(combined);
-          }
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch users", err);
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [userId]);
 
-  const handlePhoneInputChange = (value: string, country: any) => {
-    setPhone(value);
+  const handleUpdatePersonalDetails = async () => {
+    if (!userId) return;
+    const payload = { user_id: userId, ...formData };
+    try {
+      const res = await api.post("user/update-profile", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Update failed:", err);
+    }
   };
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length || !userId) return;
+
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("user_image", file);
+    formData.append("user_id", String(userId));
+
+    try {
+      const res = await api.post("user/update-profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.IsSuccess == true) {
+        toast.success(res.data.message);
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Image upload failed:", err);
+    }
+  };
+
+  const handlePhoneInputChange = (value: string, country: any) => {
+    setPhone(value);
+
+    const ext = "+" + country.dialCode;
+    const numberOnly = value.replace(country.dialCode, "");
+
+    handleFieldChange("extension", ext);
+    handleFieldChange("phone", numberOnly);
+  };
+
   return (
     <Box>
       <BlankCard>
@@ -157,8 +189,8 @@ const TablePagination = () => {
                 variant="dot"
                 sx={{
                   "& .MuiBadge-badge": {
-                    backgroundColor: data[0].is_working ? "#22bf22" : "#df2626",
-                    color: data[0].is_working ? "#22bf22" : "#df2626",
+                    backgroundColor: data?.is_working ? "#22bf22" : "#df2626",
+                    color: data?.is_working ? "#22bf22" : "#df2626",
                     width: 12,
                     height: 12,
                     borderRadius: "50%",
@@ -166,14 +198,23 @@ const TablePagination = () => {
                   },
                 }}
               >
-                <Avatar
-                  src={
-                    data[0].user_image
-                      ? data[0].user_image
-                      : "/images/users/user.png"
-                  }
-                  alt={data[0].first_name}
-                  sx={{ width: 50, height: 50 }}
+                <label htmlFor="upload-avatar">
+                  <Avatar
+                    src={
+                      data?.user_image
+                        ? data?.user_image
+                        : "/images/users/user.png"
+                    }
+                    alt={data?.first_name}
+                    sx={{ width: 50, height: 50, cursor: "pointer" }}
+                  />
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="upload-avatar"
+                  style={{ display: "none" }}
+                  onChange={handleImageUpload}
                 />
               </Badge>
 
@@ -184,7 +225,7 @@ const TablePagination = () => {
                 ml={1}
                 fontSize={"20px !important"}
               >
-                {data[0].name ?? null}
+                {data?.name ?? null}
               </Typography>
               <Typography
                 fontSize={"16px !important"}
@@ -192,7 +233,7 @@ const TablePagination = () => {
                 mb={1}
                 ml={4}
               >
-                {data[0].trade_name}
+                {data?.trade_name}
               </Typography>
             </Box>
             <Box>
@@ -200,7 +241,7 @@ const TablePagination = () => {
                 variant="outlined"
                 color="primary"
                 onClick={() => {
-                  setSelectedUser(data[0]);
+                  setSelectedUser(data);
                   setOpenIdCard(true);
                 }}
               >
@@ -215,6 +256,7 @@ const TablePagination = () => {
         <Grid
           display={"block"}
           justifyContent={"center"}
+          overflow={"visible"}
           size={{
             xs: 3,
             lg: 3,
@@ -222,13 +264,22 @@ const TablePagination = () => {
         >
           <BlankCard>
             <Box sx={{ m: 3 }} className="person_info_wrapper">
-              <Typography
-                fontSize="18px !important"
-                color="#487bb3ff"
-                variant="h4"
-              >
-                Personal Details
-              </Typography>
+              <Box display={"flex"} justifyContent={"space-between"}>
+                <Typography
+                  fontSize="18px !important"
+                  color="#487bb3ff"
+                  variant="h4"
+                >
+                  Personal Details
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleUpdatePersonalDetails}
+                >
+                  Update
+                </Button>
+              </Box>
               <form>
                 <Typography color="textSecondary" variant="h5" mt={2}>
                   First Name
@@ -238,10 +289,13 @@ const TablePagination = () => {
                   className="custom_color"
                   name="first_name"
                   placeholder="Enter first name.."
-                  value={data[0].first_name}
-                  variant="outlined"
+                  value={formData.first_name}
+                  onChange={(e: any) =>
+                    handleFieldChange("first_name", e.target.value)
+                  }
                   fullWidth
                 />
+
                 <Typography color="textSecondary" variant="h5" mt={2}>
                   Last Name
                 </Typography>
@@ -250,25 +304,23 @@ const TablePagination = () => {
                   name="last_name"
                   className="custom_color"
                   placeholder="Enter last name.."
-                  value={data[0].last_name}
-                  variant="outlined"
+                  value={formData.last_name}
+                  onChange={(e: any) =>
+                    handleFieldChange("last_name", e.target.value)
+                  }
                   fullWidth
                 />
+
                 <Typography color="textSecondary" variant="h5" mt={2} mb={1}>
                   Mobile phone
                 </Typography>
-
                 <PhoneInput
-                  inputClass="phone-input"
                   country={"gb"}
                   value={phone}
                   onChange={handlePhoneInputChange}
-                  inputStyle={{
-                    width: "100%",
-                    borderColor: theme.palette.grey[200],
-                  }}
+                  inputStyle={{ width: "100%" }}
+                  inputClass="phone-input"
                   enableSearch
-                  inputProps={{ required: true }}
                 />
 
                 <Typography color="textSecondary" variant="h5" mt={2}>
@@ -279,9 +331,10 @@ const TablePagination = () => {
                   name="email"
                   className="custom_color"
                   placeholder="Enter email.."
-                  value={data[0].email}
-                  disabled
-                  variant="outlined"
+                  value={formData.email}
+                  onChange={(e: any) =>
+                    handleFieldChange("email", e.target.value)
+                  }
                   fullWidth
                 />
               </form>
@@ -330,21 +383,15 @@ const TablePagination = () => {
               </Tabs>
             </Box>
             <Box>
-              <TabPanel value={value} index={0}>
-                <HealthInfo userId={Number(userId)} />
-              </TabPanel>
-              <TabPanel value={value} index={1}>
-                <BillingInfo
-                  userId={Number(userId)}
-                  companyId={Number(user.company_id)}
-                />
-              </TabPanel>
-              <TabPanel value={value} index={2}>
-                <Notifications
-                  userId={Number(userId)}
-                  companyId={Number(user.company_id)}
-                />
-              </TabPanel>
+              <Box hidden={value !== 0}>
+                <HealthInfo userId={Number(userId)} active={value === 0} />
+              </Box>
+              <Box hidden={value !== 1}>
+                <BillingInfo companyId={Number(user.company_id)}  active={value === 1}/>
+              </Box>
+              <Box hidden={value !== 2}>
+                <Notifications companyId={Number(user.company_id)} active={value === 2} />
+              </Box>
             </Box>
           </BlankCard>
         </Grid>

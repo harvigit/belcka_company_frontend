@@ -280,10 +280,15 @@ input#project_id::placeholder {
     color: #7297be !important;
 }
 
-.billing_wraper .mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input.Mui-disabled{
+.billing_wraper .mui-14olbgo-MuiInputBase-input-MuiOutlinedInput-input.Mui-disabled {
     -webkit-text-fill-color: rgb(85, 83, 83);
     cursor: not-allowed;
 }
+ .react-tel-input :disabled{
+    -webkit-text-fill-color: rgb(85, 83, 83);
+    cursor: not-allowed;
+    border: 1px solid #b8b8b8 !important;
+ }
 
 .react-tel-input .form-control:focus{
     box-shadow: 0 0 0 1px #1e4db7;

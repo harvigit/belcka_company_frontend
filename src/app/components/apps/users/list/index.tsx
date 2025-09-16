@@ -177,7 +177,7 @@ const TablePagination = () => {
                 sx={{ width: 36, height: 36 }}
               />
               <Box>
-                <Link href={`/apps/users/user?user_id=${user.id}`} passHref>
+                <Link href={`/apps/users/${user.id}`} passHref>
                   <Typography
                     className="f-14"
                     color="textPrimary"

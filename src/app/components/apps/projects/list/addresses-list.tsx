@@ -14,12 +14,13 @@ import {
   IconButton,
   Stack,
   MenuItem,
-  CircularProgress,
   Drawer,
   Tab,
   Tabs,
   ListItemIcon,
   Menu,
+  Badge,
+  Button,
 } from "@mui/material";
 import {
   flexRender,
@@ -53,6 +54,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CreateProjectTask from "../tasks";
 import toast from "react-hot-toast";
+import { IconDownload } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -246,6 +248,29 @@ const AddressesList = ({
     });
   }, [processedIds]);
 
+  const handleDownloadZip = async (addressId: number) => {
+    try {
+      const response = await api.get(
+        `address/download-tasks-zip/${addressId}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], { type: "application/zip" });
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `tasks_address_${addressId}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Download failed", error);
+    }
+  };
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
@@ -354,11 +379,37 @@ const AddressesList = ({
       columnHelper.accessor("end_date", {
         id: "end_date",
         header: () => "End date",
-        cell: (info) => (
-          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
-            {formatDate(info.getValue())}
-          </Typography>
-        ),
+        cell: (info) => {
+          const rowIndex = info.row.index;
+          const isRowSelected = selectedRowIds.has(rowIndex);
+
+          return (
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={6}
+              justifyContent={"space-between"}
+            >
+              <Typography variant="h5" color="textPrimary">
+                {formatDate(info.getValue())}
+              </Typography>
+              <Badge
+                badgeContent={info.row.original.image_count}
+                color="error"
+                overlap="circular"
+              >
+                <Button
+                 variant="outlined"
+                 color="error"
+                 size="small"
+                  onClick={() => handleDownloadZip(info.row.original.id)}
+                >
+                  <IconDownload size={24} />
+                </Button>
+              </Badge>
+            </Box>
+          );
+        },
       }),
     ],
     [data, selectedRowIds]

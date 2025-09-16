@@ -71,6 +71,7 @@ export type ProjectList = {
   status_int: number;
   status_text: string;
   check_ins: number;
+  image_count: number;
 };
 interface ProjectListingProps {
   projectId: number | null;

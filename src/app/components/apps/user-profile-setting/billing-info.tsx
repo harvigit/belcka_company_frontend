@@ -17,10 +17,11 @@ import theme from "@/utils/theme";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { IconCheck, IconX } from "@tabler/icons-react";
+import { useParams } from "next/navigation";
 
 interface ProjectListingProps {
-  userId: number | null;
   companyId: number | null;
+  active: boolean;
 }
 
 interface BillingFormData {
@@ -74,7 +75,7 @@ const emptyBillingInfo: BillingFormData = {
   diff_data: {},
 };
 
-const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
+const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
   const [billingInfo, setBillingInfo] = useState<BillingFormData | null>(null);
   const [hasBillingInfo, setHasBillingInfo] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -83,7 +84,8 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
   const user = session.data?.user as User & { user_role_id?: number | null } & {
     id: number;
   };
-
+  const params = useParams();
+  const userId = Number(params?.id);
   /*  Fetch billing info */
   const fetchBillingInfo = async () => {
     if (!userId || !companyId) return;
@@ -137,16 +139,40 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
     }
   }, [billingInfo, userId, companyId, hasBillingInfo, fetchBillingInfo]);
 
+  /* Helpers */
+  const isDisabledNewData =
+    billingInfo?.status === 3 &&
+    (!billingInfo?.old_data ||
+      Object.keys(billingInfo.old_data).length === 0) &&
+    billingInfo?.new_data;
+
+  const formData: Partial<BillingFormData> = isDisabledNewData
+    ? billingInfo?.new_data || {}
+    : billingInfo || {};
+
+  const isDisabledField = (key: string) => {
+    if (isDisabledNewData) return true;
+    return (
+      billingInfo?.is_pending_request &&
+      billingInfo?.diff_data?.hasOwnProperty(key)
+    );
+  };
+
+  useEffect(() => {
+    if(!userId || !active) return
+    fetchBillingInfo();
+  }, [userId, active]);
+
   /*  Set combined phone */
   useEffect(() => {
-    if (billingInfo) {
-      const ext = billingInfo.extension || "";
-      const number = billingInfo.phone || "";
+    if (formData) {
+      const ext = formData.extension || "";
+      const number = formData.phone || "";
       if (ext && number) {
         setPhone(ext.replace("+", "") + number);
       }
     }
-  }, [billingInfo]);
+  }, [formData]);
 
   /*  Phone input change */
   const handlePhoneInputChange = (value: string, country: any) => {
@@ -158,15 +184,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
     handleFieldChange("extension", ext);
     handleFieldChange("phone", numberOnly);
   };
-
-  /*  Helpers */
-  const isDisabledField = (key: string) =>
-    billingInfo?.is_pending_request &&
-    billingInfo?.diff_data?.hasOwnProperty(key);
-
-  useEffect(() => {
-    fetchBillingInfo();
-  }, [userId]);
 
   /*  Approve request */
   const handleApprove = async (requestLogId?: number | null) => {
@@ -214,7 +231,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
         display="flex"
         justifyContent="center"
         alignItems="center"
-        minHeight="330px"
+        minHeight="370px"
       >
         <CircularProgress />
       </Box>
@@ -226,7 +243,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
   }
 
   return (
-    <Box ml={5} className="billing_wraper">
+    <Box ml={5} mt={2} p={2} className="billing_wraper">
       {/* General Info */}
       {user.user_role_id == 1 && billingInfo.is_pending_request == true && (
         <Box display={"flex"} justifyContent={"end"}>
@@ -268,7 +285,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
                 label={key
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (c) => c.toUpperCase())}
-                value={(billingInfo as any)[key] ?? ""}
+                value={(formData as any)[key] ?? ""}
                 onChange={(e) =>
                   handleFieldChange(
                     key as keyof BillingFormData,
@@ -317,7 +334,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
               label={key
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (c) => c.toUpperCase())}
-              value={(billingInfo as any)[key] ?? ""}
+              value={(formData as any)[key] ?? ""}
               onChange={(e) =>
                 handleFieldChange(key as keyof BillingFormData, e.target.value)
               }
@@ -347,7 +364,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ userId, companyId }) => {
                 label={key
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (c) => c.toUpperCase())}
-                value={(billingInfo as any)[key] ?? ""}
+                value={(formData as any)[key] ?? ""}
                 onChange={(e) =>
                   handleFieldChange(
                     key as keyof BillingFormData,
