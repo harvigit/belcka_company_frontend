@@ -2,7 +2,7 @@ import React from 'react';
 import Breadcrumb from '@/app/(DashboardLayout)/layout/shared/breadcrumb/Breadcrumb';
 import PageContainer from '@/app/components/container/PageContainer';
 import BlankCard from '@/app/components/shared/BlankCard';
-import TimesheetList from '@/app/components/apps/timesheet/list';
+import TimesheetList from '@/app/components/apps/timesheet';
 
 const BCrumb = [
     {

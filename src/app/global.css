@@ -265,6 +265,10 @@ input#project_id::placeholder {
     width: 20%;
 }
 
+.mui-od50dp-MuiInputBase-input-MuiOutlinedInput-input {
+    text-align: center;
+}
+
 .phone-input{
     height: 47px !important;
     background-color: transparent !important;
