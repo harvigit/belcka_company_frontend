@@ -296,3 +296,6 @@ input#project_id::placeholder {
 .user-tabs span.MuiTabs-indicator.mui-at3d3q {
     display: block;
 }
+.billing_wraper .mui-ao3ay5.Mui-disabled{
+    cursor: not-allowed;
+}

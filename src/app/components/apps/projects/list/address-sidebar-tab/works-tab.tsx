@@ -3,11 +3,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
     Avatar, Box, Button, Chip, IconButton, InputAdornment,
-    TextField, Typography, Tooltip
+    TextField, Typography, Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from '@mui/material';
 import { Stack } from '@mui/system';
-import { IconChevronRight, IconFilter, IconSearch } from '@tabler/icons-react';
+import { IconChevronRight, IconSearch, IconTrash } from '@tabler/icons-react';
 import api from '@/utils/axios';
+import toast from 'react-hot-toast';
 
 interface WorksTabProps {
     addressId: number,
@@ -17,6 +22,8 @@ interface WorksTabProps {
 export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     const [tabData, setTabData] = useState<any[]>([]);
     const [searchUser, setSearchUser] = useState<string>('');
+    const [openDialog, setOpenDialog] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number>(0);
 
     const fetchWorkTabData = async () => {
         try {
@@ -65,6 +72,24 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
         );
     }, [searchUser, tabData]);
 
+    const handleTaskDelete = async () => {
+        try {
+            const payload = {
+                task_ids: String(selectedIds),
+            };
+            const response = await api.post(
+                "company-tasks/delete",
+                payload
+            );
+            if(response.data.IsSuccess == true){
+                toast.success(response.data.message);
+                await fetchWorkTabData();
+            }
+        } catch (error) {
+        } finally {
+        setOpenDialog(false);
+        }
+    }
     return (
         <Box>
             {/* Search bar and filter button */}
@@ -195,6 +220,16 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                     </Typography>
                                 </Box>
 
+                                {work.is_checklog == false && (
+                                    <IconButton color="error" 
+                                        onClick={() => {
+                                         setOpenDialog(true)
+                                         setSelectedIds(work.id)
+                                        }}>
+                                        <IconTrash width={18} />
+                                    </IconButton>
+                                )}
+
                                 {parseFloat(work.total_work_hours) > 0 && (
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <Typography fontWeight="bold" fontSize="1.25rem">
@@ -214,6 +249,32 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     No works found for this address.
                 </Typography>
             )}
+
+             {/* delete work */}
+                <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    <Typography color="textSecondary">
+                    Are you sure you want to delete this task?
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                    onClick={() => setOpenDialog(false)}
+                    variant="outlined"
+                    color="primary"
+                    >
+                    Cancel
+                    </Button>
+                    <Button
+                    onClick={() => handleTaskDelete()}
+                    variant="outlined"
+                    color="error"
+                    >
+                    Delete
+                    </Button>
+                </DialogActions>
+                </Dialog>
         </Box>
     );
 };

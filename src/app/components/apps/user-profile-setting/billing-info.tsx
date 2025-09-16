@@ -239,7 +239,16 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
   }
 
   if (!billingInfo) {
-    return <Typography>No Billing Info Available !!</Typography>;
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="370px"
+      >
+        <Typography>No Billing Info Available !!</Typography>
+      </Box>
+    );
   }
 
   return (
