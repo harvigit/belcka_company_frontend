@@ -254,35 +254,37 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
   return (
     <Box ml={5} p={2} className="billing_wraper">
       {/* General Info */}
-      {user.user_role_id == 1 && billingInfo.is_pending_request == true && (
-        <Box display={"flex"} justifyContent={"end"}>
-          <Button
-            variant="outlined"
-            color="success"
-            startIcon={<IconCheck size={16} />}
-            onClick={() => handleApprove(billingInfo?.request_log_id)}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<IconX size={16} />}
-            onClick={() => handleReject(billingInfo?.request_log_id)}
-            sx={{ ml: 2 }}
-          >
-            Reject
-          </Button>
-        </Box>
-      )}
-      <Typography
-        variant="h1"
-        color="#487bb3ff"
-        fontSize="18px !important"
-        sx={{ mb: 1 }}
-      >
-        General Information
-      </Typography>
+      <Box display={"flex"} justifyContent={"space-between"} mb={1}>
+        <Typography
+          variant="h1"
+          color="#487bb3ff"
+          fontSize="18px !important"
+          sx={{ mb: 1 }}
+        >
+          General Information
+        </Typography>
+        {user.user_role_id == 1 && billingInfo.is_pending_request == true && (
+          <Box display={"flex"} justifyContent={"end"} mb={1}>
+            <Button
+              variant="outlined"
+              color="success"
+              startIcon={<IconCheck size={16} />}
+              onClick={() => handleApprove(billingInfo?.request_log_id)}
+            >
+              Approve
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconX size={16} />}
+              onClick={() => handleReject(billingInfo?.request_log_id)}
+              sx={{ ml: 2 }}
+            >
+              Reject
+            </Button>
+          </Box>
+        )}
+      </Box>
       <Grid container spacing={2} mb={2}>
         {["first_name", "middle_name", "last_name", "email", "post_code"].map(
           (key) => (

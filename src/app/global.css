@@ -300,6 +300,9 @@ input#project_id::placeholder {
 .user-tabs span.MuiTabs-indicator.mui-at3d3q {
     display: block;
 }
-.billing_wraper .mui-ao3ay5.Mui-disabled{
+.billing_wraper .Mui-disabled ,.company_rate_wrapper .Mui-disabled{
     cursor: not-allowed;
+}
+.trade-selection .MuiOutlinedInput-input{
+    height: 30px !important;
 }

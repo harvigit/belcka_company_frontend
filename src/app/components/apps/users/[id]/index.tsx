@@ -10,8 +10,14 @@ import {
   Tabs,
   Badge,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
-import { IconArrowLeft, IconMedal } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconCheck,
+  IconMedal,
+  IconX,
+} from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -29,6 +35,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import Notifications from "../../user-profile-setting/notifications";
 import toast from "react-hot-toast";
+import ComapnyRate from "../../user-profile-setting/company-rate";
 
 dayjs.extend(customParseFormat);
 
@@ -54,11 +61,6 @@ export interface TradeList {
   trade_id: number;
   name: string;
 }
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
 
 const TablePagination = () => {
   const [data, setData] = useState<TeamList>();
@@ -66,7 +68,9 @@ const TablePagination = () => {
   const router = useRouter();
 
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null } & {
+    company_name?: string | null;
+  };
   const [phone, setPhone] = useState("");
 
   const [openIdCard, setOpenIdCard] = useState(false);
@@ -94,6 +98,7 @@ const TablePagination = () => {
 
   const fetchData = async () => {
     if (!userId) return;
+    setLoading(true);
     try {
       const res = await api.get(`user/get-user-lists?user_id=${userId}`);
       if (res.data?.info) {
@@ -117,6 +122,7 @@ const TablePagination = () => {
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -168,6 +174,19 @@ const TablePagination = () => {
     handleFieldChange("extension", ext);
     handleFieldChange("phone", numberOnly);
   };
+  
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="300px"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -363,23 +382,26 @@ const TablePagination = () => {
                   justifyContent: "space-between",
                 }}
               >
-                {["Health Info", "Billing Info", "Notification Settings"].map(
-                  (label, index) => (
-                    <Tab
-                      key={label}
-                      label={label}
-                      sx={{
-                        textTransform: "none",
-                        borderRadius: "10px",
-                        px: 3,
-                        py: 0.5,
-                        fontSize: "14px",
-                        fontWeight: value === index ? "600" : "400",
-                        transition: "all 0.3s ease",
-                      }}
-                    />
-                  )
-                )}
+                {[
+                  "Health Info",
+                  "Billing Info",
+                  "Rate",
+                  "Notification Settings",
+                ].map((label, index) => (
+                  <Tab
+                    key={label}
+                    label={label}
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: "10px",
+                      px: 3,
+                      py: 0.5,
+                      fontSize: "14px",
+                      fontWeight: value === index ? "600" : "400",
+                      transition: "all 0.3s ease",
+                    }}
+                  />
+                ))}
               </Tabs>
             </Box>
             <Box>
@@ -387,10 +409,19 @@ const TablePagination = () => {
                 <HealthInfo userId={Number(userId)} active={value === 0} />
               </Box>
               <Box hidden={value !== 1}>
-                <BillingInfo companyId={Number(user.company_id)}  active={value === 1}/>
+                <BillingInfo
+                  companyId={Number(user.company_id)}
+                  active={value === 1}
+                />
               </Box>
               <Box hidden={value !== 2}>
-                <Notifications companyId={Number(user.company_id)} active={value === 2} />
+                <ComapnyRate active={value === 2} />
+              </Box>
+              <Box hidden={value !== 3}>
+                <Notifications
+                  companyId={Number(user.company_id)}
+                  active={value === 3}
+                />
               </Box>
             </Box>
           </BlankCard>

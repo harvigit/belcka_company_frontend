@@ -16,6 +16,8 @@ import {
     Button,
     SelectChangeEvent,
     CircularProgress,
+    AvatarGroup,
+    Avatar,
 } from '@mui/material';
 import { IconHelp } from '@tabler/icons-react';
 import SearchIcon from '@mui/icons-material/Search';
@@ -25,6 +27,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import { TimePicker } from '@mui/x-date-pickers';
 import dayjs, { Dayjs } from 'dayjs';
+import toast from 'react-hot-toast';
 
 interface Timezone {
     id: string | number;
@@ -35,6 +38,7 @@ interface Timezone {
 interface CompanyUser {
     id: string;
     name: string;
+    image?: string | null;
 }
 
 interface CompanySettings {
@@ -225,10 +229,12 @@ const useApiData = (payRateUsers: CompanyUser[] = []) => {
                 const apiUsers: CompanyUser[] = (response.data.company_users || []).map((user: any) => ({
                     id: String(user.id),
                     name: user.name,
+                    image: user.image || null
                 }));
                 const payRateUsersMapped: CompanyUser[] = payRateUsers.map((user: any) => ({
                     id: String(user.user_id),
                     name: user.user_name,
+                    image: user.user_image || null
                 }));
                 const combinedUsers = [
                     ...apiUsers,
@@ -533,6 +539,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             const response = await api.post('/setting/save-general-setting', payload);
 
             if (response.data?.IsSuccess) {
+                toast.success(response.data.message)
                 onSaveSuccess();
             }
         } catch (error) {
@@ -872,7 +879,20 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         {/* Show Pay Rates & Export Format */}
                         <Box mb={4}>
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                <Typography variant="body2">Show pay rates</Typography>
+                                 <Typography variant="body2">Show pay rates</Typography>
+                               <Box display={"flex"} justifyContent={"end"} alignContent={"center"} gap={3}>
+                                <AvatarGroup max={4}>
+                                {companyUsers
+                                    .filter((user) => settings.users.includes(user.id.toString()))
+                                    .map((user) => (
+                                    <Avatar
+                                        key={user.id}
+                                        alt={user.name}
+                                        src={user.image || ""}
+                                    />
+                                    ))}
+                                </AvatarGroup>
+
                                 <Select
                                     multiple
                                     value={settings.users}
@@ -978,6 +998,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         </MenuItem>
                                     )}
                                 </Select>
+                               </Box>
                             </Box>
 
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
