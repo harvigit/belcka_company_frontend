@@ -303,7 +303,7 @@ const HealthInfo: React.FC<ProjectListingProps> = React.memo(
     if (!healthInfo) return <Typography>Health Info not found!</Typography>;
 
     return (
-      <Box ml={5} mt={2} p={2} className="health_info_wrapper">
+      <Box ml={5} p={2} className="health_info_wrapper">
         <Typography
           variant="h1"
           color="#487bb3ff"

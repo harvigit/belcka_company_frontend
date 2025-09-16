@@ -293,3 +293,6 @@ input#project_id::placeholder {
 .react-tel-input .form-control:focus{
     box-shadow: 0 0 0 1px #1e4db7;
 }
+.user-tabs span.MuiTabs-indicator.mui-at3d3q {
+    display: block;
+}

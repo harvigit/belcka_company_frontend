@@ -243,7 +243,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
   }
 
   return (
-    <Box ml={5} mt={2} p={2} className="billing_wraper">
+    <Box ml={5} p={2} className="billing_wraper">
       {/* General Info */}
       {user.user_role_id == 1 && billingInfo.is_pending_request == true && (
         <Box display={"flex"} justifyContent={"end"}>
