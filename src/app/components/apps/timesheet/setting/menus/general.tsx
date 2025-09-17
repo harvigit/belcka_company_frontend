@@ -38,7 +38,8 @@ interface Timezone {
 interface CompanyUser {
     id: string;
     name: string;
-    image?: string | null;
+    user_image?: string | null;
+    user_thumb_image?: string | null;
 }
 
 interface CompanySettings {
@@ -888,7 +889,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     <Avatar
                                         key={user.id}
                                         alt={user.name}
-                                        src={user.image || ""}
+                                        src={user.user_thumb_image || ""}
                                     />
                                     ))}
                                 </AvatarGroup>
