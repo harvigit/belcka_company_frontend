@@ -303,6 +303,10 @@ input#project_id::placeholder {
 .billing_wraper .Mui-disabled ,.company_rate_wrapper .Mui-disabled{
     cursor: not-allowed;
 }
-.trade-selection .MuiOutlinedInput-input{
+.company-trade-selection .MuiOutlinedInput-input{
     height: 30px !important;
+    
+    .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator, .mui-1uhhrmm-MuiAutocomplete-endAdornment, button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.MuiAutocomplete-popupIndicator.mui-tcwnsx, svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeMedium.mui-q7mezt{
+        display: none;
+    }
 }

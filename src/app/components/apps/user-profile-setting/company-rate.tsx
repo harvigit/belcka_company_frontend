@@ -38,6 +38,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
 
   const [comapny, setCompany] = useState<any>();
   const [trade, setTrade] = useState<TradeList[]>([]);
+  const [gross, setGross] = useState<any>();
+  const [cis, setCis] = useState<any>();
 
   const [formData, setFormData] = useState<{
     trade_id: number | null;
@@ -53,16 +55,29 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
     try {
       const res = await api.get(`company/active-company?user_id=${userId}`);
       if (res.data.info) {
-        setCompany(res.data.info);
+        const companyData = res.data.info;
+        setCompany(companyData);
+        const netRate = Object.keys(companyData?.diff_data || {}).includes(
+          "net_rate_perday"
+        )
+          ? companyData?.diff_data?.net_rate_perday?.old ?? 0
+          : companyData?.net_rate_perDay ?? 0;
+
         setFormData({
-          trade_id: res.data.info.trade_id ?? null,
-          rate: res.data.info.net_rate_perDay ?? "",
+          trade_id: companyData.trade_id ?? null,
+          rate: netRate,
         });
+
+        const cisAmount = netRate * 0.2;
+        const grossAmount = netRate + cisAmount;
+        setCis(cisAmount);
+        setGross(grossAmount);
       }
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchTrades = async () => {
@@ -163,6 +178,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   return (
     <Box
       m={2}
+      p={2}
+      pt={0}
       mt={2}
       ml={5}
       className="company_rate_wrapper"
@@ -170,15 +187,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
     >
       <Box display={"flex"} justifyContent={"space-between"} mb={1}>
         <Typography
-          variant="h1"
           color="#487bb3ff"
-          fontSize="18px !important"
+          fontSize="16px !important"
           sx={{ mb: 1 }}
         >
           Edit rate
         </Typography>
-        {user.user_role_id == 1 && comapny.is_pending_request == true && (
-          <Box display={"flex"} justifyContent={"end"} mb={1}>
+        {user.user_role_id == 1 && comapny.is_pending_request && (
+          <Box display="flex" justifyContent="end" mb={1}>
             <Button
               variant="outlined"
               color="success"
@@ -199,26 +215,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
           </Box>
         )}
       </Box>
-      <Grid container spacing={2} mb={2}>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            fullWidth
-            className="custom_color"
-            label="Rate"
-            value={
-              Object.keys(comapny?.diff_data || {}).includes("net_rate_perday")
-                ? comapny?.diff_data.net_rate_perday?.old ?? ""
-                : formData.rate
-            }
-            disabled={Object.keys(comapny?.diff_data || {}).includes(
-              "net_rate_perday"
-            )}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, rate: e.target.value }))
-            }
-          />
-        </Grid>
 
+      <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <Autocomplete
             fullWidth
@@ -237,14 +235,15 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
                 trade_id: val ? val.id : null,
               }))
             }
-            sx={{ height: "47px !important" }}
+            sx={{ height: "47px !important", width: "100% !important" }}
             getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             renderInput={(params) => (
               <CustomTextField
+              label="Trade"
                 {...params}
                 placeholder="Search Trade"
-                className="trade-selection"
+                className="company-trade-selection"
               />
             )}
             disabled={Object.keys(comapny?.diff_data || {}).includes(
@@ -252,15 +251,53 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
             )}
           />
         </Grid>
+
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            className="custom_color"
+            label={"(" + comapny?.currency + ")" + " Net Per Day"}
+            value={
+              Object.keys(comapny?.diff_data || {}).includes("net_rate_perday")
+                ? comapny?.diff_data.net_rate_perday?.old ?? ""
+                : formData.rate
+            }
+            disabled={Object.keys(comapny?.diff_data || {}).includes(
+              "net_rate_perday"
+            )}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, rate: e.target.value }))
+            }
+          />
+        </Grid>
       </Grid>
-      <Grid size={{ xs: 12, sm: 6 }} mt={2}>
-        <TextField
-          fullWidth
-          className="custom_color"
-          label="Joining on"
-          value={comapny?.joining_date}
-          disabled
-        />
+
+      <Grid container spacing={2} mb={2}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            className="custom_color"
+            label="Join Company Date"
+            value={comapny?.joining_date}
+            disabled
+          />
+        </Grid>
+      </Grid>
+      <Grid size={{ xs: 6, sm: 6 }}>
+        <Box display={"flex"} justifyContent={"space-between"} mb={2}>
+          <Typography color="textSecondary">Gross Per Day</Typography>
+          <Typography color="textSecondary">
+            {comapny?.currency}
+            {gross}
+          </Typography>
+        </Box>
+        <Box display={"flex"} justifyContent={"space-between"}>
+          <Typography color="textSecondary">CIS (20%)</Typography>
+          <Typography color="textSecondary">
+            {comapny?.currency}
+            {cis}
+          </Typography>
+        </Box>
       </Grid>
       <Box mt={2}>
         <Button

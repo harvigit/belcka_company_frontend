@@ -305,9 +305,8 @@ const HealthInfo: React.FC<ProjectListingProps> = React.memo(
     return (
       <Box ml={5} p={2} className="health_info_wrapper">
         <Typography
-          variant="h1"
           color="#487bb3ff"
-          fontSize="18px !important"
+          fontSize="16px !important"
           sx={{ mb: 2 }}
         >
           Emergency Contact
@@ -346,7 +345,7 @@ const HealthInfo: React.FC<ProjectListingProps> = React.memo(
               onChange={handlePhoneInputChange}
               inputStyle={{
                 width: "100%",
-                borderColor: theme.palette.grey[200],
+                borderColor: "#c0d1dc9c",
               }}
               enableSearch
               inputProps={{ required: true }}
@@ -357,9 +356,8 @@ const HealthInfo: React.FC<ProjectListingProps> = React.memo(
         <Divider />
 
         <Typography
-          variant="h1"
           color="#487bb3ff"
-          fontSize="18px !important"
+          fontSize="16px !important"
           sx={{ mt: 4, mb: 2 }}
         >
           Health Info
@@ -396,9 +394,8 @@ const HealthInfo: React.FC<ProjectListingProps> = React.memo(
         <Divider />
 
         <Typography
-          variant="h1"
           color="#487bb3ff"
-          fontSize="18px !important"
+          fontSize="16px !important"
           sx={{ mt: 4, mb: 2 }}
         >
           Questions

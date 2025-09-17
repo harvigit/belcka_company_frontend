@@ -36,6 +36,7 @@ import "react-phone-input-2/lib/material.css";
 import Notifications from "../../user-profile-setting/notifications";
 import toast from "react-hot-toast";
 import ComapnyRate from "../../user-profile-setting/company-rate";
+import theme from "@/utils/theme";
 
 dayjs.extend(customParseFormat);
 
@@ -174,7 +175,7 @@ const TablePagination = () => {
     handleFieldChange("extension", ext);
     handleFieldChange("phone", numberOnly);
   };
-  
+
   if (loading) {
     return (
       <Box
@@ -283,12 +284,12 @@ const TablePagination = () => {
         >
           <BlankCard>
             <Box sx={{ m: 3 }} className="person_info_wrapper">
-              <Box display={"flex"} justifyContent={"space-between"}>
-                <Typography
-                  fontSize="18px !important"
-                  color="#487bb3ff"
-                  variant="h4"
-                >
+              <Box
+                display={"flex"}
+                justifyContent={"space-between"}
+                alignItems={"baseline"}
+              >
+                <Typography fontSize="16px !important" color="#487bb3ff">
                   Personal Details
                 </Typography>
                 <Button
@@ -337,7 +338,10 @@ const TablePagination = () => {
                   country={"gb"}
                   value={phone}
                   onChange={handlePhoneInputChange}
-                  inputStyle={{ width: "100%" }}
+                  inputStyle={{
+                    width: "100%",
+                    borderColor: "#c0d1dc9c",
+                  }}
                   inputClass="phone-input"
                   enableSearch
                 />

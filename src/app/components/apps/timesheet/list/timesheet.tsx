@@ -447,7 +447,6 @@ const TimesheetList = () => {
     return (
         <Box>
             <Stack
-                mt={3}
                 mx={2}
                 mb={3}
                 direction={{xs: 'column', sm: 'row'}}

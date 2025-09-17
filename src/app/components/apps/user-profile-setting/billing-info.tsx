@@ -256,9 +256,8 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
       {/* General Info */}
       <Box display={"flex"} justifyContent={"space-between"} mb={1}>
         <Typography
-          variant="h1"
           color="#487bb3ff"
-          fontSize="18px !important"
+          fontSize="16px !important"
           sx={{ mb: 1 }}
         >
           General Information
@@ -317,7 +316,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
             onChange={handlePhoneInputChange}
             inputStyle={{
               width: "100%",
-              borderColor: theme.palette.grey[200],
+              borderColor: "#c0d1dc9c",
             }}
             enableSearch
             inputProps={{ required: true }}
@@ -328,9 +327,8 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
 
       {/* Tax Info */}
       <Typography
-        variant="h1"
         color="#487bb3ff"
-        fontSize="18px !important"
+        fontSize="16px !important"
         sx={{ mt: 3, mb: 1 }}
       >
         Tax Information
@@ -357,9 +355,8 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
 
       {/* Bank Info */}
       <Typography
-        variant="h1"
         color="#487bb3ff"
-        fontSize="18px !important"
+        fontSize="16px !important"
         sx={{ mt: 3, mb: 1 }}
       >
         Bank Information

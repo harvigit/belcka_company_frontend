@@ -356,7 +356,6 @@ const TimeClock = () => {
             <Box sx={{ transition: 'height 0.3s ease-in-out' }}>
                 {/* Search and Filter Controls */}
                 <Stack
-                    mt={1}
                     mx={2}
                     mb={3}
                     direction={{ xs: 'column', sm: 'row' }}
