@@ -226,7 +226,7 @@ const TablePagination = () => {
                         : "/images/users/user.png"
                     }
                     alt={data?.first_name}
-                    sx={{ width: 50, height: 50, cursor: "pointer" }}
+                    sx={{ width: 60, height: 60, cursor: "pointer" }}
                   />
                 </label>
                 <input
@@ -237,24 +237,23 @@ const TablePagination = () => {
                   onChange={handleImageUpload}
                 />
               </Badge>
-
-              <Typography
-                color="textSecondary"
-                fontWeight={600}
-                mb={1}
-                ml={1}
-                fontSize={"20px !important"}
-              >
-                {data?.name ?? null}
-              </Typography>
-              <Typography
-                fontSize={"16px !important"}
-                color="textSecondary"
-                mb={1}
-                ml={4}
-              >
-                {data?.trade_name}
-              </Typography>
+              <Box display={"block"}>
+                <Typography
+                  color="textSecondary"
+                  fontWeight={600}
+                  ml={2}
+                  fontSize={"20px !important"}
+                >
+                  {data?.name ?? null}
+                </Typography>
+                <Typography
+                  fontSize={"16px !important"}
+                  color="textSecondary"
+                  ml={2}
+                >
+                  {data?.trade_name ?? null}
+                </Typography>
+              </Box>
             </Box>
             <Box>
               <Button
@@ -292,16 +291,9 @@ const TablePagination = () => {
                 <Typography fontSize="16px !important" color="#487bb3ff">
                   Personal Details
                 </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleUpdatePersonalDetails}
-                >
-                  Update
-                </Button>
               </Box>
               <form>
-                <Typography color="textSecondary" variant="h5" mt={2}>
+                <Typography color="textSecondary" variant="h5" mt={1}>
                   First Name
                 </Typography>
                 <CustomTextField
@@ -361,6 +353,15 @@ const TablePagination = () => {
                   fullWidth
                 />
               </form>
+              <Box mt={2}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleUpdatePersonalDetails}
+                >
+                  Update
+                </Button>
+              </Box>
             </Box>
           </BlankCard>
         </Grid>

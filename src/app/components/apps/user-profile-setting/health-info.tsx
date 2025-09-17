@@ -446,7 +446,7 @@ const HealthInfo: React.FC<ProjectListingProps> = React.memo(
                     onChange={(e) =>
                       handleHealthIssueChange(index, "comment", e.target.value)
                     }
-                    sx={{ mt: 1 }}
+                    sx={{ mt: 1 ,mb: 1}}
                   />
                 )}
               </Box>
