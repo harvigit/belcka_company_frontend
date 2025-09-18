@@ -119,7 +119,6 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
     }, [data, searchTerm, filters]);
 
     const handleDownloadZip = async (addressId: number,taskId: number) => {
-        console.log(taskId,'taskId')
         try {
           const response = await api.get(
             `address/download-tasks-zip/${addressId}?taskId=${taskId}`,
@@ -251,7 +250,6 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 cell: (info) => {
                 const rowIndex = info.row.index;
                 const isRowSelected = selectedRowIds.has(rowIndex);
-                    console.log(info.row.original,'row.original.id')
                 return (
                     <Box
                     display="flex"

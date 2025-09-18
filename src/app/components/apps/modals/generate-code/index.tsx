@@ -34,7 +34,6 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     try {
       const generatedCode = await onGenerate();
       setCode(generatedCode);
-      console.log(generatedCode,'generatedCode', code)
 
       setResendTimer(15 * 60); // 15 minute
       if (intervalRef.current) {

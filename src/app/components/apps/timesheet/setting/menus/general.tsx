@@ -230,12 +230,12 @@ const useApiData = (payRateUsers: CompanyUser[] = []) => {
                 const apiUsers: CompanyUser[] = (response.data.company_users || []).map((user: any) => ({
                     id: String(user.id),
                     name: user.name,
-                    image: user.image || null
+                    user_image: user.user_image || null
                 }));
                 const payRateUsersMapped: CompanyUser[] = payRateUsers.map((user: any) => ({
                     id: String(user.user_id),
                     name: user.user_name,
-                    image: user.user_image || null
+                    user_image: user.user_image || null
                 }));
                 const combinedUsers = [
                     ...apiUsers,
@@ -889,7 +889,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     <Avatar
                                         key={user.id}
                                         alt={user.name}
-                                        src={user.user_thumb_image || ""}
+                                        src={user.user_image || ""}
                                     />
                                     ))}
                                 </AvatarGroup>
