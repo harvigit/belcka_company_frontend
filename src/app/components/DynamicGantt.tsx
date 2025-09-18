@@ -199,7 +199,7 @@ export default function DynamicGantt({
             status:
               t.status === 4
                 ? "Completed"
-                : t.status === 13
+                : t.status === 13 || t.status === 3
                 ? "In Progress"
                 : "Pending",
           });

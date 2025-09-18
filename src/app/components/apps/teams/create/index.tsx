@@ -71,7 +71,7 @@ const CreateTeam = () => {
       setLoading(false);
     };
     fetchTrades();
-  }, []);
+  }, [user.id]);
 
   useEffect(() => {
     const lastId = teams.length > 0 ? teams[teams.length - 1].id + 1 : 1;

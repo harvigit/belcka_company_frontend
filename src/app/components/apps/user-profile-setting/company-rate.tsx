@@ -8,6 +8,7 @@ import {
   TextField,
   Button,
   Autocomplete,
+  Tooltip,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -34,12 +35,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   const session = useSession();
   const user = session.data?.user as User & { user_role_id?: number | null } & {
     id: number;
-  };
+  } & { company_id: number };
 
   const [comapny, setCompany] = useState<any>();
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [gross, setGross] = useState<any>();
   const [cis, setCis] = useState<any>();
+  const [payRate, setPayRate] = useState<boolean>(false);
 
   const [formData, setFormData] = useState<{
     trade_id: number | null;
@@ -89,9 +91,21 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
     }
   };
 
+  const findPermission = async () => {
+    try {
+      const res = await api.get(
+        `setting/user-payrate-permission?user_id=${user.id}&company_id=${user.company_id}`
+      );
+      if (res.data) setPayRate(res.data.info.show_pay_rate);
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    }
+  };
+
   useEffect(() => {
     if (!userId || !active) return;
     getCompanyData();
+    findPermission();
   }, [userId, active]);
 
   useEffect(() => {
@@ -99,6 +113,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       fetchTrades();
     }
   }, [comapny]);
+  console.log(payRate, "payRate");
 
   const handleUpdate = async () => {
     if (!formData.trade_id || !formData.rate) {
@@ -186,11 +201,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       height="370px !important"
     >
       <Box display={"flex"} justifyContent={"space-between"} mb={1}>
-        <Typography
-          color="#487bb3ff"
-          fontSize="16px !important"
-          sx={{ mb: 1 }}
-        >
+        <Typography color="#487bb3ff" fontSize="16px !important" sx={{ mb: 1 }}>
           Edit rate
         </Typography>
         {user.user_role_id == 1 && comapny.is_pending_request && (
@@ -240,7 +251,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
             isOptionEqualToValue={(option, value) => option.id === value.id}
             renderInput={(params) => (
               <CustomTextField
-              label="Trade"
+                label="Trade"
                 {...params}
                 placeholder="Search Trade"
                 className="company-trade-selection"
@@ -251,28 +262,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
             )}
           />
         </Grid>
-
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            fullWidth
-            className="custom_color"
-            label={"(" + comapny?.currency + ")" + " Net Per Day"}
-            value={
-              Object.keys(comapny?.diff_data || {}).includes("net_rate_perday")
-                ? comapny?.diff_data.net_rate_perday?.old ?? ""
-                : formData.rate
-            }
-            disabled={Object.keys(comapny?.diff_data || {}).includes(
-              "net_rate_perday"
-            )}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, rate: e.target.value }))
-            }
-          />
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
@@ -283,22 +272,51 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
           />
         </Grid>
       </Grid>
-      <Grid size={{ xs: 6, sm: 6 }}>
-        <Box display={"flex"} justifyContent={"space-between"} mb={2}>
-          <Typography color="textSecondary">Gross Per Day</Typography>
-          <Typography color="textSecondary">
-            {comapny?.currency}
-            {gross}
-          </Typography>
-        </Box>
-        <Box display={"flex"} justifyContent={"space-between"}>
-          <Typography color="textSecondary">CIS (20%)</Typography>
-          <Typography color="textSecondary">
-            {comapny?.currency}
-            {cis}
-          </Typography>
-        </Box>
-      </Grid>
+
+      {payRate ? (
+        <>
+          <Grid container spacing={2} mb={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                className="custom_color"
+                label={"(" + comapny?.currency + ")" + " Net Per Day"}
+                value={
+                  Object.keys(comapny?.diff_data || {}).includes(
+                    "net_rate_perday"
+                  )
+                    ? comapny?.diff_data.net_rate_perday?.old ?? ""
+                    : formData.rate
+                }
+                disabled={Object.keys(comapny?.diff_data || {}).includes(
+                  "net_rate_perday"
+                )}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, rate: e.target.value }))
+                }
+              />
+            </Grid>
+          </Grid>
+          <Grid size={{ xs: 6, sm: 6 }}>
+            <Box display={"flex"} justifyContent={"space-between"} mb={2}>
+              <Typography color="textSecondary">Gross Per Day</Typography>
+              <Typography color="textSecondary">
+                {comapny?.currency}
+                {gross}
+              </Typography>
+            </Box>
+            <Box display={"flex"} justifyContent={"space-between"}>
+              <Typography color="textSecondary">CIS (20%)</Typography>
+              <Typography color="textSecondary">
+                {comapny?.currency}
+                {cis}
+              </Typography>
+            </Box>
+          </Grid>
+        </>
+      ) : (
+        ""
+      )}
       <Box mt={2}>
         <Button
           variant="contained"

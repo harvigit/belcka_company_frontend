@@ -80,7 +80,7 @@ const EditTeamPage = () => {
       }
     };
     fetchTrades();
-  }, []);
+  }, [teamId]);
 
   useEffect(() => {
     const fetchTeamData = async () => {

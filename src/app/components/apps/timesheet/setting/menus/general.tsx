@@ -28,6 +28,8 @@ import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import { TimePicker } from '@mui/x-date-pickers';
 import dayjs, { Dayjs } from 'dayjs';
 import toast from 'react-hot-toast';
+import { User } from 'next-auth';
+import { useSession } from 'next-auth/react';
 
 interface Timezone {
     id: string | number;
@@ -348,7 +350,9 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
         name: companySettings?.users.includes(id) ? (companySettings as any).pay_rate_users?.find((u: any) => String(u.user_id) === id)?.user_name || '' : '',
     })) || []);
     const [settings, updateSettings] = useSettingsState(companySettings || undefined);
-
+    const session = useSession();
+    const user = session.data?.user as User & { user_role_id?: number | null } & {id: number } & { company_id: number};
+    
     const timezoneDropdown = useSearchableDropdown();
     const userDropdown = useSearchableDropdown();
 
@@ -893,112 +897,120 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     />
                                     ))}
                                 </AvatarGroup>
-
-                                <Select
-                                    multiple
-                                    value={settings.users}
-                                    onChange={handleUserChange}
-                                    open={userDropdown.isOpen}
-                                    onOpen={userDropdown.handleOpen}
-                                    onClose={userDropdown.handleClose}
-                                    size="small"
-                                    displayEmpty
-                                    renderValue={(selected) => {
-                                        if (selected.length === 0) {
-                                            return 'Select Users';
-                                        }
-                                        return selected
-                                            .map((id) => companyUsers.find((cu) => cu.id === id)?.name || '')
-                                            .filter(Boolean)
-                                            .join(', ');
-                                    }}
-                                    sx={{
-                                        width: 200,
-                                        '& .MuiOutlinedInput-root': {
-                                            height: 40,
-                                            fontSize: '0.875rem',
-                                        },
-                                        '& .MuiSelect-select': {
-                                            padding: '8px 12px',
-                                        },
-                                    }}
-                                    MenuProps={styles.selectMenuProps}
+                                <Tooltip
+                                title={user.user_role_id !== 1 ? "Only owner can chnage this field" : ""}
+                                arrow
+                                placement="top"
                                 >
-                                    <ListSubheader
-                                        sx={{
-                                            bgcolor: 'background.paper',
-                                            position: 'sticky',
-                                            top: 0,
-                                            zIndex: 1,
-                                            padding: '8px 16px',
-                                            borderBottom: '1px solid #e0e0e0',
-                                        }}
-                                    >
-                                        <TextField
+                                    <span>
+                                        <Select
+                                            multiple
+                                            value={settings.users}
+                                            onChange={handleUserChange}
+                                            open={userDropdown.isOpen}
+                                            onOpen={userDropdown.handleOpen}
+                                            onClose={userDropdown.handleClose}
                                             size="small"
-                                            placeholder="Search user..."
-                                            fullWidth
-                                            value={userDropdown.searchText}
-                                            onChange={userDropdown.handleSearchChange}
-                                            variant="outlined"
-                                            InputProps={{
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <SearchIcon sx={{ color: 'action.active', fontSize: 20 }} />
-                                                    </InputAdornment>
-                                                ),
+                                            displayEmpty
+                                            disabled={user.user_role_id !== 1 }
+                                            renderValue={(selected) => {
+                                                if (selected.length === 0) {
+                                                    return 'Select Users';
+                                                }
+                                                return selected
+                                                    .map((id) => companyUsers.find((cu) => cu.id === id)?.name || '')
+                                                    .filter(Boolean)
+                                                    .join(', ');
                                             }}
                                             sx={{
+                                                width: 200,
                                                 '& .MuiOutlinedInput-root': {
-                                                    height: 36,
+                                                    height: 40,
                                                     fontSize: '0.875rem',
-                                                    '& fieldset': {
-                                                        borderColor: '#e0e0e0',
-                                                    },
-                                                    '&:hover fieldset': {
-                                                        borderColor: '#bdbdbd',
-                                                    },
-                                                    '&.Mui-focused fieldset': {
-                                                        borderColor: '#1976d2',
-                                                        borderWidth: 1,
-                                                    },
                                                 },
-                                                '& .MuiOutlinedInput-input': {
+                                                '& .MuiSelect-select': {
                                                     padding: '8px 12px',
                                                 },
                                             }}
-                                            onKeyDown={(e) => e.stopPropagation()}
-                                        />
-                                    </ListSubheader>
-
-                                    {filteredUsers.length > 0 ? (
-                                        filteredUsers.map((cu) => (
-                                            <MenuItem
-                                                key={cu.id}
-                                                value={cu.id}
+                                            MenuProps={styles.selectMenuProps}
+                                        >
+                                            <ListSubheader
                                                 sx={{
-                                                    fontSize: '0.875rem',
-                                                    padding: '10px 16px',
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                                                    },
-                                                    '&.Mui-selected': {
-                                                        backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                                                        '&:hover': {
-                                                            backgroundColor: 'rgba(25, 118, 210, 0.16)',
-                                                        },
-                                                    },
+                                                    bgcolor: 'background.paper',
+                                                    position: 'sticky',
+                                                    top: 0,
+                                                    zIndex: 1,
+                                                    padding: '8px 16px',
+                                                    borderBottom: '1px solid #e0e0e0',
                                                 }}
                                             >
-                                                {cu.name}
-                                            </MenuItem>
-                                        ))
-                                    ) : (
-                                        <MenuItem disabled sx={{ fontSize: '0.875rem', padding: '10px 16px' }}>
-                                            No user found
-                                        </MenuItem>
-                                    )}
-                                </Select>
+                                                <TextField
+                                                    size="small"
+                                                    placeholder="Search user..."
+                                                    fullWidth
+                                                    value={userDropdown.searchText}
+                                                    onChange={userDropdown.handleSearchChange}
+                                                    variant="outlined"
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <SearchIcon sx={{ color: 'action.active', fontSize: 20 }} />
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': {
+                                                            height: 36,
+                                                            fontSize: '0.875rem',
+                                                            '& fieldset': {
+                                                                borderColor: '#e0e0e0',
+                                                            },
+                                                            '&:hover fieldset': {
+                                                                borderColor: '#bdbdbd',
+                                                            },
+                                                            '&.Mui-focused fieldset': {
+                                                                borderColor: '#1976d2',
+                                                                borderWidth: 1,
+                                                            },
+                                                        },
+                                                        '& .MuiOutlinedInput-input': {
+                                                            padding: '8px 12px',
+                                                        },
+                                                    }}
+                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                />
+                                            </ListSubheader>
+
+                                            {filteredUsers.length > 0 ? (
+                                                filteredUsers.map((cu) => (
+                                                    <MenuItem
+                                                        key={cu.id}
+                                                        value={cu.id}
+                                                        sx={{
+                                                            fontSize: '0.875rem',
+                                                            padding: '10px 16px',
+                                                            '&:hover': {
+                                                                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                                            },
+                                                            '&.Mui-selected': {
+                                                                backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(25, 118, 210, 0.16)',
+                                                                },
+                                                            },
+                                                        }}
+                                                    >
+                                                        {cu.name}
+                                                    </MenuItem>
+                                                ))
+                                            ) : (
+                                                <MenuItem disabled sx={{ fontSize: '0.875rem', padding: '10px 16px' }}>
+                                                    No user found
+                                                </MenuItem>
+                                            )}
+                                        </Select>
+                                    </span>
+                                </Tooltip>
                                </Box>
                             </Box>
 
