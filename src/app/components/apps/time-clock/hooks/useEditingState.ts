@@ -7,6 +7,10 @@ export const useEditingState = () => {
     const [editingShifts, setEditingShifts] = useState<{
         [key: string]: { shift_id: number | string; editingField: 'shift' }
     }>({});
+    
+    const [editingProjects, setEditingProjects] = useState<{
+        [key: string]: { project_id: number | string; editingField: 'project' }
+    }>({});
 
     const startEditingField = useCallback((worklogId: string, field: 'start' | 'end', log: any) => {
         if (log?.status === 6 || log?.status === '6') return;
@@ -71,6 +75,36 @@ export const useEditingState = () => {
         }));
     }, []);
 
+    const startEditingProject = useCallback((worklogId: string, currentProjectId: number | string, log: any) => {
+        if (log?.status === 6 || log?.status === '6') return;
+
+        setEditingProjects(prev => ({
+            ...prev,
+            [worklogId]: {
+                project_id: currentProjectId || '',
+                editingField: 'project',
+            }
+        }));
+    }, []);
+    
+    const updateEditingProject = useCallback((worklogId: string, projectId: number | string) => {
+        setEditingProjects(prev => ({
+            ...prev,
+            [worklogId]: {
+                ...prev[worklogId],
+                project_id: projectId
+            }
+        }));
+    }, []);
+
+    const cancelEditingProject = useCallback((worklogId: string) => {
+        setEditingProjects(prev => {
+            const newState = {...prev};
+            delete newState[worklogId];
+            return newState;
+        });
+    }, []);
+
     return {
         editingWorklogs,
         savingWorklogs,
@@ -82,5 +116,9 @@ export const useEditingState = () => {
         cancelEditingShift,
         updateEditingField,
         updateEditingShift,
+        editingProjects,
+        startEditingProject,
+        updateEditingProject,
+        cancelEditingProject,
     };
 };

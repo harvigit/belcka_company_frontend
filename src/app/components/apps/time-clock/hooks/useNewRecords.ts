@@ -12,6 +12,7 @@ export const useNewRecords = () => {
             [recordKey]: {
                 date,
                 shift_id: '',
+                project_id: '',
                 start: '',
                 end: '',
             }

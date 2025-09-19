@@ -5,13 +5,14 @@ import { Box, Button, Tab, Tabs } from '@mui/material';
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css';
 
-import TimesheetList from './list/timesheet';
+// Commented out TimesheetList import
+// import TimesheetList from './list/timesheet';
 import TimeClock from '@/app/components/apps/time-clock/time-clock';
 import { IconSettings } from '@tabler/icons-react';
 import Setting from './setting/settings';
 
 const TimesheetPage = () => {
-    const [value, setValue] = useState(0);
+    const [value, setValue] = useState(0); // Changed to 0 since we only have one tab now
     const [settingOpen, setSettingOpen] = useState(false);
 
     const handleTabChange = (event: any, newValue: any) => {
@@ -37,47 +38,59 @@ const TimesheetPage = () => {
                     className="timesheet-tabs"
                     value={value}
                     onChange={handleTabChange}
-                    aria-label="minimal-tabs"
-                    TabIndicatorProps={{ style: { display: 'none' } }}
+                    aria-label="timesheet-tabs"
                     sx={{
                         borderRadius: '12px',
-                        minHeight: '40px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        mb: 2,
                         '& .MuiTab-root': {
-                            minHeight: 36,
                             textTransform: 'none',
-                            fontSize: 16,
-                            color: '#555',
-                            padding: '0 8px',
+                            fontSize: '16px',
+                            fontWeight: 500,
+                            color: '#666',
+                            padding: '12px 24px',
+                            minHeight: '44px',
+                            borderRadius: '10px',
+                            margin: '0 4px',
+                            transition: 'all 0.3s ease',
+                            '&.Mui-selected': {
+                                color: '#1976d2',
+                                fontWeight: 600,
+                            },
+                        },
+                        '& .MuiTabs-indicator': {
+                            display: 'none',
                         },
                     }}
                 >
-                    <Tab
+                    {/* Commented out Timesheets tab */}
+                    {/*<Tab
                         label="Timesheets"
                         sx={{
                             textTransform: 'none',
                             borderRadius: '10px',
-                            minHeight: '32px',
-                            minWidth: 'auto',
+                            minHeight: '44px',
                             px: 3,
-                            py: 0.5,
-                            fontWeight: value === 0 ? '600' : '400',
+                            py: 1.5,
+                            fontWeight: value === 0 ? 600 : 500,
                             transition: 'all 0.3s ease',
+                            '&.Mui-selected': {
+                                backgroundColor: '#e3f2fd',
+                                color: '#1976d2',
+                            },
                         }}
-                    />
+                    />*/}
                     <Tab
                         label="Time Clock"
                         sx={{
                             textTransform: 'none',
                             borderRadius: '10px',
-                            minHeight: '32px',
-                            minWidth: 'auto',
+                            minHeight: '44px',
                             px: 3,
-                            py: 0.5,
-                            fontWeight: value === 1 ? '600' : '400',
+                            py: 1.5,
+                            fontWeight: value === 0 ? 600 : 500,
                             transition: 'all 0.3s ease',
+                            '&.Mui-selected': {
+                                color: '#1976d2',
+                            },
                         }}
                     />
                 </Tabs>
@@ -101,8 +114,9 @@ const TimesheetPage = () => {
                 </Button>
             </Box>
 
-            {value === 0 && <TimesheetList />}
-            {value === 1 && <TimeClock />}
+            {/* Commented out TimesheetList rendering */}
+            {/*{value === 0 && <TimesheetList />}*/}
+            {value === 0 && <TimeClock />}
 
             <Setting
                 settingOpen={settingOpen}

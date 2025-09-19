@@ -2,12 +2,9 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-    Avatar, Box, Button, Chip, IconButton, InputAdornment,
+    Box, Button, IconButton, InputAdornment,
     TextField, Typography, Tooltip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions
+    Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { Stack } from '@mui/system';
 import { IconChevronRight, IconSearch, IconTrash } from '@tabler/icons-react';
@@ -21,7 +18,7 @@ interface WorksTabProps {
 
 export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     const [tabData, setTabData] = useState<any[]>([]);
-    const [searchUser, setSearchUser] = useState<string>('');
+    const [searchWork, setSearchWork] = useState<string>('');
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number>(0);
 
@@ -63,42 +60,47 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     }, [addressId]);
 
     const filteredData = useMemo(() => {
-        const search = searchUser.trim().toLowerCase();
+        const search = searchWork.trim().toLowerCase();
         if (!search) return tabData;
+
         return tabData.filter(
             (item) =>
-                item.user_name?.toLowerCase().includes(search) ||
-                item.work_name?.toLowerCase().includes(search)
+                item.trade_name?.toLowerCase().includes(search) ||
+                item.name?.toLowerCase().includes(search)
         );
-    }, [searchUser, tabData]);
+    }, [searchWork, tabData]);
 
     const handleTaskDelete = async () => {
         try {
             const payload = {
                 task_ids: String(selectedIds),
             };
-            const response = await api.post(
-                "company-tasks/delete",
-                payload
-            );
-            if(response.data.IsSuccess == true){
+            const response = await api.post("company-tasks/delete", payload);
+
+            if (response.data.IsSuccess === true) {
                 toast.success(response.data.message);
                 await fetchWorkTabData();
             }
         } catch (error) {
         } finally {
-        setOpenDialog(false);
+            setOpenDialog(false);
         }
-    }
+    };
+
     return (
         <Box>
-            {/* Search bar and filter button */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2} sx={{ flexWrap: 'wrap' }}>
+            <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                mb={2}
+                sx={{ flexWrap: 'wrap' }}
+            >
                 <TextField
                     placeholder="Search..."
                     size="small"
-                    value={searchUser}
-                    onChange={(e) => setSearchUser(e.target.value)}
+                    value={searchWork}
+                    onChange={(e) => setSearchWork(e.target.value)}
                     InputProps={{
                         endAdornment: (
                             <InputAdornment position="end">
@@ -108,9 +110,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     }}
                     sx={{ width: { xs: '100%', sm: '80%' }, mb: { xs: 2, sm: 0 } }}
                 />
-                {/*<Button variant="contained" onClick={() => setOpen(true)}>*/}
-                {/*    <IconFilter width={18} />*/}
-                {/*</Button>*/}
             </Stack>
 
             {/* List of works */}
@@ -133,6 +132,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                 },
                             }}
                         >
+                            {/* Labels */}
                             <Box
                                 sx={{
                                     position: 'absolute',
@@ -213,6 +213,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                 </Box>
                             </Box>
 
+                            {/* Work row */}
                             <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', mt: 1 }}>
                                 <Box sx={{ flexGrow: 1 }}>
                                     <Typography fontWeight="bold" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
@@ -220,12 +221,14 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                                     </Typography>
                                 </Box>
 
-                                {work.is_checklog == false && (
-                                    <IconButton color="error" 
+                                {work.is_checklog === false && (
+                                    <IconButton
+                                        color="error"
                                         onClick={() => {
-                                         setOpenDialog(true)
-                                         setSelectedIds(work.id)
-                                        }}>
+                                            setOpenDialog(true);
+                                            setSelectedIds(work.id);
+                                        }}
+                                    >
                                         <IconTrash width={18} />
                                     </IconButton>
                                 )}
@@ -250,31 +253,30 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                 </Typography>
             )}
 
-             {/* delete work */}
-                <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+            <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>
                     <Typography color="textSecondary">
-                    Are you sure you want to delete this task?
+                        Are you sure you want to delete this task?
                     </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button
-                    onClick={() => setOpenDialog(false)}
-                    variant="outlined"
-                    color="primary"
+                        onClick={() => setOpenDialog(false)}
+                        variant="outlined"
+                        color="primary"
                     >
-                    Cancel
+                        Cancel
                     </Button>
                     <Button
-                    onClick={() => handleTaskDelete()}
-                    variant="outlined"
-                    color="error"
+                        onClick={handleTaskDelete}
+                        variant="outlined"
+                        color="error"
                     >
-                    Delete
+                        Delete
                     </Button>
                 </DialogActions>
-                </Dialog>
+            </Dialog>
         </Box>
     );
 };

@@ -290,11 +290,11 @@ const TimeClock = () => {
                 header: 'Total Hours',
                 cell: (info: any) => formatHour(info.getValue()) || '-',
             }),
-            columnHelper.accessor('total_break_hours', {
-                id: 'total_break_hours',
-                header: 'Total Break Hours',
-                cell: (info: any) => formatHour(info.getValue()) || '-',
-            }),
+            // columnHelper.accessor('total_break_hours', {
+            //     id: 'total_break_hours',
+            //     header: 'Total Break Hours',
+            //     cell: (info: any) => formatHour(info.getValue()) || '-',
+            // }),
             columnHelper.accessor('payable_total_hours', {
                 id: 'payable_total_hours',
                 header: 'Payable Hours',

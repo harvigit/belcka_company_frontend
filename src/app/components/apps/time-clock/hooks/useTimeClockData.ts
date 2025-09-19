@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import api from '@/utils/axios';
-import {ConflictDetail, Shift, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
+import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
 import { TimeClock } from '@/app/components/apps/time-clock/time-clock';
 
 export const useTimeClockData = (user_id: any, currency: string) => {
@@ -11,6 +11,7 @@ export const useTimeClockData = (user_id: any, currency: string) => {
     const [totalConflicts, setTotalConflicts] = useState<number>(0);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
 
     const fetchTimeClockData = useCallback(async (start: Date, end: Date): Promise<void> => {
         try {
@@ -39,6 +40,7 @@ export const useTimeClockData = (user_id: any, currency: string) => {
             const response = await api.get('/time-clock/resources', {params: {companyId}});
             if (response.data.IsSuccess) {
                 setShifts(response.data.shifts || []);
+                setProjects(response.data.projects || []);
             }
         } catch (error) {
             console.error('Error fetching timeClock resources:', error);
@@ -54,6 +56,7 @@ export const useTimeClockData = (user_id: any, currency: string) => {
         setTotalConflicts,
         conflictDetails,
         shifts,
+        projects,
         fetchTimeClockData,
     };
 };

@@ -244,7 +244,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 ),
             }),
 
-              columnHelper.accessor("end_date", {
+            columnHelper.accessor("end_date", {
                 id: "end_date",
                 header: () => "End date",
                 cell: (info) => {

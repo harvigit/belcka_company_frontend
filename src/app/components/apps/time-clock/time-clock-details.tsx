@@ -57,6 +57,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         setTotalConflicts,
         conflictDetails,
         shifts,
+        projects,
         fetchTimeClockData,
     } = useTimeClockData(user_id, currency);
 
@@ -71,6 +72,10 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         cancelEditingShift,
         updateEditingField,
         updateEditingShift,
+        editingProjects,
+        startEditingProject,
+        updateEditingProject,
+        cancelEditingProject,
     } = useEditingState();
 
     const {
@@ -342,6 +347,45 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         }
     };
 
+    const saveProjectChanges = async (worklogId: string, originalLog: any) => {
+        const editedData = editingProjects[worklogId];
+        if (!editedData) return;
+
+        if (isRecordLocked(originalLog)) {
+            cancelEditingProject(worklogId);
+            return;
+        }
+
+        const originalProjectId = originalLog.project_id;
+        const newProjectId = editedData.project_id;
+
+        if (originalProjectId === newProjectId) {
+            cancelEditingProject(worklogId);
+            return;
+        }
+
+        setSavingWorklogs(prev => new Set(prev).add(worklogId));
+        try {
+            await api.post('/time-clock/edit-worklog-project', {
+                user_worklog_id: originalLog.worklog_id,
+                project_id: newProjectId,
+            });
+
+            cancelEditingProject(worklogId);
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+        } catch (error) {
+            console.error('Error saving project:', error);
+        } finally {
+            setSavingWorklogs(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(worklogId);
+                return newSet;
+            });
+        }
+    };
+
     const saveNewRecord = async (recordKey: string) => {
         const newRecord = newRecords[recordKey];
         if (!newRecord) return;
@@ -375,6 +419,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 device_model_type: 'web',
                 date: formattedDate,
                 shift_id: newRecord.shift_id,
+                project_id: newRecord.project_id,
                 start_time: formattedStart,
                 end_time: formattedEnd,
             };
@@ -850,12 +895,12 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 cell: ({ row }) => row.original.rowType === 'day' ? row.original.employeeNotes : null,
                 size: 150,
             },
-            {
-                id: 'managerNotes',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Manager notes</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.managerNotes : null,
-                size: 150,
-            },
+            // {
+            //     id: 'managerNotes',
+            //     header: () => <span style={{ display: 'block', textAlign: 'center' }}>Manager notes</span>,
+            //     cell: ({ row }) => row.original.rowType === 'day' ? row.original.managerNotes : null,
+            //     size: 150,
+            // },
         ],
         [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect]
     );
@@ -952,6 +997,12 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 saveShiftChanges={saveShiftChanges}
                 saveNewRecord={saveNewRecord}
                 cancelNewRecord={cancelNewRecord}
+                projects={projects}
+                editingProjects={editingProjects}
+                startEditingProject={startEditingProject}
+                updateEditingProject={updateEditingProject}
+                cancelEditingProject={cancelEditingProject}
+                saveProjectChanges={saveProjectChanges}
             />
 
             <ActionBar

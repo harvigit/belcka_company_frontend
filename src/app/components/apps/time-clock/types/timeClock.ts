@@ -76,6 +76,11 @@ export interface Shift {
     name: string;
 }
 
+export interface Project {
+    id: number;
+    name: string;
+}
+
 export interface ConflictItem {
     user_id: number;
     date: string;
@@ -117,6 +122,7 @@ export type EditingWorklog = {
 export type NewRecord = {
     date: string;
     shift_id: number | string;
+    project_id: number | string;
     start: string;
     end: string;
 };

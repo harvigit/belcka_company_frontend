@@ -18,8 +18,9 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 import CheckLogRows from '../time-clock-details/check-log-list';
 import EditableTimeCell from './EditableTimeCell';
 import EditableShiftCell from './EditableShiftCell';
+import EditableProjectCell from './EditableProjectCell';
 import NewRecordRow from './NewRecordRow';
-import {DailyBreakdown, EditingWorklog, NewRecord, Shift} from '@/app/components/apps/time-clock/types/timeClock';
+import {DailyBreakdown, EditingWorklog, NewRecord, Shift, Project} from '@/app/components/apps/time-clock/types/timeClock';
 
 interface TimeClockTableProps {
     table: any;
@@ -53,6 +54,12 @@ interface TimeClockTableProps {
     saveShiftChanges: (worklogId: string, originalLog: any) => void;
     saveNewRecord: (recordKey: string) => void;
     cancelNewRecord: (recordKey: string) => void;
+    projects: Project[],
+    editingProjects: { [key: string]: { project_id: number | string; editingField: 'project' } },
+    startEditingProject: (worklogId: string, currentShiftId: number | string, log: any) => void;
+    updateEditingProject: (worklogId: string, shiftId: number | string) => void;
+    saveProjectChanges: (worklogId: string, originalLog: any) => void;
+    cancelEditingProject: (worklogId: string) => void;
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -87,6 +94,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            saveShiftChanges,
                                                            saveNewRecord,
                                                            cancelNewRecord,
+                                                           projects,
+                                                           editingProjects,
+                                                           startEditingProject,
+                                                           updateEditingProject,
+                                                           saveProjectChanges,
+                                                           cancelEditingProject,
                                                        }) => {
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
@@ -104,7 +117,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     };
 
     const visibleColumnConfigs = getVisibleColumnConfigs();
-
+    
     return (
         <Box sx={{ flex: 1, overflow: 'auto', paddingBottom: selectedRows.size > 0 ? '80px' : '0px' }}>
             <TableContainer sx={{ overflowY: 'hidden' }}>
@@ -265,7 +278,30 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {visibleColumnConfigs.project?.visible && (
                                                     <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
-                                                        {log.project_name || '--'}
+                                                        {(log.user_checklogs && log.user_checklogs.length > 0) || isLogLocked ? (
+                                                            <Box sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                opacity: isLogLocked ? 0.6 : 1
+                                                            }}>
+                                                                {log.project_name || '--'}
+                                                            </Box>
+                                                        ) : (
+                                                            <EditableProjectCell
+                                                                worklogId={worklogId}
+                                                                currentProjectId={log.project_id}
+                                                                currentProjectName={log.project_name}
+                                                                log={log}
+                                                                projects={projects}
+                                                                editingProjects={editingProjects}
+                                                                savingWorklogs={savingWorklogs}
+                                                                startEditingProject={startEditingProject}
+                                                                updateEditingProject={updateEditingProject}
+                                                                saveProjectChanges={saveProjectChanges}
+                                                                cancelEditingProject={cancelEditingProject}
+                                                            />
+                                                        )}
                                                     </TableCell>
                                                 )}
 
@@ -422,6 +458,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                         recordKey={recordKey}
                                         newRecord={newRecord}
                                         shifts={shifts}
+                                        projects={projects}
                                         isSaving={savingNewRecords.has(recordKey)}
                                         visibleColumnConfigs={visibleColumnConfigs}
                                         validateAndFormatTime={validateAndFormatTime}
@@ -492,6 +529,33 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     const [recordKey, newRecord] = dateNewRecords[0];
                                                     const isSaving = savingNewRecords.has(recordKey);
 
+                                                    if (column.id === 'project') {
+                                                        return (
+                                                            <TableCell align="center" sx={{ py: 0.5, width: '100%', minHeight: '45px' }}>
+                                                                <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                                                                    <Select
+                                                                        value={newRecord.project_id}
+                                                                        onChange={(e) => updateNewRecord(recordKey, 'project_id', e.target.value)}
+                                                                        disabled={isSaving}
+                                                                        displayEmpty
+                                                                        sx={{
+                                                                            height: '32px',
+                                                                            '& .MuiSelect-select': { fontSize: '0.875rem', py: '6px', px: '8px', textAlign: 'center' },
+                                                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                                                        }}
+                                                                    >
+                                                                        <MenuItem value="">Select Project</MenuItem>
+                                                                        {projects.map((project) => (
+                                                                            <MenuItem key={project.id} value={project.id}>
+                                                                                {project.name}
+                                                                            </MenuItem>
+                                                                        ))}
+                                                                    </Select>
+                                                                </FormControl>
+                                                            </TableCell>
+                                                        );
+                                                    }
+                                                    
                                                     if (column.id === 'shift') {
                                                         return (
                                                             <TableCell
