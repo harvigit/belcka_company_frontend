@@ -181,7 +181,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       if (res.data?.info) {
         setProject(res.data.info);
 
-        const cookieProjectId = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
+        const cookieProjectId = Cookies.get(
+          COOKIE_PREFIX + user.id + user.company_id
+        );
         const validProjectId = res.data.info.some(
           (p: any) => p.id === Number(cookieProjectId)
         )
@@ -204,9 +206,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({
 
   useEffect(() => {
     if (projectId && user?.id) {
-      Cookies.set(COOKIE_PREFIX + user.id + user.company_id, projectId.toString(), {
-        expires: 30,
-      });
+      Cookies.set(
+        COOKIE_PREFIX + user.id + user.company_id,
+        projectId.toString(),
+        {
+          expires: 30,
+        }
+      );
     }
   }, [projectId, user?.id]);
 
@@ -348,7 +354,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   };
 
-   const handleProjectSubmit = async (e: React.FormEvent) => {
+  const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
@@ -443,6 +449,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             renderInput={(params) => (
               <CustomTextField
                 {...params}
+                InputProps={{
+                  ...params.InputProps,
+                  readOnly: true,
+                }}
                 placeholder="Projects"
                 className="project-selection"
                 onClick={() => setDialogOpen(true)}
@@ -1002,7 +1012,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               </Grid>
             ))}
           </Grid>
-           <CreateProject
+          <CreateProject
             open={projectOpen}
             onClose={() => setProjectOpen(false)}
             formData={formData}
@@ -1010,7 +1020,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             handleSubmit={handleProjectSubmit}
             isSaving={isSaving}
           />
-          
         </Box>
       </Drawer>
     </Box>

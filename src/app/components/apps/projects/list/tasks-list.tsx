@@ -258,7 +258,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                     justifyContent={"space-between"}
                     >
                     <Typography variant="h5" color="textPrimary">
-                        {formatDate(info.getValue())}
+                        {info.getValue()}
                     </Typography>
                     <Badge
                         badgeContent={info.row.original.image_count}

@@ -49,6 +49,9 @@ import { Avatar } from "@mui/material";
 import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 dayjs.extend(customParseFormat);
 
@@ -75,27 +78,31 @@ const TablePagination = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const searchParams = useSearchParams();
   const projectId = searchParams ? searchParams.get("project_id") : "";
+  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: string | null };
 
-  useEffect(() => {
-    const fetchTrades = async () => {
-      setLoading(true);
-      try {
-        let url = "";
-        if (projectId) {
-          url = `user/get-user-lists?project_id=${projectId}`;
-        } else {
-          url = "user/get-user-lists";
-        }
-        const res = await api.get(url);
-        if (res.data) {
-          setData(res.data.info);
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      let url = "";
+      if (projectId) {
+        url = `user/get-user-lists?project_id=${projectId}`;
+      } else {
+        url = "user/get-user-lists";
       }
-      setLoading(false);
-    };
-    fetchTrades();
+      const res = await api.get(url);
+      if (res.data) {
+        setData(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    }
+    setLoading(false);
+  };
+  useEffect(() => {
+    fetchUsers();
   }, [projectId]);
 
   const uniqueTeams = useMemo(
@@ -401,11 +408,16 @@ const TablePagination = () => {
         </Dialog>
         <Stack direction={"row-reverse"} mb={1} mr={1}>
           {selectedRowIds.size > 0 && (
-            // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
             <Button
               variant="outlined"
               color="error"
               startIcon={<IconTrash width={18} />}
+              onClick={() => {
+                const selectedIds = Array.from(selectedRowIds);
+                console.log(selectedIds, "selectedIds", selectedRowIds);
+                setUsersToDelete(selectedIds.filter(Boolean));
+                setConfirmOpen(true);
+              }}
             >
               Remove
             </Button>
@@ -413,6 +425,48 @@ const TablePagination = () => {
         </Stack>
       </Stack>
       <Divider />
+      {/* remove user */}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography color="textSecondary">
+            Are you sure you want to remove {usersToDelete.length} user
+            {usersToDelete.length > 1 ? "s" : ""} from the team?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmOpen(false)}
+            variant="outlined"
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const payload = {
+                  user_ids: usersToDelete.join(","),
+                  company_id: user.company_id
+                };
+                const response = await api.post("user/remove-account", payload);
+                toast.success(response.data.message);
+                setSelectedRowIds(new Set());
+                await fetchUsers();
+              } catch (error) {
+                console.error("Failed to remove users", error);
+              } finally {
+                setConfirmOpen(false);
+              }
+            }}
+            variant="outlined"
+            color="error"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
