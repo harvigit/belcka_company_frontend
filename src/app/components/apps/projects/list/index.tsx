@@ -452,6 +452,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 InputProps={{
                   ...params.InputProps,
                   readOnly: true,
+                  style: { caretColor: "transparent" },
                 }}
                 placeholder="Projects"
                 className="project-selection"
