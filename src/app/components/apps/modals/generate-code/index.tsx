@@ -36,10 +36,28 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     }
 
     try {
-      await navigator.clipboard.writeText(code);
-      toast.success("Code copied!");
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+        toast.success("Code copied!");
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = code;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const success = document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        if (success) {
+          toast.success("Code copied!");
+        } else {
+          throw new Error("Fallback copy failed");
+        }
+      }
     } catch (err) {
-      console.error("Clipboard write failed:", err);
+      console.error("Clipboard copy failed:", err);
       toast.error("Failed to copy code!");
     }
   };
