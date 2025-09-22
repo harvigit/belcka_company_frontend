@@ -29,38 +29,15 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    try {
-      const generatedCode = await onGenerate();
-      setCode(generatedCode);
-
-      setResendTimer(15 * 60); // 15 minute
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      intervalRef.current = setInterval(() => {
-        setResendTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(intervalRef.current!);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (err) {
-      toast.error("Failed to generate code");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-  const handleCopyCode = async (text: string) => {
+  // Unified copy function
+  const copyToClipboard = (text: string) => {
     if (!text) return toast.error("Nothing to copy");
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        toast.success("Copied!");
+        navigator.clipboard
+          .writeText(text)
+          .then(() => toast.success("Copied!"));
         return;
       }
 
@@ -87,25 +64,17 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     }
   };
 
-  // const fallbackCopyCode = (codeToCopy: string) => {
-  //   const textArea = document.createElement("textarea");
-  //   textArea.value = codeToCopy;
-  //   document.body.appendChild(textArea);
-  //   textArea.select();
-  //   try {
-  //     document.execCommand("copy");
-  //     toast.success("code copied!");
-  //   } catch (err) {
-  //     console.error("Fallback failed:", err);
-  //     toast.error("Failed to copy code!");
-  //   } finally {
-  //     document.body.removeChild(textArea);
-  //   }
-  // };
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    try {
+      const generatedCode = await onGenerate();
+      if (!generatedCode) return toast.error("No code received");
 
-  // Start timer on code set
-  useEffect(() => {
-    if (code) {
+      setCode(generatedCode); // set code first
+      setResendTimer(15 * 60); // 15 minutes
+
+      if (intervalRef.current) clearInterval(intervalRef.current);
+
       intervalRef.current = setInterval(() => {
         setResendTimer((prev) => {
           if (prev <= 1) {
@@ -115,12 +84,12 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
           return prev - 1;
         });
       }, 1000);
+    } catch (err) {
+      toast.error("Failed to generate code");
+    } finally {
+      setIsGenerating(false);
     }
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [code]);
+  };
 
   const formatTimer = () => {
     const m = Math.floor(resendTimer / 60)
@@ -158,13 +127,18 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   };
 
   const handleDialogClose = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setCode(null);
     setResendTimer(0);
     onClose();
   };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   return (
     <Dialog open={open} onClose={handleDialogClose} fullWidth maxWidth="xs">
@@ -199,7 +173,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
               variant="outlined"
               startIcon={<ContentCopyIcon />}
               sx={{ mt: 2 }}
-              onClick={() => handleCopyCode(code ?? "")}
+              onClick={() => copyToClipboard(code)}
             >
               Copy Code
             </Button>
