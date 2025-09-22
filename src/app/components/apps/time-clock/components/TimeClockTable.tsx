@@ -9,18 +9,22 @@ import {
     Box,
     Stack,
     Typography,
-    IconButton, Button, TextField,
-    MenuItem, FormControl, Select,
+    IconButton,
+    Button,
+    TextField,
+    MenuItem,
+    FormControl,
+    Select,
 } from '@mui/material';
 import { flexRender, ColumnDef } from '@tanstack/react-table';
-import { IconChevronDown, IconChevronRight, IconExclamationMark, IconPlus } from '@tabler/icons-react';
+import { IconChevronDown, IconChevronRight, IconExclamationMark, IconPlus, IconTrash } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import CheckLogRows from '../time-clock-details/check-log-list';
 import EditableTimeCell from './EditableTimeCell';
 import EditableShiftCell from './EditableShiftCell';
 import EditableProjectCell from './EditableProjectCell';
 import NewRecordRow from './NewRecordRow';
-import {DailyBreakdown, EditingWorklog, NewRecord, Shift, Project} from '@/app/components/apps/time-clock/types/timeClock';
+import { DailyBreakdown, EditingWorklog, NewRecord, Shift, Project } from '@/app/components/apps/time-clock/types/timeClock';
 
 interface TimeClockTableProps {
     table: any;
@@ -54,12 +58,13 @@ interface TimeClockTableProps {
     saveShiftChanges: (worklogId: string, originalLog: any) => void;
     saveNewRecord: (recordKey: string) => void;
     cancelNewRecord: (recordKey: string) => void;
-    projects: Project[],
-    editingProjects: { [key: string]: { project_id: number | string; editingField: 'project' } },
+    projects: Project[];
+    editingProjects: { [key: string]: { project_id: number | string; editingField: 'project' } };
     startEditingProject: (worklogId: string, currentShiftId: number | string, log: any) => void;
     updateEditingProject: (worklogId: string, shiftId: number | string) => void;
     saveProjectChanges: (worklogId: string, originalLog: any) => void;
     cancelEditingProject: (worklogId: string) => void;
+    onDeleteClick: (worklogId: string) => void;
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -100,6 +105,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            updateEditingProject,
                                                            saveProjectChanges,
                                                            cancelEditingProject,
+                                                           onDeleteClick
                                                        }) => {
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
@@ -109,7 +115,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             const isVisible = visibleColumns.some((visCol: any) => visCol.id === col.id);
             configs[col.id] = {
                 width: col.columnDef.size || 100,
-                visible: isVisible
+                visible: isVisible,
             };
         });
 
@@ -117,7 +123,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     };
 
     const visibleColumnConfigs = getVisibleColumnConfigs();
-    
+
     return (
         <Box sx={{ flex: 1, overflow: 'auto', paddingBottom: selectedRows.size > 0 ? '80px' : '0px' }}>
             <TableContainer sx={{ overflowY: 'hidden' }}>
@@ -193,6 +199,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             const dateNewRecords = Object.entries(newRecords).filter(
                                 ([_, rec]) => rec.date === rowData.date
                             );
+                            const hasRecords = hasValidWorklogData(rowData) || dateNewRecords.length > 0;
 
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
@@ -215,12 +222,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 sx={{
                                                     '& td': { textAlign: 'center' },
                                                     backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
+                                                    cursor: 'pointer',
+                                                    '&:hover .action-icon': {
+                                                        display: 'block',
+                                                        padding: 0
+                                                    },
                                                 }}
                                             >
                                                 {isFirstRow && visibleColumnConfigs.select?.visible && (
                                                     <TableCell
                                                         rowSpan={rowSpan}
                                                         align="center"
+                                                        className="rowspan-cell"
                                                         sx={{ width: `${visibleColumnConfigs.select.width}px`, py: 0.5 }}
                                                     >
                                                         <CustomCheckbox
@@ -231,7 +244,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
 
                                                 {isFirstRow && visibleColumnConfigs.date?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                                                             <Typography variant='h4'>{rowData.date}</Typography>
                                                             <IconButton
@@ -414,26 +427,54 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
 
                                                 {isFirstRow && visibleColumnConfigs.dailyTotal?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
                                                         {rowData.dailyTotal}
                                                     </TableCell>
                                                 )}
 
                                                 {isFirstRow && visibleColumnConfigs.payableAmount?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
                                                         {rowData.payableAmount}
                                                     </TableCell>
                                                 )}
 
                                                 {isFirstRow && visibleColumnConfigs.employeeNotes?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
                                                         {rowData.employeeNotes}
                                                     </TableCell>
                                                 )}
 
-                                                {isFirstRow && visibleColumnConfigs.managerNotes?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
-                                                        {rowData.managerNotes}
+                                                {visibleColumnConfigs.action?.visible && (
+                                                    <TableCell
+                                                        align="center"
+                                                        className="action-cell"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                            textAlign: 'center',
+                                                            verticalAlign: 'middle',
+                                                        }}
+                                                    >
+                                                        <Button
+                                                            size="small"
+                                                            className="action-icon"
+                                                            sx={{
+                                                                display: 'none',
+                                                                padding: 0,
+                                                                width: '30px',
+                                                                height: '30px',
+                                                                background: 'none',
+                                                                '&:hover': {
+                                                                    color: '#fc4b6c',
+                                                                    background: 'none',
+                                                                },
+                                                            }}
+                                                            onClick={() => onDeleteClick(log.worklog_id)}
+                                                            aria-label="Delete worklog" 
+                                                        >
+                                                            <IconTrash size={18} />
+                                                        </Button>
                                                     </TableCell>
                                                 )}
                                             </TableRow>
@@ -475,7 +516,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                     </React.Fragment>
                                 );
                             } else {
-                                // Single or empty day
                                 return (
                                     <React.Fragment key={row.id}>
                                         <TableRow
@@ -484,6 +524,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 backgroundColor: isRecordLocked(row.original)
                                                     ? 'rgba(244, 67, 54, 0.02)'
                                                     : 'transparent',
+                                                cursor: 'pointer',
+                                                '&:hover .action-icon': {
+                                                    display: 'block', // Show icon when row is hovered
+                                                },
                                             }}
                                         >
                                             {row.getVisibleCells().map((cell: any) => {
@@ -508,7 +552,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             }}
                                                         >
                                                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                            <Typography variant='h4'>{row.original.date}</Typography>
+                                                                <Typography variant='h4'>{row.original.date}</Typography>
                                                                 {!hasNewRecords && (
                                                                     <IconButton
                                                                         onClick={() => startAddingNewRecord(row.original.date as string)}
@@ -555,7 +599,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             </TableCell>
                                                         );
                                                     }
-                                                    
+
                                                     if (column.id === 'shift') {
                                                         return (
                                                             <TableCell
@@ -676,9 +720,30 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             textAlign: 'center',
                                                             verticalAlign: 'middle',
+                                                            height: '45px',
                                                         }}
+                                                        className={column.id === 'action' ? 'action-cell' : ''}
                                                     >
-                                                        {flexRender(column.columnDef.cell, cell.getContext())}
+                                                        {column.id === 'action' ? (
+                                                            hasValidWorklogData(rowData) ? (
+                                                                <Button
+                                                                    size="small"
+                                                                    className="action-icon"
+                                                                    sx={{
+                                                                        display: 'none',
+                                                                        '&:hover': {
+                                                                            color: '#fc4b6c',
+                                                                        },
+                                                                    }}
+                                                                >
+                                                                    <IconTrash size={18} />
+                                                                </Button>
+                                                            ) : (
+                                                                <Box sx={{ width: '30px', height: '30px' }} />
+                                                            )
+                                                        ) : (
+                                                            flexRender(column.columnDef.cell, cell.getContext())
+                                                        )}
                                                     </TableCell>
                                                 );
                                             })}
@@ -705,4 +770,5 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         </Box>
     );
 };
+
 export default TimeClockTable;

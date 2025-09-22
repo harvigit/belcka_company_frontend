@@ -719,6 +719,34 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             }
         }
     };
+
+    const handleDeleteWorklog = async (worklogId: string) => {
+        const worklogIds: string[] = [];
+        
+        if (worklogId) {
+            worklogIds.push(worklogId);
+        }
+
+        if (worklogIds.length > 0) {
+            try {
+                const ids = worklogIds.join(',');
+                const response: AxiosResponse<{
+                    IsSuccess: boolean
+                }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
+
+                if (response.data.IsSuccess) {
+                    const defaultStartDate = startDate || defaultStart;
+                    const defaultEndDate = endDate || defaultEnd;
+                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                    setSelectedRows(new Set());
+                } else {
+                    console.error(`Erroring timesheets`);
+                }
+            } catch (error) {
+                console.error(`Erroring timesheets:`, error);
+            }
+        }
+    };
     
     const handleUnlockClick = () => {
         const timesheetIds: (string | number)[] = [];
@@ -863,8 +891,8 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                         row.original.rowsData.some((log: any) => log.is_pricework) : false;
                     return (
                         <span style={{ color: isEdited ? '#ff0000' : 'inherit' }}>
-              {isPricework ? '--' : totalHours}
-            </span>
+                          {isPricework ? '--' : totalHours}
+                        </span>
                     );
                 },
                 size: 100,
@@ -895,12 +923,12 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 cell: ({ row }) => row.original.rowType === 'day' ? row.original.employeeNotes : null,
                 size: 150,
             },
-            // {
-            //     id: 'managerNotes',
-            //     header: () => <span style={{ display: 'block', textAlign: 'center' }}>Manager notes</span>,
-            //     cell: ({ row }) => row.original.rowType === 'day' ? row.original.managerNotes : null,
-            //     size: 150,
-            // },
+            {
+                id: 'action',
+                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Action</span>,
+                cell: ({ row }) => null,
+                size: 150,
+            },
         ],
         [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect]
     );
@@ -1003,6 +1031,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 updateEditingProject={updateEditingProject}
                 cancelEditingProject={cancelEditingProject}
                 saveProjectChanges={saveProjectChanges}
+                onDeleteClick={handleDeleteWorklog}
             />
 
             <ActionBar
