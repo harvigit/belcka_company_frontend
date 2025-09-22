@@ -291,20 +291,21 @@ const TablePagination = () => {
       await fetchData();
     }
   };
-
-  // generate company code
-  const handleGenerateCode = async (): Promise<string> => {
+  const handleGenerateCode = async (): Promise<string | null> => {
     try {
-      const payload = {
-        team_id: teamId,
-        company_id: id.company_id,
-      };
-      const response = await api.post(`team/generate-otp`, payload);
+      const payload = { team_id: teamId, company_id: id.company_id };
+      const response = await api.post("team/generate-otp", payload);
+
+      if (!response.data.IsSuccess || !response.data.info?.company_otp) {
+        toast.error("Failed to generate code");
+        return null;
+      }
+
       toast.success(response.data.message);
       return response.data.info.company_otp;
     } catch (error) {
       toast.error("Failed to generate code.");
-      throw error;
+      return null;
     }
   };
 

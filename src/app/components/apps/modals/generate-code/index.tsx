@@ -16,7 +16,7 @@ import toast from "react-hot-toast";
 interface GenerateCodeDialogProps {
   open: boolean;
   onClose: () => void;
-  onGenerate: () => Promise<string>;
+  onGenerate: () => Promise<string | null>; 
 }
 
 const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
@@ -29,7 +29,6 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Unified copy function
   const copyToClipboard = (text: string) => {
     if (!text) return toast.error("Nothing to copy");
 
@@ -68,13 +67,15 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     setIsGenerating(true);
     try {
       const generatedCode = await onGenerate();
-      if (!generatedCode) return toast.error("No code received");
+      if (!generatedCode) {
+        toast.error("Failed to received code from server");
+        return;
+      }
 
-      setCode(generatedCode); // set code first
+      setCode(generatedCode);
       setResendTimer(15 * 60); // 15 minutes
 
       if (intervalRef.current) clearInterval(intervalRef.current);
-
       intervalRef.current = setInterval(() => {
         setResendTimer((prev) => {
           if (prev <= 1) {
@@ -133,7 +134,6 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
     onClose();
   };
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -154,7 +154,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       </DialogTitle>
 
       <DialogContent sx={{ textAlign: "center", minHeight: 120 }}>
-        {!code && (
+        {!code && !isGenerating && (
           <Typography>Are you sure you want to generate a new code?</Typography>
         )}
 
@@ -191,16 +191,10 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center" }}>
-        {!code && (
+        {!code && !isGenerating && (
           <>
-            <Button onClick={handleDialogClose} disabled={isGenerating}>
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleGenerate}
-              disabled={isGenerating}
-            >
+            <Button onClick={handleDialogClose}>Cancel</Button>
+            <Button variant="contained" onClick={handleGenerate}>
               Confirm
             </Button>
           </>
