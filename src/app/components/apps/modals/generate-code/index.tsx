@@ -16,7 +16,7 @@ import toast from "react-hot-toast";
 interface GenerateCodeDialogProps {
   open: boolean;
   onClose: () => void;
-  onGenerate: () => Promise<string | null>; 
+  onGenerate: () => Promise<string | null>;
 }
 
 const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
@@ -29,37 +29,18 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const copyToClipboard = (text: string) => {
-    if (!text) return toast.error("Nothing to copy");
+  const handleCopyCode = async (code: string | null) => {
+    if (!code) {
+      toast.error("No code to copy!");
+      return;
+    }
 
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard
-          .writeText(text)
-          .then(() => toast.success("Copied!"));
-        return;
-      }
-
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.top = "0";
-      textArea.style.left = "0";
-      textArea.style.width = "1px";
-      textArea.style.height = "1px";
-      textArea.style.opacity = "0";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-
-      const successful = document.execCommand("copy");
-      document.body.removeChild(textArea);
-
-      if (successful) toast.success("Copied!");
-      else throw new Error("Fallback copy failed");
+      await navigator.clipboard.writeText(code);
+      toast.success("Code copied!");
     } catch (err) {
-      console.error("Copy failed:", err);
-      toast.error("Failed to copy!");
+      console.error("Clipboard write failed:", err);
+      toast.error("Failed to copy code!");
     }
   };
 
@@ -173,7 +154,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
               variant="outlined"
               startIcon={<ContentCopyIcon />}
               sx={{ mt: 2 }}
-              onClick={() => copyToClipboard(code)}
+              onClick={() => handleCopyCode(code)}
             >
               Copy Code
             </Button>
