@@ -58,7 +58,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const handleCopyCode = (code: string | null) => {
     const codeToCopy = code ?? "";
 
-    if (navigator.clipboard && window.isSecureContext) {
+    if (navigator.clipboard) {
       navigator.clipboard
         .writeText(codeToCopy)
         .then(() => toast.success("Code copied!"))
