@@ -431,7 +431,7 @@ const TablePagination = () => {
         <DialogContent>
           <Typography color="textSecondary">
             Are you sure you want to remove {usersToDelete.length} user
-            {usersToDelete.length > 1 ? "s" : ""} from the team?
+            {usersToDelete.length > 1 ? "s" : ""} from the company?
           </Typography>
         </DialogContent>
         <DialogActions>

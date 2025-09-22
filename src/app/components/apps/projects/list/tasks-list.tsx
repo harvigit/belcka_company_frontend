@@ -244,7 +244,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                 ),
             }),
 
-            columnHelper.accessor("end_date", {
+              columnHelper.accessor("end_date", {
                 id: "end_date",
                 header: () => "End date",
                 cell: (info) => {
@@ -258,7 +258,7 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                     justifyContent={"space-between"}
                     >
                     <Typography variant="h5" color="textPrimary">
-                        {info.getValue()}
+                        {info.row.original.status_int == 4 ?  info.getValue() : "-"}
                     </Typography>
                     <Badge
                         badgeContent={info.row.original.image_count}
