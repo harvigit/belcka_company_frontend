@@ -1,6 +1,15 @@
-import React from 'react';
-import { TableRow, TableCell, FormControl, Select, MenuItem, TextField, Button, Stack } from '@mui/material';
-import {NewRecord, Shift, Project} from '@/app/components/apps/time-clock/types/timeClock';
+import React, { useEffect } from 'react';
+import {
+    TableRow,
+    TableCell,
+    FormControl,
+    Select,
+    MenuItem,
+    TextField,
+    Button,
+    Stack,
+} from '@mui/material';
+import { NewRecord, Shift, Project } from '@/app/components/apps/time-clock/types/timeClock';
 
 interface NewRecordRowProps {
     recordKey: string;
@@ -28,6 +37,14 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                                                        cancelNewRecord,
                                                    }) => {
 
+    useEffect(() => {
+        if (!newRecord.project_id && projects.length > 0) {
+            updateNewRecord(recordKey, 'project_id', projects[0].id);
+        }
+        if (!newRecord.shift_id && shifts.length > 0) {
+            updateNewRecord(recordKey, 'shift_id', shifts[0].id);
+        }
+    }, [newRecord, projects, shifts, recordKey, updateNewRecord]);
 
     return (
         <TableRow
@@ -39,49 +56,67 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         >
             {visibleColumnConfigs.exclamation?.visible && <TableCell align="center" sx={{ py: 0.5 }}></TableCell>}
             {visibleColumnConfigs.expander?.visible && <TableCell align="center" sx={{ py: 0.5 }}></TableCell>}
-            
+
             {visibleColumnConfigs.project?.visible && (
-                <>
-                    <TableCell align="center" sx={{ py: 0.5, width: '100%', minHeight: '45px' }}>
-                        <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
-                            <Select
-                                value={newRecord.project_id}
-                                onChange={(e) => updateNewRecord(recordKey, 'project_id', e.target.value)}
-                                disabled={isSaving}
-                                displayEmpty
-                                sx={{
-                                    height: '32px',
-                                    '& .MuiSelect-select': { fontSize: '0.875rem', py: '6px', px: '8px', textAlign: 'center' },
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                }}
-                            >
-                                <MenuItem value="">Select Project</MenuItem>
-                                {projects.map((project) => (
-                                    <MenuItem key={project.id} value={project.id}>
-                                        {project.name}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </TableCell>
-                </>
+                <TableCell align="center" sx={{ py: 0.5, width: '100%', minHeight: '45px' }}>
+                    <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                        <Select
+                            value={newRecord.project_id || ''}
+                            onChange={(e) => updateNewRecord(recordKey, 'project_id', e.target.value)}
+                            disabled={isSaving}
+                            displayEmpty
+                            sx={{
+                                height: '32px',
+                                '& .MuiSelect-select': {
+                                    fontSize: '0.75rem',
+                                    py: '6px',
+                                    px: '8px',
+                                    textAlign: 'center',
+                                },
+                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                            }}
+                        >
+                            <MenuItem value="" disabled>Project</MenuItem>
+                            {projects.map((project) => (
+                                <MenuItem key={project.id} value={project.id}>
+                                    {project.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </TableCell>
             )}
 
             {visibleColumnConfigs.shift?.visible && (
-                <TableCell align="center" sx={{ py: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '45px' }}>
+                <TableCell
+                    align="center"
+                    sx={{
+                        py: 0.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        minHeight: '45px',
+                    }}
+                >
                     <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
                         <Select
-                            value={newRecord.shift_id}
+                            value={newRecord.shift_id || ''}
                             onChange={(e) => updateNewRecord(recordKey, 'shift_id', e.target.value)}
                             disabled={isSaving}
                             displayEmpty
                             sx={{
                                 height: '32px',
-                                '& .MuiSelect-select': { fontSize: '0.875rem', py: '6px', px: '8px', textAlign: 'center' },
+                                '& .MuiSelect-select': {
+                                    fontSize: '0.75rem',
+                                    py: '6px',
+                                    px: '8px',
+                                    textAlign: 'center',
+                                },
                                 '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
                             }}
                         >
-                            <MenuItem value="">Select Shift</MenuItem>
+                            <MenuItem value="" disabled>Shift</MenuItem>
                             {shifts.map((shift) => (
                                 <MenuItem key={shift.id} value={shift.id}>
                                     {shift.name}
@@ -92,12 +127,13 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                 </TableCell>
             )}
 
-            {['start', 'end'].map((field) =>
+            {['start', 'end'].map(
+                (field) =>
                     visibleColumnConfigs[field]?.visible && (
                         <TableCell key={field} align="center" sx={{ py: 0.5 }}>
                             <TextField
                                 type="text"
-                                value={newRecord[field as keyof NewRecord] as string}
+                                value={(newRecord[field as keyof NewRecord] as string) || ''}
                                 placeholder="HH:MM"
                                 variant="outlined"
                                 size="small"
@@ -106,13 +142,15 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                                     updateNewRecord(recordKey, field as keyof NewRecord, raw);
                                 }}
                                 onBlur={() => {
-                                    const formattedTime = validateAndFormatTime(newRecord[field as keyof NewRecord] as string);
+                                    const formattedTime = validateAndFormatTime(
+                                        (newRecord[field as keyof NewRecord] as string) || ''
+                                    );
                                     updateNewRecord(recordKey, field as keyof NewRecord, formattedTime);
                                 }}
                                 disabled={isSaving}
                                 sx={{
                                     width: '70px',
-                                    '& .MuiInputBase-input': { fontSize: '0.875rem', textAlign: 'center' },
+                                    '& .MuiInputBase-input': { fontSize: '0.75rem', textAlign: 'center' },
                                 }}
                             />
                         </TableCell>
@@ -154,4 +192,5 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         </TableRow>
     );
 };
+
 export default NewRecordRow;

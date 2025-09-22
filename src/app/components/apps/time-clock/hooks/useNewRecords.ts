@@ -5,14 +5,17 @@ export const useNewRecords = () => {
     const [newRecords, setNewRecords] = useState<{ [key: string]: NewRecord }>({});
     const [savingNewRecords, setSavingNewRecords] = useState<Set<string>>(new Set());
 
-    const startAddingNewRecord = useCallback((date: string) => {
+    const startAddingNewRecord = useCallback((date: string, projects: any, shifts: any) => {
         const recordKey = `new-${date}-${Date.now()}`;
+        const defaultShiftId = shifts.length > 0 ? shifts[0].id : '';
+        const defaultProjectId = projects.length > 0 ? projects[0].id : '';
+        
         setNewRecords(prev => ({
             ...prev,
             [recordKey]: {
                 date,
-                shift_id: '',
-                project_id: '',
+                shift_id: defaultShiftId,
+                project_id: defaultProjectId,
                 start: '',
                 end: '',
             }

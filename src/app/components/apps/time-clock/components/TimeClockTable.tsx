@@ -46,7 +46,7 @@ interface TimeClockTableProps {
     handleRowSelect: (rowId: string, checked: boolean) => void;
     handlePendingRequest: () => void;
     handleWorklogToggle: (worklogId: string) => void;
-    startAddingNewRecord: (date: string) => void;
+    startAddingNewRecord: (date: string, projects: any, shifts: any) => void;
     startEditingField: (worklogId: string, field: 'start' | 'end', log: any) => void;
     startEditingShift: (worklogId: string, currentShiftId: number | string, log: any) => void;
     updateEditingField: (worklogId: string, field: keyof EditingWorklog, value: string) => void;
@@ -248,7 +248,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                                                             <Typography variant='h4'>{rowData.date}</Typography>
                                                             <IconButton
-                                                                onClick={() => startAddingNewRecord(rowData.date as string)}
+                                                                onClick={() => startAddingNewRecord(rowData.date as string, projects as any, shifts as any)}
                                                                 size="small"
                                                                 sx={{ '&:hover': { backgroundColor: 'transparent' } }}
                                                                 title="Add new record"
@@ -555,7 +555,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 <Typography variant='h4'>{row.original.date}</Typography>
                                                                 {!hasNewRecords && (
                                                                     <IconButton
-                                                                        onClick={() => startAddingNewRecord(row.original.date as string)}
+                                                                        onClick={() => startAddingNewRecord(row.original.date as string, projects as any, shifts as any)}
                                                                         size="small"
                                                                         sx={{ '&:hover': { backgroundColor: 'transparent' } }}
                                                                         title="Add new record"
@@ -584,11 +584,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         displayEmpty
                                                                         sx={{
                                                                             height: '32px',
-                                                                            '& .MuiSelect-select': { fontSize: '0.875rem', py: '6px', px: '8px', textAlign: 'center' },
+                                                                            '& .MuiSelect-select': { fontSize: '0.75rem', py: '6px', px: '8px', textAlign: 'center' },
                                                                             '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
                                                                         }}
                                                                     >
-                                                                        <MenuItem value="">Select Project</MenuItem>
+                                                                        <MenuItem value="" disabled>Project</MenuItem>
                                                                         {projects.map((project) => (
                                                                             <MenuItem key={project.id} value={project.id}>
                                                                                 {project.name}
@@ -614,11 +614,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         displayEmpty
                                                                         sx={{
                                                                             height: '32px',
-                                                                            '& .MuiSelect-select': { fontSize: '0.875rem', py: '6px', px: '8px', textAlign: 'center' },
+                                                                            '& .MuiSelect-select': { fontSize: '0.75rem', py: '6px', px: '8px', textAlign: 'center' },
                                                                             '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
                                                                         }}
                                                                     >
-                                                                        <MenuItem value="">Select Shift</MenuItem>
+                                                                        <MenuItem value="" disabled>Shift</MenuItem>
                                                                         {shifts.map((shift) => (
                                                                             <MenuItem key={shift.id} value={shift.id}>
                                                                                 {shift.name}
@@ -653,7 +653,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     disabled={isSaving}
                                                                     sx={{
                                                                         width: '70px',
-                                                                        '& .MuiInputBase-input': { fontSize: '0.875rem', textAlign: 'center' },
+                                                                        '& .MuiInputBase-input': { fontSize: '0.75rem', textAlign: 'center' },
                                                                     }}
                                                                 />
                                                             </TableCell>
