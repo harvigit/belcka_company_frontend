@@ -54,35 +54,36 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       setIsGenerating(false);
     }
   };
-  const handleCopyCode = (code: string | null) => {
-    const codeToCopy = code ?? "";
-
-    // Always use fallback for HTTP
-    const textArea = document.createElement("textarea");
-    textArea.value = codeToCopy;
-    textArea.style.position = "fixed"; // avoid scrolling
-    textArea.style.top = "0";
-    textArea.style.left = "0";
-    textArea.style.width = "1px";
-    textArea.style.height = "1px";
-    textArea.style.padding = "0";
-    textArea.style.border = "none";
-    textArea.style.outline = "none";
-    textArea.style.boxShadow = "none";
-    textArea.style.background = "transparent";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
+  const handleCopyCode = async (text: string) => {
+    if (!text) return toast.error("Nothing to copy");
 
     try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        toast.success("Copied!");
+        return;
+      }
+
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.width = "1px";
+      textArea.style.height = "1px";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
       const successful = document.execCommand("copy");
-      if (successful) toast.success("Code copied!");
-      else toast.error("Failed to copy code!");
-    } catch (err) {
-      console.error("Fallback failed:", err);
-      toast.error("Failed to copy code!");
-    } finally {
       document.body.removeChild(textArea);
+
+      if (successful) toast.success("Copied!");
+      else throw new Error("Fallback copy failed");
+    } catch (err) {
+      console.error("Copy failed:", err);
+      toast.error("Failed to copy!");
     }
   };
 
@@ -198,7 +199,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
               variant="outlined"
               startIcon={<ContentCopyIcon />}
               sx={{ mt: 2 }}
-              onClick={() => handleCopyCode(code)}
+              onClick={() => handleCopyCode(code ?? "")}
             >
               Copy Code
             </Button>
