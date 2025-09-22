@@ -82,7 +82,6 @@ export interface TradeList {
   name: string;
 }
 
-// const ProjectListing: React.FC<ProjectListingProps> = ({ projectId, onProjectUpdated }) => {
 const TablePagination: React.FC<ProjectListingProps> = ({
   onProjectUpdated,
 }) => {
@@ -109,6 +108,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
   const [project, setProject] = useState<ProjectList[]>([]);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<any>(null);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -353,6 +355,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       setIsSaving(false);
     }
   };
+
+  async function archiveProjectApi(id: number) {
+    try {
+      const payload = {
+        id: id,
+      };
+      const result = await api.post("project/archive", payload);
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -927,30 +943,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         onClose={() => setDialogOpen(false)}
         PaperProps={{
           sx: {
-            width: 250,
+            width: 350,
             maxWidth: "100%",
           },
         }}
       >
         <Box sx={{ position: "relative", p: 2 }}>
-          {/* Close Button */}
-          <IconButton
-            aria-label="close"
-            onClick={() => setDialogOpen(false)}
-            size="small"
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 8,
-              color: (theme) => theme.palette.grey[900],
-              backgroundColor: "transparent",
-              zIndex: 10,
-              width: 50,
-              height: 50,
-            }}
-          >
-            <IconX size={18} />
-          </IconButton>
 
           {/* Add Project Button */}
           <Button
@@ -965,6 +963,38 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           >
             Add Project
           </Button>
+
+          <Dialog
+            open={deleteDialogOpen}
+            onClose={() => setDeleteDialogOpen(false)}
+          >
+            <DialogTitle>Archive Project</DialogTitle>
+            <DialogContent>
+              Are you sure you want to archive <b>{projectToDelete?.name}</b>?
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={async () => {
+                  if (projectToDelete) {
+                    try {
+                      await archiveProjectApi(projectToDelete.id);
+                      setProject((prev: any) =>
+                        prev.filter((p: any) => p.id !== projectToDelete.id)
+                      );
+                    } catch (err) {
+                      console.error("Delete failed", err);
+                    }
+                  }
+                  setDeleteDialogOpen(false);
+                }}
+              >
+                Archive
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Project List */}
           <Grid container spacing={2} display="block">
@@ -1010,6 +1040,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   </Typography>
                   <IconChevronRight style={{ color: "GrayText" }} />
                 </Box>
+                <IconButton color="error" sx={{ ml: 2 }}>
+                  <IconTrash
+                    size={18}
+                    onClick={() => {
+                      setProjectToDelete(project);
+                      setDeleteDialogOpen(true);
+                    }}
+                  />
+                </IconButton>
               </Grid>
             ))}
           </Grid>

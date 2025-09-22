@@ -2,15 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Box,
   Grid,
-  CircularProgress,
   CardContent,
-  Autocomplete,
-  Typography,
-  IconButton,
-  Button,
-  Drawer,
 } from "@mui/material";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
@@ -20,12 +13,8 @@ import BlankCard from "@/app/components/shared/BlankCard";
 import ProjectListing from "@/app/components/apps/projects/list";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import Cookies from "js-cookie";
-import { IconChevronRight, IconPlus, IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
-import CreateProject from "../create";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 dayjs.extend(customParseFormat);
 

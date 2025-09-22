@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Typography,
   Box,
@@ -12,17 +12,12 @@ import {
   IconButton,
   CircularProgress,
 } from "@mui/material";
-import {
-  IconArrowLeft,
-  IconCheck,
-  IconMedal,
-  IconX,
-} from "@tabler/icons-react";
+import { IconArrowLeft, IconMedal } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
 
 import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
@@ -36,7 +31,6 @@ import "react-phone-input-2/lib/material.css";
 import Notifications from "../../user-profile-setting/notifications";
 import toast from "react-hot-toast";
 import ComapnyRate from "../../user-profile-setting/company-rate";
-import theme from "@/utils/theme";
 
 dayjs.extend(customParseFormat);
 
@@ -91,6 +85,7 @@ const TablePagination = () => {
     email: "",
     extension: "+44",
     phone: "",
+    expired_at: "",
   });
 
   const handleFieldChange = (key: keyof typeof formData, value: string) => {
@@ -114,6 +109,9 @@ const TablePagination = () => {
           email: userInfo.email || "",
           extension: ext,
           phone: number,
+          expired_at: userInfo.expired_at
+            ? userInfo.expired_at.split("T")[0]
+            : "",
         });
         if (ext && number) {
           const combined = ext.replace("+", "") + number;
@@ -351,6 +349,24 @@ const TablePagination = () => {
                     handleFieldChange("email", e.target.value)
                   }
                   fullWidth
+                />
+                <Typography color="textSecondary" variant="h5" mt={2}>
+                  Expired At
+                </Typography>
+                <CustomTextField
+                  type="date"
+                  className="custom_color"
+                  id="expired_at"
+                  placeholder="Choose Expiry date"
+                  fullWidth
+                  value={formData.expired_at}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newDate = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      expired_at: newDate,
+                    }));
+                  }}
                 />
               </form>
               <Box mt={2}>
