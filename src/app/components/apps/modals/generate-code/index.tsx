@@ -53,12 +53,40 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
         if (success) {
           toast.success("Code copied!");
         } else {
+          fallbackCopy(code);
           throw new Error("Fallback copy failed");
         }
       }
     } catch (err) {
       console.error("Clipboard copy failed:", err);
       toast.error("Failed to copy code!");
+    }
+  };
+
+  const fallbackCopy = (text: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+
+      textArea.focus();
+      textArea.select();
+      textArea.setSelectionRange(0, textArea.value.length);
+
+      const successful = (document as any).execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        toast.success("Copied!");
+      } else {
+        toast.error("Copy failed!");
+      }
+    } catch (err) {
+      console.error("Fallback copy failed:", err);
+      toast.error("Failed to copy!");
     }
   };
 
