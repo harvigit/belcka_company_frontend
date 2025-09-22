@@ -54,31 +54,30 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       setIsGenerating(false);
     }
   };
-
   const handleCopyCode = (code: string | null) => {
     const codeToCopy = code ?? "";
 
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(codeToCopy)
-        .then(() => toast.success("Code copied!"))
-        .catch((err) => {
-          console.error("Clipboard API failed:", err);
-          fallbackCopyCode(codeToCopy);
-        });
-    } else {
-      fallbackCopyCode(codeToCopy);
-    }
-  };
-
-  const fallbackCopyCode = (codeToCopy: string) => {
+    // Always use fallback for HTTP
     const textArea = document.createElement("textarea");
     textArea.value = codeToCopy;
+    textArea.style.position = "fixed"; // avoid scrolling
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.width = "1px";
+    textArea.style.height = "1px";
+    textArea.style.padding = "0";
+    textArea.style.border = "none";
+    textArea.style.outline = "none";
+    textArea.style.boxShadow = "none";
+    textArea.style.background = "transparent";
     document.body.appendChild(textArea);
+    textArea.focus();
     textArea.select();
+
     try {
-      document.execCommand("copy");
-      toast.success("code copied!");
+      const successful = document.execCommand("copy");
+      if (successful) toast.success("Code copied!");
+      else toast.error("Failed to copy code!");
     } catch (err) {
       console.error("Fallback failed:", err);
       toast.error("Failed to copy code!");
@@ -86,6 +85,22 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
       document.body.removeChild(textArea);
     }
   };
+
+  // const fallbackCopyCode = (codeToCopy: string) => {
+  //   const textArea = document.createElement("textarea");
+  //   textArea.value = codeToCopy;
+  //   document.body.appendChild(textArea);
+  //   textArea.select();
+  //   try {
+  //     document.execCommand("copy");
+  //     toast.success("code copied!");
+  //   } catch (err) {
+  //     console.error("Fallback failed:", err);
+  //     toast.error("Failed to copy code!");
+  //   } finally {
+  //     document.body.removeChild(textArea);
+  //   }
+  // };
 
   // Start timer on code set
   useEffect(() => {
