@@ -111,22 +111,14 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      try {
-        if (url.startsWith("/")) {
-          return `${baseUrl}${url}`;
-        }
-    
-        const parsedBase = new URL(baseUrl);
-        const parsedUrl = new URL(url);
-    
-        if (parsedUrl.origin === parsedBase.origin) {
-          return `${baseUrl}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
-        }
-        return baseUrl;
-      } catch {
-        return baseUrl;
+      if (url.startsWith("/")) {
+        return baseUrl + url;
       }
-    }
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      return baseUrl;
+    },
   },
 
   pages: {
