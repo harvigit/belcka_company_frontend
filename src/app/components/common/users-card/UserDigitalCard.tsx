@@ -19,6 +19,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 
 interface ApiDigitalCardInfo {
+    is_expired: boolean;
     id: number;
     user_id: number;
     company_name: string;
@@ -171,7 +172,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                             </Box>
                             
                             <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" mt={2}>
-                                {cardData.is_working ? (
+                                {!cardData.is_expired ? (
                                     <>
                                         <CheckCircleIcon sx={{ color: 'green', fontSize: 20 }} />
                                         <Typography fontWeight={500}>
