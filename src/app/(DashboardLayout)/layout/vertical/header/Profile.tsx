@@ -60,7 +60,7 @@ const Profile = () => {
         onClick={handleClick2}
       >
         <Avatar
-         src={user?.user_image ? `${user?.user_image}` : "/images/logos/belcka_logo.png"}
+         src={user?.image ? `${user?.image}` : "/images/logos/belcka_logo.png"}
           // src={"/images/logos/belcka_logo.png"}
           alt={user.first_name || ''}
           sx={{
@@ -119,7 +119,7 @@ const Profile = () => {
         <Typography variant="h4">User Profile</Typography>
         <Stack direction="row" py={3} pb={0} spacing={2} alignItems="center">
           <Avatar
-            src={user?.user_image ? `${user?.user_image}` : "/images/logos/belcka_logo.png"}
+            src={user?.image ? `${user?.image}` : "/images/logos/belcka_logo.png"}
             // src={"/images/logos/logoIcon.svg"}
             alt={user?.first_name || ''}
             sx={{ width: 95, height: 95 }}
