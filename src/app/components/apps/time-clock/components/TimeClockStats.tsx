@@ -76,7 +76,15 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                             .map((col: any) => (
                                 <FormControlLabel
                                     key={col.id}
-                                    control={<Checkbox checked={col.getIsVisible()} onChange={col.getToggleVisibilityHandler()} />}
+                                    control={
+                                        <Checkbox
+                                            checked={col.getIsVisible()}
+                                            onChange={col.getToggleVisibilityHandler()}
+                                        />
+                                    }
+                                    sx={{
+                                        textTransform: 'capitalize'
+                                    }}
                                     label={
                                         col.columnDef.meta?.label ||
                                         (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
@@ -91,4 +99,5 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
         </Box>
     );
 };
+
 export default TimeClockStats;

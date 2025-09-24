@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import api from '@/utils/axios';
 import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
