@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {Box, Drawer, IconButton} from '@mui/material';
+import { Box, Drawer, IconButton } from '@mui/material';
 import { useReactTable, getCoreRowModel, getExpandedRowModel, ColumnDef, VisibilityState, ExpandedState } from '@tanstack/react-table';
 import { format, parse } from 'date-fns';
 import { DateTime } from 'luxon';
@@ -8,8 +8,6 @@ import api from '@/utils/axios';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import RequestDetails from './time-clock-details/request-details';
 import Conflicts from './time-clock-details/conflicts/conflicts';
-
-// Import our new components and hooks
 import { useTimeClockData } from './hooks/useTimeClockData';
 import { useEditingState } from './hooks/useEditingState';
 import { useNewRecords } from './hooks/useNewRecords';
@@ -17,35 +15,95 @@ import TimeClockHeader from './components/TimeClockHeader';
 import TimeClockStats from './components/TimeClockStats';
 import TimeClockTable from './components/TimeClockTable';
 import ActionBar from './components/ActionBar';
-import {CheckLog, DailyBreakdown, TimeClockDetailsProps} from '@/app/components/apps/time-clock/types/timeClock';
-import {IconChevronDown, IconChevronRight, IconExclamationMark} from '@tabler/icons-react';
+import { CheckLog, DailyBreakdown, TimeClockDetailsProps } from '@/app/components/apps/time-clock/types/timeClock';
+import { IconChevronDown, IconChevronRight, IconExclamationMark } from '@tabler/icons-react';
 
-const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
-                                                               open,
-                                                               timeClock,
-                                                               user_id,
-                                                               currency,
-                                                               allUsers = [],
-                                                               onClose,
-                                                               onUserChange
-                                                           }) => {
+const STORAGE_KEY = 'time-clock-details-page';
+
+const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
+    try {
+        const data = {
+            startDate: startDate ? startDate.toDateString() : null,
+            endDate: endDate ? endDate.toDateString() : null,
+            columnVisibility,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+        console.error('Error saving data to localStorage:', error);
+    }
+};
+
+const loadDateRangeFromStorage = () => {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+                endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+                columnVisibility: parsed.columnVisibility || {},
+            };
+        }
+    } catch (error) {
+        console.error('Error loading data from localStorage:', error);
+    }
+    return null;
+};
+
+interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
+    onDataChange?: () => void;
+}
+
+const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
+                                                                       open,
+                                                                       timeClock,
+                                                                       user_id,
+                                                                       currency,
+                                                                       allUsers = [],
+                                                                       onClose,
+                                                                       onUserChange,
+                                                                       onDataChange,
+                                                                   }) => {
     const today = new Date();
     const defaultStart = new Date(today);
     defaultStart.setDate(today.getDate() - today.getDay() + 1);
     const defaultEnd = new Date(today);
     defaultEnd.setDate(today.getDate() - today.getDay() + 7);
 
+    const getInitialDatesAndVisibility = () => {
+        const stored = loadDateRangeFromStorage();
+        if (stored && stored.startDate && stored.endDate) {
+            return {
+                startDate: stored.startDate,
+                endDate: stored.endDate,
+                columnVisibility: stored.columnVisibility,
+            };
+        }
+        return {
+            startDate: defaultStart,
+            endDate: defaultEnd,
+            columnVisibility: {},
+        };
+    };
+
+    const initialData = useMemo(() => getInitialDatesAndVisibility(), []);
+
     // UI State
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialData.columnVisibility);
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [expandedWorklogsIds, setExpandedWorklogsIds] = useState<string[]>([]);
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-    const [startDate, setStartDate] = useState<Date | null>(null);
-    const [endDate, setEndDate] = useState<Date | null>(null);
     const [requestListOpen, setRequestListOpen] = useState<boolean>(false);
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
+    const [startDate, setStartDate] = useState<Date | null>(initialData.startDate);
+    const [endDate, setEndDate] = useState<Date | null>(initialData.endDate);
+
+    // Save columnVisibility to localStorage whenever it changes
+    useEffect(() => {
+        saveDateRangeToStorage(startDate, endDate, columnVisibility);
+    }, [startDate, endDate, columnVisibility]);
 
     // Custom hooks
     const {
@@ -91,7 +149,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
     // Navigation logic
     const currentUserIndex = useMemo(() => {
         if (!timeClock || !allUsers.length) return -1;
-        return allUsers.findIndex(user => user.user_id === timeClock.user_id);
+        return allUsers.findIndex((user) => user.user_id === timeClock.user_id);
     }, [timeClock, allUsers]);
 
     const handlePreviousUser = () => {
@@ -218,18 +276,23 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
     const handlePopoverClose = () => setAnchorEl(null);
 
-    const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
-        if (range.from && range.to) {
-            setStartDate(range.from);
-            setEndDate(range.to);
-            fetchTimeClockData(range.from, range.to);
-        }
-    };
+    const handleDateRangeChange = useCallback(
+        (range: { from: Date | null; to: Date | null }) => {
+            if (range.from && range.to) {
+                setStartDate(range.from);
+                setEndDate(range.to);
+                fetchTimeClockData(range.from, range.to);
+                saveDateRangeToStorage(range.from, range.to, columnVisibility);
+                onDataChange?.();
+            }
+        },
+        [fetchTimeClockData, columnVisibility, onDataChange]
+    );
 
     const handleWorklogToggle = (worklogId: string) => {
-        setExpandedWorklogsIds(prevIds => {
+        setExpandedWorklogsIds((prevIds) => {
             if (prevIds.includes(worklogId)) {
-                return prevIds.filter(existingId => existingId !== worklogId);
+                return prevIds.filter((existingId) => existingId !== worklogId);
             } else {
                 return [...prevIds, worklogId];
             }
@@ -242,9 +305,16 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
     const closeConflictSidebar = async () => {
         setConflictSidebar(false);
-        const defaultStartDate = startDate || defaultStart;
-        const defaultEndDate = endDate || defaultEnd;
-        await fetchTimeClockData(defaultStartDate, defaultEndDate);
+        try {
+            if (conflictDetails?.length > 0) {
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                onDataChange?.();
+            }
+        } catch (error) {
+            console.error('Error fetching time clock data after closing conflict sidebar:', error);
+        }
     };
 
     const handlePendingRequest = async () => {
@@ -253,9 +323,16 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
     const closeRequestList = async () => {
         setRequestListOpen(false);
-        const defaultStartDate = startDate || defaultStart;
-        const defaultEndDate = endDate || defaultEnd;
-        await fetchTimeClockData(defaultStartDate, defaultEndDate);
+        try {
+            if (pendingRequestCount > 0) {
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                onDataChange?.();
+            }
+        } catch (error) {
+            console.error('Error fetching time clock data after closing request list:', error);
+        }
     };
 
     // API calls
@@ -284,7 +361,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             return;
         }
 
-        setSavingWorklogs(prev => new Set(prev).add(worklogId));
+        setSavingWorklogs((prev) => new Set(prev).add(worklogId));
         try {
             await api.post('/time-clock/edit-worklog', {
                 user_worklog_id: originalLog.worklog_id,
@@ -297,10 +374,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
         } catch (error) {
             console.error('Error saving worklog:', error);
         } finally {
-            setSavingWorklogs(prev => {
+            setSavingWorklogs((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(worklogId);
                 return newSet;
@@ -325,7 +403,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             return;
         }
 
-        setSavingWorklogs(prev => new Set(prev).add(worklogId));
+        setSavingWorklogs((prev) => new Set(prev).add(worklogId));
         try {
             await api.post('/time-clock/edit-worklog-shift', {
                 user_worklog_id: originalLog.worklog_id,
@@ -336,10 +414,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
         } catch (error) {
             console.error('Error saving shift:', error);
         } finally {
-            setSavingWorklogs(prev => {
+            setSavingWorklogs((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(worklogId);
                 return newSet;
@@ -364,7 +443,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             return;
         }
 
-        setSavingWorklogs(prev => new Set(prev).add(worklogId));
+        setSavingWorklogs((prev) => new Set(prev).add(worklogId));
         try {
             await api.post('/time-clock/edit-worklog-project', {
                 user_worklog_id: originalLog.worklog_id,
@@ -375,10 +454,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
         } catch (error) {
             console.error('Error saving project:', error);
         } finally {
-            setSavingWorklogs(prev => {
+            setSavingWorklogs((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(worklogId);
                 return newSet;
@@ -410,7 +490,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         }
         const formattedDate = parsedDate.toFormat('yyyy-MM-dd');
 
-        setSavingNewRecords(prev => new Set(prev).add(recordKey));
+        setSavingNewRecords((prev) => new Set(prev).add(recordKey));
 
         try {
             const params = {
@@ -428,15 +508,15 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
 
             if (response.data.IsSuccess) {
                 cancelNewRecord(recordKey);
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                onDataChange?.();
             }
-
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchTimeClockData(defaultStartDate, defaultEndDate);
         } catch (error) {
             console.error('Error saving new record:', error);
         } finally {
-            setSavingNewRecords(prev => {
+            setSavingNewRecords((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(recordKey);
                 return newSet;
@@ -444,7 +524,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         }
     };
 
-    // Selection logic
     const dailyData = useMemo<DailyBreakdown[]>(() => {
         return (data || []).flatMap((week: any) => {
             const weekRows: DailyBreakdown[] = [];
@@ -459,7 +538,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 rowType: 'week',
                 weekLabel: week.week_range,
                 weeklyTotalHours: formatHour(week.weekly_total_hours),
-                weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`
+                weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
             });
 
             const dayRows = (week.days || []).flatMap((day: any) => {
@@ -549,7 +628,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
             }
         });
         return ids;
-    }, [dailyData.length]);
+    }, [dailyData]);
 
     const handleSelectAll = useCallback((checked: boolean) => {
         if (checked) {
@@ -560,7 +639,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
     }, [selectableRowIds]);
 
     const handleRowSelect = useCallback((rowId: string, checked: boolean) => {
-        setSelectedRows(prev => {
+        setSelectedRows((prev) => {
             const newSet = new Set(prev);
             if (checked) {
                 newSet.add(rowId);
@@ -578,11 +657,11 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         let hasLockedRows = false;
         let hasUnlockedRows = false;
 
-        const selectedRowIndices = Array.from(selectedRows).map(rowId => {
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
             return parseInt(rowId.replace('row-', ''));
         });
 
-        selectedRowIndices.forEach(rowIndex => {
+        selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
                 if (!rowData.rowsData) {
@@ -618,6 +697,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                     const defaultEndDate = endDate || defaultEnd;
                     await fetchTimeClockData(defaultStartDate, defaultEndDate);
                     setSelectedRows(new Set());
+                    onDataChange?.();
                 } else {
                     console.error(`Error ${action}ing timesheets`);
                 }
@@ -625,16 +705,16 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 console.error(`Error ${action}ing timesheets:`, error);
             }
         },
-        [startDate, endDate]
+        [startDate, endDate, fetchTimeClockData, onDataChange]
     );
 
     const handleLockClick = () => {
         const timesheetIds: (string | number)[] = [];
-        const selectedRowIndices = Array.from(selectedRows).map(rowId => {
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
             return parseInt(rowId.replace('row-', ''));
         });
 
-        selectedRowIndices.forEach(rowIndex => {
+        selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
                 if (!rowData.rowsData && rowData.timesheet_light_id != null) {
@@ -654,107 +734,13 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         }
     };
 
-    const getSelectedRowsWorklogs = () => {
-        let hasWorklogs = false;
-        const worklogIds: string[] = [];
-
-        const selectedRowIndices = Array.from(selectedRows).map(rowId => {
-            return parseInt(rowId.replace('row-', ''));
-        });
-
-        selectedRowIndices.forEach(rowIndex => {
-            const rowData = dailyData[rowIndex];
-            if (rowData && rowData.rowType === 'day') {
-                if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
-                    hasWorklogs = true;
-                    rowData.rowsData.forEach((worklog: any) => {
-                        if (worklog.worklog_id) {
-                            worklogIds.push(worklog.worklog_id);
-                        }
-                    });
-                }
-            }
-        });
-
-        return { hasWorklogs };
-    };
-    
-    const handleDeleteWorklogs = async () => {
-        const worklogIds: string[] = [];
-
-        const selectedRowIndices = Array.from(selectedRows).map(rowId => {
-            return parseInt(rowId.replace('row-', ''));
-        });
-
-        selectedRowIndices.forEach(rowIndex => {
-            const rowData = dailyData[rowIndex];
-            if (rowData && rowData.rowType === 'day') {
-                if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
-                    rowData.rowsData.forEach((worklog: any) => {
-                        if (worklog.worklog_id) {
-                            worklogIds.push(worklog.worklog_id);
-                        }
-                    });
-                }
-            }
-        });
-
-        if (worklogIds.length > 0) {
-            try {
-                const ids = worklogIds.join(',');
-                const response: AxiosResponse<{
-                    IsSuccess: boolean
-                }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
-
-                if (response.data.IsSuccess) {
-                    const defaultStartDate = startDate || defaultStart;
-                    const defaultEndDate = endDate || defaultEnd;
-                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                    setSelectedRows(new Set());
-                } else {
-                    console.error(`Erroring timesheets`);
-                }
-            } catch (error) {
-                console.error(`Erroring timesheets:`, error);
-            }
-        }
-    };
-
-    const handleDeleteWorklog = async (worklogId: string) => {
-        const worklogIds: string[] = [];
-        
-        if (worklogId) {
-            worklogIds.push(worklogId);
-        }
-
-        if (worklogIds.length > 0) {
-            try {
-                const ids = worklogIds.join(',');
-                const response: AxiosResponse<{
-                    IsSuccess: boolean
-                }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
-
-                if (response.data.IsSuccess) {
-                    const defaultStartDate = startDate || defaultStart;
-                    const defaultEndDate = endDate || defaultEnd;
-                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                    setSelectedRows(new Set());
-                } else {
-                    console.error(`Erroring timesheets`);
-                }
-            } catch (error) {
-                console.error(`Erroring timesheets:`, error);
-            }
-        }
-    };
-    
     const handleUnlockClick = () => {
         const timesheetIds: (string | number)[] = [];
-        const selectedRowIndices = Array.from(selectedRows).map(rowId => {
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
             return parseInt(rowId.replace('row-', ''));
         });
 
-        selectedRowIndices.forEach(rowIndex => {
+        selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
                 if (!rowData.rowsData && rowData.timesheet_light_id) {
@@ -774,7 +760,102 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         }
     };
 
-    // Table columns configuration
+    const getSelectedRowsWorklogs = () => {
+        let hasWorklogs = false;
+        const worklogIds: string[] = [];
+
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
+            return parseInt(rowId.replace('row-', ''));
+        });
+
+        selectedRowIndices.forEach((rowIndex) => {
+            const rowData = dailyData[rowIndex];
+            if (rowData && rowData.rowType === 'day') {
+                if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
+                    hasWorklogs = true;
+                    rowData.rowsData.forEach((worklog: any) => {
+                        if (worklog.worklog_id) {
+                            worklogIds.push(worklog.worklog_id);
+                        }
+                    });
+                }
+            }
+        });
+
+        return { hasWorklogs };
+    };
+
+    const handleDeleteWorklogs = async () => {
+        const worklogIds: string[] = [];
+
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
+            return parseInt(rowId.replace('row-', ''));
+        });
+
+        selectedRowIndices.forEach((rowIndex) => {
+            const rowData = dailyData[rowIndex];
+            if (rowData && rowData.rowType === 'day') {
+                if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
+                    rowData.rowsData.forEach((worklog: any) => {
+                        if (worklog.worklog_id) {
+                            worklogIds.push(worklog.worklog_id);
+                        }
+                    });
+                }
+            }
+        });
+
+        if (worklogIds.length > 0) {
+            try {
+                const ids = worklogIds.join(',');
+                const response: AxiosResponse<{
+                    IsSuccess: boolean
+                }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
+
+                if (response.data.IsSuccess) {
+                    const defaultStartDate = startDate || defaultStart;
+                    const defaultEndDate = endDate || defaultEnd;
+                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                    setSelectedRows(new Set());
+                    onDataChange?.();
+                } else {
+                    console.error(`Error deleting timesheets`);
+                }
+            } catch (error) {
+                console.error(`Error deleting timesheets:`, error);
+            }
+        }
+    };
+
+    const handleDeleteWorklog = async (worklogId: string) => {
+        const worklogIds: string[] = [];
+
+        if (worklogId) {
+            worklogIds.push(worklogId);
+        }
+
+        if (worklogIds.length > 0) {
+            try {
+                const ids = worklogIds.join(',');
+                const response: AxiosResponse<{
+                    IsSuccess: boolean
+                }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
+
+                if (response.data.IsSuccess) {
+                    const defaultStartDate = startDate || defaultStart;
+                    const defaultEndDate = endDate || defaultEnd;
+                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                    setSelectedRows(new Set());
+                    onDataChange?.();
+                } else {
+                    console.error(`Error deleting timesheet`);
+                }
+            } catch (error) {
+                console.error(`Error deleting timesheet:`, error);
+            }
+        }
+    };
+
     const mainTableColumns = useMemo<ColumnDef<DailyBreakdown, any>[]>(
         () => [
             {
@@ -829,7 +910,6 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                     );
                 },
             },
-            // Add other columns as needed...
             {
                 id: 'expander',
                 header: () => <span style={{ display: 'block', textAlign: 'center' }}></span>,
@@ -838,7 +918,7 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
                 enableSorting: false,
                 cell: ({ row }) => {
                     if (row.original.rowType !== 'day') return null;
-                    const hasLogs = row.original.userChecklogs && row.original.userChecklogs.length > 0;
+                    const hasLogs = row.original.allUserChecklogs && row.original.allUserChecklogs.length > 0;
                     if (!hasLogs) return null;
                     return (
                         <IconButton
@@ -944,23 +1024,28 @@ const TimeClockDetails: React.FC<TimeClockDetailsProps> = ({
         getRowCanExpand: (row) => row.original.rowType === 'day',
     });
 
-    // Effects
     useEffect(() => {
-        if (timeClock?.start_date && timeClock?.end_date) {
-            const start = new Date(timeClock.start_date);
-            const end = new Date(timeClock.end_date);
+        if (!open) return;
 
-            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                setStartDate(start);
-                setEndDate(end);
+        let start: Date | null = null;
+        let end: Date | null = null;
+
+        if (initialData?.startDate && initialData?.endDate) {
+            start = new Date(initialData.startDate);
+            end = new Date(initialData.endDate);
+        } else {
+            if(timeClock?.start_date && timeClock?.end_date){
+                start = new Date(timeClock.start_date);
+                end = new Date(timeClock.end_date);
             }
-
-            fetchTimeClockData(
-                new Date(timeClock.start_date),
-                new Date(timeClock.end_date)
-            );
         }
-    }, [timeClock, fetchTimeClockData]);
+
+        if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            setStartDate(start);
+            setEndDate(end);
+            fetchTimeClockData(start, end);
+        }
+    }, [timeClock, initialData, fetchTimeClockData]);
 
     if (!timeClock) return null;
 

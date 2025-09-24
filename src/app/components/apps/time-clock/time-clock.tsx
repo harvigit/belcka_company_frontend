@@ -18,6 +18,8 @@ import {
     Typography,
     Drawer,
     InputAdornment,
+    Snackbar,
+    Alert,
 } from '@mui/material';
 import { IconSearch, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import {
@@ -147,14 +149,13 @@ const TimeClock = () => {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
     const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-
-    // Use initial dates from localStorage or defaults
     const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
-
     const [hoveredRow, setHoveredRow] = useState<string | null>(null);
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
+    const [hasDataChanged, setHasDataChanged] = useState<boolean>(false); // New state to track changes
+    const [errorMessage, setErrorMessage] = useState<string | null>(null); // State for error feedback
 
     const fetchData = async (start: Date, end: Date): Promise<void> => {
         try {
@@ -175,6 +176,7 @@ const TimeClock = () => {
             }
         } catch (error) {
             console.error('Error fetching timesheet data:', error);
+            setErrorMessage('Failed to fetch timesheet data. Please try again.');
         }
     };
 
@@ -186,7 +188,6 @@ const TimeClock = () => {
         if (range.from && range.to) {
             setStartDate(range.from);
             setEndDate(range.to);
-            // Save to localStorage whenever dates change
             saveDateRangeToStorage(range.from, range.to);
         }
     };
@@ -197,7 +198,6 @@ const TimeClock = () => {
     };
 
     const handleUserChange = (newUser: TimeClock) => {
-        // Update the selected user with the same date range
         const updatedUser = {
             ...newUser,
             start_date: selectedTimeClock?.start_date || startDate?.toISOString() || '',
@@ -206,13 +206,23 @@ const TimeClock = () => {
         setSelectedTimeClock(updatedUser);
     };
 
-    const closeDetails = () => {
+    const closeDetails = async () => {
         setDetailsOpen(false);
         setSelectedTimeClock(null);
 
-        if (startDate && endDate) {
-            fetchData(startDate, endDate);
+        if (hasDataChanged && startDate && endDate) {
+            try {
+                await fetchData(startDate, endDate);
+                setHasDataChanged(false); // Reset after fetching
+            } catch (error) {
+                console.error('Error fetching data after closing details:', error);
+                setErrorMessage('Failed to refresh data. Please try again.');
+            }
         }
+    };
+
+    const handleDataChange = () => {
+        setHasDataChanged(true); // Called by TimeClockDetails when data changes
     };
 
     const filteredData = useMemo(() => {
@@ -266,18 +276,10 @@ const TimeClock = () => {
                         <Stack direction="row" alignItems="center" spacing={2}>
                             <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
                             <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography
-                                   className="f-14"
-                                    noWrap
-                                >
+                                <Typography className="f-14" noWrap>
                                     {row.user_name}
                                 </Typography>
-
-                                <Typography
-                                    variant="caption"
-                                    color="textSecondary"
-                                    noWrap
-                                >
+                                <Typography variant="caption" color="textSecondary" noWrap>
                                     {row.trade_name}
                                 </Typography>
                             </Box>
@@ -290,11 +292,6 @@ const TimeClock = () => {
                 header: 'Total Hours',
                 cell: (info: any) => formatHour(info.getValue()) || '-',
             }),
-            // columnHelper.accessor('total_break_hours', {
-            //     id: 'total_break_hours',
-            //     header: 'Total Break Hours',
-            //     cell: (info: any) => formatHour(info.getValue()) || '-',
-            // }),
             columnHelper.accessor('payable_total_hours', {
                 id: 'payable_total_hours',
                 header: 'Payable Hours',
@@ -354,7 +351,6 @@ const TimeClock = () => {
     return (
         <Box sx={{ position: 'relative', overflow: 'hidden' }}>
             <Box sx={{ transition: 'height 0.3s ease-in-out' }}>
-                {/* Search and Filter Controls */}
                 <Stack
                     mx={2}
                     mb={3}
@@ -370,18 +366,17 @@ const TimeClock = () => {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         InputProps={{
-                        endAdornment: (
-                        <InputAdornment position="end">
-                            <IconSearch size={16} />
-                        </InputAdornment>
-                        ),
-                    }}
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <IconSearch size={16} />
+                                </InputAdornment>
+                            ),
+                        }}
                     />
                 </Stack>
 
                 <Divider />
 
-                {/* Data Table */}
                 <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
                     <Table stickyHeader>
                         <TableHead>
@@ -472,7 +467,6 @@ const TimeClock = () => {
                     </Table>
                 </TableContainer>
 
-                {/* Pagination Controls */}
                 <Stack
                     gap={1}
                     pr={3}
@@ -561,11 +555,23 @@ const TimeClock = () => {
                     timeClock={selectedTimeClock}
                     user_id={selectedTimeClock?.user_id}
                     currency={currency}
-                    allUsers={filteredData} 
+                    allUsers={filteredData}
                     onClose={closeDetails}
                     onUserChange={handleUserChange}
+                    onDataChange={handleDataChange}
                 />
             </Drawer>
+
+            <Snackbar
+                open={!!errorMessage}
+                autoHideDuration={6000}
+                onClose={() => setErrorMessage(null)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setErrorMessage(null)} severity="error" sx={{ width: '100%' }}>
+                    {errorMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };
