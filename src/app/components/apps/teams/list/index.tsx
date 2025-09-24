@@ -120,7 +120,8 @@ const TablePagination = () => {
   const [otp, setOtp] = useState("");
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [openGenerateDialog, setOpenGenerateDialog] = useState(false);
   const router = useRouter();
 
@@ -135,7 +136,7 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  const fetchTrades = useCallback(async () => {
+  const fetchTeams = useCallback(async () => {
     setLoading(true);
     try {
       const url = projectId
@@ -154,8 +155,8 @@ const TablePagination = () => {
   }, [projectId]);
 
   useEffect(() => {
-    fetchTrades();
-  }, [fetchTrades]);
+    fetchTeams();
+  }, [fetchTeams]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -191,6 +192,36 @@ const TablePagination = () => {
     },
     [router]
   );
+
+  const handleDeleteClick = (teamId: number) => {
+    setSelectedTeamId(teamId);
+    setOpenConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedTeamId) {
+      try {
+        const payload = {
+          team_id: Number(selectedTeamId),
+          company_id: Number(id.company_id),
+        };
+        const response = await api.post(`team/delete-subcontractor`, payload);
+        toast.success(response.data.message);
+        fetchTeams();
+      } catch (error) {
+        console.error("Failed to remove users", error);
+      } finally {
+        setConfirmOpen(false);
+      }
+    }
+    setOpenConfirm(false);
+    setSelectedTeamId(null);
+  };
+
+  const handleCancelDelete = () => {
+    setOpenConfirm(false);
+    setSelectedTeamId(null);
+  };
 
   const uniqueTrades = useMemo(
     () => [...new Set(data.map((item) => item.name).filter(Boolean))],
@@ -350,18 +381,32 @@ const TablePagination = () => {
           item.company_id !== item.subcontractor_company_id;
         return (
           <Stack direction="row" spacing={1}>
-            <Tooltip title="Edit">
-              <IconButton
-                disabled={subcontractor}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEdit(item.team_id);
-                }}
-                color="primary"
-              >
-                <IconEdit size={18} />
-              </IconButton>
-            </Tooltip>
+            {subcontractor && (
+              <Tooltip title="Delete">
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(item.team_id);
+                  }}
+                  color="error"
+                >
+                  <IconTrash size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
+            {!subcontractor && (
+              <Tooltip title="Edit">
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(item.team_id);
+                  }}
+                  color="primary"
+                >
+                  <IconEdit size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
           </Stack>
         );
       },
@@ -575,7 +620,7 @@ const TablePagination = () => {
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
-                    await fetchTrades();
+                    await fetchTeams();
                   } catch (error) {
                     toast.error("Failed to archive teams");
                   } finally {
@@ -589,6 +634,26 @@ const TablePagination = () => {
               </Button>
             </DialogActions>
           </Dialog>
+          {/* delete subcontractor team */}
+          <Dialog open={openConfirm} onClose={handleCancelDelete}>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogContent>
+              <Typography>
+                Are you sure you want to remove this subcontracoter team?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCancelDelete}>Cancel</Button>
+              <Button
+                onClick={handleConfirmDelete}
+                color="error"
+                variant="contained"
+              >
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <IconButton
             sx={{ margin: "0px" }}
             id="basic-button"
@@ -678,7 +743,7 @@ const TablePagination = () => {
       <ArchiveTeam
         open={archiveDrawerOpen}
         onClose={() => setarchiveDrawerOpen(false)}
-        onWorkUpdated={fetchTrades}
+        onWorkUpdated={fetchTeams}
       />
       <Grid container spacing={3}>
         <Grid size={12}>
@@ -774,7 +839,7 @@ const TablePagination = () => {
                           }}
                         >
                           {row.getVisibleCells().map((cell) => {
-                            const isActionCell = cell.column.id === "actions"; 
+                            const isActionCell = cell.column.id === "actions";
                             const isCheckboxCell = cell.column.id === "name";
 
                             return (
