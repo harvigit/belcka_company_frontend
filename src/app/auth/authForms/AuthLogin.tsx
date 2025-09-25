@@ -83,6 +83,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
       const result = await signIn("credentials", {
         redirect: false,
+        ...payload,
          callbackUrl: "/apps/users/list",
       });
 
