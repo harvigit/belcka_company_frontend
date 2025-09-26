@@ -29,7 +29,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (status === "unauthenticated" && !PUBLIC_ROUTES.includes(pathname)) {
-    return null; // redirect will happen
+    router.replace("/auth");
   }
 
   return <>{children}</>;
