@@ -414,7 +414,7 @@ const TablePagination = () => {
               startIcon={<IconTrash width={18} />}
               onClick={() => {
                 const selectedIds = Array.from(selectedRowIds);
-                console.log(selectedIds, "selectedIds", selectedRowIds);
+
                 setUsersToDelete(selectedIds.filter(Boolean));
                 setConfirmOpen(true);
               }}

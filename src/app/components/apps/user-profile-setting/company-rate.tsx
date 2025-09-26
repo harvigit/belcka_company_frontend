@@ -113,7 +113,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       fetchTrades();
     }
   }, [comapny]);
-  console.log(payRate, "payRate");
 
   const handleUpdate = async () => {
     if (!formData.trade_id || !formData.rate) {

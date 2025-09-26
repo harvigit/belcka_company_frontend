@@ -24,8 +24,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import api from '@/utils/axios';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
-import { TimePicker } from '@mui/x-date-pickers';
 import dayjs, { Dayjs } from 'dayjs';
 import toast from 'react-hot-toast';
 import { User } from 'next-auth';
@@ -45,11 +43,9 @@ interface CompanyUser {
 }
 
 interface CompanySettings {
-    dayLength: number[];
     dailyLimit: string;
-    autoClockOut: string;
+    autoClockOut: number;
     showDiff: boolean;
-    workDays: boolean[];
     timeZone: string;
     users: string[];
     highlightMore: boolean;
@@ -60,29 +56,15 @@ interface CompanySettings {
     showTimesheetRound: boolean;
     isDayLimit: boolean;
     isAutoClock: boolean;
-    startTime: string | null;
-    endTime: string | null;
 }
 
 interface GeneralSettingProps {
     onSaveSuccess: () => void;
 }
 
-interface WorkDaySelectorProps {
-    workDays: boolean[];
-    dayLength: number[];
-    onDayClick: (index: number) => void;
-    onDayLengthChange: (index: number, value: string) => void;
-}
-
 interface SettingsState extends CompanySettings {
     isSaving: boolean;
 }
-
-const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
-const DAY_NAMES = [
-    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-] as const;
 
 const ROUNDING_OPTIONS = [
     { value: 5, label: '5 minutes' },
@@ -102,18 +84,10 @@ const generateTimeOptions = (): string[] => {
     return options;
 };
 
-const parseTimeString = (timeString: string | null): Dayjs | null => {
-    if (!timeString) return null;
-    const parsed = dayjs(timeString, 'HH:mm');
-    return parsed.isValid() ? parsed : null;
-};
-
 const getDefaultSettings = (): Omit<SettingsState, 'isSaving'> => ({
-    dayLength: [8, 8, 8, 8, 8, 8, 8],
     dailyLimit: '12:00 Hours',
-    autoClockOut: '13:00 Hours',
+    autoClockOut: 13,
     showDiff: false,
-    workDays: [false, true, true, true, true, true, false],
     timeZone: '',
     users: [],
     highlightMore: false,
@@ -124,82 +98,7 @@ const getDefaultSettings = (): Omit<SettingsState, 'isSaving'> => ({
     showTimesheetRound: false,
     isDayLimit: false,
     isAutoClock: false,
-    startTime: '09:00',
-    endTime: '17:00',
 });
-
-const WorkDaySelector = React.memo<WorkDaySelectorProps>(({ workDays, dayLength, onDayClick, onDayLengthChange }) => {
-    const selectedCount = useMemo(() => workDays.filter(Boolean).length, [workDays]);
-
-    return (
-        <Box display="flex" gap={3} sx={{ height: 90 }}>
-            {DAYS.map((day, index) => {
-                const isSelected = workDays[index];
-                const canToggle = selectedCount > 1 || !isSelected;
-
-                return (
-                    <Box
-                        key={index}
-                        display="flex"
-                        flexDirection="column"
-                        alignItems="center"
-                        justifyContent="space-between"
-                        sx={{ width: 32 }}
-                    >
-                        <Box
-                            onClick={() => canToggle && onDayClick(index)}
-                            sx={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: '50%',
-                                backgroundColor: isSelected ? '#1976d2' : '#e0e0e0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: isSelected ? 'white' : '#666',
-                                fontSize: '0.875rem',
-                                fontWeight: 500,
-                                cursor: canToggle ? 'pointer' : 'not-allowed',
-                                transition: 'all 0.2s',
-                                '&:hover': {
-                                    backgroundColor: isSelected
-                                        ? '#1565c0'
-                                        : canToggle ? '#d5d5d5' : '#e0e0e0',
-                                },
-                            }}
-                            title={canToggle
-                                ? `Click to toggle ${DAY_NAMES[index]}`
-                                : 'At least one day must be selected'
-                            }
-                        >
-                            {day}
-                        </Box>
-                        <Typography sx={{ backgroundColor: '#d3d3d3', width: '1px', height: '26px' }} />
-                        <TextField
-                            type="text"
-                            value={dayLength[index]}
-                            onChange={(e) => onDayLengthChange(index, e.target.value)}
-                            size="small"
-                            disabled={!isSelected}
-                            sx={{
-                                width: 32,
-                                '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.75rem' },
-                                '& .MuiOutlinedInput-input': { textAlign: 'center', padding: '4px 2px' },
-                                '& .MuiInputBase-input.Mui-disabled': {
-                                    WebkitTextFillColor: '#666',
-                                    backgroundColor: '#f5f5f5',
-                                },
-                            }}
-                            inputProps={{ min: 0, max: 24 }}
-                        />
-                    </Box>
-                );
-            })}
-        </Box>
-    );
-});
-
-WorkDaySelector.displayName = 'WorkDaySelector';
 
 const useSettingsState = (defaultSettings: Partial<CompanySettings> = {}): [SettingsState, (updates: Partial<SettingsState>) => void] => {
     const [state, setState] = useState<SettingsState>({
@@ -276,11 +175,9 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
             const response = await api.get('/setting/get-company-settings');
             if (response.data?.IsSuccess) {
                 const apiSettings: CompanySettings = {
-                    dayLength: response.data.dayLength || getDefaultSettings().dayLength,
                     dailyLimit: response.data.dailyLimit || getDefaultSettings().dailyLimit,
-                    autoClockOut: response.data.autoClockOut || getDefaultSettings().autoClockOut,
+                    autoClockOut: parseInt(response.data.autoClockOut) || getDefaultSettings().autoClockOut,
                     showDiff: response.data.showDiff ?? getDefaultSettings().showDiff,
-                    workDays: response.data.workDays || getDefaultSettings().workDays,
                     timeZone: response.data.timeZone || getDefaultSettings().timeZone,
                     users: response.data.pay_rate_users
                         ? response.data.pay_rate_users.map((user: any) => String(user.user_id))
@@ -293,8 +190,6 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
                     showTimesheetRound: response.data.showTimesheetRound ?? getDefaultSettings().showTimesheetRound,
                     isDayLimit: response.data.isDayLimit ?? getDefaultSettings().isDayLimit,
                     isAutoClock: response.data.isAutoClock ?? getDefaultSettings().isAutoClock,
-                    startTime: response.data.startTime || null,
-                    endTime: response.data.endTime || null,
                 };
                 setSettings(apiSettings);
             } else {
@@ -352,7 +247,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     const [settings, updateSettings] = useSettingsState(companySettings || undefined);
     const session = useSession();
     const user = session.data?.user as User & { user_role_id?: number | null } & {id: number } & { company_id: number};
-    
+
     const timezoneDropdown = useSearchableDropdown();
     const userDropdown = useSearchableDropdown();
 
@@ -365,11 +260,9 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                     const payRateUsers = response.data.pay_rate_users || [];
 
                     updateSettings({
-                        dayLength: fetchedSettings.day_length || [8, 8, 8, 8, 8, 8, 8],
                         dailyLimit: fetchedSettings.daily_limit || '12:00 Hours',
-                        autoClockOut: fetchedSettings.auto_clock_out || '13:00 Hours',
+                        autoClockOut: parseInt(fetchedSettings.auto_clock_out) || 13,
                         showDiff: fetchedSettings.show_diff || false,
-                        workDays: fetchedSettings.work_days || [true, true, true, true, true, true, true],
                         timeZone: fetchedSettings.timezone_id ? String(fetchedSettings.timezone_id) : '',
                         users: payRateUsers.map((user: any) => String(user.user_id)),
                         highlightMore: fetchedSettings.highlight_more || false,
@@ -380,8 +273,6 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         showTimesheetRound: fetchedSettings.show_timesheet_round || false,
                         isDayLimit: fetchedSettings.is_day_limit || false,
                         isAutoClock: fetchedSettings.is_auto_clock || false,
-                        startTime: fetchedSettings.start_time || null,
-                        endTime: fetchedSettings.end_time || null,
                         isSaving: false,
                     });
                 }
@@ -394,7 +285,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     }, [updateSettings]);
 
     const isLoading = settingsLoading || resourcesLoading;
-    
+
     const timeOptions = useMemo(() => generateTimeOptions(), []);
 
     const filteredTimezones = useMemo(() => {
@@ -411,9 +302,6 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
         );
     }, [companyUsers, userDropdown.searchText]);
 
-    const startTimeObj = useMemo(() => parseTimeString(settings.startTime), [settings.startTime]);
-    const endTimeObj = useMemo(() => parseTimeString(settings.endTime), [settings.endTime]);
-    
     const styles = useMemo(() => ({
         sharedSelectStyles: {
             minWidth: 100,
@@ -474,7 +362,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             autoFocus: false,
         },
     }), []);
-    
+
     const createCheckboxHandler = useCallback((field: keyof SettingsState) =>
         (event: React.ChangeEvent<HTMLInputElement>) => {
             updateSettings({ [field]: event.target.checked });
@@ -491,27 +379,6 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             updateSettings({ [field]: event.target.value });
         }, [updateSettings]);
 
-    const handleDayClick = useCallback((index: number) => {
-        const selectedCount = settings.workDays.filter(Boolean).length;
-        if (selectedCount === 1 && settings.workDays[index]) return;
-
-        const updatedWorkDays = [...settings.workDays];
-        updatedWorkDays[index] = !updatedWorkDays[index];
-        updateSettings({ workDays: updatedWorkDays });
-    }, [settings.workDays, updateSettings]);
-
-    const handleDayLengthChange = useCallback((index: number, value: string) => {
-        const newValue = Math.max(0, Math.min(24, parseInt(value) || 0));
-        const updatedDayLength = [...settings.dayLength];
-        updatedDayLength[index] = newValue;
-        updateSettings({ dayLength: updatedDayLength });
-    }, [settings.dayLength, updateSettings]);
-
-    const handleTimeChange = useCallback((field: 'startTime' | 'endTime') =>
-        (newValue: Dayjs | null) => {
-            updateSettings({ [field]: newValue ? newValue.format('HH:mm') : null });
-        }, [updateSettings]);
-
     const handleUserChange = useCallback((event: SelectChangeEvent<string[]>) => {
         const value = event.target.value;
         updateSettings({ users: typeof value === 'string' ? [value] : value });
@@ -522,10 +389,6 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             updateSettings({ isSaving: true });
 
             const payload = {
-                workDays: settings.workDays,
-                dayLength: settings.dayLength,
-                startTime: settings.startTime,
-                endTime: settings.endTime,
                 isDayLimit: settings.isDayLimit,
                 dailyLimit: settings.dailyLimit,
                 isAutoClock: settings.isAutoClock,
@@ -579,131 +442,8 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                {/* Scrollable Content */}
                 <Box sx={{ flex: 1, overflowY: 'auto', p: 3, bgcolor: 'white' }}>
                     <Box sx={{ maxWidth: 900, mx: 'auto' }}>
-                        {/* Work Days Section */}
-                        <Box mb={4}>
-                            <Box display="flex" gap={4} alignItems="stretch">
-                                <Box display="flex" flexDirection="column" justifyContent="space-between" sx={{ width: 120 }}>
-                                    <Typography variant="body2" color="text.primary"
-                                                sx={{ height: 32, display: 'flex', alignItems: 'center' }}>
-                                        Work days:
-                                    </Typography>
-                                    <Box display="flex" alignItems="center" gap={1} sx={{ height: 32 }}>
-                                        <Typography variant="body2" color="text.primary">Day length:</Typography>
-                                        <Tooltip
-                                            componentsProps={styles.tooltipStyles}
-                                            title={
-                                                <>
-                                                    Determine how many hours each work day equals by default,
-                                                    while the longest day represents a full work day. <br />
-                                                    For example, if a full work day (the longest day) is 8 hours
-                                                    and the day length for Friday is 4 hours, a time off on Friday
-                                                    will be displayed as half a day (4 divided by 8).
-                                                </>
-                                            }
-                                            arrow
-                                            placement="top"
-                                        >
-                                            <Box component="span" sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                                <IconHelp size={16} color="#9e9e9e" />
-                                            </Box>
-                                        </Tooltip>
-                                    </Box>
-                                </Box>
-                                <WorkDaySelector
-                                    workDays={settings.workDays}
-                                    dayLength={settings.dayLength}
-                                    onDayClick={handleDayClick}
-                                    onDayLengthChange={handleDayLengthChange}
-                                />
-                            </Box>
-                        </Box>
-
-                        {/* Default Work Day Hours */}
-                        <Box mb={4}>
-                            <Box display="flex" alignItems="center" gap={1} mb={2}>
-                                <Typography variant="body2" color="text.primary">Default work day hours:</Typography>
-                                <Tooltip componentsProps={styles.tooltipStyles} title="Set the default work hours when adding new shifts"
-                                         arrow placement="top">
-                                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                        <IconHelp size={16} color="#9e9e9e" />
-                                    </Box>
-                                </Tooltip>
-                            </Box>
-                            <Box display="flex" alignItems="center" gap={3}>
-                                <Box display="flex" alignItems="center" gap={1}>
-                                    <Typography variant="body2" color="text.secondary">From:</Typography>
-                                    <TimePicker
-                                        value={startTimeObj}
-                                        onChange={handleTimeChange('startTime')}
-                                        ampm={false}
-                                        format="HH:mm"
-                                        viewRenderers={{
-                                            hours: renderTimeViewClock,
-                                            minutes: renderTimeViewClock,
-                                            seconds: renderTimeViewClock,
-                                        }}
-                                        slotProps={{
-                                            textField: {
-                                                size: 'small',
-                                                sx: {
-                                                    '& .MuiSvgIcon-root': {
-                                                        width: '18px',
-                                                        height: '18px',
-                                                    },
-                                                    '& .MuiFormHelperText-root': {
-                                                        display: 'none',
-                                                    },
-                                                },
-                                            },
-                                        }}
-                                    />
-                                </Box>
-                                <Box display="flex" alignItems="center" gap={1}>
-                                    <Typography variant="body2" color="text.secondary">To:</Typography>
-                                    <TimePicker
-                                        value={endTimeObj}
-                                        onChange={handleTimeChange('endTime')}
-                                        ampm={false}
-                                        format="HH:mm"
-                                        viewRenderers={{
-                                            hours: renderTimeViewClock,
-                                            minutes: renderTimeViewClock,
-                                            seconds: renderTimeViewClock,
-                                        }}
-                                        slotProps={{
-                                            textField: {
-                                                size: 'small',
-                                                sx: {
-                                                    '& .MuiSvgIcon-root': {
-                                                        width: '18px',
-                                                        height: '18px',
-                                                    },
-                                                    '& .MuiFormHelperText-root': {
-                                                        display: 'none',
-                                                    },
-                                                },
-                                            },
-                                        }}
-                                    />
-                                </Box>
-                            </Box>
-                        </Box>
-
-                        <Divider sx={{ my: 1 }} />
-
-                        {/* Overtime & Pay Rules */}
-                        <Box py={4}>
-                            <Typography variant="body1" color="text.primary" mb={1}>Overtime & Pay rules</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Ensure fair compensation by setting up overtime rules and policies.
-                            </Typography>
-                        </Box>
-
-                        <Divider sx={{ my: 1 }} />
-
                         {/* Daily Limit & Auto Clock Out */}
                         <Box py={3}>
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
@@ -750,18 +490,25 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         </Typography>
                                     </Box>
                                 </Box>
-                                <Select
-                                    value={settings.autoClockOut}
-                                    onChange={createSelectHandler('autoClockOut')}
-                                    size="small"
-                                    sx={styles.sharedSelectStyles}
-                                    MenuProps={styles.dropdownMenuProps}
-                                    disabled={!settings.isAutoClock}
-                                >
-                                    {timeOptions.map((option) => (
-                                        <MenuItem key={option} value={option} sx={{ fontSize: 14 }}>{option}</MenuItem>
-                                    ))}
-                                </Select>
+                                <Box display='flex' alignItems='center'>
+                                    <TextField
+                                        variant="outlined"
+                                        size="small"
+                                        type="text"
+                                        value={settings.autoClockOut}
+                                        onChange={createNumberInputHandler('autoClockOut')}
+                                        disabled={!settings.isAutoClock}
+                                        inputProps={{
+                                            style: { width: '40px', backgroundColor: '#fff' },
+                                            min: 0
+                                        }}
+                                        sx={{
+                                            mr: 1,
+                                            padding: '4px'
+                                        }}
+                                    />
+                                    hours
+                                </Box>
                             </Box>
 
                             <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -872,7 +619,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     <Box display="flex" alignItems="center" sx={{ backgroundColor: '#fff1b8', padding: 1 }}>
                                         <IconHelp size={18} />
                                         <Typography ml={1} variant="body2">
-                                            Changes will apply to all current and past timesheets
+                                            Changes will apply to all new timesheets
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -884,24 +631,24 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         {/* Show Pay Rates & Export Format */}
                         <Box mb={4}>
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                 <Typography variant="body2">Show pay rates</Typography>
-                               <Box display={"flex"} justifyContent={"end"} alignContent={"center"} gap={3}>
-                                <AvatarGroup max={4}>
-                                {companyUsers
-                                    .filter((user) => settings.users.includes(user.id.toString()))
-                                    .map((user) => (
-                                    <Avatar
-                                        key={user.id}
-                                        alt={user.name}
-                                        src={user.user_image || ""}
-                                    />
-                                    ))}
-                                </AvatarGroup>
-                                <Tooltip
-                                title={user.user_role_id !== 1 ? "Only owner can chnage this field" : ""}
-                                arrow
-                                placement="top"
-                                >
+                                <Typography variant="body2">Show pay rates</Typography>
+                                <Box display={"flex"} justifyContent={"end"} alignContent={"center"} gap={3}>
+                                    <AvatarGroup max={4}>
+                                        {companyUsers
+                                            .filter((user) => settings.users.includes(user.id.toString()))
+                                            .map((user) => (
+                                                <Avatar
+                                                    key={user.id}
+                                                    alt={user.name}
+                                                    src={user.user_image || ""}
+                                                />
+                                            ))}
+                                    </AvatarGroup>
+                                    <Tooltip
+                                        title={user.user_role_id !== 1 ? "Only owner can chnage this field" : ""}
+                                        arrow
+                                        placement="top"
+                                    >
                                     <span>
                                         <Select
                                             multiple
@@ -1010,8 +757,8 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                             )}
                                         </Select>
                                     </span>
-                                </Tooltip>
-                               </Box>
+                                    </Tooltip>
+                                </Box>
                             </Box>
 
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>

@@ -175,7 +175,6 @@ const TimeClock = () => {
                 }
             }
         } catch (error) {
-            console.error('Error fetching timesheet data:', error);
             setErrorMessage('Failed to fetch timesheet data. Please try again.');
         }
     };
@@ -213,16 +212,15 @@ const TimeClock = () => {
         if (hasDataChanged && startDate && endDate) {
             try {
                 await fetchData(startDate, endDate);
-                setHasDataChanged(false); // Reset after fetching
+                setHasDataChanged(false);
             } catch (error) {
-                console.error('Error fetching data after closing details:', error);
                 setErrorMessage('Failed to refresh data. Please try again.');
             }
         }
     };
 
     const handleDataChange = () => {
-        setHasDataChanged(true); // Called by TimeClockDetails when data changes
+        setHasDataChanged(true);
     };
 
     const filteredData = useMemo(() => {

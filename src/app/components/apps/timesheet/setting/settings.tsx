@@ -19,11 +19,14 @@ import {
     IconClock,
     IconPaperclip,
     IconRefresh,
+    IconTiltShift,
 } from '@tabler/icons-react';
-import GeneralSetting from './menus/general'; // Import the GeneralSetting component
+import GeneralSetting from './menus/general'; 
+import ShiftLists from './menus/shift/index';
 
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
+    { icon: <IconTiltShift size={18} />, label: "Shift" },
     { icon: <IconTools size={18} />, label: "Clock in & out" },
     { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     { icon: <IconCoffee size={18} />, label: "Breaks" },
@@ -139,6 +142,9 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                     >
                         {activeMenuItem === "General" && (
                             <GeneralSetting onSaveSuccess={handleSaveSuccess} />
+                        )}
+                        {activeMenuItem === "Shift" && (
+                            <ShiftLists />
                         )}
                     </Box>
                 </Box>
