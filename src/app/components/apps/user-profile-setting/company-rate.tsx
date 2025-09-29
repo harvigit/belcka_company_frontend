@@ -197,7 +197,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       mt={2}
       ml={5}
       className="company_rate_wrapper"
-      height="370px !important"
+      height="450px !important"
     >
       <Box display={"flex"} justifyContent={"space-between"} mb={1}>
         <Typography color="#487bb3ff" fontSize="16px !important" sx={{ mb: 1 }}>

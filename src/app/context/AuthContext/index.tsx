@@ -19,6 +19,10 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!hasMounted) return;
 
+    if (status === "authenticated" && pathname === "/") {
+      router.replace("/apps/users/list");
+    }
+
     if (status === "unauthenticated" && !PUBLIC_ROUTES.includes(pathname)) {
       router.replace("/auth");
     }
