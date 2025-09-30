@@ -27,11 +27,11 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                            handlePopoverClose,
                                                        }) => {
     const headerDetails = [
-        { value: formatHour(headerDetail?.total_hours), label: 'Total Hours' },
-        { value: formatHour(headerDetail?.total_break_hours), label: 'Total Break Hours' },
+        // { value: formatHour(headerDetail?.total_hours), label: 'Total Hours' },
+        // { value: formatHour(headerDetail?.total_break_hours), label: 'Total Break Hours' },
         { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
         { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
-        { value: headerDetail?.worked_days ?? 0, label: 'Worked Days' },
+        // { value: headerDetail?.worked_days ?? 0, label: 'Worked Days' },
     ];
 
     return (

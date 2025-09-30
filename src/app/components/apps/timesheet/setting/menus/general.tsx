@@ -24,7 +24,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import api from '@/utils/axios';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs, { Dayjs } from 'dayjs';
 import toast from 'react-hot-toast';
 import { User } from 'next-auth';
 import { useSession } from 'next-auth/react';
