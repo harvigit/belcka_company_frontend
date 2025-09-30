@@ -25,30 +25,36 @@ interface DocumentsTabProps {
   companyId: number;
 }
 
-export const DocumentsTab = ({ addressId, projectId,companyId }: DocumentsTabProps) => {
+export const DocumentsTab = ({
+  addressId,
+  projectId,
+  companyId,
+}: DocumentsTabProps) => {
   const [tabData, setTabData] = useState<any[]>([]);
   const [searchUser, setSearchUser] = useState<string>("");
-
-  const fetchDocumentTabData = async () => {
-    try {
-      const res = await api.get(
-        `address/address-document?address_id=${addressId}&company_id=${companyId}`
-      );
-      if (res.data?.IsSuccess) {
-        setTabData(res.data.info || []);
-      } else {
-        setTabData([]);
-      }
-    } catch {
-      setTabData([]);
-    }
-  };
 
   useEffect(() => {
     if (addressId) {
       fetchDocumentTabData();
     }
   }, [addressId, projectId]);
+
+  const fetchDocumentTabData = async () => {
+    try {
+      const res = await api.get(
+        `address/address-document?address_id=${addressId}&company_id=${companyId}`
+      );
+
+      if (res.data?.isSuccess) {
+        setTabData(res.data.info || []);
+      } else {
+        setTabData([]);
+      }
+    } catch (error) {
+      console.error("Document fetch failed:", error);
+      setTabData([]);
+    }
+  };
 
   const handleDownloadZip = async (addressId: number, taskId: number) => {
     try {
