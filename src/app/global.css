@@ -309,3 +309,38 @@ input#project_id::placeholder {
         display: none;
     }
 }
+.add_site_location .MuiPaper-root{
+    height: 90%;
+}
+
+.address-form .MuiTextField-root .MuiAutocomplete-inputRoot, .MuiTextField-root .MuiAutocomplete-inputRoot{
+    padding: 5px !important;
+}
+
+.map-site-label {
+  font-size: 13px;
+  font-weight: bold;
+  color: #1976d2;
+  background: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.disabled_location {
+  position: relative;
+  cursor: not-allowed !important;
+}
+
+.disabled_location::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.356); 
+  z-index: 2;
+  border-radius: 18px !important; 
+  cursor: not-allowed !important;
+}

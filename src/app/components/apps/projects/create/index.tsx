@@ -24,6 +24,7 @@ interface FormData {
   shift_ids: string;
   team_ids: string;
   company_id: number;
+  workzone_id?: number;
 }
 
 interface Shift {
@@ -33,6 +34,11 @@ interface Shift {
 
 interface Team {
   id: number | null;
+  name: string;
+}
+
+interface Geofence {
+  id: number;
   name: string;
 }
 
@@ -69,6 +75,8 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   };
   const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
+  const [geofence, setGeofence] = useState<Geofence[]>([]);
+
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
 
@@ -104,6 +112,27 @@ const CreateProject: React.FC<CreateProjectProps> = ({
     };
 
     getTeams();
+  }, []);
+
+  useEffect(() => {
+    const getGeofence = async () => {
+      try {
+        const res = await api.get(
+          `work-zone/get?company_id=${user.company_id}`
+        );
+        if (res.data?.info) {
+          const zones: Geofence[] = res.data.info.map((z: any) => ({
+            id: z.id,
+            name: z.name,
+          }));
+          setGeofence(zones);
+        }
+      } catch (err) {
+        console.error("Failed to refresh project data", err);
+      }
+    };
+
+    getGeofence();
   }, []);
 
   return (
@@ -214,6 +243,33 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                     <CustomTextField {...params} placeholder="Select Teams" />
                   )}
                 />
+                {/* <Typography variant="h5" mt={2}>
+                  Add Geofence
+                </Typography>
+                <Autocomplete
+                  fullWidth
+                  options={geofence}
+                  value={
+                    geofence.find((item) => item.id === formData.workzone_id) ||
+                    null
+                  }
+                  onChange={(event, newValue) => {
+                    setFormData({
+                      ...formData,
+                      workzone_id: newValue ? newValue.id : undefined,
+                    });
+                  }}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderInput={(params) => (
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select Geofence"
+                    />
+                  )}
+                /> */}
                 <Typography variant="h5" mt={2}>
                   Site Address
                 </Typography>

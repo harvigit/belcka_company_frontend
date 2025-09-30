@@ -23,6 +23,7 @@ import {
 } from '@tabler/icons-react';
 import GeneralSetting from './menus/general'; 
 import ShiftLists from './menus/shift/index';
+import Geofence from "./menus/geofence";
 
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
@@ -145,6 +146,11 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         )}
                         {activeMenuItem === "Shift" && (
                             <ShiftLists />
+                        )}
+                        
+
+                        {activeMenuItem === 'Geolocation' && (
+                            <Geofence onSaveSuccess={handleSaveSuccess} />
                         )}
                     </Box>
                 </Box>

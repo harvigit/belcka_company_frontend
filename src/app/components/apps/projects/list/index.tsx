@@ -949,7 +949,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         }}
       >
         <Box sx={{ position: "relative", p: 2 }}>
-
           {/* Add Project Button */}
           <Button
             color="primary"
@@ -1006,12 +1005,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 textAlign="start"
                 alignItems="center"
               >
-                <CustomCheckbox
-                  onClick={() => {
-                    setProjectId(project.id);
-                    setDialogOpen(false);
-                  }}
-                />
                 <Box
                   onClick={() => {
                     setProjectId(project.id);
