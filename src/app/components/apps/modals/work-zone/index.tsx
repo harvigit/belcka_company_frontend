@@ -346,7 +346,7 @@ export default function WorkZone({
               variant="outlined"
               startIcon={<IconPlus size={16} />}
               sx={{ borderRadius: 30 }}
-              color="info"
+              color="primary"
               onClick={() => {
                 clearExistingOverlays();
                 setActiveSite({
@@ -406,9 +406,8 @@ export default function WorkZone({
                             lat: s.lat || s.latitude,
                             lng: s.lng || s.longitude,
                           });
-                          if (drawingManagerRef) {
-                            console.log("working",drawingManagerRef.current,drawingOverlayRef.current);
-                            // drawingManagerRef.current.setDrawingMode(null);
+                          if (drawingManagerRef.current) {
+                            drawingManagerRef.current.setDrawingMode(null);
                           }
                         }}
                       >
@@ -523,13 +522,13 @@ export default function WorkZone({
                   />
                 </Box>
 
-                <Box display="flex" justifyContent="space-between" mt={2}>
+                <Box display="flex" justifyContent="end" mt={2}>
                   <Button sx={{ mr: 2 }} onClick={() => setActiveSite(null)}>
-                    Discard
+                    Cancle
                   </Button>
                   <Button
                     variant="contained"
-                    color="info"
+                    color="primary"
                     onClick={handleSaveSite}
                     disabled={loading}
                   >

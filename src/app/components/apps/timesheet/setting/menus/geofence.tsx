@@ -112,13 +112,6 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
 
   const options = [
     {
-      id: "breadcrumbs",
-      title: "Breadcrumbs (live-tracking)",
-      description:
-        "Track users' live location and route while they're on the clock",
-      image: "/images/location/geolocation1.png",
-    },
-    {
       id: "checking-checkout",
       title: "Clock in & out",
       description: "Track users' clock in and clock out locations",
@@ -168,8 +161,8 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     );
 
   return (
-    <Box display="flex" flexDirection="column" overflow="auto">
-      <Box sx={{ flex: 1, p: 3 }} m="auto">
+    <Box display={"flex"} overflow="auto">
+      <Box sx={{ p: 3 }} m="auto" width={"60%"}>
         {/* Top Section */}
         <Box
           display="flex"
@@ -181,32 +174,6 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             <Typography variant="h1" fontSize={"20px !important"}>
               Geolocation
             </Typography>
-            <Tooltip
-              componentsProps={styles.tooltipStyles}
-              title={<>Learn more</>}
-              arrow
-              placement="top"
-            >
-              <Box
-                component="span"
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <Link
-                  style={{ display: "flex" }}
-                  href={
-                    "https://help.connecteam.com/en/articles/6489778-time-clock-gps-location-tracking-geolocation"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <IconHelp size={16} color="#9e9e9e" />
-                </Link>
-              </Box>
-            </Tooltip>
           </Box>
         </Box>
         <Typography variant="body2" color="text.secondary">
@@ -242,7 +209,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 <Box display="flex" alignItems="center" mb={0}>
                   <Radio
                     size="small"
-                    color="info"
+                    color="primary"
                     checked={isSelected}
                     onChange={() => setSelectedOption(opt.id)}
                   />
@@ -257,51 +224,10 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 >
                   {opt.description}
                 </Typography>
-                {opt.id === "breadcrumbs" && (
-                  <Link
-                    style={{
-                      display: "flex",
-                      color: "#20B9C7",
-                      marginLeft: 40,
-                      fontSize: 14,
-                    }}
-                    href={
-                      "https://help.connecteam.com/en/articles/6489778-time-clock-gps-location-tracking-geolocation"
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Learn more
-                  </Link>
-                )}
               </Box>
             );
           })}
         </Box>
-
-        {/* Clock-in/out switch */}
-        {selectedOption === "checking-checkout" && (
-          <Box display="flex" alignItems={"center"} flexWrap="wrap" p={3}>
-            <Box
-              bgcolor={"#eff0f0ff"}
-              m={"auto"}
-              p={2}
-              display="flex"
-              alignItems={"center"}
-              borderRadius={2}
-            >
-              <Typography color="textSecondary">
-                Users must share location to <br />
-                clock in/out (optional when off)
-              </Typography>
-              <Switch
-                color="info"
-                checked={shareLocation}
-                onChange={(e) => setShareLocation(e.target.checked)}
-              />
-            </Box>
-          </Box>
-        )}
 
         {/* Geo fence sites header */}
         <Box display="flex" justifyContent="space-between" mt={3}>
@@ -342,7 +268,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
               arrow
               placement="top"
               title={
-                selectedOption !== "breadcrumbs"
+                selectedOption == "off"
                   ? "You can add Geo fence sites only when Geolocation is required or Breadcrumbs are enabled"
                   : ""
               }
@@ -353,8 +279,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                   startIcon={<IconPlus size={16} />}
                   sx={{ borderRadius: 30 }}
                   onClick={() => setOpenSite(true)}
-                  disabled={selectedOption !== "breadcrumbs" && !shareLocation}
-                  color="info"
+                  color="primary"
                 >
                   {workZones.length > 0 ? "Edit Sites" : "Add sites"}
                 </Button>
@@ -373,9 +298,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
           flexWrap="wrap"
           mt={3}
           className={
-            selectedOption !== "breadcrumbs" && !shareLocation
-              ? "disabled_location"
-              : ""
+            selectedOption == "off" && !shareLocation ? "disabled_location" : ""
           }
         >
           <Box
@@ -391,8 +314,8 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
               Require admin’s approval if users clock out outside the Geo fence
             </Typography>
             <Switch
-              color="info"
-              disabled={selectedOption !== "breadcrumbs" && !shareLocation}
+              color="primary"
+              disabled={selectedOption == "off" && !shareLocation}
             />
           </Box>
         </Box>
@@ -403,9 +326,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
           mt={2}
           mb={1}
           className={
-            selectedOption !== "breadcrumbs" && !shareLocation
-              ? "disabled_location"
-              : ""
+            selectedOption == "off" && !shareLocation ? "disabled_location" : ""
           }
         >
           {!workZones.length ? (
@@ -525,22 +446,6 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             }}
           />
         </Box>
-      </Box>
-
-      {/* Sticky Footer */}
-      <Box
-        sx={{
-          borderTop: "1px solid #e0e0e0",
-          p: 2,
-          bgcolor: "#fff",
-          position: "sticky",
-          bottom: 0,
-          textAlign: "right",
-        }}
-      >
-        <Button variant="contained" color="primary" onClick={onSaveSuccess}>
-          Save changes
-        </Button>
       </Box>
     </Box>
   );

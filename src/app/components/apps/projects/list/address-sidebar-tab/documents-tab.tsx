@@ -155,9 +155,7 @@ export const DocumentsTab = ({
                           variant="outlined"
                           color="error"
                           size="small"
-                          onClick={() =>
-                            handleDownloadZip(doc.address_id, doc.id)
-                          }
+                          onClick={() => handleDownloadZip(addressId, doc.id)}
                         >
                           <IconDownload size={18} />
                         </Button>
