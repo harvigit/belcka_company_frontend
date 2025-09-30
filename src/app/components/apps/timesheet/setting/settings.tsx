@@ -28,16 +28,16 @@ import Geofence from "./menus/geofence";
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
     { icon: <IconTiltShift size={18} />, label: "Shift" },
-    { icon: <IconTools size={18} />, label: "Clock in & out" },
-    { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
-    { icon: <IconCoffee size={18} />, label: "Breaks" },
-    { icon: <IconPaperclip size={18} />, label: "Shift entries" },
+    // { icon: <IconTools size={18} />, label: "Clock in & out" },
+    // { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
+    // { icon: <IconCoffee size={18} />, label: "Breaks" },
+    // { icon: <IconPaperclip size={18} />, label: "Shift entries" },
     { icon: <IconMapPin size={18} />, label: "Geolocation" },
-    { icon: <IconClock size={18} />, label: "Reminders" },
-    { icon: <IconBellRinging size={18} />, label: "Notifications" },
-    { icon: <IconFileText size={18} />, label: "Auto reports" },
-    { icon: <IconHandStop size={18} />, label: "Limitations" },
-    { icon: <IconRefresh size={18} />, label: "Integrations" },
+    // { icon: <IconClock size={18} />, label: "Reminders" },
+    // { icon: <IconBellRinging size={18} />, label: "Notifications" },
+    // { icon: <IconFileText size={18} />, label: "Auto reports" },
+    // { icon: <IconHandStop size={18} />, label: "Limitations" },
+    // { icon: <IconRefresh size={18} />, label: "Integrations" },
 ];
 
 interface SettingsProps {
