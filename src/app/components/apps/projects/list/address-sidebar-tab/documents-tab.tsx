@@ -147,7 +147,7 @@ export const DocumentsTab = ({
                     </TableCell>
                     <TableCell align="center">
                       <Badge
-                        badgeContent={doc.count}
+                        badgeContent={doc.images?.length}
                         color="error"
                         overlap="circular"
                       >
