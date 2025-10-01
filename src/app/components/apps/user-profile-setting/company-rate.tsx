@@ -8,7 +8,9 @@ import {
   TextField,
   Button,
   Autocomplete,
-  Tooltip,
+  Paper,
+  AccordionDetails,
+  Alert,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -115,8 +117,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   }, [comapny]);
 
   const handleUpdate = async () => {
-    if (!formData.trade_id || !formData.rate) {
-      toast.error("Please select trade and enter rate");
+    if (!formData.trade_id) {
+      toast.error("Please select trade");
       return;
     }
     try {
@@ -199,11 +201,15 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       className="company_rate_wrapper"
       height="450px !important"
     >
-      <Box display={"flex"} justifyContent={"space-between"} mb={1}>
-        <Typography color="#487bb3ff" fontSize="16px !important" sx={{ mb: 1 }}>
-          Edit rate
-        </Typography>
-        {user.user_role_id == 1 && comapny.is_pending_request && (
+      {user.user_role_id == 1 && comapny.is_pending_request && (
+        <Box display={"flex"} justifyContent={"space-between"} mb={1}>
+          <Typography
+            color="#487bb3ff"
+            fontSize="16px !important"
+            sx={{ mb: 1 }}
+          >
+            Edit rate
+          </Typography>
           <Box display="flex" justifyContent="end" mb={1}>
             <Button
               variant="outlined"
@@ -223,9 +229,31 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
               Reject
             </Button>
           </Box>
-        )}
-      </Box>
+        </Box>
+      )}
 
+      {user.user_role_id !== 1 && comapny.is_pending_request && (
+        <Box width={"35%"} mb={4}>
+          <Paper sx={{ boxShadow: 5 }}>
+            <Alert severity="error" variant="filled" sx={{ width: "100%" }}>
+              Your rate request has been pending.
+            </Alert>
+            {/* <AccordionDetails sx={{ textAlign: "center" }}>
+              <Typography variant="h4" color="error" mt={1}>
+                Your rate request has been pending.
+              </Typography>
+              <Button
+                variant="outlined"
+                color="success"
+                disabled
+                sx={{ mt: 1 }}
+              >
+                wait for approval
+              </Button>
+            </AccordionDetails> */}
+          </Paper>
+        </Box>
+      )}
       <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <Autocomplete

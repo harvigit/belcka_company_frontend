@@ -146,7 +146,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
   };
   return (
     <>
-      <Box sx={{ p: 3, marginBottom: 4 }}>
+      <Box sx={{ p: 3,pt:1, marginBottom: 4 }}>
         <Grid
           size={{
             xs: 12,

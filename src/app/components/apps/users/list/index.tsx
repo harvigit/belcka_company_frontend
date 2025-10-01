@@ -177,14 +177,14 @@ const TablePagination = () => {
                 setSelectedRowIds(newSelected);
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={4}>
-              <Avatar
-                src={user.user_image || defaultImage}
-                alt={user.name}
-                sx={{ width: 36, height: 36 }}
-              />
-              <Box>
-                <Link href={`/apps/users/${user.id}`} passHref>
+            <Link href={`/apps/users/${user.id}`} passHref>
+              <Stack direction="row" alignItems="center" spacing={4}>
+                <Avatar
+                  src={user.user_image || defaultImage}
+                  alt={user.name}
+                  sx={{ width: 36, height: 36 }}
+                />
+                <Box>
                   <Typography
                     className="f-14"
                     color="textPrimary"
@@ -192,12 +192,12 @@ const TablePagination = () => {
                   >
                     {user.name ?? "-"}
                   </Typography>
-                </Link>
-                <Typography color="textSecondary" variant="subtitle1">
-                  {user.trade_name}
-                </Typography>
-              </Box>
-            </Stack>
+                  <Typography color="textSecondary" variant="subtitle1">
+                    {user.trade_name}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Link>
           </Stack>
         );
       },
@@ -447,7 +447,7 @@ const TablePagination = () => {
               try {
                 const payload = {
                   user_ids: usersToDelete.join(","),
-                  company_id: user.company_id
+                  company_id: user.company_id,
                 };
                 const response = await api.post("user/remove-account", payload);
                 toast.success(response.data.message);
