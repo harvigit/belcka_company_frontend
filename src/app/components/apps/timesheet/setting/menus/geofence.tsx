@@ -294,158 +294,167 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
         </Typography>
 
         {/* Map Section */}
-        <Box
-          flexWrap="wrap"
-          mt={3}
-          className={
-            selectedOption == "off" && !shareLocation ? "disabled_location" : ""
-          }
-        >
-          <Box
-            bgcolor={"#eff0f0ff"}
-            m={"auto"}
-            p={2}
-            display="flex"
-            alignItems={"center"}
-            justifyContent="space-between"
-            borderRadius={2}
-          >
-            <Typography color="textSecondary">
-              Require admin’s approval if users clock out outside the Geo fence
-            </Typography>
-            <Switch
-              color="primary"
-              disabled={selectedOption == "off" && !shareLocation}
-            />
-          </Box>
-        </Box>
 
-        {/* Map Section */}
-        <Box
-          sx={{ flex: 1, position: "relative" }}
-          mt={2}
-          mb={1}
-          className={
-            selectedOption == "off" && !shareLocation ? "disabled_location" : ""
-          }
-        >
-          {!workZones.length ? (
-            <Image
-              src="/images/location/geofence-map-placeholder.png"
-              alt="placeholder"
-              height={300}
-              width={1000}
-              style={{ borderRadius: 18 }}
-            />
-          ) : (
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={mapCenter}
-              zoom={12}
-              onLoad={() => setGoogleMaps(window.google)}
+        {selectedOption !== "off" && (
+          <>
+            <Box
+              flexWrap="wrap"
+              mt={3}
+              className={
+                selectedOption == "off" && !shareLocation
+                  ? "disabled_location"
+                  : ""
+              }
             >
-              {workZones.map((site) => {
-                let markerPos = { lat: site.latitude, lng: site.longitude };
-                let radius: number | undefined = site.circleRadius;
+              <Box
+                bgcolor={"#eff0f0ff"}
+                m={"auto"}
+                p={2}
+                display="flex"
+                alignItems={"center"}
+                justifyContent="space-between"
+                borderRadius={2}
+              >
+                <Typography color="textSecondary">
+                  Require admin’s approval if users clock out outside the Geo
+                  fence
+                </Typography>
+                <Switch
+                  color="primary"
+                  disabled={selectedOption == "off" && !shareLocation}
+                />
+              </Box>
+            </Box>
 
-                if (site.type === "circle" && site.boundary) {
-                  try {
-                    const parsed = JSON.parse(site.boundary);
-                    markerPos = { lat: parsed.lat, lng: parsed.lng };
-                    radius = parsed.radius || site.circleRadius;
-                  } catch {}
-                }
+            <Box
+              sx={{ flex: 1, position: "relative" }}
+              mt={2}
+              mb={1}
+              className={
+                selectedOption == "off" && !shareLocation
+                  ? "disabled_location"
+                  : ""
+              }
+            >
+              {!workZones.length ? (
+                <Image
+                  src="/images/location/geofence-map-placeholder.png"
+                  alt="placeholder"
+                  height={300}
+                  width={920}
+                  style={{ width: "100%", borderRadius: 18 }}
+                />
+              ) : (
+                <GoogleMap
+                  mapContainerStyle={mapContainerStyle}
+                  center={mapCenter}
+                  zoom={12}
+                  onLoad={() => setGoogleMaps(window.google)}
+                >
+                  {workZones.map((site) => {
+                    let markerPos = { lat: site.latitude, lng: site.longitude };
+                    let radius: number | undefined = site.circleRadius;
 
-                if (
-                  (site.type === "polygon" || site.type === "polyline") &&
-                  site.boundary
-                ) {
-                  const path = getBoundaryPath(site);
-                  if (path.length) markerPos = path[0];
-                }
+                    if (site.type === "circle" && site.boundary) {
+                      try {
+                        const parsed = JSON.parse(site.boundary);
+                        markerPos = { lat: parsed.lat, lng: parsed.lng };
+                        radius = parsed.radius || site.circleRadius;
+                      } catch {}
+                    }
 
-                return (
-                  <React.Fragment key={site.id}>
-                    <Marker
-                      position={markerPos}
-                      label={{
-                        text: site.name || `Site ${site.id}`,
-                        color: site.color,
-                        className: "map-site-label",
-                      }}
-                    />
+                    if (
+                      (site.type === "polygon" || site.type === "polyline") &&
+                      site.boundary
+                    ) {
+                      const path = getBoundaryPath(site);
+                      if (path.length) markerPos = path[0];
+                    }
 
-                    {site.type === "circle" && radius && (
-                      <Circle
-                        center={markerPos}
-                        radius={radius}
-                        options={{
-                          fillColor: site.color || "#1976d2",
-                          fillOpacity: 0.3,
-                          strokeColor: site.color || "#1976d2",
-                          strokeWeight: 2,
-                        }}
-                      />
-                    )}
-                    {site.type === "polygon" && site.boundary && (
-                      <Polygon
-                        paths={getBoundaryPath(site)}
-                        options={{
-                          fillColor: site.color || "#1976d2",
-                          fillOpacity: 0.3,
-                          strokeColor: site.color || "#1976d2",
-                          strokeWeight: 2,
-                        }}
-                      />
-                    )}
-                    {site.type === "polyline" &&
-                      site.boundary &&
-                      (() => {
-                        const path = getBoundaryPath(site);
-                        if (path.length < 3) {
-                          // Too few points to fill, just draw line
-                          return (
-                            <Polyline
-                              key={site.id}
-                              path={path}
-                              options={{
-                                strokeColor: site.color || "#1976d2",
-                                strokeWeight: 2,
-                              }}
-                            />
-                          );
-                        }
+                    return (
+                      <React.Fragment key={site.id}>
+                        <Marker
+                          position={markerPos}
+                          label={{
+                            text: site.name || `Site ${site.id}`,
+                            color: site.color,
+                            className: "map-site-label",
+                          }}
+                        />
 
-                        // Close path for polygon fill
-                        const polygonPath = [...path, path[0]];
-                        return (
-                          <Polygon
-                            key={site.id}
-                            paths={polygonPath}
+                        {site.type === "circle" && radius && (
+                          <Circle
+                            center={markerPos}
+                            radius={radius}
                             options={{
-                              strokeColor: site.color || "#1976d2",
-                              strokeWeight: 2,
                               fillColor: site.color || "#1976d2",
                               fillOpacity: 0.3,
+                              strokeColor: site.color || "#1976d2",
+                              strokeWeight: 2,
                             }}
                           />
-                        );
-                      })()}
-                  </React.Fragment>
-                );
-              })}
-            </GoogleMap>
-          )}
-          <WorkZone
-            open={openSite}
-            isLoaded={isLoaded}
-            onClose={() => setOpenSite(false)}
-            onSiteUpdate={async (siteId) => {
-              setLastUpdatedSiteId(siteId);
-              await getWorkzones();
-            }}
-          />
-        </Box>
+                        )}
+                        {site.type === "polygon" && site.boundary && (
+                          <Polygon
+                            paths={getBoundaryPath(site)}
+                            options={{
+                              fillColor: site.color || "#1976d2",
+                              fillOpacity: 0.3,
+                              strokeColor: site.color || "#1976d2",
+                              strokeWeight: 2,
+                            }}
+                          />
+                        )}
+                        {site.type === "polyline" &&
+                          site.boundary &&
+                          (() => {
+                            const path = getBoundaryPath(site);
+                            if (path.length < 3) {
+                              // Too few points to fill, just draw line
+                              return (
+                                <Polyline
+                                  key={site.id}
+                                  path={path}
+                                  options={{
+                                    strokeColor: site.color || "#1976d2",
+                                    strokeWeight: 2,
+                                  }}
+                                />
+                              );
+                            }
+
+                            // Close path for polygon fill
+                            const polygonPath = [...path, path[0]];
+                            return (
+                              <Polygon
+                                key={site.id}
+                                paths={polygonPath}
+                                options={{
+                                  strokeColor: site.color || "#1976d2",
+                                  strokeWeight: 2,
+                                  fillColor: site.color || "#1976d2",
+                                  fillOpacity: 0.3,
+                                }}
+                              />
+                            );
+                          })()}
+                      </React.Fragment>
+                    );
+                  })}
+                </GoogleMap>
+              )}
+              <WorkZone
+                open={openSite}
+                isLoaded={isLoaded}
+                onClose={() => setOpenSite(false)}
+                onSiteUpdate={async (siteId) => {
+                  setLastUpdatedSiteId(siteId);
+                  await getWorkzones();
+                }}
+              />
+            </Box>
+          </>
+        )}
       </Box>
     </Box>
   );
