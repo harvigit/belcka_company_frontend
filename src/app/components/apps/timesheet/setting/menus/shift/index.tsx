@@ -6,10 +6,12 @@ import {
     CardContent,
     Typography,
     Switch,
-    Drawer, Alert, Snackbar,
+    Drawer,
+    Button,
 } from '@mui/material';
 import api from '@/utils/axios';
 import ShiftSettings from './shift-settings';
+import { IconPlus } from '@tabler/icons-react';
 
 interface Shift {
     id: number;
@@ -27,8 +29,8 @@ interface ShiftListsProps {
 const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [editSidebar, setEditSidebar] = useState(false);
-    const [shiftId, setShiftId] = useState<number | null>(null);
+    const [shiftSidebar, setShiftSidebar] = useState(false);
+    const [shiftId, setShiftId] = useState<number | undefined>(undefined); // Changed from number | null to number | undefined
 
     const fetchShifts = async () => {
         try {
@@ -73,7 +75,6 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
             });
         } catch (error) {
             console.error('Error toggling shift status:', error);
-            // Revert state on error
             setShifts(shifts);
         }
     };
@@ -85,54 +86,75 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
 
     const handleEditShiftSidebar = (shiftId: number) => {
         setShiftId(shiftId);
-        setEditSidebar(true);
+        setShiftSidebar(true);
     };
 
     const handleCloseSidebar = () => {
-        setEditSidebar(false);
-        setShiftId(null);
-        fetchShifts(); // Refresh shifts after saving
+        setShiftSidebar(false);
+        setShiftId(undefined); // Changed from null to undefined
+        fetchShifts();
+    };
+    
+    const handleAddShift = () => {
+        setShiftId(undefined); // Explicitly set to undefined for adding a new shift
+        setShiftSidebar(true);
     };
 
     return (
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', overflowY: 'auto' }}>
             <Box sx={{ p: 2, position: 'relative' }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                        fullWidth
-                        placeholder="Search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    style={{ marginRight: '12px' }}
-                                >
-                                    <circle cx="11" cy="11" r="8" />
-                                    <path d="m21 21-4.35-4.35" />
-                                </svg>
-                            ),
-                        }}
-                        sx={{
-                            mb: 2,
-                            borderRadius: '25px',
-                            bgcolor: 'background.paper',
-                            '& .MuiOutlinedInput-root': {
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '600px', height: '50px' }}>
+                        <TextField
+                            fullWidth
+                            placeholder="Search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            InputProps={{
+                                startAdornment: (
+                                    <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        style={{ marginRight: '12px' }}
+                                    >
+                                        <circle cx="11" cy="11" r="8" />
+                                        <path d="m21 21-4.35-4.35" />
+                                    </svg>
+                                ),
+                            }}
+                            sx={{
+                                mb: 2,
                                 borderRadius: '25px',
-                            },
-                            width: '100%',
-                            maxWidth: '600px',
-                            margin: '0 auto',
-                        }}
-                    />
+                                bgcolor: 'background.paper',
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: '25px',
+                                },
+                                width: '70%',
+                            }}
+                        />
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            onClick={handleAddShift}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: '10px',
+                                py: 0.5,
+                                fontWeight: 500,
+                                boxShadow: 'none',
+                                height: '47px'
+                            }}
+                        >
+                            <IconPlus size={18} />
+                            Add Shift
+                        </Button>
+                    </Box>
 
                     {filteredShifts.map((shift) => (
                         <Card
@@ -205,10 +227,9 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                 )}
             </Box>
 
-            {/* Drawer instead of Box */}
             <Drawer
                 anchor="right"
-                open={editSidebar}
+                open={shiftSidebar}
                 onClose={handleCloseSidebar}
                 sx={{
                     '& .MuiDrawer-paper': {
@@ -217,13 +238,11 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                     },
                 }}
             >
-                {shiftId && (
-                    <ShiftSettings
-                        shiftId={shiftId}
-                        onSaveSuccess={handleCloseSidebar}
-                        onClose={handleCloseSidebar}
-                    />
-                )}
+                <ShiftSettings
+                    shiftId={shiftId}
+                    onSaveSuccess={handleCloseSidebar}
+                    onClose={handleCloseSidebar}
+                />
             </Drawer>
         </Box>
     );

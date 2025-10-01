@@ -8,7 +8,9 @@ import {
     Button,
     Switch,
     IconButton,
-    Tooltip, Alert, Snackbar,
+    Tooltip,
+    Alert,
+    Snackbar,
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
@@ -41,7 +43,7 @@ interface ShiftDetails {
 }
 
 interface ShiftSettingProps {
-    shiftId: number;
+    shiftId?: number;
     onSaveSuccess: () => void;
     onClose: () => void;
 }
@@ -52,9 +54,9 @@ const parseTimeString = (timeString: string | null): Dayjs | null => {
     return parsed.isValid() ? parsed : null;
 };
 
-const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
+const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const DAY_NAMES = [
-    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ] as const;
 
 interface WorkDaySelectorProps {
@@ -62,6 +64,21 @@ interface WorkDaySelectorProps {
     dayLength: number[];
     onDayClick: (index: number) => void;
     onDayLengthChange: (index: number, value: string) => void;
+}
+
+interface ShiftPayload {
+    shift_id: number | null;
+    shift_name: string;
+    is_pricework: boolean;
+    days: any;
+    start_time: string;
+    end_time: string;
+    shift_breaks: any;
+    is_archive: boolean;
+    status: boolean;
+    company_id: string | number;
+    default_start_time: string;
+    default_end_time: string;
 }
 
 const WorkDaySelector = React.memo<WorkDaySelectorProps>(
@@ -145,15 +162,17 @@ const WorkDaySelector = React.memo<WorkDaySelectorProps>(
 WorkDaySelector.displayName = 'WorkDaySelector';
 
 const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onClose }) => {
+    const isNewShift = !shiftId;
+
     const [shiftDetail, setShiftDetail] = useState<ShiftDetails>({
         id: 0,
         company_id: 0,
         shift_name: '',
         is_pricework: false,
-        workDays: Array(7).fill(false),
+        workDays: [true, true, true, true, true, false, false],
         dayLength: Array(7).fill(8),
         start_time: '09:00',
-        end_time: '18:00',
+        end_time: '17:00',
         is_archive: false,
         status: true,
         shift_breaks: [],
@@ -161,67 +180,69 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         default_end_time: '17:00',
     });
     const [breaksEnabled, setBreaksEnabled] = useState<boolean>(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null); // State for error feedback
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchShiftSettings = async () => {
-            try {
-                const response = await api.get(`/setting/get-shift-details`, {
-                    params: { shift_id: shiftId },
-                });
-                if (response.data?.IsSuccess) {
-                    const data = response.data.info;
+        if (!isNewShift) {
+            const fetchShiftSettings = async () => {
+                try {
+                    const response = await api.get(`/setting/get-shift-details`, {
+                        params: { shift_id: shiftId },
+                    });
+                    if (response.data?.IsSuccess) {
+                        const data = response.data.info;
 
-                    const daysMap: Record<string, number> = {
-                        sunday: 0,
-                        monday: 1,
-                        tuesday: 2,
-                        wednesday: 3,
-                        thursday: 4,
-                        friday: 5,
-                        saturday: 6,
-                    };
-                    const workDays = Array(7).fill(false);
-                    data.days.forEach((d: any) => {
-                        const idx = daysMap[d.name.toLowerCase()];
-                        if (idx !== undefined) {
-                            workDays[idx] = d.status;
-                        }
-                    });
-                    const dayLength = Array(7).fill(8);
-                    const shiftBreaks = data.shift_breaks
-                        ? data.shift_breaks.map((b: any) => ({
-                            id: b.id,
-                            start: b.break_start_time,
-                            end: b.break_end_time,
-                        }))
-                        : [];
-                    setShiftDetail({
-                        id: data.id,
-                        company_id: data.company_id,
-                        shift_name: data.name || '',
-                        is_pricework: data.is_pricework || false,
-                        workDays,
-                        dayLength,
-                        start_time: data.start_time || '09:00',
-                        end_time: data.end_time || '18:00',
-                        is_archive: data.is_archive || false,
-                        status: data.status || true,
-                        shift_breaks: shiftBreaks,
-                        default_start_time: '09:00',
-                        default_end_time: '17:00',
-                    });
-                    setBreaksEnabled(shiftBreaks.length > 0);
-                } else {
+                        const daysMap: Record<string, number> = {
+                            monday: 0,
+                            tuesday: 1,
+                            wednesday: 2,
+                            thursday: 3,
+                            friday: 4,
+                            saturday: 5,
+                            sunday: 6,
+                        };
+                        const workDays = Array(7).fill(false);
+                        data.days.forEach((d: any) => {
+                            const idx = daysMap[d.name.toLowerCase()];
+                            if (idx !== undefined) {
+                                workDays[idx] = d.status;
+                            }
+                        });
+                        const dayLength = Array(7).fill(8);
+                        const shiftBreaks = data.shift_breaks
+                            ? data.shift_breaks.map((b: any) => ({
+                                  id: b.id,
+                                  start: b.break_start_time,
+                                  end: b.break_end_time,
+                              }))
+                            : [];
+                        setShiftDetail({
+                            id: data.id,
+                            company_id: data.company_id,
+                            shift_name: data.name || '',
+                            is_pricework: data.is_pricework || false,
+                            workDays,
+                            dayLength,
+                            start_time: data.start_time || '09:00',
+                            end_time: data.end_time || '17:00',
+                            is_archive: data.is_archive || false,
+                            status: data.status || true,
+                            shift_breaks: shiftBreaks,
+                            default_start_time: data.default_start_time || '08:00',
+                            default_end_time: data.default_end_time || '17:00',
+                        });
+                        setBreaksEnabled(shiftBreaks.length > 0);
+                    } else {
+                        setErrorMessage('Failed to load shift settings');
+                    }
+                } catch (error) {
                     setErrorMessage('Failed to load shift settings');
                 }
-            } catch (error) {
-                setErrorMessage('Failed to load shift settings');
-            }
-        };
+            };
 
-        fetchShiftSettings();
-    }, [shiftId]);
+            fetchShiftSettings();
+        }
+    }, [shiftId, isNewShift]);
 
     const startTimeObj = useMemo(() => parseTimeString(shiftDetail.default_start_time), [shiftDetail.default_start_time]);
     const endTimeObj = useMemo(() => parseTimeString(shiftDetail.default_end_time), [shiftDetail.default_end_time]);
@@ -286,8 +307,8 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 break_end_time: b.end,
             }));
 
-            const payload = {
-                shift_id: shiftId,
+            const payload: ShiftPayload = {
+                shift_id: isNewShift ? null : (shiftId as number),
                 shift_name: shiftDetail.shift_name,
                 is_pricework: shiftDetail.is_pricework,
                 days,
@@ -341,7 +362,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         },
         [updateShiftSettings]
     );
-    
+
     return (
         <Box
             sx={{
@@ -351,7 +372,6 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
             }}
         >
             <LocalizationProvider dateAdapter={AdapterDayjs}>
-                {/* Header - Fixed at top */}
                 <Box
                     sx={{
                         boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
@@ -363,13 +383,12 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         flexShrink: 0,
                     }}
                 >
-                    <Typography variant="h6">Edit Shift</Typography>
+                    <Typography variant="h6">{isNewShift ? 'Add Shift' : 'Edit Shift'}</Typography>
                     <IconButton color="inherit" onClick={onClose}>
                         <IconX size="21" />
                     </IconButton>
                 </Box>
 
-                {/* Scrollable Content */}
                 <Box
                     sx={{
                         flex: 1,
@@ -385,7 +404,6 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         },
                     }}
                 >
-                    {/* Shift Name */}
                     <Box
                         sx={{
                             p: 2,
@@ -411,7 +429,6 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         />
                     </Box>
 
-                    {/* Start and End Shift */}
                     <Box
                         sx={{
                             p: 2,
@@ -481,7 +498,6 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         </Box>
                     </Box>
 
-                    {/* Breaks */}
                     <Box
                         sx={{
                             p: 2,
@@ -604,7 +620,6 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         )}
                     </Box>
 
-                    {/* Select Days */}
                     <Box
                         sx={{
                             p: 2,
@@ -625,7 +640,6 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         />
                     </Box>
 
-                    {/* Default Work Day Hours */}
                     <Box
                         sx={{
                             p: 2,
@@ -641,20 +655,20 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             </Typography>
                             <Tooltip
                                 componentsProps={{
-                                tooltip: {
-                                    sx: {
-                                        backgroundColor: '#1a1f29',
-                                        color: '#fff',
-                                        fontSize: '13px',
-                                        fontWeight: 400,
-                                        lineHeight: 1.4,
-                                        maxWidth: 320,
-                                        p: '10px 14px',
-                                        borderRadius: '6px',
-                                        boxShadow: '0px 4px 12px rgba(0,0,0,0.25)',
-                                        whiteSpace: 'normal',
+                                    tooltip: {
+                                        sx: {
+                                            backgroundColor: '#1a1f29',
+                                            color: '#fff',
+                                            fontSize: '13px',
+                                            fontWeight: 400,
+                                            lineHeight: 1.4,
+                                            maxWidth: 320,
+                                            p: '10px 14px',
+                                            borderRadius: '6px',
+                                            boxShadow: '0px 4px 12px rgba(0,0,0,0.25)',
+                                            whiteSpace: 'normal',
+                                        },
                                     },
-                                },
                                     arrow: { sx: { color: '#1a1f29' } },
                                 }}
                                 title="Set the default work hours when adding new shifts"
@@ -732,7 +746,6 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 </Box>
             </LocalizationProvider>
 
-            {/* Save Button - Fixed at bottom */}
             <Box
                 sx={{
                     bgcolor: '#fff',
