@@ -413,7 +413,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: '0.875rem',
-                                                            color: log.is_edited ? '#ff0000' : 'inherit'
+                                                            color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit')
                                                         }}
                                                     >
                                                         {log.is_pricework ? '--' : formatHour(log.total_hours)}
