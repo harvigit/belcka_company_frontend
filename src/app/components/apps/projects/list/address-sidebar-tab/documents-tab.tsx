@@ -6,7 +6,7 @@ import {
     Box,
     Button,
     Card,
-    Grid,
+    Checkbox,
     IconButton,
     InputAdornment,
     TextField,
@@ -30,6 +30,7 @@ export const DocumentsTab = ({
     const [tabData, setTabData] = useState<any[]>([]);
     const [searchUser, setSearchUser] = useState<string>("");
     const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+    const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
 
     useEffect(() => {
         if (addressId) {
@@ -54,10 +55,10 @@ export const DocumentsTab = ({
         }
     };
 
-    const handleDownloadZip = async (addressId: number, taskId: number) => {
+    const handleDownloadZip = async (taskIds: number[]) => {
         try {
             const response = await api.get(
-                `address/download-tasks-zip/${addressId}?taskId=${taskId}`,
+                `address/download-tasks-zip/${addressId}?taskIds=${taskIds.join(",")}`,
                 {
                     responseType: "blob",
                 }
@@ -81,6 +82,32 @@ export const DocumentsTab = ({
         setImageErrors(prev => new Set(prev).add(imageUrl));
     };
 
+    const handleCheckboxChange = (taskId: number) => {
+        setSelectedTasks(prev =>
+            prev.includes(taskId)
+                ? prev.filter(id => id !== taskId)
+                : [...prev, taskId]
+        );
+    };
+
+    const handleDownloadSelected = () => {
+        const tasksWithImages = selectedTasks.filter(taskId => {
+            const task = tabData.find(doc => doc.id === taskId);
+            return task?.images?.length > 0;
+        });
+
+        if (tasksWithImages.length > 0) {
+            handleDownloadZip(tasksWithImages);
+        }
+    };
+
+    const hasTasksWithImages = useMemo(() => {
+        return selectedTasks.some(taskId => {
+            const task = tabData.find(doc => doc.id === taskId);
+            return task?.images?.length > 0;
+        });
+    }, [selectedTasks, tabData]);
+
     const filteredData = useMemo(() => {
         const search = searchUser.trim().toLowerCase();
         if (!search) return tabData;
@@ -93,7 +120,6 @@ export const DocumentsTab = ({
 
     return (
         <Box>
-            {/* Search + Filter */}
             <Stack
                 direction="row"
                 alignItems="center"
@@ -112,27 +138,48 @@ export const DocumentsTab = ({
                             </InputAdornment>
                         ),
                     }}
-                    sx={{ width: "80%" }}
+                    sx={{ width: "70%" }}
                 />
-                <Button variant="contained">
-                    <IconFilter width={18} />
-                </Button>
+                <Stack direction="row" spacing={1}>
+                    <IconButton
+                        color="primary"
+                        onClick={handleDownloadSelected}
+                        disabled={!hasTasksWithImages}
+                        sx={{
+                            border: '1px solid',
+                            borderColor: hasTasksWithImages ? 'primary.main' : 'grey.400',
+                            borderRadius: '8px',
+                            padding: '8px',
+                        }}
+                    >
+                        <IconDownload size={20} />
+                    </IconButton>
+                    <Button
+                        variant="contained"
+                    >
+                        <IconFilter width={18} />
+                    </Button>
+                </Stack>
             </Stack>
 
-            {/* Documents Grid */}
             {filteredData.length > 0 ? (
                 filteredData.map((doc) => (
-                    <Box key={doc.id} mb={4}>
-                        {/* Document Title and Download Button */}
+                    <Box key={doc.id} mb={3}>
                         <Stack
                             direction="row"
                             alignItems="center"
                             justifyContent="space-between"
                             mb={2}
                         >
-                            <Typography variant="h6" fontWeight={600}>
-                                {doc.title || `Document #${doc.id}`}
-                            </Typography>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                <Checkbox
+                                    checked={selectedTasks.includes(doc.id)}
+                                    onChange={() => handleCheckboxChange(doc.id)}
+                                />
+                                <Typography variant="h6" fontWeight={600}>
+                                    {doc.title || `Document #${doc.id}`}
+                                </Typography>
+                            </Stack>
                             <Badge
                                 badgeContent={doc.images?.length || 0}
                                 color="error"
@@ -140,7 +187,7 @@ export const DocumentsTab = ({
                             >
                                 <IconButton
                                     color="error"
-                                    onClick={() => handleDownloadZip(addressId, doc.id)}
+                                    onClick={() => handleDownloadZip([doc.id])}
                                     sx={{
                                         border: '1px solid',
                                         borderColor: 'error.main',
@@ -153,7 +200,6 @@ export const DocumentsTab = ({
                             </Badge>
                         </Stack>
 
-                        {/* Images Grid - 4 per row using Flexbox */}
                         <Box
                             sx={{
                                 display: 'flex',
@@ -184,7 +230,6 @@ export const DocumentsTab = ({
                                                 }}
                                             >
                                                 {hasError || !imageUrl ? (
-                                                    // Show placeholder icon when image fails to load
                                                     <Box
                                                         sx={{
                                                             display: 'flex',
