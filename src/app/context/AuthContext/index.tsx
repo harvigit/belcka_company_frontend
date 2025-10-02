@@ -24,7 +24,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     if (status === "unauthenticated" && !PUBLIC_ROUTES.includes(pathname)) {
-      router.replace("/auth");
+      router.replace("/");
     }
   }, [status, pathname, router, hasMounted]);
 
