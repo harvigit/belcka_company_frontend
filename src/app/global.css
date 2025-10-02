@@ -344,3 +344,7 @@ input#project_id::placeholder {
   border-radius: 18px !important; 
   cursor: not-allowed !important;
 }
+
+.pending-request .MuiAlert-message{
+    display: flex;
+}

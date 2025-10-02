@@ -8,7 +8,9 @@ import {
   TextField,
   Button,
   Autocomplete,
-  Tooltip,
+  Paper,
+  AccordionDetails,
+  Alert,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -115,8 +117,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   }, [comapny]);
 
   const handleUpdate = async () => {
-    if (!formData.trade_id || !formData.rate) {
-      toast.error("Please select trade and enter rate");
+    if (!formData.trade_id) {
+      toast.error("Please select trade");
       return;
     }
     try {
@@ -199,33 +201,78 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       className="company_rate_wrapper"
       height="450px !important"
     >
-      <Box display={"flex"} justifyContent={"space-between"} mb={1}>
-        <Typography color="#487bb3ff" fontSize="16px !important" sx={{ mb: 1 }}>
-          Edit rate
-        </Typography>
-        {user.user_role_id == 1 && comapny.is_pending_request && (
-          <Box display="flex" justifyContent="end" mb={1}>
-            <Button
-              variant="outlined"
-              color="success"
-              startIcon={<IconCheck size={16} />}
-              onClick={() => handleApprove(comapny?.request_log_id)}
+      {user.user_role_id == 1 && comapny.is_pending_request === true && (
+        <>
+          <Box display={"flex"} justifyContent={"space-between"} mb={1}>
+            <Typography
+              color="#487bb3ff"
+              fontSize="16px !important"
+              sx={{ mb: 1 }}
             >
-              Approve
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<IconX size={16} />}
-              onClick={() => handleReject(comapny?.request_log_id)}
-              sx={{ ml: 2 }}
-            >
-              Reject
-            </Button>
+              Edit rate
+            </Typography>
           </Box>
-        )}
-      </Box>
 
+          <Box width={"60%"} mb={4}>
+            <Alert
+              severity="info"
+              variant="outlined"
+              className="pending-request"
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                borderColor: "red !important",
+                color: "black !important",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                }}
+              >
+                <Typography sx={{ color: "black !important", mr: 2 }}>
+                  Rate request is pending please take an action.
+                </Typography>
+
+                <Box>
+                  <Button
+                    variant="outlined"
+                    color="success"
+                    startIcon={<IconCheck size={16} />}
+                    onClick={() => handleApprove(comapny?.request_log_id)}
+                    sx={{ mr: 1 }}
+                  >
+                    Approve
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<IconX size={16} />}
+                    onClick={() => handleReject(comapny?.request_log_id)}
+                  >
+                    Reject
+                  </Button>
+                </Box>
+              </Box>
+            </Alert>
+          </Box>
+        </>
+      )}
+
+      {user.user_role_id !== 1 && comapny.is_pending_request && (
+        <Box width={"35%"} mb={4}>
+          <Paper sx={{ boxShadow: 5 }}>
+            <Alert severity="error" variant="filled" sx={{ width: "100%" }}>
+              Your rate request has been pending.
+            </Alert>
+          </Paper>
+        </Box>
+      )}
+      
       <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <Autocomplete

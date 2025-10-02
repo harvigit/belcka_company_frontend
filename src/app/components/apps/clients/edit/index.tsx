@@ -155,7 +155,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   };
 
   return (
-    <Box sx={{ p: 3, marginBottom: 4 }}>
+    <Box sx={{ p: 3, pt: 1,marginBottom: 4 }}>
       <Grid size={{ xs: 12, lg: 12 }}>
         <Box>
           <form onSubmit={handleEditClient}>

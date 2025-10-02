@@ -24,7 +24,7 @@ interface FormData {
   shift_ids: string;
   team_ids: string;
   company_id: number;
-  workzone_id?: number;
+  workzone_ids?: string;
 }
 
 interface Shift {
@@ -243,20 +243,27 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                     <CustomTextField {...params} placeholder="Select Teams" />
                   )}
                 />
-                {/* <Typography variant="h5" mt={2}>
+                <Typography variant="h5" mt={2}>
                   Add Geofence
                 </Typography>
                 <Autocomplete
                   fullWidth
+                  multiple
+                  id="workzone_ids"
                   options={geofence}
-                  value={
-                    geofence.find((item) => item.id === formData.workzone_id) ||
-                    null
-                  }
+                  value={geofence.filter((item) =>
+                    formData.workzone_ids
+                      ?.split(",")
+                      .map((id) => Number(id))
+                      .includes(item.id ?? -1)
+                  )}
                   onChange={(event, newValue) => {
+                    const selectedIds = newValue
+                      .map((item) => item.id)
+                      .filter(Boolean);
                     setFormData({
                       ...formData,
-                      workzone_id: newValue ? newValue.id : undefined,
+                      workzone_ids: selectedIds.join(","),
                     });
                   }}
                   getOptionLabel={(option) => option.name}
@@ -266,10 +273,10 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                   renderInput={(params) => (
                     <CustomTextField
                       {...params}
-                      placeholder="Select Geofence"
+                      placeholder="Select Geofences"
                     />
                   )}
-                /> */}
+                />
                 <Typography variant="h5" mt={2}>
                   Site Address
                 </Typography>
