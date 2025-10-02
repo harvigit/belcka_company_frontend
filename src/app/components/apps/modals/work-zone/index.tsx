@@ -70,7 +70,6 @@ export default function WorkZone({
   const user = session.data?.user as User & { company_id?: number | null };
 
   const circleRef = useRef<google.maps.Circle | null>(null);
-
   const polygonRef = useRef<google.maps.Polygon | null>(null);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const drawingOverlayRef = useRef<google.maps.MVCObject | null>(null);
@@ -108,11 +107,15 @@ export default function WorkZone({
     }
   }, [open, user?.company_id]);
 
-  // Address predictions
   useEffect(() => {
     if (!isLoaded || !addressInput || !typedAddress) return;
     const service = new google.maps.places.AutocompleteService();
-    service.getPlacePredictions({ input: addressInput }, (results, status) => {
+
+    const input = /^[0-9]{5,6}$/.test(addressInput.trim())
+      ? `India ${addressInput.trim()}`
+      : addressInput;
+
+    service.getPlacePredictions({ input }, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
         setPredictions(results);
       } else {
@@ -173,6 +176,7 @@ export default function WorkZone({
       return null;
     }
   };
+
   const clearExistingOverlays = () => {
     if (circleRef.current) {
       circleRef.current.setMap(null);
@@ -459,14 +463,13 @@ export default function WorkZone({
                 <Typography mt={2}>Site address</Typography>
                 <TextField
                   fullWidth
-                  placeholder="Enter address"
+                  placeholder="Enter address / pincode"
                   value={addressInput}
                   onChange={(e) => {
                     setAddressInput(e.target.value);
                     setTypedAddress(true);
                   }}
                 />
-
                 {typedAddress && predictions.length > 0 && (
                   <List
                     sx={{
