@@ -30,7 +30,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [shiftSidebar, setShiftSidebar] = useState(false);
-    const [shiftId, setShiftId] = useState<number | undefined>(undefined); // Changed from number | null to number | undefined
+    const [shiftId, setShiftId] = useState<number | undefined>(undefined);
 
     const fetchShifts = async () => {
         try {
@@ -80,8 +80,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
     };
 
     const filteredShifts = shifts.filter(shift =>
-        shift.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        shift.days.toLowerCase().includes(searchQuery.toLowerCase())
+        shift.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const handleEditShiftSidebar = (shiftId: number) => {
@@ -91,71 +90,110 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
 
     const handleCloseSidebar = () => {
         setShiftSidebar(false);
-        setShiftId(undefined); // Changed from null to undefined
+        setShiftId(undefined);
         fetchShifts();
     };
-    
+
     const handleAddShift = () => {
-        setShiftId(undefined); // Explicitly set to undefined for adding a new shift
+        setShiftId(undefined);
         setShiftSidebar(true);
     };
 
     return (
-        <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', overflowY: 'auto' }}>
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                overflow: 'hidden',
+            }}
+        >
             <Box sx={{ p: 2, position: 'relative' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '600px', height: '50px' }}>
-                        <TextField
-                            fullWidth
-                            placeholder="Search"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            InputProps={{
-                                startAdornment: (
-                                    <svg
-                                        width="20"
-                                        height="20"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        style={{ marginRight: '12px' }}
-                                    >
-                                        <circle cx="11" cy="11" r="8" />
-                                        <path d="m21 21-4.35-4.35" />
-                                    </svg>
-                                ),
-                            }}
-                            sx={{
-                                mb: 2,
+                    <TextField
+                        fullWidth
+                        placeholder="Search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    style={{ marginRight: '12px' }}
+                                >
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="m21 21-4.35-4.35" />
+                                </svg>
+                            ),
+                        }}
+                        sx={{
+                            mb: 2,
+                            borderRadius: '25px',
+                            bgcolor: 'background.paper',
+                            '& .MuiOutlinedInput-root': {
                                 borderRadius: '25px',
-                                bgcolor: 'background.paper',
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: '25px',
-                                },
-                                width: '70%',
-                            }}
-                        />
-                        <Button
-                            variant="outlined"
-                            color="primary"
-                            onClick={handleAddShift}
-                            sx={{
-                                textTransform: 'none',
-                                borderRadius: '10px',
-                                py: 0.5,
-                                fontWeight: 500,
-                                boxShadow: 'none',
-                                height: '47px'
-                            }}
-                        >
-                            <IconPlus size={18} />
-                            Add Shift
-                        </Button>
-                    </Box>
+                            },
+                            width: '70%',
+                        }}
+                    />
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={handleAddShift}
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: '10px',
+                            py: 0.5,
+                            fontWeight: 500,
+                            boxShadow: 'none',
+                            height: '47px'
+                        }}
+                    >
+                        <IconPlus size={18} />
+                        Add Shift
+                    </Button>
+                </Box>
+                </Box>
+            </Box>
 
+            {/* Scrollable Content Area */}
+            <Box
+                sx={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    p: 2,
+                    bgcolor: 'background.default',
+                    // Custom scrollbar styling
+                    '&::-webkit-scrollbar': {
+                        width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        background: '#f1f1f1',
+                        borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        background: '#c1c1c1',
+                        borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                        background: '#a8a8a8',
+                    },
+                }}
+            >
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    alignItems: 'center',
+                }}>
                     {filteredShifts.map((shift) => (
                         <Card
                             onClick={() => handleEditShiftSidebar(shift.id)}
@@ -168,9 +206,9 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                 width: '100%',
                                 maxWidth: '600px',
                                 margin: '0 auto',
-                                maxHeight: '150px',
                                 '&:hover': {
                                     cursor: 'pointer',
+                                    boxShadow: 2,
                                 },
                             }}
                         >
@@ -181,14 +219,11 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                     alignItems: 'flex-start',
                                     padding: 2,
                                     wordBreak: 'break-word',
-                                    height: '100%',
-                                    maxHeight: 'inherit',
                                 }}
                             >
                                 <Box
                                     sx={{
                                         flex: 1,
-                                        maxHeight: '118px',
                                         pr: 2,
                                     }}
                                 >
@@ -207,7 +242,10 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                 </Box>
                                 <Switch
                                     checked={shift.enabled}
-                                    onChange={() => toggleShift(shift.id)}
+                                    onChange={(e) => {
+                                        e.stopPropagation();
+                                        toggleShift(shift.id);
+                                    }}
                                     color="primary"
                                     aria-label={`Toggle ${shift.name} shift`}
                                     sx={{
@@ -218,13 +256,19 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                             </CardContent>
                         </Card>
                     ))}
-                </Box>
 
-                {filteredShifts.length === 0 && searchQuery && (
-                    <Typography sx={{ textAlign: 'center', color: 'text.secondary', py: 4 }}>
-                        No shifts found matching "{searchQuery}"
-                    </Typography>
-                )}
+                    {filteredShifts.length === 0 && searchQuery && (
+                        <Typography sx={{ textAlign: 'center', color: 'text.secondary', py: 4 }}>
+                            No shifts found matching "{searchQuery}"
+                        </Typography>
+                    )}
+
+                    {filteredShifts.length === 0 && !searchQuery && (
+                        <Typography sx={{ textAlign: 'center', color: 'text.secondary', py: 4 }}>
+                            No shifts available. Click "Add Shift" to create one.
+                        </Typography>
+                    )}
+                </Box>
             </Box>
 
             <Drawer
