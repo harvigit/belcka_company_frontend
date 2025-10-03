@@ -226,13 +226,12 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
             </Typography>
           </Box>
 
-          <Box width={"60%"} mb={4}>
+          <Box mb={4} display={"flex"}>
             <Alert
               severity="info"
               variant="outlined"
               className="pending-request"
               sx={{
-                display: "flex",
                 alignItems: "center",
                 borderColor: "red !important",
                 color: "black !important",
@@ -243,33 +242,30 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  width: "100%",
                 }}
               >
                 <Typography sx={{ color: "black !important", mr: 2 }}>
                   Rate request is pending please take an action.
                 </Typography>
 
-                <Box>
-                  <Button
-                    variant="outlined"
-                    color="success"
-                    startIcon={<IconCheck size={16} />}
-                    onClick={() => handleApprove(comapny?.request_log_id)}
-                    sx={{ mr: 1 }}
-                  >
-                    Approve
-                  </Button>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  startIcon={<IconCheck size={16} />}
+                  onClick={() => handleApprove(comapny?.request_log_id)}
+                  sx={{ mr: 1 }}
+                >
+                  Approve
+                </Button>
 
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<IconX size={16} />}
-                    onClick={() => handleReject(comapny?.request_log_id)}
-                  >
-                    Reject
-                  </Button>
-                </Box>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<IconX size={16} />}
+                  onClick={() => handleReject(comapny?.request_log_id)}
+                >
+                  Reject
+                </Button>
               </Box>
             </Alert>
           </Box>
@@ -277,15 +273,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       )}
 
       {user.user_role_id !== 1 && comapny.is_pending_request && (
-        <Box width={"35%"} mb={4}>
-          <Paper sx={{ boxShadow: 5 }}>
-            <Alert severity="error" variant="filled" sx={{ width: "100%" }}>
-              Your rate request has been pending.
-            </Alert>
-          </Paper>
+        <Box mb={4} display={"flex"}>
+          <Alert severity="error" variant="filled">
+            Your rate request has been pending.
+          </Alert>
         </Box>
       )}
-      
+
       <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <Autocomplete
