@@ -156,6 +156,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         {table.getRowModel().rows.map((row: any) => {
                             const rowData = row.original;
 
+                            console.log(rowData, 'rowData')
                             // Week header row
                             if (rowData.rowType === 'week') {
                                 const visibleColumnsCount = table.getVisibleLeafColumns().length;
@@ -427,7 +428,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
 
                                                 {isFirstRow && visibleColumnConfigs.dailyTotal?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell
+                                                        rowSpan={rowSpan} align="center" className="rowspan-cell" 
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            color: (rowData.isMoreThanWork || rowData.isLessThanWork) ? '#1976d2' : 'inherit'
+                                                        }}
+                                                    >
                                                         {rowData.dailyTotal}
                                                     </TableCell>
                                                 )}

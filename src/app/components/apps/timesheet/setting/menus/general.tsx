@@ -84,6 +84,8 @@ const DAY_NAMES = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ] as const;
 
+const DAY_NAMES_LOWER = DAY_NAMES.map(name => name.toLowerCase());
+
 const ROUNDING_OPTIONS = [
     { value: 5, label: '5 minutes' },
     { value: 10, label: '10 minutes' },
@@ -525,9 +527,18 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
         try {
             updateSettings({ isSaving: true });
 
+            const work_days = DAY_NAMES_LOWER.map((name, index) => ({
+                name,
+                status: settings.workDays[index],
+            }));
+            const day_length = DAY_NAMES_LOWER.map((name, index) => ({
+                name,
+                value: settings.dayLength[index],
+            }));
+
             const payload = {
-                workDays: settings.workDays,
-                dayLength: settings.dayLength,
+                work_days,
+                day_length,
                 startTime: settings.startTime,
                 endTime: settings.endTime,
                 isDayLimit: settings.isDayLimit,

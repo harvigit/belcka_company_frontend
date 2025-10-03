@@ -529,6 +529,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const weekRows: DailyBreakdown[] = [];
 
             weekRows.push({
+                isMoreThanWork: false,
+                isLessThanWork: false,
                 is_requested: false,
                 is_edited: false,
                 timesheet_light_id: 0,
@@ -567,6 +569,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
                         managerNotes: day.manager_notes || '--',
+                        isMoreThanWork: day.isMoreThanWork,
+                        isLessThanWork: day.isLessThanWork,
                         weekLabel: week.week_range,
                         weeklyTotalHours: formatHour(week.weekly_total_hours),
                         weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
@@ -611,6 +615,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     status: day.status,
                     is_requested: false,
                     is_edited: false,
+                    isMoreThanWork: false,
+                    isLessThanWork: false,
                     timesheet_light_id: day.timesheet_light_id,
                 }];
             });
