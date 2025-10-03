@@ -21,7 +21,7 @@ import {
     IconRefresh,
     IconTiltShift,
 } from '@tabler/icons-react';
-import GeneralSetting from './menus/general'; 
+import GeneralSetting from './menus/general';
 import ShiftLists from './menus/shift/index';
 import Geofence from "./menus/geofence";
 
@@ -97,16 +97,28 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                 <Box
                     display="flex"
                     flex="1"
-                    sx={{ overflow: "hidden" }} // Prevent overflow in the main content
+                    sx={{ overflow: "hidden" }}
                 >
-                    {/* Sidebar */}
                     <Box
                         sx={{
                             width: 240,
                             borderRight: "1px solid #e0e0e0",
                             p: 1,
-                            overflowY: "auto", // Allow scrolling if menu items exceed height
+                            overflowY: "auto",
                             bgcolor: "#fff",
+                            '&::-webkit-scrollbar': {
+                                width: '6px',
+                            },
+                            '&::-webkit-scrollbar-track': {
+                                background: 'transparent',
+                            },
+                            '&::-webkit-scrollbar-thumb': {
+                                background: '#c1c1c1',
+                                borderRadius: '3px',
+                            },
+                            '&::-webkit-scrollbar-thumb:hover': {
+                                background: '#a8a8a8',
+                            },
                         }}
                     >
                         {menuItems.map((item, i) => (
@@ -132,13 +144,12 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         ))}
                     </Box>
 
-                    {/* Child Content (Scrollable) - Now takes full height */}
                     <Box
                         sx={{
                             flex: 1,
                             display: "flex",
                             flexDirection: "column",
-                            overflow: "hidden", // Prevent overflow at this level
+                            overflow: "hidden",
                         }}
                     >
                         {activeMenuItem === "General" && (
@@ -147,7 +158,6 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         {activeMenuItem === "Shift" && (
                             <ShiftLists />
                         )}
-                        
 
                         {activeMenuItem === 'Geolocation' && (
                             <Geofence onSaveSuccess={handleSaveSuccess} />
