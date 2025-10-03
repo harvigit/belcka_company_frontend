@@ -282,35 +282,17 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
 
       <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Autocomplete
+          <TextField
             fullWidth
             className="custom_color"
-            size="small"
-            options={trade}
+            disabled
             value={
               Object.keys(comapny?.diff_data || {}).includes("trade_id")
-                ? trade.find((t) => t.id === comapny.diff_data.trade_id.old) ??
-                  null
-                : trade.find((t) => t.id === formData.trade_id) ?? null
+                ? trade.find((t) => t.id === comapny.diff_data.trade_id.old)
+                    ?.name ?? ""
+                : trade.find((t) => t.id === formData.trade_id)?.name ?? ""
             }
-            onChange={(e, val) =>
-              setFormData((prev) => ({
-                ...prev,
-                trade_id: val ? val.id : null,
-              }))
-            }
-            sx={{ height: "47px !important", width: "100% !important" }}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderInput={(params) => (
-              <CustomTextField
-                label="Trade"
-                {...params}
-                placeholder="Search Trade"
-                className="company-trade-selection"
-              />
-            )}
-            disabled
+            label="Trade"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
