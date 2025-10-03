@@ -267,13 +267,12 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
             </Typography>
           </Box>
 
-          <Box width={"60%"} mb={4}>
+          <Box display={"flex"} mb={4}>
             <Alert
               severity="info"
               variant="outlined"
               className="pending-request"
               sx={{
-                display: "flex",
                 alignItems: "center",
                 borderColor: "red !important",
                 color: "black !important",
@@ -284,7 +283,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  width: "100%",
                 }}
               >
                 <Typography sx={{ color: "black !important", mr: 2 }}>
@@ -318,12 +316,10 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
       )}
 
       {user.user_role_id !== 1 && billingInfo.is_pending_request && (
-        <Box width={"35%"} mb={4}>
-          <Paper sx={{ boxShadow: 5 }}>
-            <Alert severity="error" variant="filled" sx={{ width: "100%" }}>
-              Your billing info request has been pending.
-            </Alert>
-          </Paper>
+        <Box mb={4} display={"flex"}>
+          <Alert severity="error" variant="filled">
+            Your billing info request has been pending.
+          </Alert>
         </Box>
       )}
       <Grid container spacing={2} mb={2}>
