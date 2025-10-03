@@ -121,6 +121,19 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       toast.error("Please select trade");
       return;
     }
+    const currentTradeId = comapny?.trade_id ?? null;
+    const currentNetRate = Object.keys(comapny?.diff_data || {}).includes(
+      "net_rate_perday"
+    )
+      ? comapny?.diff_data?.net_rate_perday?.old ?? 0
+      : comapny?.net_rate_perDay ?? 0;
+
+    if (
+      currentTradeId === formData.trade_id &&
+      Number(currentNetRate) === Number(formData.rate)
+    ) {
+      return;
+    }
     try {
       const payload = {
         company_id: comapny.id,
@@ -303,9 +316,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
                 className="company-trade-selection"
               />
             )}
-            disabled={Object.keys(comapny?.diff_data || {}).includes(
-              "trade_id"
-            )}
+            disabled
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
