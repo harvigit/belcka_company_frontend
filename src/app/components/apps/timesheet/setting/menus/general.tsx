@@ -62,6 +62,8 @@ interface CompanySettings {
     isAutoClock: boolean;
     startTime: string | null;
     endTime: string | null;
+    payRatePermission: string;
+    exportFormat: string;
 }
 
 interface GeneralSettingProps {
@@ -128,6 +130,8 @@ const getDefaultSettings = (): Omit<SettingsState, 'isSaving'> => ({
     isAutoClock: false,
     startTime: '09:00',
     endTime: '17:00',
+    payRatePermission: 'view', // Default to first option: "Only view"
+    exportFormat: 'time', // Default to first option: "Time 04:30"
 });
 
 const WorkDaySelector = React.memo<WorkDaySelectorProps>(({ workDays, dayLength, onDayClick, onDayLengthChange }) => {
@@ -297,6 +301,8 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
                     isAutoClock: response.data.isAutoClock ?? getDefaultSettings().isAutoClock,
                     startTime: response.data.startTime || getDefaultSettings().startTime,
                     endTime: response.data.endTime || getDefaultSettings().endTime,
+                    payRatePermission: response.data.pay_rate_permission || 'view',
+                    exportFormat: response.data.export_format || 'time',
                 };
                 setSettings(apiSettings);
             } else {
@@ -385,6 +391,8 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         isAutoClock: fetchedSettings.is_auto_clock ?? defaults.isAutoClock,
                         startTime: fetchedSettings.start_time || defaults.startTime,
                         endTime: fetchedSettings.end_time || defaults.endTime,
+                        payRatePermission: fetchedSettings.pay_rate_permission || 'view', // Default to first option
+                        exportFormat: fetchedSettings.export_format || 'time', // Default to first option
                         isSaving: false,
                     });
                 } else {
@@ -554,12 +562,14 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 roundingIncrement: settings.roundingIncrement,
                 timeZone: settings.timeZone,
                 users: settings.users,
+                pay_rate_permission: settings.users.length > 0 ? settings.payRatePermission : null,
+                export_format: settings.exportFormat,
             };
 
             const response = await api.post('/setting/save-general-setting', payload);
 
             if (response.data?.IsSuccess) {
-                toast.success(response.data.message)
+                toast.success(response.data.message);
                 onSaveSuccess();
             }
         } catch (error) {
@@ -900,7 +910,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         <Box mb={4}>
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                                 <Typography variant="body2">Show pay rates</Typography>
-                                <Box display={"flex"} justifyContent={"end"} alignContent={"center"} gap={3}>
+                                <Box display="flex" justifyContent="end" alignContent="center" gap={3}>
                                     <AvatarGroup max={4}>
                                         {companyUsers
                                             .filter((user) => settings.users.includes(user.id.toString()))
@@ -917,121 +927,155 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         arrow
                                         placement="top"
                                     >
-                                    <span>
-                                        <Select
-                                            multiple
-                                            value={settings.users}
-                                            onChange={handleUserChange}
-                                            open={userDropdown.isOpen}
-                                            onOpen={userDropdown.handleOpen}
-                                            onClose={userDropdown.handleClose}
-                                            size="small"
-                                            displayEmpty
-                                            disabled={user.user_role_id !== 1 }
-                                            renderValue={(selected) => {
-                                                if (selected.length === 0) {
-                                                    return 'Select Users';
-                                                }
-                                                return selected
-                                                    .map((id) => companyUsers.find((cu) => cu.id === id)?.name || '')
-                                                    .filter(Boolean)
-                                                    .join(', ');
-                                            }}
-                                            sx={{
-                                                width: 200,
-                                                '& .MuiOutlinedInput-root': {
-                                                    height: 40,
-                                                    fontSize: '0.875rem',
-                                                },
-                                                '& .MuiSelect-select': {
-                                                    padding: '8px 12px',
-                                                },
-                                            }}
-                                            MenuProps={styles.selectMenuProps}
-                                        >
-                                            <ListSubheader
-                                                sx={{
-                                                    bgcolor: 'background.paper',
-                                                    position: 'sticky',
-                                                    top: 0,
-                                                    zIndex: 1,
-                                                    padding: '8px 16px',
-                                                    borderBottom: '1px solid #e0e0e0',
+                                        <span>
+                                            <Select
+                                                multiple
+                                                value={settings.users}
+                                                onChange={handleUserChange}
+                                                open={userDropdown.isOpen}
+                                                onOpen={userDropdown.handleOpen}
+                                                onClose={userDropdown.handleClose}
+                                                size="small"
+                                                displayEmpty
+                                                disabled={user.user_role_id !== 1}
+                                                renderValue={(selected) => {
+                                                    if (selected.length === 0) {
+                                                        return 'Select Users';
+                                                    }
+                                                    return selected
+                                                        .map((id) => companyUsers.find((cu) => cu.id === id)?.name || '')
+                                                        .filter(Boolean)
+                                                        .join(', ');
                                                 }}
+                                                sx={{
+                                                    width: 150,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        height: 40,
+                                                        fontSize: '0.875rem',
+                                                    },
+                                                    '& .MuiSelect-select': {
+                                                        padding: '8px 12px',
+                                                    },
+                                                    marginRight: '10px'
+                                                }}
+                                                MenuProps={styles.selectMenuProps}
                                             >
-                                                <TextField
-                                                    size="small"
-                                                    placeholder="Search user..."
-                                                    fullWidth
-                                                    value={userDropdown.searchText}
-                                                    onChange={userDropdown.handleSearchChange}
-                                                    variant="outlined"
-                                                    InputProps={{
-                                                        startAdornment: (
-                                                            <InputAdornment position="start">
-                                                                <SearchIcon sx={{ color: 'action.active', fontSize: 20 }} />
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
+                                                <ListSubheader
                                                     sx={{
-                                                        '& .MuiOutlinedInput-root': {
-                                                            height: 36,
-                                                            fontSize: '0.875rem',
-                                                            '& fieldset': {
-                                                                borderColor: '#e0e0e0',
-                                                            },
-                                                            '&:hover fieldset': {
-                                                                borderColor: '#bdbdbd',
-                                                            },
-                                                            '&.Mui-focused fieldset': {
-                                                                borderColor: '#1976d2',
-                                                                borderWidth: 1,
-                                                            },
-                                                        },
-                                                        '& .MuiOutlinedInput-input': {
-                                                            padding: '8px 12px',
-                                                        },
+                                                        bgcolor: 'background.paper',
+                                                        position: 'sticky',
+                                                        top: 0,
+                                                        zIndex: 1,
+                                                        padding: '8px 16px',
+                                                        borderBottom: '1px solid #e0e0e0',
                                                     }}
-                                                    onKeyDown={(e) => e.stopPropagation()}
-                                                />
-                                            </ListSubheader>
-
-                                            {filteredUsers.length > 0 ? (
-                                                filteredUsers.map((cu) => (
-                                                    <MenuItem
-                                                        key={cu.id}
-                                                        value={cu.id}
+                                                >
+                                                    <TextField
+                                                        size="small"
+                                                        placeholder="Search user..."
+                                                        fullWidth
+                                                        value={userDropdown.searchText}
+                                                        onChange={userDropdown.handleSearchChange}
+                                                        variant="outlined"
+                                                        InputProps={{
+                                                            startAdornment: (
+                                                                <InputAdornment position="start">
+                                                                    <SearchIcon sx={{ color: 'action.active', fontSize: 20 }} />
+                                                                </InputAdornment>
+                                                            ),
+                                                        }}
                                                         sx={{
-                                                            fontSize: '0.875rem',
-                                                            padding: '10px 16px',
-                                                            '&:hover': {
-                                                                backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                                                            },
-                                                            '&.Mui-selected': {
-                                                                backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                                                                '&:hover': {
-                                                                    backgroundColor: 'rgba(25, 118, 210, 0.16)',
+                                                            '& .MuiOutlinedInput-root': {
+                                                                height: 36,
+                                                                fontSize: '0.875rem',
+                                                                '& fieldset': {
+                                                                    borderColor: '#e0e0e0',
+                                                                },
+                                                                '&:hover fieldset': {
+                                                                    borderColor: '#bdbdbd',
+                                                                },
+                                                                '&.Mui-focused fieldset': {
+                                                                    borderColor: '#1976d2',
+                                                                    borderWidth: 1,
                                                                 },
                                                             },
+                                                            '& .MuiOutlinedInput-input': {
+                                                                padding: '8px 12px',
+                                                            },
                                                         }}
-                                                    >
-                                                        {cu.name}
+                                                        onKeyDown={(e) => e.stopPropagation()}
+                                                    />
+                                                </ListSubheader>
+
+                                                {filteredUsers.length > 0 ? (
+                                                    filteredUsers.map((cu) => (
+                                                        <MenuItem
+                                                            key={cu.id}
+                                                            value={cu.id}
+                                                            sx={{
+                                                                fontSize: '0.875rem',
+                                                                padding: '10px 16px',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                                                },
+                                                                '&.Mui-selected': {
+                                                                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                                                                    '&:hover': {
+                                                                        backgroundColor: 'rgba(25, 118, 210, 0.16)',
+                                                                    },
+                                                                },
+                                                            }}
+                                                        >
+                                                            {cu.name}
+                                                        </MenuItem>
+                                                    ))
+                                                ) : (
+                                                    <MenuItem disabled sx={{ fontSize: '0.875rem', padding: '10px 16px' }}>
+                                                        No user found
                                                     </MenuItem>
-                                                ))
-                                            ) : (
-                                                <MenuItem disabled sx={{ fontSize: '0.875rem', padding: '10px 16px' }}>
-                                                    No user found
-                                                </MenuItem>
-                                            )}
-                                        </Select>
-                                    </span>
+                                                )}
+                                            </Select>
+                                            <Select
+                                                value={settings.payRatePermission}
+                                                onChange={createSelectHandler('payRatePermission')}
+                                                size="small"
+                                                sx={{
+                                                    width: 130,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        height: 40,
+                                                        fontSize: '0.875rem',
+                                                    },
+                                                    '& .MuiSelect-select': {
+                                                        padding: '8px 12px',
+                                                    },
+                                                }}
+                                                disabled={settings.users.length === 0 || user.user_role_id !== 1}
+                                            >
+                                                <MenuItem value="view">Only view</MenuItem>
+                                                <MenuItem value="view_edit">View & Edit</MenuItem>
+                                            </Select>
+                                        </span>
                                     </Tooltip>
                                 </Box>
                             </Box>
 
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                                 <Typography variant="body2" color="text.primary">Timesheet & payroll export format</Typography>
-                                <Select value="time" size="small" sx={{ width: 150, ...styles.sharedSelectStyles }}>
+                                <Select
+                                    value={settings.exportFormat}
+                                    onChange={createSelectHandler('exportFormat')}
+                                    size="small"
+                                    sx={{
+                                        width: 200,
+                                        '& .MuiOutlinedInput-root': {
+                                            height: 40,
+                                            fontSize: '0.875rem',
+                                        },
+                                        '& .MuiSelect-select': {
+                                            padding: '8px 12px',
+                                        },
+                                    }}
+                                >
                                     <MenuItem value="time">Time 04:30</MenuItem>
                                     <MenuItem value="decimal">Decimal 4.5</MenuItem>
                                 </Select>
