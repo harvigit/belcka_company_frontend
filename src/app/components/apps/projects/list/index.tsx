@@ -21,6 +21,7 @@ import {
   ListItemIcon,
   Drawer,
   Autocomplete,
+  CircularProgress,
 } from "@mui/material";
 import {
   IconChartPie,
@@ -112,7 +113,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
-
+  const [page, setPage] = useState<number>(1);
+  const limit = 20;
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
@@ -262,7 +264,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   // Fetch addresses for selected project
   const fetchHistories = async () => {
     try {
-      const res = await api.get(`project/get-history?project_id=${Number(projectID)}`);
+      const res = await api.get(
+        `project/get-history?project_id=${Number(projectID)}`
+      );
       if (res.data?.info) {
         setHistory(res.data.info);
       }
@@ -443,6 +447,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const formatDate = (date: string | undefined) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
+
+  const paginatedFeeds = history?.slice(0, page * limit) || [];
 
   // if (loading == true) {
   //   return (
@@ -1143,7 +1149,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     pr: 0,
                   }}
                 >
-                  {history.map((addr, index) => {
+                  {paginatedFeeds.map((addr, index) => {
                     let color = "";
 
                     switch (addr.status_int) {
@@ -1210,7 +1216,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                             fontSize="14px"
                             className="multi-ellipsis"
                           >
-                          <b>{addr.user_name}:</b> {addr.message}
+                            <b>{addr.user_name}:</b> {addr.message}
                           </Typography>
                           <p
                             style={{
@@ -1227,6 +1233,21 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     );
                   })}
                 </Box>
+                {paginatedFeeds.length < history.length && (
+                  <Box display="flex" justifyContent="center" my={2}>
+                    <Button
+                      variant="outlined"
+                      startIcon={
+                        loading ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : null
+                      }
+                      onClick={() => setPage((prev) => prev + 1)}
+                    >
+                      See More
+                    </Button>
+                  </Box>
+                )}
               </Box>
             ) : (
               <>
