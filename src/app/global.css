@@ -349,3 +349,12 @@ input#project_id::placeholder {
 .pending-request .MuiAlert-message{
     display: flex;
 }
+
+.header-icons{
+    cursor: pointer;
+    color: #0000008a;
+}
+
+.header-icons:hover {
+    color: #1e4db7;
+}

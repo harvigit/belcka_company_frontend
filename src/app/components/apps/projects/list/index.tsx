@@ -108,9 +108,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
   const [project, setProject] = useState<ProjectList[]>([]);
-
+  const [openDrawer, setOpenDrawer] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -258,6 +259,21 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   }, [projectId]);
 
+  // Fetch addresses for selected project
+  const fetchHistories = async () => {
+    try {
+      const res = await api.get(`project/get-history?project_id=${Number(projectID)}`);
+      if (res.data?.info) {
+        setHistory(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch address", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistories();
+  }, [openDrawer]);
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -424,6 +440,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   }, [project, archiveList]);
 
+  const formatDate = (date: string | undefined) => {
+    return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
+  };
+
   // if (loading == true) {
   //   return (
   //     <Box
@@ -528,6 +548,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({
 
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
+          </Button>
+          <Button
+            color="primary"
+            sx={{ width: "9%" }}
+            variant="outlined"
+            onClick={() => setOpenDrawer(true)}
+          >
+            Activity
           </Button>
           <IconButton onClick={() => handleRowClick()}>
             <IconChartPie size={24}></IconChartPie>
@@ -1053,6 +1081,161 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             handleSubmit={handleProjectSubmit}
             isSaving={isSaving}
           />
+        </Box>
+      </Drawer>
+
+      <Drawer
+        anchor="right"
+        open={openDrawer}
+        onClose={() => setOpenDrawer(false)}
+        PaperProps={{
+          sx: {
+            width: 500,
+            maxWidth: "100%",
+            "& .MuiDrawer-paper": {
+              width: 500,
+              padding: 2,
+              backgroundColor: "#f9f9f9",
+            },
+          },
+        }}
+      >
+        <Box sx={{ position: "relative", p: 2 }}>
+          {/* Close Button */}
+          <IconButton
+            aria-label="close"
+            onClick={() => setOpenDrawer(false)}
+            size="small"
+            sx={{
+              position: "absolute",
+              right: 0,
+              top: 8,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <IconX size={18} />
+          </IconButton>
+          {/* Project List */}
+          <Grid container spacing={2} display="block">
+            <Box
+              display={"flex"}
+              alignContent={"center"}
+              alignItems={"center"}
+              flexWrap={"wrap"}
+            >
+              <IconButton onClick={() => setOpenDrawer(false)}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h5" fontWeight={700}>
+                Project Activities
+              </Typography>
+            </Box>
+            {history.length > 0 ? (
+              <Box mt={3}>
+                <Box
+                  sx={{
+                    maxHeight: history.length > 3 ? "auto" : "auto",
+                    overflow: history.length > 3 ? "auto" : "visible",
+                    pr: 0,
+                  }}
+                >
+                  {history.map((addr, index) => {
+                    let color = "";
+
+                    switch (addr.status_int) {
+                      case 13:
+                        color = "#A600FF";
+                        break;
+                      case 14:
+                        color = "#A600FF";
+                        break;
+                      case 3:
+                        color = "#FF7F00";
+                        break;
+                      case 4:
+                        color = "#32A852";
+                        break;
+                      default:
+                        color = "#999";
+                    }
+
+                    return (
+                      <Box
+                        key={addr.id ?? index}
+                        mb={index === data.length - 1 ? 0 : 2}
+                        pl={2}
+                        pr={2}
+                        mt={2}
+                        position="relative"
+                        display="flex"
+                        alignItems="center"
+                        sx={{
+                          width: "100%",
+                          lineHeight: "10px",
+                          height: "100px",
+                          borderRadius: "25px",
+                          boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
+                          border: "1px solid rgb(240 240 240)",
+                        }}
+                      >
+                        <Box
+                          position="absolute"
+                          top="-10px"
+                          left="15px"
+                          bgcolor={color}
+                          px={1.5}
+                          borderRadius="10px"
+                          zIndex={1}
+                        >
+                          <Typography
+                            variant="caption"
+                            fontWeight={700}
+                            fontSize={"12px !important"}
+                            color="#fff"
+                          >
+                            {addr.status_text}
+                          </Typography>
+                        </Box>
+                        <Box
+                          display="initial"
+                          width="100%"
+                          textAlign="start"
+                          mt={1}
+                        >
+                          <Typography
+                            fontSize="14px"
+                            className="multi-ellipsis"
+                          >
+                          <b>{addr.user_name}:</b> {addr.message}
+                          </Typography>
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              textAlign: "end",
+                              color: "GrayText",
+                            }}
+                            color="textSecondary"
+                          >
+                            {formatDate(addr.date_added)}
+                          </p>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+            ) : (
+              <>
+                <Typography mt={2} ml={2} variant="h5">
+                  No activities are found for this project!!
+                </Typography>
+              </>
+            )}
+          </Grid>
         </Box>
       </Drawer>
     </Box>
