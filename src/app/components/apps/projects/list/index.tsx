@@ -22,6 +22,9 @@ import {
   Drawer,
   Autocomplete,
   CircularProgress,
+  ListItem,
+  ListItemButton,
+  List,
 } from "@mui/material";
 import {
   IconChartPie,
@@ -54,6 +57,13 @@ import { IconTrash } from "@tabler/icons-react";
 import ArchiveAddress from "./archive-address-list";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import CreateProject from "../create";
+import {
+  Circle,
+  GoogleMap,
+  Marker,
+  useJsApiLoader,
+} from "@react-google-maps/api";
+import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
 
 dayjs.extend(customParseFormat);
 
@@ -81,6 +91,19 @@ interface ProjectListingProps {
 export interface TradeList {
   id: number;
   name: string;
+}
+
+const GOOGLE_MAP_LIBRARIES: (
+  | "places"
+  | "drawing"
+  | "geometry"
+  | "visualization"
+)[] = ["places", "drawing"];
+
+interface Boundary {
+  lat: number;
+  lng: number;
+  radius: number;
 }
 
 const TablePagination: React.FC<ProjectListingProps> = ({
@@ -127,6 +150,17 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [sidebar, setSidebar] = useState(false);
   const COOKIE_PREFIX = "project_";
   const projectID = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const [predictions, setPredictions] = useState<
+    google.maps.places.AutocompletePrediction[]
+  >([]);
+  const [radius, setRadius] = useState(100);
+  const [typedAddress, setTypedAddress] = useState(false);
+
   const [formData, setFormData] = useState<any>({
     project_id: Number(projectID),
     company_id: user.company_id,
@@ -353,6 +387,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       const payload = {
         ...formData,
         project_id: projectId,
+        type: "circle",
       };
       const result = await api.post("address/create", payload);
       if (result.data.IsSuccess === true) {
@@ -449,19 +484,100 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   };
 
   const paginatedFeeds = history?.slice(0, page * limit) || [];
+  const defaultLocation = { lat: 51.5074, lng: -0.1278 };
 
-  // if (loading == true) {
-  //   return (
-  //     <Box
-  //       display="flex"
-  //       justifyContent="center"
-  //       alignItems="center"
-  //       minHeight="300px"
-  //     >
-  //       <CircularProgress />
-  //     </Box>
-  //   );
-  // }
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
+    libraries: GOOGLE_MAP_LIBRARIES,
+  });
+
+  useEffect(() => {
+    if (isLoaded && formData.name.trim()) {
+      // Autocomplete API call
+      const service = new google.maps.places.AutocompleteService();
+      service.getPlacePredictions(
+        { input: formData.name },
+        (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            setPredictions(results);
+          } else {
+            setPredictions([]);
+          }
+        }
+      );
+    }
+  }, [formData.name, isLoaded]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, name: e.target.value });
+    setTypedAddress(true);
+  };
+
+  const selectPrediction = (placeId: string) => {
+    const service = new google.maps.places.PlacesService(
+      document.createElement("div")
+    );
+    service.getDetails({ placeId }, (place, status) => {
+      if (
+        status === google.maps.places.PlacesServiceStatus.OK &&
+        place?.geometry?.location
+      ) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setFormData({ ...formData, lat: lat, lng: lng });
+
+        const newBoundary: Boundary = {
+          lat,
+          lng,
+          radius,
+        };
+
+        setSelectedLocation({ lat, lng });
+        setFormData({
+          ...formData,
+          name: place.formatted_address || "",
+          lat,
+          lng,
+          boundary: JSON.stringify(newBoundary),
+        });
+        setPredictions([]);
+      }
+    });
+  };
+
+  const handleRadiusChange = (event: Event, newValue: number | number[]) => {
+    const value = Array.isArray(newValue) ? newValue[0] : newValue;
+
+    setRadius(value);
+
+    if (selectedLocation) {
+      const newBoundary: Boundary = {
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng,
+        radius: value,
+      };
+
+      setFormData({
+        ...formData,
+        boundary: JSON.stringify(newBoundary),
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!sidebar) {
+      setFormData((prev: any) => ({
+        ...prev,
+        name: "",
+        boundary: "",
+        lat: null,
+        lng: null,
+      }));
+
+      setSelectedLocation(null);
+    }
+  }, [sidebar]);
+
   return (
     <Box>
       <Stack
@@ -802,15 +918,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         address_id={null}
         projectId={projectId}
       />
+
       <Drawer
         anchor="right"
         open={sidebar}
         onClose={() => setSidebar(false)}
         sx={{
-          width: 350,
+          width: 500,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: 350,
+            width: 500,
             padding: 2,
             backgroundColor: "#f9f9f9",
           },
@@ -819,9 +936,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         <Box display="flex" flexDirection="column" height="100%">
           <Box height={"100%"}>
             <form onSubmit={handleSubmit} className="address-form">
-              {" "}
               <Grid container mt={3}>
-                <Grid size={{ lg: 12, xs: 12 }}>
+                <Grid size={{ xs: 12 }}>
                   <Box
                     display={"flex"}
                     alignContent={"center"}
@@ -831,29 +947,93 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     <IconButton onClick={() => setSidebar(false)}>
                       <IconArrowLeft />
                     </IconButton>
-                    <Typography variant="h5" fontWeight={700}>
+                    <Typography variant="h6" color="inherit" fontWeight={700}>
                       Add Address
                     </Typography>
                   </Box>
-                  <Typography variant="h5" mt={3}>
-                    Name
-                  </Typography>
-                  <CustomTextField
+
+                  <Typography variant="h5" mt={3}></Typography>
+                  <TextField
+                    label="Enter address"
                     id="name"
                     name="name"
-                    placeholder="Enter address name.."
+                    placeholder="Search for address.."
                     value={formData.name}
-                    onChange={handleChange}
+                    onChange={handleSearchChange}
                     variant="outlined"
                     fullWidth
                   />
+
+                  {/* Display address predictions */}
+                  {typedAddress && predictions.length > 0 && (
+                    <List
+                      sx={{
+                        border: "1px solid #ccc",
+                        maxHeight: 200,
+                        overflow: "auto",
+                        marginTop: 1,
+                      }}
+                    >
+                      {predictions.map((prediction) => (
+                        <ListItem key={prediction.place_id} disablePadding>
+                          <ListItemButton
+                            onClick={() =>
+                              selectPrediction(prediction.place_id)
+                            }
+                          >
+                            {prediction.description}
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+
+                  {selectedLocation && (
+                    <Box sx={{ marginTop: 3 }}>
+                      <Typography variant="h6">
+                        Area size [{radius} Meter]
+                      </Typography>
+                      <CustomRangeSlider
+                        value={radius}
+                        onChange={handleRadiusChange}
+                        min={0}
+                        max={100}
+                        step={1}
+                      />
+
+                      <GoogleMap
+                        zoom={14}
+                        center={selectedLocation}
+                        mapContainerStyle={{
+                          width: "100%",
+                          height: "400px",
+                          marginTop: "20px",
+                        }}
+                      >
+                        <Marker position={selectedLocation} />
+                        <Circle
+                          center={selectedLocation}
+                          radius={radius}
+                          options={{
+                            fillColor: "#FF0000",
+                            fillOpacity: 0.3,
+                            strokeColor: "#FF0000",
+                            strokeOpacity: 1,
+                            strokeWeight: 1,
+                          }}
+                        />
+                      </GoogleMap>
+                    </Box>
+                  )}
                 </Grid>
               </Grid>
+
               <Box
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",
                   gap: 2,
+                  marginTop: 3,
                 }}
               >
                 <Button
@@ -870,10 +1050,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   variant="contained"
                   size="medium"
                   type="submit"
-                  disabled={isSaving}
                   fullWidth
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  Save
                 </Button>
               </Box>
             </form>
