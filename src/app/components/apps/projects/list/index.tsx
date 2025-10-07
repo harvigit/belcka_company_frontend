@@ -1223,6 +1223,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                               fontSize: "12px",
                               textAlign: "end",
                               color: "GrayText",
+                              margin: 0,
                             }}
                             color="textSecondary"
                           >

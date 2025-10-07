@@ -7,12 +7,12 @@ import {
   Button,
   Card,
   Checkbox,
-  IconButton,
   InputAdornment,
   TextField,
   Typography,
+  IconButton,
+  Stack,
 } from "@mui/material";
-import { Stack } from "@mui/system";
 import {
   IconFilter,
   IconSearch,
@@ -36,6 +36,11 @@ export const DocumentsTab = ({
   const [searchUser, setSearchUser] = useState<string>("");
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
+  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     if (addressId) {
@@ -48,12 +53,8 @@ export const DocumentsTab = ({
       const res = await api.get(
         `address/address-document?address_id=${addressId}&company_id=${companyId}`
       );
-
-      if (res.data?.isSuccess) {
-        setTabData(res.data.info || []);
-      } else {
-        setTabData([]);
-      }
+      if (res.data?.isSuccess) setTabData(res.data.info || []);
+      else setTabData([]);
     } catch (error) {
       console.error("Document fetch failed:", error);
       setTabData([]);
@@ -64,14 +65,10 @@ export const DocumentsTab = ({
     try {
       const response = await api.get(
         `address/download-tasks-zip/${addressId}?taskIds=${taskIds.join(",")}`,
-        {
-          responseType: "blob",
-        }
+        { responseType: "blob" }
       );
-
       const blob = new Blob([response.data], { type: "application/zip" });
       const url = window.URL.createObjectURL(blob);
-
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `tasks_address_${addressId}.zip`);
@@ -100,10 +97,7 @@ export const DocumentsTab = ({
       const task = tabData.find((doc) => doc.id === taskId);
       return task?.images?.length > 0;
     });
-
-    if (tasksWithImages.length > 0) {
-      handleDownloadZip(tasksWithImages);
-    }
+    if (tasksWithImages.length > 0) handleDownloadZip(tasksWithImages);
   };
 
   const hasTasksWithImages = useMemo(() => {
@@ -206,13 +200,7 @@ export const DocumentsTab = ({
               </Badge>
             </Stack>
 
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 2,
-              }}
-            >
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
               {doc.images && doc.images.length > 0 ? (
                 doc.images.map((image: any, idx: number) => {
                   const imageUrl =
@@ -227,6 +215,7 @@ export const DocumentsTab = ({
                           xs: "calc(0% - 8px)",
                           sm: "calc(25% - 12px)",
                         },
+                        position: "relative",
                       }}
                     >
                       <Card
@@ -236,13 +225,21 @@ export const DocumentsTab = ({
                           alignItems: "center",
                           justifyContent: "center",
                           backgroundColor: "#f5f5f5",
-                          transition: "transform .2s",
-                          overflow: "visible",
                           cursor: "pointer",
-                          "&:hover img": {
-                            transform: "scale(1.5)",
-                          },
+                          overflow: "hidden",
                         }}
+                        onMouseEnter={(e) => {
+                          if (!hasError && imageUrl) {
+                            setHoveredImage(imageUrl);
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            setHoverPosition({
+                              x: rect.right + 10,
+                              y: rect.top,
+                            });
+                          }
+                        }}
+                        onMouseLeave={() => setHoveredImage(null)}
                       >
                         {hasError || !imageUrl ? (
                           <Box
@@ -295,6 +292,32 @@ export const DocumentsTab = ({
           <Typography variant="body1" color="textSecondary">
             No documents found
           </Typography>
+        </Box>
+      )}
+
+      {/* Hover Preview */}
+      {hoveredImage && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 200,
+            left: "45%",
+            width: "500px",
+            maxHeight: "80vh",
+            zIndex: 2000,
+            border: "1px solid #ccc",
+            borderRadius: 2,
+            overflow: "hidden",
+            backgroundColor: "#fff",
+            boxShadow: 3,
+          }}
+        >
+          <Box
+            component="img"
+            src={hoveredImage}
+            alt="Preview"
+            sx={{ width: "100%", height: "100%", objectFit: "contain" }}
+          />
         </Box>
       )}
     </Box>

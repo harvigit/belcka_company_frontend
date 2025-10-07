@@ -12,7 +12,12 @@ import {
   IconButton,
   CircularProgress,
 } from "@mui/material";
-import { IconArrowLeft, IconMedal } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconEdit,
+  IconMedal,
+  IconPencil,
+} from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -24,7 +29,7 @@ import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import HealthInfo from "../../user-profile-setting/health-info";
 import BillingInfo from "../../user-profile-setting/billing-info";
-import { useSession } from "next-auth/react";
+import { useSession, signIn, getSession } from "next-auth/react";
 import { User } from "next-auth";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
@@ -62,9 +67,11 @@ const TablePagination = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
-  const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null } & {
+  const { data: session, update } = useSession();
+  const user = session?.user as User & { company_id?: number | null } & {
     company_name?: string | null;
+  } & { user_image?: string | null } & { id: number } & {
+    user_thumb_image?: string | null;
   };
   const [phone, setPhone] = useState("");
 
@@ -136,6 +143,18 @@ const TablePagination = () => {
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         fetchData();
+        if (Number(userId) === Number(user?.id)) {
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              first_name: formData.first_name,
+              last_name: formData.last_name,
+              email: formData.email,
+              phone: formData.phone,
+            },
+          });
+        }
       }
     } catch (err) {
       console.error("Update failed:", err);
@@ -155,9 +174,26 @@ const TablePagination = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (res.data.IsSuccess == true) {
+      if (res.data.IsSuccess) {
         toast.success(res.data.message);
         fetchData();
+
+        if (Number(userId) === Number(user?.id)) {
+          const updatedUser = {
+            ...user,
+            user_image: res.data.info.user_image
+              ? res.data.info.user_image
+              : user?.user_image,
+            user_thumb_image: res.data.info.user_image
+              ? res.data.info.user_image
+              : user?.user_thumb_image,
+          };
+
+          await update({
+            ...session,
+            user: updatedUser,
+          });
+        }
       }
     } catch (err) {
       console.error("Image upload failed:", err);
@@ -213,6 +249,7 @@ const TablePagination = () => {
                     height: 12,
                     borderRadius: "50%",
                     boxShadow: "0 0 0 2px white",
+                    cursor: "pointer",
                   },
                 }}
               >
@@ -236,6 +273,13 @@ const TablePagination = () => {
                 />
               </Badge>
               <Box display={"block"}>
+                <label htmlFor="upload-avatar">
+                  <IconEdit
+                    size={17}
+                    color={"#1e4db7"}
+                    style={{ cursor: "pointer" }}
+                  ></IconEdit>
+                </label>
                 <Typography
                   color="textSecondary"
                   fontWeight={600}

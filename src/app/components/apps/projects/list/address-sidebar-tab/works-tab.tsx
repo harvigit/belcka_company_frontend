@@ -25,6 +25,7 @@ import {
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
+import WorkDetailPage from "@/app/components/works";
 
 interface WorksTabProps {
   addressId: number;
@@ -42,6 +43,9 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const [filterOptions, setFilterOptions] = useState<any[]>([]);
   const [filters, setFilters] = useState<FilterState>({ type: "" });
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
+  const [openSidebar, setOpenSidebar] = useState(false);
+  const [selectedWorkId, setSelectedWorkId] = useState(null);
+
   const fetchWorkTabData = async () => {
     try {
       const res = await api.get("/project/get-works", {
@@ -132,6 +136,10 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     }
   };
 
+  const handleWorkClick = (workId: any) => {
+    setSelectedWorkId(workId);
+    setOpenSidebar(true);
+  };
   return (
     <Box>
       <Stack
@@ -241,13 +249,22 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
           </Button>
         </DialogActions>
       </Dialog>
+      <WorkDetailPage
+        open={openSidebar}
+        onClose={() => setOpenSidebar(false)}
+        workId={selectedWorkId}
+        companyId={companyId}
+        addressId={addressId}
+      />
+
       {/* List of works */}
       {filteredData.length > 0 ? (
         filteredData.map((work, idx) => (
           <Box
             key={idx}
             mb={2}
-            sx={{ display: "flex", flexDirection: "column" }}
+            sx={{ display: "flex", flexDirection: "column", cursor: "pointer" }}
+            onClick={() => handleWorkClick(work.id)}
           >
             <Box
               sx={{
@@ -369,9 +386,10 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                 {work.is_checklog === false && (
                   <IconButton
                     color="error"
-                    onClick={() => {
+                    onClick={(e) => {
                       setOpenDialog(true);
                       setSelectedIds(work.id);
+                      e.stopPropagation();
                     }}
                   >
                     <IconTrash width={18} />
@@ -384,7 +402,10 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                       {formatHour(work.total_work_hours)} H
                     </Typography>
                     <IconButton>
-                      <IconChevronRight fontSize="small" />
+                      <IconChevronRight
+                        fontSize="small"
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </IconButton>
                   </Stack>
                 )}
