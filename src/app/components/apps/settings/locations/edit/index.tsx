@@ -123,28 +123,33 @@ const EditLocation: React.FC<EditLocationProps> = ({
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "start",
                 gap: 2,
               }}
             >
               <Button
-                color="error"
-                onClick={onClose}
-                variant="contained"
-                size="medium"
-                fullWidth
-              >
-                Close
-              </Button>
-              <Button
                 color="primary"
                 variant="contained"
-                size="medium"
+                size="large"
                 type="submit"
                 disabled={isSaving}
-                fullWidth
+                sx={{ borderRadius: 3 }}
+                className="drawer_buttons"
               >
                 {isSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                color="inherit"
+                onClick={onClose}
+                variant="contained"
+                size="large"
+                sx={{
+                  backgroundColor: "transparent",
+                  borderRadius: 3,
+                  color: "GrayText",
+                }}
+              >
+                Close
               </Button>
             </Box>
           </form>

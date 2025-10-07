@@ -492,7 +492,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   });
 
   useEffect(() => {
-    if (isLoaded && formData.name.trim()) {
+    if (isLoaded && formData?.name?.trim()) {
       // Autocomplete API call
       const service = new google.maps.places.AutocompleteService();
       service.getPlacePredictions(
@@ -989,7 +989,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   )}
 
                   {selectedLocation && (
-                    <Box sx={{ marginTop: 3 }}>
+                    <Box sx={{ marginTop: 3 }} width={"98%"} className="slider_wrapper">
                       <Typography variant="h6">
                         Area size [{radius} Meter]
                       </Typography>
@@ -999,10 +999,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                         min={0}
                         max={100}
                         step={1}
+                        sx={{ height: "1px"}}
                       />
 
                       <GoogleMap
-                        zoom={14}
+                        zoom={17}
                         center={selectedLocation}
                         mapContainerStyle={{
                           width: "100%",
@@ -1031,28 +1032,29 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "start",
                   gap: 2,
                   marginTop: 3,
                 }}
               >
                 <Button
-                  color="error"
-                  onClick={() => setSidebar(false)}
-                  variant="contained"
-                  size="medium"
-                  fullWidth
-                >
-                  Close
-                </Button>
-                <Button
                   color="primary"
                   variant="contained"
-                  size="medium"
+                  size="large"
                   type="submit"
-                  fullWidth
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
                 >
                   Save
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => setSidebar(false)}
+                  variant="contained"
+                  size="large"
+                  sx={{ backgroundColor: "transparent", borderRadius: 3 ,color: "GrayText"}}
+                >
+                  Close
                 </Button>
               </Box>
             </form>
