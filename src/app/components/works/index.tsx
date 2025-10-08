@@ -147,15 +147,6 @@ export default function WorkDetailPage({
     setLoading(false);
   };
 
-  if (!work || Object.keys(work).length === 0)
-    return (
-      <Drawer anchor="right" open={open} onClose={onClose}>
-        <Box p={3} textAlign="center">
-          <Typography>No detail found for this work!</Typography>
-        </Box>
-      </Drawer>
-    );
-
   return (
     <Drawer
       anchor="right"
@@ -171,347 +162,365 @@ export default function WorkDetailPage({
         },
       }}
     >
-      <Box mb={2}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" alignItems="center" gap={1}>
-            <IconButton onClick={onClose}>
-              <IconArrowLeft />
-            </IconButton>
-            <Typography variant="h6" color="inherit" fontWeight={700}>
-              Work details
-            </Typography>
+      {!work || Object.keys(work).length === 0 ? (
+        <>
+          <Box p={3} textAlign="center">
+            <Typography>No detail found for this work!</Typography>
           </Box>
-          {!editing && work.images.length > 0 && (
-            <Button variant="contained" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          )}
-          {editing && work.images.length > 0 && (
-            <Button variant="contained" color="success" onClick={handleUpload}>
-              Save
-            </Button>
-          )}
-        </Box>
-      </Box>
+        </>
+      ) : (
+        <>
+          <Box mb={2}>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Box display="flex" alignItems="center" gap={1}>
+                <IconButton onClick={onClose}>
+                  <IconArrowLeft />
+                </IconButton>
+                <Typography variant="h6" color="inherit" fontWeight={700}>
+                  Work details
+                </Typography>
+              </Box>
+              {!editing && work.images.length > 0 && (
+                <Button variant="contained" onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+              )}
+              {editing && work.images.length > 0 && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleUpload}
+                >
+                  Save
+                </Button>
+              )}
+            </Box>
+          </Box>
 
-      {/* Work Info */}
-      <Box p={2}>
-        {/* Tags */}
-        <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-          <Box
-            sx={{
-              backgroundColor: "#FF7A00",
-              border: "1px solid #FF7A00",
-              color: "#fff",
-              fontSize: "11px",
-              fontWeight: 500,
-              px: 1,
-              py: 0.2,
-              borderRadius: "999px",
-            }}
-          >
-            {work.trade_name}
-          </Box>
-          <Box
-            sx={{
-              backgroundColor:
-                work.repeatable_job === "Task" ? "#32A852" : "#FF008C",
-              border:
-                work.repeatable_job === "Task"
-                  ? "1px solid #32A852"
-                  : "1px solid #FF008C",
-              color: "#fff",
-              fontSize: "11px",
-              fontWeight: 500,
-              px: 1,
-              py: 0.2,
-              borderRadius: "999px",
-            }}
-          >
-            {work.repeatable_job === "Task" ? work.rate : "Job"}
-          </Box>
-          <Box
-            sx={{
-              backgroundColor: work.status_color,
-              border: `1px solid ${work.status_color}`,
-              color: "#fff",
-              fontSize: "11px",
-              fontWeight: 500,
-              px: 1,
-              py: 0.2,
-              borderRadius: "999px",
-            }}
-          >
-            {work.status_text}
-          </Box>
-        </Box>
+          {/* Work Info */}
+          <Box p={2}>
+            {/* Tags */}
+            <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+              <Box
+                sx={{
+                  backgroundColor: "#FF7A00",
+                  border: "1px solid #FF7A00",
+                  color: "#fff",
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  px: 1,
+                  py: 0.2,
+                  borderRadius: "999px",
+                }}
+              >
+                {work.trade_name}
+              </Box>
+              <Box
+                sx={{
+                  backgroundColor:
+                    work.repeatable_job === "Task" ? "#32A852" : "#FF008C",
+                  border:
+                    work.repeatable_job === "Task"
+                      ? "1px solid #32A852"
+                      : "1px solid #FF008C",
+                  color: "#fff",
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  px: 1,
+                  py: 0.2,
+                  borderRadius: "999px",
+                }}
+              >
+                {work.repeatable_job === "Task" ? work.rate : "Job"}
+              </Box>
+              <Box
+                sx={{
+                  backgroundColor: work.status_color,
+                  border: `1px solid ${work.status_color}`,
+                  color: "#fff",
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  px: 1,
+                  py: 0.2,
+                  borderRadius: "999px",
+                }}
+              >
+                {work.status_text}
+              </Box>
+            </Box>
 
-        {/* Basic info */}
-        <Typography
-          variant="h6"
-          mb={1}
-          sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-        >
-          {work.name}
-        </Typography>
-        {work.location && (
-          <Typography
-            variant="h6"
-            mb={1}
-            sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-          >
-            Location: {work.location}
-          </Typography>
-        )}
-        {work.units && (
-          <Typography
-            variant="h6"
-            mb={1}
-            sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-          >
-            Units: {work.units}
-          </Typography>
-        )}
-        {work.duration && (
-          <Typography
-            variant="h6"
-            mb={1}
-            sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-          >
-            Estimated duration: ~{work.duration}
-          </Typography>
-        )}
-
-        {/* Progress */}
-        {work.progress !== undefined && (
-          <Box>
+            {/* Basic info */}
             <Typography
               variant="h6"
-              mb={0.5}
+              mb={1}
               sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
             >
-              Progress: {work.progress}%
-              <LinearProgress
-                variant="determinate"
-                value={work.progress}
-                sx={{
-                  height: 10,
-                  borderRadius: 5,
-                  "& .MuiLinearProgress-bar": {
-                    backgroundColor: getProgressColor(work.progress),
-                  },
-                  backgroundColor: "#eee",
-                }}
-              />
+              {work.name}
             </Typography>
+            {work.location && (
+              <Typography
+                variant="h6"
+                mb={1}
+                sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+              >
+                Location: {work.location}
+              </Typography>
+            )}
+            {work.units && (
+              <Typography
+                variant="h6"
+                mb={1}
+                sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+              >
+                Units: {work.units}
+              </Typography>
+            )}
+            {work.duration && (
+              <Typography
+                variant="h6"
+                mb={1}
+                sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+              >
+                Estimated duration: ~{work.duration}
+              </Typography>
+            )}
+
+            {/* Progress */}
+            {work.progress !== undefined && (
+              <Box>
+                <Typography
+                  variant="h6"
+                  mb={0.5}
+                  sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+                >
+                  Progress: {work.progress}%
+                  <LinearProgress
+                    variant="determinate"
+                    value={work.progress}
+                    sx={{
+                      height: 10,
+                      borderRadius: 5,
+                      "& .MuiLinearProgress-bar": {
+                        backgroundColor: getProgressColor(work.progress),
+                      },
+                      backgroundColor: "#eee",
+                    }}
+                  />
+                </Typography>
+              </Box>
+            )}
           </Box>
-        )}
-      </Box>
 
-      {/* Photos Before */}
-      {work?.images.length > 0 && (
-        <Box p={2}>
-          <Typography fontWeight="bold" mb={1}>
-            Photos Before
-          </Typography>
-          <Grid container spacing={2}>
-            {work.images
-              ?.filter((i: any) => i.is_before)
-              .map((img: any) => (
-                <Grid
-                  size={{ xs: 6 }}
-                  key={img.id}
-                  sx={{
-                    position: "relative",
-                    transition: "transform .2s",
-                    overflow: "visible",
-                    cursor: "pointer",
-                    "&:hover img": {
-                      transform: "scale(1.2)",
-                    },
-                  }}
-                >
-                  <Image
-                    width={170}
-                    height={170}
-                    src={img.image_url}
-                    alt="before"
-                    style={{
-                      borderRadius: 8,
-                      objectFit: "cover",
-                    }}
-                    onClick={() => handleRemoveExisting(img.id, "before")}
-                    onMouseEnter={(e) => {
-                      setHoveredImage(img.image_url);
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setHoverPosition({
-                        x: rect.right + 10,
-                        y: rect.top,
-                      });
-                    }}
-                    onMouseLeave={() => setHoveredImage(null)}
-                  />
-                  {editing && (
-                    <IconButton
-                      color="error"
-                      size="small"
+          {/* Photos Before */}
+          {work?.images.length > 0 && (
+            <Box p={2}>
+              <Typography fontWeight="bold" mb={1}>
+                Photos Before
+              </Typography>
+              <Grid container spacing={2}>
+                {work.images
+                  ?.filter((i: any) => i.is_before)
+                  .map((img: any) => (
+                    <Grid
+                      size={{ xs: 6 }}
+                      key={img.id}
                       sx={{
-                        position: "absolute",
-                        top: 4,
-                        right: 4,
-                        background: "#fff",
+                        position: "relative",
+                        transition: "transform .2s",
+                        overflow: "visible",
+                        cursor: "pointer",
+                        "&:hover img": {
+                          transform: "scale(1.2)",
+                        },
                       }}
                     >
-                      <IconTrash size={16} />
-                    </IconButton>
-                  )}
-                </Grid>
-              ))}
-          </Grid>
+                      <Image
+                        width={170}
+                        height={170}
+                        src={img.image_url}
+                        alt="before"
+                        style={{
+                          borderRadius: 8,
+                          objectFit: "cover",
+                        }}
+                        onClick={() => handleRemoveExisting(img.id, "before")}
+                        onMouseEnter={(e) => {
+                          setHoveredImage(img.image_url);
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setHoverPosition({
+                            x: rect.right + 10,
+                            y: rect.top,
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredImage(null)}
+                      />
+                      {editing && (
+                        <IconButton
+                          color="error"
+                          size="small"
+                          sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            background: "#fff",
+                          }}
+                        >
+                          <IconTrash size={16} />
+                        </IconButton>
+                      )}
+                    </Grid>
+                  ))}
+              </Grid>
 
-          {editing && work?.images.length > 0 && (
-            <Box mt={2}>
-              <Button
-                variant="outlined"
-                startIcon={<IconPlus />}
-                component="label"
-                size="small"
-              >
-                Add Before Photos
-                <input
-                  type="file"
-                  hidden
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => handleAddFiles(e, "before")}
-                />
-              </Button>
-              <Box mt={1} display="flex" gap={1} flexWrap="wrap">
-                {newBeforeFiles.map((file, idx) => (
-                  <Typography key={idx} variant="body2">
-                    {file.name}
-                  </Typography>
-                ))}
-              </Box>
+              {editing && work?.images.length > 0 && (
+                <Box mt={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<IconPlus />}
+                    component="label"
+                    size="small"
+                  >
+                    Add Before Photos
+                    <input
+                      type="file"
+                      hidden
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleAddFiles(e, "before")}
+                    />
+                  </Button>
+                  <Box mt={1} display="flex" gap={1} flexWrap="wrap">
+                    {newBeforeFiles.map((file, idx) => (
+                      <Typography key={idx} variant="body2">
+                        {file.name}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Box>
+              )}
             </Box>
           )}
-        </Box>
-      )}
 
-      {/* Photos After */}
-      {work?.images.length > 0 && (
-        <Box p={2}>
-          <Typography fontWeight="bold" mb={1}>
-            Photos After
-          </Typography>
-          <Grid container spacing={2}>
-            {work.images
-              ?.filter((i: any) => !i.is_before)
-              .map((img: any) => (
-                <Grid
-                  size={{ xs: 6 }}
-                  key={img.id}
+          {/* Photos After */}
+          {work?.images.length > 0 && (
+            <Box p={2}>
+              <Typography fontWeight="bold" mb={1}>
+                Photos After
+              </Typography>
+              <Grid container spacing={2}>
+                {work.images
+                  ?.filter((i: any) => !i.is_before)
+                  .map((img: any) => (
+                    <Grid
+                      size={{ xs: 6 }}
+                      key={img.id}
+                      sx={{
+                        position: "relative",
+                        transition: "transform .2s",
+                        overflow: "visible",
+                        cursor: "pointer",
+                        "&:hover img": {
+                          transform: "scale(1.2)",
+                        },
+                      }}
+                    >
+                      <Image
+                        width={170}
+                        height={170}
+                        src={img.image_url}
+                        alt="after"
+                        style={{
+                          borderRadius: 8,
+                          objectFit: "cover",
+                        }}
+                        onMouseEnter={(e) => {
+                          setHoveredImage(img.image_url);
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setHoverPosition({
+                            x: rect.right + 10,
+                            y: rect.top,
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredImage(null)}
+                      />
+                      {editing && (
+                        <IconButton
+                          color="error"
+                          size="small"
+                          sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            background: "#fff",
+                          }}
+                          onClick={() => handleRemoveExisting(img.id, "after")}
+                        >
+                          <IconTrash size={16} />
+                        </IconButton>
+                      )}
+                    </Grid>
+                  ))}
+              </Grid>
+
+              {editing && work?.images.length > 0 && (
+                <Box mt={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<IconPlus />}
+                    component="label"
+                    size="small"
+                  >
+                    Add After Photos
+                    <input
+                      type="file"
+                      hidden
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleAddFiles(e, "after")}
+                    />
+                  </Button>
+                  <Box mt={1} display="flex" gap={1} flexWrap="wrap">
+                    {newAfterFiles.map((file, idx) => (
+                      <Typography key={idx} variant="body2">
+                        {file.name}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Hover Preview */}
+              {hoveredImage && (
+                <Box
                   sx={{
-                    position: "relative",
-                    transition: "transform .2s",
-                    overflow: "visible",
-                    cursor: "pointer",
-                    "&:hover img": {
-                      transform: "scale(1.2)",
-                    },
+                    position: "fixed",
+                    top: "20%",
+                    left: "35%",
+                    width: "25%",
+                    maxHeight: "80vh",
+                    zIndex: 2000,
+                    border: "1px solid #ccc",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    backgroundColor: "#fff",
+                    boxShadow: 3,
                   }}
                 >
-                  <Image
-                    width={170}
-                    height={170}
-                    src={img.image_url}
-                    alt="after"
-                    style={{
-                      borderRadius: 8,
-                      objectFit: "cover",
-                    }}
-                    onMouseEnter={(e) => {
-                      setHoveredImage(img.image_url);
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setHoverPosition({
-                        x: rect.right + 10,
-                        y: rect.top,
-                      });
-                    }}
-                    onMouseLeave={() => setHoveredImage(null)}
+                  <Box
+                    component="img"
+                    src={hoveredImage}
+                    alt="Preview"
+                    sx={{ width: "100%", height: "100%", objectFit: "contain" }}
                   />
-                  {editing && (
-                    <IconButton
-                      color="error"
-                      size="small"
-                      sx={{
-                        position: "absolute",
-                        top: 4,
-                        right: 4,
-                        background: "#fff",
-                      }}
-                      onClick={() => handleRemoveExisting(img.id, "after")}
-                    >
-                      <IconTrash size={16} />
-                    </IconButton>
-                  )}
-                </Grid>
-              ))}
-          </Grid>
-
-          {editing && work?.images.length > 0 && (
-            <Box mt={2}>
-              <Button
-                variant="outlined"
-                startIcon={<IconPlus />}
-                component="label"
-                size="small"
-              >
-                Add After Photos
-                <input
-                  type="file"
-                  hidden
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => handleAddFiles(e, "after")}
-                />
-              </Button>
-              <Box mt={1} display="flex" gap={1} flexWrap="wrap">
-                {newAfterFiles.map((file, idx) => (
-                  <Typography key={idx} variant="body2">
-                    {file.name}
-                  </Typography>
-                ))}
-              </Box>
+                </Box>
+              )}
             </Box>
           )}
-
-          {/* Hover Preview */}
-          {hoveredImage && (
-            <Box
-              sx={{
-                position: "fixed",
-                top: "20%",
-                left: "35%",
-                width: "25%",
-                maxHeight: "80vh",
-                zIndex: 2000,
-                border: "1px solid #ccc",
-                borderRadius: 2,
-                overflow: "hidden",
-                backgroundColor: "#fff",
-                boxShadow: 3,
-              }}
-            >
-              <Box
-                component="img"
-                src={hoveredImage}
-                alt="Preview"
-                sx={{ width: "100%", height: "100%", objectFit: "contain" }}
-              />
-            </Box>
-          )}
-        </Box>
+        </>
       )}
     </Drawer>
   );
