@@ -32,6 +32,7 @@ import {
   IconDotsVertical,
   IconFilter,
   IconLocation,
+  IconPencil,
   IconPlus,
   IconSearch,
 } from "@tabler/icons-react";
@@ -64,6 +65,8 @@ import {
   useJsApiLoader,
 } from "@react-google-maps/api";
 import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
+import EditProject from "../edit";
+import ArchiveProject from "./archive-project-list";
 
 dayjs.extend(customParseFormat);
 
@@ -126,8 +129,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [archiveList, setArchiveList] = useState<boolean>(false);
+  const [archiveProjectList, setArchiveProjectList] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
+  const [projectEditOpen, setProjectEditOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectList | null>(
+    null
+  );
 
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
@@ -462,6 +470,42 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   };
 
+  const handleEditProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        company_id: user.company_id,
+        budget: Number(formData.budget),
+      };
+
+      const result = await api.put("project/update", payload);
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setFormData({
+          name: "",
+          address: "",
+          budget: "",
+          description: "",
+          code: "",
+          shift_ids: "",
+          team_ids: "",
+          company_id: user.company_id,
+          is_pricework: false,
+          repeatable_job: false,
+        });
+        fetchProjects();
+        setProjectEditOpen(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
@@ -484,7 +528,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   };
 
   const paginatedFeeds = history?.slice(0, page * limit) || [];
-  const defaultLocation = { lat: 51.5074, lng: -0.1278 };
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
@@ -725,28 +768,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  setSidebar(true);
-                }}
-                style={{
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconLocation width={18} />
-                </ListItemIcon>
-                Add Address
-              </Link>
-            </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
                   handleOpenCreateDrawer();
                 }}
                 style={{
@@ -762,6 +783,28 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   <IconPlus width={18} />
                 </ListItemIcon>
                 Add Task
+              </Link>
+            </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSidebar(true);
+                }}
+                style={{
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconLocation width={18} />
+                </ListItemIcon>
+                Add Address
               </Link>
             </MenuItem>
             <MenuItem onClick={handleClose}>
@@ -804,6 +847,29 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   <IconNotes width={18} />
                 </ListItemIcon>
                 Project detail
+              </Link>
+            </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setArchiveProjectList(true);
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archive project list
               </Link>
             </MenuItem>
           </Menu>
@@ -989,7 +1055,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   )}
 
                   {selectedLocation && (
-                    <Box sx={{ marginTop: 3 }} width={"98%"} className="slider_wrapper">
+                    <Box
+                      sx={{ marginTop: 3 }}
+                      width={"98%"}
+                      className="slider_wrapper"
+                    >
                       <Typography variant="h6">
                         Area size [{radius} Meter]
                       </Typography>
@@ -999,7 +1069,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                         min={0}
                         max={100}
                         step={1}
-                        sx={{ height: "1px"}}
+                        sx={{ height: "1px" }}
                       />
 
                       <GoogleMap
@@ -1052,7 +1122,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   onClick={() => setSidebar(false)}
                   variant="contained"
                   size="large"
-                  sx={{ backgroundColor: "transparent", borderRadius: 3 ,color: "GrayText"}}
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
                 >
                   Close
                 </Button>
@@ -1152,6 +1226,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         onClose={() => setArchiveList(false)}
         onWorkUpdated={fetchAddresses}
       />
+      <ArchiveProject
+        open={archiveProjectList}
+        companyId={Number(user.company_id)}
+        onClose={() => setArchiveProjectList(false)}
+        onWorkUpdated={fetchProjects}
+      />
+
       <Drawer
         anchor="left"
         open={dialogOpen}
@@ -1248,7 +1329,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   </Typography>
                   <IconChevronRight style={{ color: "GrayText" }} />
                 </Box>
-                <IconButton color="error" sx={{ ml: 2 }}>
+                <IconButton color="primary" sx={{ ml: 2 }}>
+                  <IconPencil
+                    size={18}
+                    onClick={() => {
+                      setEditingProject(project);
+                      setProjectEditOpen(true);
+                    }}
+                  />
+                </IconButton>
+                <IconButton color="error">
                   <IconTrash
                     size={18}
                     onClick={() => {
@@ -1266,6 +1356,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             formData={formData}
             setFormData={setFormData}
             handleSubmit={handleProjectSubmit}
+            isSaving={isSaving}
+          />
+
+          <EditProject
+            open={projectEditOpen}
+            onClose={() => setProjectEditOpen(false)}
+            formData={formData}
+            setFormData={setFormData}
+            project={editingProject}
+            handleSubmit={handleEditProject}
             isSaving={isSaving}
           />
         </Box>

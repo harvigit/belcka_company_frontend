@@ -43,7 +43,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [gross, setGross] = useState<any>();
   const [cis, setCis] = useState<any>();
-  const [payRate, setPayRate] = useState<boolean>(false);
+  const [payRate, setPayRate] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<{
     trade_id: number | null;
@@ -98,7 +98,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       const res = await api.get(
         `setting/user-payrate-permission?user_id=${user.id}&company_id=${user.company_id}`
       );
-      if (res.data) setPayRate(res.data.info.show_pay_rate);
+      if (res.data) {
+        const showRate = res.data?.info?.show_pay_rate || null;
+        setPayRate(showRate);
+      }
     } catch (err) {
       console.error("Failed to fetch trades", err);
     }
@@ -313,7 +316,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
               <TextField
                 fullWidth
                 className="custom_color"
-                label={"(" + comapny?.currency + ")" + " Net Per Day"}
+                label={`(${comapny?.currency}) Net Per Day`}
                 value={
                   Object.keys(comapny?.diff_data || {}).includes(
                     "net_rate_perday"
@@ -321,9 +324,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
                     ? comapny?.diff_data.net_rate_perday?.old ?? ""
                     : formData.rate
                 }
-                disabled={Object.keys(comapny?.diff_data || {}).includes(
-                  "net_rate_perday"
-                )}
+                disabled={
+                  // disable if permission is "view" or missing, or if diff_data already exists
+                  Object.keys(comapny?.diff_data || {}).includes(
+                    "net_rate_perday"
+                  ) ||
+                  payRate === "view" ||
+                  !payRate
+                }
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, rate: e.target.value }))
                 }

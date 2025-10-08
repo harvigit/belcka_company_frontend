@@ -54,7 +54,6 @@ const EditLocation: React.FC<EditLocationProps> = ({
       const fetchTasks = async () => {
         try {
           const res = await api.get(`company-locations/get?location_id=${id}`);
-          console.log(res, "resres");
           if (res.data && res.data.info) {
             const task = res.data.info[0];
             setData(task);
