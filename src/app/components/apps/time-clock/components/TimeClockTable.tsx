@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, {useMemo, useState} from 'react';
 import {
     Table,
     TableBody,
@@ -15,56 +15,72 @@ import {
     MenuItem,
     FormControl,
     Select,
+    Tooltip,
+    Popover
 } from '@mui/material';
-import { flexRender, ColumnDef } from '@tanstack/react-table';
-import { IconChevronDown, IconChevronRight, IconExclamationMark, IconPlus, IconTrash } from '@tabler/icons-react';
+import {flexRender} from '@tanstack/react-table';
+import {
+    IconExclamationMark,
+    IconExclamationCircle,
+    IconPlus,
+    IconTrash,
+    IconPointFilled,
+} from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
-import CheckLogRows from '../time-clock-details/check-log-list';
 import EditableTimeCell from './EditableTimeCell';
 import EditableShiftCell from './EditableShiftCell';
 import EditableProjectCell from './EditableProjectCell';
 import NewRecordRow from './NewRecordRow';
-import { DailyBreakdown, EditingWorklog, NewRecord, Shift, Project } from '@/app/components/apps/time-clock/types/timeClock';
+import {
+    DailyBreakdown,
+    EditingWorklog,
+    NewRecord,
+    Shift,
+    Project
+} from '@/app/components/apps/time-clock/types/timeClock';
 
 interface TimeClockTableProps {
-    table: any;
-    dailyData: DailyBreakdown[];
-    currency: string;
-    selectedRows: Set<string>;
-    expandedWorklogsIds: string[];
-    newRecords: { [key: string]: NewRecord };
-    savingNewRecords: Set<string>;
-    shifts: Shift[];
-    editingWorklogs: { [key: string]: EditingWorklog };
-    savingWorklogs: Set<string>;
-    editingShifts: { [key: string]: { shift_id: number | string; editingField: 'shift' } };
-    formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
-    sanitizeDateTime: (dateTime: string) => string;
-    validateAndFormatTime: (value: string) => string;
-    hasValidWorklogData: (row: DailyBreakdown) => boolean;
-    isRecordLocked: (log: any) => boolean;
-    handleRowSelect: (rowId: string, checked: boolean) => void;
-    handlePendingRequest: () => void;
-    handleWorklogToggle: (worklogId: string) => void;
-    startAddingNewRecord: (date: string, projects: any, shifts: any) => void;
-    startEditingField: (worklogId: string, field: 'start' | 'end', log: any) => void;
-    startEditingShift: (worklogId: string, currentShiftId: number | string, log: any) => void;
-    updateEditingField: (worklogId: string, field: keyof EditingWorklog, value: string) => void;
-    updateEditingShift: (worklogId: string, shiftId: number | string) => void;
-    updateNewRecord: (recordKey: string, field: keyof NewRecord, value: string | number) => void;
-    cancelEditingField: (worklogId: string) => void;
-    cancelEditingShift: (worklogId: string) => void;
-    saveFieldChanges: (worklogId: string, originalLog: any) => void;
-    saveShiftChanges: (worklogId: string, originalLog: any) => void;
-    saveNewRecord: (recordKey: string) => void;
-    cancelNewRecord: (recordKey: string) => void;
-    projects: Project[];
-    editingProjects: { [key: string]: { project_id: number | string; editingField: 'project' } };
-    startEditingProject: (worklogId: string, currentShiftId: number | string, log: any) => void;
-    updateEditingProject: (worklogId: string, shiftId: number | string) => void;
-    saveProjectChanges: (worklogId: string, originalLog: any) => void;
-    cancelEditingProject: (worklogId: string) => void;
-    onDeleteClick: (worklogId: string) => void;
+    table: any,
+    dailyData: DailyBreakdown[],
+    currency: string,
+    selectedRows: Set<string>,
+    expandedWorklogsIds: string[],
+    newRecords: { [key: string]: NewRecord },
+    savingNewRecords: Set<string>,
+    shifts: Shift[],
+    editingWorklogs: { [key: string]: EditingWorklog },
+    savingWorklogs: Set<string>,
+    editingShifts: { [key: string]: { shift_id: number | string; editingField: 'shift' } },
+    formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string,
+    sanitizeDateTime: (dateTime: string) => string,
+    validateAndFormatTime: (value: string) => string,
+    hasValidWorklogData: (row: DailyBreakdown) => boolean,
+    isRecordLocked: (log: any) => boolean,
+    handleRowSelect: (rowId: string, checked: boolean) => void,
+    handlePendingRequest: () => void,
+    handleWorklogToggle: (worklogId: string) => void,
+    startAddingNewRecord: (date: string, projects: any, shifts: any) => void,
+    startEditingField: (worklogId: string, field: 'start' | 'end', log: any) => void,
+    startEditingShift: (worklogId: string, currentShiftId: number | string, log: any) => void,
+    updateEditingField: (worklogId: string, field: keyof EditingWorklog, value: string) => void,
+    updateEditingShift: (worklogId: string, shiftId: number | string) => void,
+    updateNewRecord: (recordKey: string, field: keyof NewRecord, value: string | number) => void,
+    cancelEditingField: (worklogId: string) => void,
+    cancelEditingShift: (worklogId: string) => void,
+    saveFieldChanges: (worklogId: string, originalLog: any) => void,
+    saveShiftChanges: (worklogId: string, originalLog: any) => void,
+    saveNewRecord: (recordKey: string) => void,
+    cancelNewRecord: (recordKey: string) => void,
+    projects: Project[],
+    editingProjects: { [key: string]: { project_id: number | string; editingField: 'project' } },
+    startEditingProject: (worklogId: string, currentShiftId: number | string, log: any) => void,
+    updateEditingProject: (worklogId: string, shiftId: number | string) => void,
+    saveProjectChanges: (worklogId: string, originalLog: any) => void,
+    cancelEditingProject: (worklogId: string) => void,
+    onDeleteClick: (worklogId: string) => void,
+    conflictsByDate?: { [key: string]: number },
+    openConflictsSideBar?: () => Promise<void>
+    openChecklogsSidebar?: (worklogId: number) => Promise<void>;
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -86,7 +102,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            isRecordLocked,
                                                            handleRowSelect,
                                                            handlePendingRequest,
-                                                           handleWorklogToggle,
                                                            startAddingNewRecord,
                                                            startEditingField,
                                                            startEditingShift,
@@ -105,8 +120,13 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            updateEditingProject,
                                                            saveProjectChanges,
                                                            cancelEditingProject,
-                                                           onDeleteClick
+                                                           onDeleteClick,
+                                                           conflictsByDate = {},
+                                                           openConflictsSideBar,
+                                                           openChecklogsSidebar
                                                        }) => {
+    const [conflictAnchorEl, setConflictAnchorEl] = useState<HTMLElement | null>(null);
+
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
         const configs: { [key: string]: { width: number; visible: boolean } } = {};
@@ -124,10 +144,19 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
     const visibleColumnConfigs = getVisibleColumnConfigs();
 
+    const conflictDaysCount = useMemo(() => {
+        return Object.keys(conflictsByDate).filter(date => conflictsByDate[date] > 0).length;
+    }, [conflictsByDate]);
+
+    const handleConflicts = () => {
+        setConflictAnchorEl(null);
+        openConflictsSideBar?.();
+    };
+
     return (
-        <Box sx={{ flex: 1, overflow: 'auto', paddingBottom: selectedRows.size > 0 ? '80px' : '0px' }}>
-            <TableContainer sx={{ overflowY: 'hidden' }}>
-                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
+        <Box sx={{flex: 1, overflow: 'auto', paddingBottom: selectedRows.size > 0 ? '80px' : '0px'}}>
+            <TableContainer sx={{overflowY: 'hidden'}}>
+                <Table size="small" stickyHeader sx={{tableLayout: 'fixed', width: '100%'}}>
                     <TableHead>
                         {table.getHeaderGroups().map((hg: any) => (
                             <TableRow key={hg.id}>
@@ -143,9 +172,27 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             width: `${header.column.columnDef.size || 100}px`,
                                             minWidth: `${header.column.columnDef.size || 100}px`,
                                             maxWidth: `${header.column.columnDef.size || 100}px`,
+                                            textAlign: 'center',
+                                            verticalAlign: 'middle',
                                         }}
                                     >
-                                        <Typography>{flexRender(header.column.columnDef.header, header.getContext())}</Typography>
+                                        {header.id === 'conflicts' ? (
+                                            conflictDaysCount > 0 ? (
+                                                <Typography
+                                                    variant="body2"
+                                                    fontWeight={600}
+                                                    sx={{
+                                                        color: '#fff',
+                                                        backgroundColor: '#fc4b6c',
+                                                        borderRadius: '50%',
+                                                    }}
+                                                >
+                                                    {conflictDaysCount}
+                                                </Typography>
+                                            ) : null
+                                        ) : (
+                                            <Typography>{flexRender(header.column.columnDef.header, header.getContext())}</Typography>
+                                        )}
                                     </TableCell>
                                 ))}
                             </TableRow>
@@ -155,8 +202,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                     <TableBody>
                         {table.getRowModel().rows.map((row: any) => {
                             const rowData = row.original;
+                            const rowId = `row-${row.index}`;
+                            const isRowSelected = selectedRows.has(rowId);
+                            const isRowLocked = isRecordLocked(rowData);
 
-                            console.log(rowData, 'rowData')
                             // Week header row
                             if (rowData.rowType === 'week') {
                                 const visibleColumnsCount = table.getVisibleLeafColumns().length;
@@ -171,7 +220,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 py: 1.5,
                                             }}
                                         >
-                                            <Stack direction="row" alignItems="center" sx={{ width: '100%', position: 'relative' }}>
+                                            <Stack direction="row" alignItems="center"
+                                                   sx={{width: '100%', position: 'relative'}}>
                                                 <Typography
                                                     variant="body1"
                                                     fontWeight={600}
@@ -186,9 +236,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 <Typography
                                                     variant="body1"
                                                     fontWeight={600}
-                                                    sx={{ marginLeft: 'auto' }}
+                                                    sx={{marginLeft: 'auto'}}
                                                 >
-                                                    Week Total: {rowData.weeklyTotalHours} ({rowData.weeklyPayableAmount})
+                                                    Week
+                                                    Total: {rowData.weeklyTotalHours} ({rowData.weeklyPayableAmount})
                                                 </Typography>
                                             </Stack>
                                         </TableCell>
@@ -202,6 +253,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             );
                             const hasRecords = hasValidWorklogData(rowData) || dateNewRecords.length > 0;
 
+                            const hasConflicts = conflictsByDate && conflictsByDate[rowData.date] > 0;
+
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
                                 const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
@@ -212,87 +265,196 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                 const subRows = row.original.rowsData.map((log: any, index: number) => {
                                     const worklogId = `${row.id}-${log.worklog_id}`;
-                                    const isWorklogExpanded = expandedWorklogsIds.includes(log.worklog_id);
                                     const isFirstRow = index === 0;
                                     const isLogLocked = isRecordLocked(log);
 
                                     return (
-                                        <>
+                                        <React.Fragment key={log.worklog_id}>
                                             <TableRow
-                                                key={log.worklog_id}
                                                 sx={{
-                                                    '& td': { textAlign: 'center' },
+                                                    height: '45px',
+                                                    minHeight: '45px',
+                                                    maxHeight: '45px',
+                                                    '& td': {textAlign: 'center', verticalAlign: 'middle'},
                                                     backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
                                                     cursor: 'pointer',
+                                                    '&:hover': {
+                                                        backgroundColor: '#f4433605',
+                                                    },
+                                                    '&:hover .select-icon': {
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    },
+                                                    '& .select-icon': {
+                                                        display: isRowSelected ? 'flex' : 'none',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    },
+                                                    '&:hover .plus-icon': {
+                                                        display: isLogLocked ? 'none' : 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    },
                                                     '&:hover .action-icon': {
-                                                        display: 'block',
-                                                        padding: 0
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        padding: 0,
                                                     },
                                                 }}
                                             >
+                                                {/* Select Column */}
                                                 {isFirstRow && visibleColumnConfigs.select?.visible && (
                                                     <TableCell
                                                         rowSpan={rowSpan}
                                                         align="center"
                                                         className="rowspan-cell"
-                                                        sx={{ width: `${visibleColumnConfigs.select.width}px`, py: 0.5 }}
+                                                        sx={{
+                                                            width: `${visibleColumnConfigs.select.width}px`,
+                                                            py: 0.5,
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                        }}
                                                     >
-                                                        <CustomCheckbox
-                                                            checked={selectedRows.has(`row-${row.index}`)}
-                                                            onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
-                                                        />
-                                                    </TableCell>
-                                                )}
-
-                                                {isFirstRow && visibleColumnConfigs.date?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                                                            <Typography variant='h4'>{rowData.date}</Typography>
-                                                            <IconButton
-                                                                onClick={() => startAddingNewRecord(rowData.date as string, projects as any, shifts as any)}
-                                                                size="small"
-                                                                sx={{ '&:hover': { backgroundColor: 'transparent' } }}
-                                                                title="Add new record"
-                                                            >
-                                                                <IconPlus size={16} color="#1976d2" />
-                                                            </IconButton>
+                                                        <Box className="select-icon" sx={{
+                                                            height: '100%',
+                                                            display: isRowSelected ? 'flex' : 'none',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <CustomCheckbox
+                                                                checked={isRowSelected}
+                                                                onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
+                                                            />
                                                         </Box>
                                                     </TableCell>
                                                 )}
 
+                                                {/* Date Column */}
+                                                {isFirstRow && visibleColumnConfigs.date?.visible && (
+                                                    <TableCell
+                                                        rowSpan={rowSpan}
+                                                        align="center"
+                                                        className="rowspan-cell"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                            width: `${visibleColumnConfigs.date.width}px`,
+                                                        }}
+                                                    >
+                                                        <Box sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: 1,
+                                                            height: '100%'
+                                                        }}>
+                                                            <Typography variant="h4">{rowData.date}</Typography>
+                                                            {!isLogLocked && !hasRecords && (
+                                                                <Box className="plus-icon" sx={{
+                                                                    display: 'none',
+                                                                    height: '100%',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center'
+                                                                }}>
+                                                                    <IconButton
+                                                                        onClick={() => startAddingNewRecord(rowData.date as string, projects as any, shifts as any)}
+                                                                        size="small"
+                                                                        sx={{
+                                                                            paddingY: 0,
+                                                                            '&:hover': {backgroundColor: 'transparent'}
+                                                                        }}
+                                                                        title="Add new record"
+                                                                    >
+                                                                        <IconPlus size={16} color="#1976d2"/>
+                                                                    </IconButton>
+                                                                </Box>
+                                                            )}
+                                                        </Box>
+                                                    </TableCell>
+                                                )}
+
+                                                {/* Conflicts Column */}
+                                                {isFirstRow && visibleColumnConfigs.conflicts?.visible && (
+                                                    <TableCell
+                                                        rowSpan={rowSpan}
+                                                        align="center"
+                                                        className="rowspan-cell"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            px: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                            width: `${visibleColumnConfigs.conflicts.width}px`,
+                                                        }}
+                                                    >
+                                                        {hasConflicts && (
+                                                            <Tooltip
+                                                                title={`${conflictDaysCount} Issue${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                arrow
+                                                                placement="top"
+                                                            >
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="error"
+                                                                    aria-label={`${conflictDaysCount} scheduling conflict${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                    onClick={(e) => setConflictAnchorEl(e.currentTarget)}
+                                                                    sx={{
+                                                                        p: 0,
+                                                                        '&:hover': {
+                                                                            backgroundColor: 'error.light',
+                                                                            color: 'error.dark',
+                                                                            opacity: 0.9
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <IconExclamationCircle size={20}/>
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        )}
+                                                    </TableCell>
+                                                )}
+
+                                                {/* Exclamation Column */}
                                                 {visibleColumnConfigs.exclamation?.visible && (
-                                                    <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell align="center" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
                                                         {log.is_requested ? (
                                                             <IconButton
                                                                 size="small"
                                                                 color="error"
                                                                 onClick={handlePendingRequest}
                                                                 aria-label="error"
-                                                                sx={{ '&:hover': { backgroundColor: 'transparent', color: '#fc4b6c' } }}
+                                                                sx={{
+                                                                    '&:hover': {
+                                                                        backgroundColor: 'transparent',
+                                                                        color: '#fc4b6c'
+                                                                    }
+                                                                }}
                                                             >
-                                                                <IconExclamationMark size={18} />
+                                                                <IconExclamationMark size={18}/>
                                                             </IconButton>
                                                         ) : null}
                                                     </TableCell>
                                                 )}
 
-                                                {visibleColumnConfigs.expander?.visible && (
-                                                    <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
-                                                        {log.user_checklogs && log.user_checklogs.length > 0 ? (
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => handleWorklogToggle(log.worklog_id)}
-                                                                aria-label={isWorklogExpanded ? 'Collapse' : 'Expand'}
-                                                            >
-                                                                {isWorklogExpanded ? <IconChevronDown size={18} /> : <IconChevronRight size={18} />}
-                                                            </IconButton>
-                                                        ) : null}
-                                                    </TableCell>
-                                                )}
-
+                                                {/* Project Column */}
                                                 {visibleColumnConfigs.project?.visible && (
-                                                    <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
-                                                        {(log.user_checklogs && log.user_checklogs.length > 0) || isLogLocked ? (
+                                                    <TableCell align="center" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
+                                                        {isLogLocked ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
@@ -319,8 +481,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
+                                                {/* Shift Column */}
                                                 {visibleColumnConfigs.shift?.visible && (
-                                                    <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell align="center" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
                                                         {log.is_pricework || isLogLocked ? (
                                                             <Box sx={{
                                                                 display: 'flex',
@@ -348,72 +516,165 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
+                                                {/* Start Time Column */}
                                                 {visibleColumnConfigs.start?.visible && (
-                                                    <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell align="center" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
                                                         {log.is_pricework || isLogLocked ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                opacity: isLogLocked ? 0.6 : 1
+                                                                opacity: isLogLocked ? 0.6 : 1,
                                                             }}>
                                                                 {sanitizeDateTime(log.start)}
                                                             </Box>
                                                         ) : (
-                                                            <EditableTimeCell
-                                                                worklogId={worklogId}
-                                                                field="start"
-                                                                currentValue={log.start}
-                                                                log={log}
-                                                                editingWorklogs={editingWorklogs}
-                                                                savingWorklogs={savingWorklogs}
-                                                                sanitizeDateTime={sanitizeDateTime}
-                                                                validateAndFormatTime={validateAndFormatTime}
-                                                                updateEditingField={updateEditingField}
-                                                                startEditingField={startEditingField}
-                                                                cancelEditingField={cancelEditingField}
-                                                                saveFieldChanges={saveFieldChanges}
-                                                            />
+                                                            <Box sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: 0.5
+                                                            }}>
+                                                                {log.start_time_edited_by && (
+                                                                    <Tooltip
+                                                                        sx={{
+                                                                            tooltip: {
+                                                                                sx: {
+                                                                                    backgroundColor: '#1a1f29',
+                                                                                    color: '#fff',
+                                                                                    fontSize: '13px',
+                                                                                    fontWeight: 400,
+                                                                                    lineHeight: 1.4,
+                                                                                    maxWidth: 320,
+                                                                                    p: '10px 14px',
+                                                                                    borderRadius: '6px',
+                                                                                    boxShadow: '0px 4px 12px rgba(0,0,0,0.25)',
+                                                                                    whiteSpace: 'normal',
+                                                                                },
+                                                                            },
+                                                                            arrow: {sx: {color: '#1a1f29'}},
+                                                                        }}
+                                                                        title={`Modified by ${log.start_time_edited_by_name} on ${log.start_time_edited_at}`}
+                                                                        arrow
+                                                                        placement="top"
+                                                                    >
+                                                                        <Box component="span" sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            cursor: 'pointer'
+                                                                        }}>
+                                                                            <IconPointFilled size={18} color="#ff9800"/>
+                                                                        </Box>
+                                                                    </Tooltip>
+                                                                )}
+                                                                <EditableTimeCell
+                                                                    worklogId={worklogId}
+                                                                    field="start"
+                                                                    currentValue={log.start}
+                                                                    log={log}
+                                                                    editingWorklogs={editingWorklogs}
+                                                                    savingWorklogs={savingWorklogs}
+                                                                    sanitizeDateTime={sanitizeDateTime}
+                                                                    validateAndFormatTime={validateAndFormatTime}
+                                                                    updateEditingField={updateEditingField}
+                                                                    startEditingField={startEditingField}
+                                                                    cancelEditingField={cancelEditingField}
+                                                                    saveFieldChanges={saveFieldChanges}
+                                                                />
+                                                            </Box>
                                                         )}
                                                     </TableCell>
                                                 )}
 
+                                                {/* End Time Column */}
                                                 {visibleColumnConfigs.end?.visible && (
-                                                    <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell align="center" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
                                                         {log.is_pricework || isLogLocked ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                opacity: isLogLocked ? 0.6 : 1
+                                                                opacity: isLogLocked ? 0.6 : 1,
                                                             }}>
                                                                 {sanitizeDateTime(log.end)}
                                                             </Box>
                                                         ) : (
-                                                            <EditableTimeCell
-                                                                worklogId={worklogId}
-                                                                field="end"
-                                                                currentValue={log.end}
-                                                                log={log}
-                                                                editingWorklogs={editingWorklogs}
-                                                                savingWorklogs={savingWorklogs}
-                                                                sanitizeDateTime={sanitizeDateTime}
-                                                                validateAndFormatTime={validateAndFormatTime}
-                                                                updateEditingField={updateEditingField}
-                                                                startEditingField={startEditingField}
-                                                                cancelEditingField={cancelEditingField}
-                                                                saveFieldChanges={saveFieldChanges}
-                                                            />
+                                                            <Box sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: 0.5
+                                                            }}>
+                                                                {log.end_time_edited_by && (
+                                                                    <Tooltip
+                                                                        sx={{
+                                                                            tooltip: {
+                                                                                sx: {
+                                                                                    backgroundColor: '#1a1f29',
+                                                                                    color: '#fff',
+                                                                                    fontSize: '13px',
+                                                                                    fontWeight: 400,
+                                                                                    lineHeight: 1.4,
+                                                                                    maxWidth: 320,
+                                                                                    p: '10px 14px',
+                                                                                    borderRadius: '6px',
+                                                                                    boxShadow: '0px 4px 12px rgba(0,0,0,0.25)',
+                                                                                    whiteSpace: 'normal',
+                                                                                },
+                                                                            },
+                                                                            arrow: {sx: {color: '#1a1f29'}},
+                                                                        }}
+                                                                        title={`Modified by ${log.end_time_edited_by_name} on ${log.end_time_edited_at}`}
+                                                                        arrow
+                                                                        placement="top"
+                                                                    >
+                                                                        <Box component="span" sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            cursor: 'pointer'
+                                                                        }}>
+                                                                            <IconPointFilled size={18} color="#ff9800"/>
+                                                                        </Box>
+                                                                    </Tooltip>
+                                                                )}
+                                                                <EditableTimeCell
+                                                                    worklogId={worklogId}
+                                                                    field="end"
+                                                                    currentValue={log.end}
+                                                                    log={log}
+                                                                    editingWorklogs={editingWorklogs}
+                                                                    savingWorklogs={savingWorklogs}
+                                                                    sanitizeDateTime={sanitizeDateTime}
+                                                                    validateAndFormatTime={validateAndFormatTime}
+                                                                    updateEditingField={updateEditingField}
+                                                                    startEditingField={startEditingField}
+                                                                    cancelEditingField={cancelEditingField}
+                                                                    saveFieldChanges={saveFieldChanges}
+                                                                />
+                                                            </Box>
                                                         )}
                                                     </TableCell>
                                                 )}
 
+                                                {/* Total Hours Column */}
                                                 {visibleColumnConfigs.totalHours?.visible && (
                                                     <TableCell
                                                         align="center"
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
                                                             color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit')
                                                         }}
                                                     >
@@ -421,18 +682,48 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
+                                                {/* Pricework Amount Column */}
                                                 {visibleColumnConfigs.priceWorkAmount?.visible && (
-                                                    <TableCell align="center" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell align="center" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
                                                         {`${currency}${log.pricework_amount || 0}`}
                                                     </TableCell>
                                                 )}
-
-                                                {isFirstRow && visibleColumnConfigs.dailyTotal?.visible && (
-                                                    <TableCell
-                                                        rowSpan={rowSpan} align="center" className="rowspan-cell" 
+                                                
+                                                {/* Check ins Column */}
+                                                {visibleColumnConfigs.checkins?.visible && (
+                                                    <TableCell 
+                                                        align="center"
+                                                        onClick={() => openChecklogsSidebar?.(log.worklog_id)}
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                            '&:hover':{
+                                                                color: '#1976d2'
+                                                            }
+                                                        }}
+                                                    >
+                                                        {`${log.check_ins || 0}`}
+                                                    </TableCell>
+                                                )}
+
+                                                {/* Daily Total Column */}
+                                                {isFirstRow && visibleColumnConfigs.dailyTotal?.visible && (
+                                                    <TableCell
+                                                        rowSpan={rowSpan}
+                                                        align="center"
+                                                        className="rowspan-cell"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
                                                             color: (rowData.isMoreThanWork || rowData.isLessThanWork) ? '#1976d2' : 'inherit'
                                                         }}
                                                     >
@@ -440,18 +731,33 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
+                                                {/* Payable Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.payableAmount?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell"
+                                                               sx={{
+                                                                   py: 0.5,
+                                                                   fontSize: '0.875rem',
+                                                                   height: '45px',
+                                                                   verticalAlign: 'middle'
+                                                               }}>
                                                         {rowData.payableAmount}
                                                     </TableCell>
                                                 )}
 
+                                                {/* Employee Notes Column */}
                                                 {isFirstRow && visibleColumnConfigs.employeeNotes?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{ py: 0.5, fontSize: '0.875rem' }}>
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell"
+                                                               sx={{
+                                                                   py: 0.5,
+                                                                   fontSize: '0.875rem',
+                                                                   height: '45px',
+                                                                   verticalAlign: 'middle'
+                                                               }}>
                                                         {rowData.employeeNotes}
                                                     </TableCell>
                                                 )}
 
+                                                {/* Action Column */}
                                                 {visibleColumnConfigs.action?.visible && (
                                                     <TableCell
                                                         align="center"
@@ -459,9 +765,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
                                                             borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             textAlign: 'center',
-                                                            verticalAlign: 'middle',
                                                         }}
                                                     >
                                                         <Button
@@ -479,25 +786,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 },
                                                             }}
                                                             onClick={() => onDeleteClick(log.worklog_id)}
-                                                            aria-label="Delete worklog" 
+                                                            aria-label="Delete worklog"
                                                         >
-                                                            <IconTrash size={18} />
+                                                            <IconTrash size={18}/>
                                                         </Button>
                                                     </TableCell>
                                                 )}
                                             </TableRow>
-
-                                            {isWorklogExpanded && (
-                                                <CheckLogRows
-                                                    logs={log.user_checklogs}
-                                                    currency={currency}
-                                                    formatHour={formatHour}
-                                                    visibleColumnConfigs={visibleColumnConfigs}
-                                                    getVisibleCellsLength={6}
-                                                    isMultiRow={true}
-                                                />
-                                            )}
-                                        </>
+                                        </React.Fragment>
                                     );
                                 });
 
@@ -524,27 +820,80 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                     </React.Fragment>
                                 );
                             } else {
+                                // Single day row (no multiple worklogs)
                                 return (
                                     <React.Fragment key={row.id}>
                                         <TableRow
                                             key={row.id}
                                             sx={{
-                                                backgroundColor: isRecordLocked(row.original)
+                                                height: '45px',
+                                                minHeight: '45px',
+                                                maxHeight: '45px',
+                                                backgroundColor: isRowLocked
                                                     ? 'rgba(244, 67, 54, 0.02)'
                                                     : 'transparent',
                                                 cursor: 'pointer',
+                                                '&:hover': {
+                                                    backgroundColor: '#f4433605',
+                                                },
+                                                '&:hover .select-icon': {
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                },
+                                                '& .select-icon': {
+                                                    display: isRowSelected ? 'flex' : 'none',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                },
+                                                '&:hover .plus-icon': {
+                                                    display: isRowLocked ? 'none' : 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                },
                                                 '&:hover .action-icon': {
-                                                    display: 'block', // Show icon when row is hovered
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
                                                 },
                                             }}
                                         >
                                             {row.getVisibleCells().map((cell: any) => {
-                                                const { column } = cell;
+                                                const {column} = cell;
                                                 const dateNewRecords = Object.entries(newRecords).filter(
                                                     ([_, rec]) => rec.date === row.original.date
                                                 );
                                                 const hasNewRecords = dateNewRecords.length > 0;
                                                 const isEmptyDay = !hasValidWorklogData(row.original);
+
+                                                // Select column
+                                                if (column.id === 'select' && row.original.rowType === 'day') {
+                                                    return (
+                                                        <TableCell
+                                                            key={cell.id}
+                                                            sx={{
+                                                                py: 0.5,
+                                                                fontSize: '0.875rem',
+                                                                height: '45px',
+                                                                verticalAlign: 'middle',
+                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                                textAlign: 'center',
+                                                            }}
+                                                        >
+                                                            <Box className="select-icon" sx={{
+                                                                height: '100%',
+                                                                display: isRowSelected ? 'flex' : 'none',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}>
+                                                                <CustomCheckbox
+                                                                    checked={isRowSelected}
+                                                                    onChange={(e) => handleRowSelect(rowId, e.target.checked)}
+                                                                />
+                                                            </Box>
+                                                        </TableCell>
+                                                    );
+                                                }
 
                                                 // Date column with add button
                                                 if (column.id === 'date' && row.original.rowType === 'day' && !row.original.rowsData) {
@@ -554,24 +903,81 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             sx={{
                                                                 py: 0.5,
                                                                 fontSize: '0.875rem',
+                                                                height: '45px',
+                                                                verticalAlign: 'middle',
                                                                 borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                                 textAlign: 'center',
-                                                                verticalAlign: 'middle',
                                                             }}
                                                         >
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <Typography variant='h4'>{row.original.date}</Typography>
-                                                                {!hasNewRecords && (
-                                                                    <IconButton
-                                                                        onClick={() => startAddingNewRecord(row.original.date as string, projects as any, shifts as any)}
-                                                                        size="small"
-                                                                        sx={{ '&:hover': { backgroundColor: 'transparent' } }}
-                                                                        title="Add new record"
-                                                                    >
-                                                                        <IconPlus size={16} color="#1976d2" />
-                                                                    </IconButton>
+                                                            <Box sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: 1,
+                                                                height: '100%'
+                                                            }}>
+                                                                <Typography
+                                                                    variant="h4">{row.original.date}</Typography>
+                                                                {!isRowLocked && !hasNewRecords && (
+                                                                    <Box className="plus-icon" sx={{
+                                                                        display: 'none',
+                                                                        height: '100%',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }}>
+                                                                        <IconButton
+                                                                            onClick={() => startAddingNewRecord(row.original.date as string, projects as any, shifts as any)}
+                                                                            size="small"
+                                                                            sx={{'&:hover': {backgroundColor: 'transparent'}}}
+                                                                            title="Add new record"
+                                                                        >
+                                                                            <IconPlus size={16} color="#1976d2"/>
+                                                                        </IconButton>
+                                                                    </Box>
                                                                 )}
                                                             </Box>
+                                                        </TableCell>
+                                                    );
+                                                }
+
+                                                // Conflicts column for single row
+                                                if (column.id === 'conflicts' && row.original.rowType === 'day') {
+                                                    return (
+                                                        <TableCell
+                                                            key={cell.id}
+                                                            sx={{
+                                                                py: 0.5,
+                                                                fontSize: '0.875rem',
+                                                                height: '45px',
+                                                                verticalAlign: 'middle',
+                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                                textAlign: 'center',
+                                                            }}
+                                                        >
+                                                            {hasConflicts && (
+                                                                <Tooltip
+                                                                    title={`${conflictDaysCount} Issue${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                    arrow
+                                                                    placement="top"
+                                                                >
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        aria-label={`${conflictDaysCount} scheduling conflict${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                        onClick={(e) => setConflictAnchorEl(e.currentTarget)}
+                                                                        sx={{
+                                                                            p: 0,
+                                                                            '&:hover': {
+                                                                                backgroundColor: 'error.light',
+                                                                                color: 'error.dark',
+                                                                                opacity: 0.9
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <IconExclamationCircle size={20}/>
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            )}
                                                         </TableCell>
                                                     );
                                                 }
@@ -583,8 +989,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                     if (column.id === 'project') {
                                                         return (
-                                                            <TableCell align="center" sx={{ py: 0.5, width: '100%', minHeight: '45px' }}>
-                                                                <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                                                            <TableCell align="center" sx={{
+                                                                py: 0.5,
+                                                                height: '45px',
+                                                                verticalAlign: 'middle',
+                                                                width: '100%',
+                                                                minHeight: '45px'
+                                                            }}>
+                                                                <FormControl size="small" sx={{
+                                                                    minWidth: '100px',
+                                                                    width: '100%',
+                                                                    maxWidth: '100px'
+                                                                }}>
                                                                     <Select
                                                                         value={newRecord.project_id}
                                                                         onChange={(e) => updateNewRecord(recordKey, 'project_id', e.target.value)}
@@ -592,13 +1008,19 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         displayEmpty
                                                                         sx={{
                                                                             height: '32px',
-                                                                            '& .MuiSelect-select': { fontSize: '0.75rem', py: '6px', px: '8px', textAlign: 'center' },
-                                                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                                                            '& .MuiSelect-select': {
+                                                                                fontSize: '0.75rem',
+                                                                                py: '6px',
+                                                                                px: '8px',
+                                                                                textAlign: 'center'
+                                                                            },
+                                                                            '& .MuiOutlinedInput-notchedOutline': {borderColor: '#e0e0e0'},
                                                                         }}
                                                                     >
                                                                         <MenuItem value="" disabled>Project</MenuItem>
                                                                         {projects.map((project) => (
-                                                                            <MenuItem key={project.id} value={project.id}>
+                                                                            <MenuItem key={project.id}
+                                                                                      value={project.id}>
                                                                                 {project.name}
                                                                             </MenuItem>
                                                                         ))}
@@ -612,9 +1034,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         return (
                                                             <TableCell
                                                                 key={cell.id}
-                                                                sx={{ py: 0.5, textAlign: 'center', verticalAlign: 'middle' }}
+                                                                sx={{
+                                                                    py: 0.5,
+                                                                    height: '45px',
+                                                                    verticalAlign: 'middle',
+                                                                    textAlign: 'center'
+                                                                }}
                                                             >
-                                                                <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                                                                <FormControl size="small" sx={{
+                                                                    minWidth: '100px',
+                                                                    width: '100%',
+                                                                    maxWidth: '100px'
+                                                                }}>
                                                                     <Select
                                                                         value={newRecord.shift_id}
                                                                         onChange={(e) => updateNewRecord(recordKey, 'shift_id', e.target.value)}
@@ -622,8 +1053,13 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         displayEmpty
                                                                         sx={{
                                                                             height: '32px',
-                                                                            '& .MuiSelect-select': { fontSize: '0.75rem', py: '6px', px: '8px', textAlign: 'center' },
-                                                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                                                            '& .MuiSelect-select': {
+                                                                                fontSize: '0.75rem',
+                                                                                py: '6px',
+                                                                                px: '8px',
+                                                                                textAlign: 'center'
+                                                                            },
+                                                                            '& .MuiOutlinedInput-notchedOutline': {borderColor: '#e0e0e0'},
                                                                         }}
                                                                     >
                                                                         <MenuItem value="" disabled>Shift</MenuItem>
@@ -642,28 +1078,56 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         return (
                                                             <TableCell
                                                                 key={cell.id}
-                                                                sx={{ py: 0.5, textAlign: 'center', verticalAlign: 'middle' }}
+                                                                sx={{
+                                                                    py: 0.5,
+                                                                    height: '45px',
+                                                                    verticalAlign: 'middle',
+                                                                    textAlign: 'center'
+                                                                }}
                                                             >
-                                                                <TextField
-                                                                    type="text"
-                                                                    value={newRecord[column.id as keyof NewRecord] as string}
-                                                                    placeholder="HH:MM"
-                                                                    variant="outlined"
-                                                                    size="small"
-                                                                    onChange={(e) => {
-                                                                        const raw = e.target.value.replace(/[^\d:]/g, '');
-                                                                        updateNewRecord(recordKey, column.id as keyof NewRecord, raw);
-                                                                    }}
-                                                                    onBlur={() => {
-                                                                        const formattedTime = validateAndFormatTime(newRecord[column.id as keyof NewRecord] as string);
-                                                                        updateNewRecord(recordKey, column.id as keyof NewRecord, formattedTime);
-                                                                    }}
-                                                                    disabled={isSaving}
-                                                                    sx={{
-                                                                        width: '70px',
-                                                                        '& .MuiInputBase-input': { fontSize: '0.75rem', textAlign: 'center' },
-                                                                    }}
-                                                                />
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: 0.5
+                                                                }}>
+                                                                    {newRecord[column.id as keyof NewRecord] && (
+                                                                        <Tooltip
+                                                                            title={`${column.id.charAt(0).toUpperCase() + column.id.slice(1)} time edited`}
+                                                                            arrow>
+                                                                            <Box sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center'
+                                                                            }}>
+                                                                                <IconPointFilled size={18}
+                                                                                                 color="#ff9800"/>
+                                                                            </Box>
+                                                                        </Tooltip>
+                                                                    )}
+                                                                    <TextField
+                                                                        type="text"
+                                                                        value={newRecord[column.id as keyof NewRecord] as string}
+                                                                        placeholder="HH:MM"
+                                                                        variant="outlined"
+                                                                        size="small"
+                                                                        onChange={(e) => {
+                                                                            const raw = e.target.value.replace(/[^\d:]/g, '');
+                                                                            updateNewRecord(recordKey, column.id as keyof NewRecord, raw);
+                                                                        }}
+                                                                        onBlur={() => {
+                                                                            const formattedTime = validateAndFormatTime(newRecord[column.id as keyof NewRecord] as string);
+                                                                            updateNewRecord(recordKey, column.id as keyof NewRecord, formattedTime);
+                                                                        }}
+                                                                        disabled={isSaving}
+                                                                        sx={{
+                                                                            width: '70px',
+                                                                            '& .MuiInputBase-input': {
+                                                                                fontSize: '0.75rem',
+                                                                                textAlign: 'center'
+                                                                            },
+                                                                        }}
+                                                                    />
+                                                                </Box>
                                                             </TableCell>
                                                         );
                                                     }
@@ -672,7 +1136,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         return (
                                                             <TableCell
                                                                 key={cell.id}
-                                                                sx={{ py: 0.5, textAlign: 'center', verticalAlign: 'middle' }}
+                                                                sx={{
+                                                                    py: 0.5,
+                                                                    height: '45px',
+                                                                    verticalAlign: 'middle',
+                                                                    textAlign: 'center'
+                                                                }}
                                                             >
                                                                 <Button
                                                                     size="small"
@@ -680,7 +1149,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     color="primary"
                                                                     onClick={() => saveNewRecord(recordKey)}
                                                                     disabled={isSaving || !newRecord.shift_id || !newRecord.start || !newRecord.end}
-                                                                    sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                                    sx={{
+                                                                        textTransform: 'none',
+                                                                        fontSize: '0.75rem',
+                                                                        minWidth: '60px'
+                                                                    }}
                                                                 >
                                                                     {isSaving ? 'Saving...' : 'Save'}
                                                                 </Button>
@@ -692,28 +1165,26 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         return (
                                                             <TableCell
                                                                 key={cell.id}
-                                                                sx={{ py: 0.5, textAlign: 'center', verticalAlign: 'middle' }}
+                                                                sx={{
+                                                                    py: 0.5,
+                                                                    height: '45px',
+                                                                    verticalAlign: 'middle',
+                                                                    textAlign: 'center'
+                                                                }}
                                                             >
                                                                 <Button
                                                                     size="small"
                                                                     variant="outlined"
                                                                     onClick={() => cancelNewRecord(recordKey)}
                                                                     disabled={isSaving}
-                                                                    sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
+                                                                    sx={{
+                                                                        textTransform: 'none',
+                                                                        fontSize: '0.75rem',
+                                                                        minWidth: '60px'
+                                                                    }}
                                                                 >
                                                                     Cancel
                                                                 </Button>
-                                                            </TableCell>
-                                                        );
-                                                    }
-
-                                                    if (column.id === 'project') {
-                                                        return (
-                                                            <TableCell
-                                                                key={cell.id}
-                                                                sx={{ py: 0.5, fontSize: '0.875rem', textAlign: 'center', verticalAlign: 'middle' }}
-                                                            >
-                                                                --
                                                             </TableCell>
                                                         );
                                                     }
@@ -725,10 +1196,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
                                                             borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             textAlign: 'center',
-                                                            verticalAlign: 'middle',
-                                                            height: '45px',
                                                         }}
                                                         className={column.id === 'action' ? 'action-cell' : ''}
                                                     >
@@ -744,10 +1215,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         },
                                                                     }}
                                                                 >
-                                                                    <IconTrash size={18} />
+                                                                    <IconTrash size={18}/>
                                                                 </Button>
                                                             ) : (
-                                                                <Box sx={{ width: '30px', height: '30px' }} />
+                                                                <Box sx={{width: '30px', height: '30px'}}/>
                                                             )
                                                         ) : (
                                                             flexRender(column.columnDef.cell, cell.getContext())
@@ -756,18 +1227,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 );
                                             })}
                                         </TableRow>
-
-                                        {row.getIsExpanded() &&
-                                            row.original.userChecklogs &&
-                                            row.original.userChecklogs.length > 0 && (
-                                                <CheckLogRows
-                                                    logs={row.original.userChecklogs || []}
-                                                    currency={currency}
-                                                    formatHour={formatHour}
-                                                    visibleColumnConfigs={visibleColumnConfigs}
-                                                    getVisibleCellsLength={row.getVisibleCells().length}
-                                                />
-                                            )}
                                     </React.Fragment>
                                 );
                             }
@@ -775,6 +1234,72 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Conflicts Popover - Moved outside Table to render once */}
+            <Popover
+                open={Boolean(conflictAnchorEl)}
+                anchorEl={conflictAnchorEl}
+                onClose={() => setConflictAnchorEl(null)}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'center',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'center',
+                }}
+                sx={{
+                    mt: 1,
+                    '& .MuiPopover-paper': {
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        borderRadius: '8px',
+                        minWidth: '280px',
+                    }
+                }}
+            >
+                <Box sx={{p: 2}}>
+                    <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        sx={{mb: 1.5}}
+                    >
+                        {conflictDaysCount} unresolved
+                        issue{conflictDaysCount !== 1 ? 's' : ''}
+                    </Typography>
+
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                    }}>
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5
+                        }}>
+                            <IconExclamationCircle size={18}
+                                                   color="#d32f2f"/>
+                            <Typography variant="body2">
+                                {conflictDaysCount} Conflict{conflictDaysCount !== 1 ? 's' : ''}
+                            </Typography>
+                        </Box>
+
+                        <Box sx={{display: 'flex', gap: 1}}>
+                            <Button
+                                size="small"
+                                onClick={handleConflicts}
+                                sx={{
+                                    textTransform: 'none',
+                                    color: 'primary.main',
+                                    fontWeight: 500
+                                }}
+                            >
+                                Review
+                            </Button>
+                        </Box>
+                    </Box>
+                </Box>
+            </Popover>
         </Box>
     );
 };

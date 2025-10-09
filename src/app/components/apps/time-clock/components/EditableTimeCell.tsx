@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, TextField } from '@mui/material';
-import {EditingWorklog} from '@/app/components/apps/time-clock/types/timeClock';
+import { EditingWorklog } from '@/app/components/apps/time-clock/types/timeClock';
 
 interface EditableTimeCellProps {
     worklogId: string;
@@ -81,7 +81,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     sx={{
                         width: '70px',
                         '& .MuiInputBase-root': { height: '32px' },
-                        '& .MuiInputBase-input': { fontSize: '0.875rem', textAlign: 'center', p: '6px 8px' }
+                        '& .MuiInputBase-input': { fontSize: '0.875rem', textAlign: 'center', p: '6px 8px' },
                     }}
                 />
             </Box>
@@ -94,13 +94,20 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
             sx={{
                 py: 0.5,
                 fontSize: '0.875rem',
-                cursor: isLocked ? 'not-allowed' : 'pointer',
+                cursor: isLocked ? 'not-allowed' : 'text',
                 minHeight: '32px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: isLocked ? 0.6 : 1,
-                '&:hover': !isLocked ? { borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.04)' } : {},
+                borderRadius: '4px',
+                px: '8px',
+                '&:hover': !isLocked
+                    ? {
+                        borderColor: '#1976d2', 
+                        boxShadow: '0 0 0 1px #1976d2',
+                    }
+                    : {},
             }}
             title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit'}
         >

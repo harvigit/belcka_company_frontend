@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, FormControl, Select, MenuItem } from '@mui/material';
-import {Shift} from '@/app/components/apps/time-clock/types/timeClock';
+import { Shift } from '@/app/components/apps/time-clock/types/timeClock';
 
 interface EditableShiftCellProps {
     worklogId: string;
@@ -56,7 +56,7 @@ const EditableShiftCell: React.FC<EditableShiftCellProps> = ({
                         sx={{
                             height: '32px',
                             '& .MuiSelect-select': { fontSize: '0.875rem', py: '6px', px: '8px', textAlign: 'center' },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' }
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
                         }}
                     >
                         {shifts.map((shift) => (
@@ -76,18 +76,26 @@ const EditableShiftCell: React.FC<EditableShiftCellProps> = ({
             sx={{
                 py: 0.5,
                 fontSize: '0.875rem',
-                cursor: isLocked ? 'not-allowed' : 'pointer',
+                cursor: isLocked ? 'not-allowed' : 'text',
                 minHeight: '32px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: isLocked ? 0.6 : 1,
-                '&:hover': !isLocked ? { borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.04)' } : {},
+                borderRadius: '4px', 
+                px: '8px',
+                '&:hover': !isLocked
+                    ? {
+                        borderColor: '#1976d2',
+                        boxShadow: '0 0 0 1px #1976d2',
+                    }
+                    : {},
             }}
             title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit shift'}
         >
             {currentShiftName || '--'}
         </Box>
     );
-}; 
+};
+
 export default EditableShiftCell;

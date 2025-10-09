@@ -15,10 +15,28 @@ import TimeClockHeader from './components/TimeClockHeader';
 import TimeClockStats from './components/TimeClockStats';
 import TimeClockTable from './components/TimeClockTable';
 import ActionBar from './components/ActionBar';
-import { CheckLog, DailyBreakdown, TimeClockDetailsProps } from '@/app/components/apps/time-clock/types/timeClock';
-import { IconChevronDown, IconChevronRight, IconExclamationMark } from '@tabler/icons-react';
+import { DailyBreakdown, TimeClockDetailsProps } from '@/app/components/apps/time-clock/types/timeClock';
+import { IconExclamationMark } from '@tabler/icons-react';
+import Checklogs from './time-clock-details/checklogs/index';
+import AddLeave from './time-clock-details/add-leave';
 
 const STORAGE_KEY = 'time-clock-details-page';
+
+interface RowData {
+    rowType: string;
+    timesheet_light_id?: string | number | null;
+    rowsData?: { timesheet_light_id?: string | number }[];
+}
+
+interface ExportResponse {
+    IsSuccess: boolean;
+    message: string;
+    data: {
+        file: string;
+        filename: string;
+        contentType: string;
+    };
+}
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
     try {
@@ -99,12 +117,17 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [startDate, setStartDate] = useState<Date | null>(initialData.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialData.endDate);
+    const [filterValue, setFilterValue] = useState<string>('all');
+    const [conflictsByDate, setConflictsByDate] = useState<{[key: string]: number}>({});
+    const [checklogsSidebar, setChecklogsSidebar] = useState<boolean>(false);
+    const [selectedWorkId, setSelectedWorkId] = useState<number>(0);
+    const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
 
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
-
+    
     // Custom hooks
     const {
         data,
@@ -119,6 +142,32 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         fetchTimeClockData,
     } = useTimeClockData(user_id, currency);
 
+    useEffect(() => {
+        if (conflictDetails && conflictDetails.length > 0) {
+            const conflicts: {[key: string]: number} = {};
+
+            conflictDetails.forEach((conflictGroup: any) => {
+                const formattedDate = conflictGroup.formatted_date; 
+                const items = conflictGroup.items || [];
+
+                if (items.length > 0) {
+                    const dateStr = items[0].date;
+                    const [day, month, year] = dateStr.split('/');
+                    const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    const dayName = daysOfWeek[dateObj.getDay()];
+                    const formattedKey = `${dayName} ${parseInt(day)}/${parseInt(month)}`; // "Wed 1/10"
+
+                    conflicts[formattedKey] = items.length;
+                }
+            });
+
+            setConflictsByDate(conflicts);
+        } else {
+            setConflictsByDate({});
+        }
+    }, [conflictDetails]);
+    
     const {
         editingWorklogs,
         savingWorklogs,
@@ -269,7 +318,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     };
 
-    // Event handlers
     const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
@@ -288,6 +336,80 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         },
         [fetchTimeClockData, columnVisibility, onDataChange]
     );
+
+    const handleFilterChange = (value: string) => {
+        setFilterValue(value);
+    };
+
+    const handleExportData = async (option: string) => {
+        try {
+            if (!dailyData || !Array.isArray(dailyData)) {
+                throw new Error('Invalid or missing dailyData');
+            }
+
+            const timesheetIds: string[] = Array.from(selectedRows)
+                .map((rowId) => parseInt(rowId.replace('row-', ''), 10))
+                .filter((rowIndex) => Number.isInteger(rowIndex) && rowIndex >= 0 && rowIndex < dailyData.length)
+                .flatMap((rowIndex) => {
+                    const rowData: RowData | undefined = dailyData[rowIndex];
+                    if (!rowData || rowData.rowType !== 'day') return [];
+
+                    if (!rowData.rowsData && rowData.timesheet_light_id != null) {
+                        return [String(rowData.timesheet_light_id)];
+                    }
+
+                    if (Array.isArray(rowData.rowsData)) {
+                        return rowData.rowsData
+                            .filter((worklog): worklog is { timesheet_light_id: string | number } => !!worklog.timesheet_light_id)
+                            .map((worklog) => String(worklog.timesheet_light_id));
+                    }
+
+                    return [];
+                });
+
+            if (timesheetIds.length === 0) {
+                throw new Error('No timesheet IDs selected for export');
+            }
+
+            const ids = timesheetIds.join(',');
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', { ids, format: option });
+
+            if (response.data.IsSuccess) {
+                const { file, filename, contentType } = response.data.data;
+
+                const binaryString = atob(file);
+                const binaryLen = binaryString.length;
+                const bytes = new Uint8Array(binaryLen);
+                for (let i = 0; i < binaryLen; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                const blob = new Blob([bytes], { type: contentType });
+
+                const url = window.URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename || `timeclock_export_${new Date().toISOString()}.${option}`;
+                document.body.appendChild(link);
+                link.click();
+
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                setSelectedRows(new Set());
+                onDataChange?.();
+            } else {
+                throw new Error(response.data.message || 'Export request failed');
+            }
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            throw error;
+        }
+    };
 
     const handleWorklogToggle = (worklogId: string) => {
         setExpandedWorklogsIds((prevIds) => {
@@ -317,6 +439,40 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
+
+    const handleChecklogs = async (worklogId: number) => {
+        setChecklogsSidebar(true);
+        setSelectedWorkId(worklogId)
+    };
+    
+    const closeChecklogsSidebar = async () => {
+        setChecklogsSidebar(false);
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error fetching time clock data after closing conflict sidebar:', error);
+        }
+    };
+
+    const handleAddLeave = async () => {
+        setAddLeaveSidebar(true);
+    };
+
+    const closeAddLeaveSidebar = async () => {
+        setAddLeaveSidebar(false);
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error fetching time clock data after closing add leave sidebar:', error);
+        }
+    };
+    
     const handlePendingRequest = async () => {
         setRequestListOpen(true);
     };
@@ -544,16 +700,21 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             });
 
             const dayRows = (week.days || []).flatMap((day: any) => {
-                const hasWorklogs = day.worklogs && day.worklogs.length > 0;
+                let filteredWorklogs = (day.worklogs || []);
+
+                if (filterValue === 'lock') {
+                    filteredWorklogs = filteredWorklogs.filter(
+                        (log: any) => log.status === '6' || log.status === 6
+                    );
+                } else if (filterValue === 'unlock') {
+                    filteredWorklogs = filteredWorklogs.filter(
+                        (log: any) => log.status === '7' || log.status === 7
+                    );
+                } 
+
+                const hasWorklogs = filteredWorklogs.length > 0;
 
                 if (hasWorklogs) {
-                    const allChecklogs = day.worklogs.reduce((acc: CheckLog[], log: any) => {
-                        if (log.user_checklogs && Array.isArray(log.user_checklogs)) {
-                            return [...acc, ...log.user_checklogs];
-                        }
-                        return acc;
-                    }, []);
-
                     return [{
                         rowType: 'day' as const,
                         date: day.date ?? '--',
@@ -578,9 +739,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         address: '--',
                         check_in: '--',
                         check_out: '--',
-                        rowsData: day.worklogs,
+                        rowsData: filteredWorklogs,
                         rowSpan: 1,
-                        allUserChecklogs: allChecklogs,
                         status: day.status,
                         is_requested: false,
                         is_edited: false,
@@ -611,7 +771,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     check_in: '--',
                     check_out: '--',
                     rowSpan: 1,
-                    allUserChecklogs: [],
                     status: day.status,
                     is_requested: false,
                     is_edited: false,
@@ -624,7 +783,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             weekRows.push(...dayRows);
             return weekRows;
         });
-    }, [data, currency]);
+    }, [data, currency, filterValue]);
 
     const selectableRowIds = useMemo(() => {
         const ids: string[] = [];
@@ -867,11 +1026,17 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             {
                 id: 'select',
                 header: () => (
-                    <CustomCheckbox
-                        checked={isAllSelected}
-                        indeterminate={isIndeterminate}
-                        onChange={(e) => handleSelectAll(e.target.checked)}
-                    />
+                    <Box className="select-icon" sx={{
+                        height: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <CustomCheckbox
+                            checked={isAllSelected}
+                            indeterminate={isIndeterminate}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                        />
+                    </Box>
                 ),
                 cell: ({ row }) => {
                     if (row.original.rowType !== 'day') return null;
@@ -891,7 +1056,15 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 id: 'date',
                 header: () => <span style={{ display: 'block', textAlign: 'center' }}>Date</span>,
                 cell: ({ row }) => row.original.rowType === 'day' ? row.original.date : null,
-                size: 100,
+                size: 150,
+            },
+            {
+                id: 'conflicts',
+                header: () => <span style={{ display: 'block', textAlign: 'center' }}></span>,
+                cell: ({ row }) => null,
+                size: 50,
+                enableSorting: false,
+                meta: { align: 'center' },
             },
             {
                 id: 'exclamation',
@@ -912,27 +1085,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                             onClick={handlePendingRequest}
                         >
                             <IconExclamationMark size={18} />
-                        </IconButton>
-                    );
-                },
-            },
-            {
-                id: 'expander',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}></span>,
-                meta: { label: 'Expand/Collapse' },
-                size: 36,
-                enableSorting: false,
-                cell: ({ row }) => {
-                    if (row.original.rowType !== 'day') return null;
-                    const hasLogs = row.original.allUserChecklogs && row.original.allUserChecklogs.length > 0;
-                    if (!hasLogs) return null;
-                    return (
-                        <IconButton
-                            size="small"
-                            onClick={row.getToggleExpandedHandler()}
-                            aria-label={row.getIsExpanded() ? 'Collapse' : 'Expand'}
-                        >
-                            {row.getIsExpanded() ? <IconChevronDown size={18} /> : <IconChevronRight size={18} />}
                         </IconButton>
                     );
                 },
@@ -981,12 +1133,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         </span>
                     );
                 },
-                size: 100,
+                size: 150,
             },
             {
                 id: 'priceWorkAmount',
                 accessorKey: 'priceWorkAmount',
                 header: () => <span style={{ display: 'block', textAlign: 'center' }}>Pricework Amount</span>,
+                cell: ({ row }) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
+                size: 150,
+            },
+            {
+                id: 'checkins',
+                accessorKey: 'checkins',
+                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Check Ins</span>,
                 cell: ({ row }) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
                 size: 140,
             },
@@ -1013,7 +1172,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 id: 'action',
                 header: () => <span style={{ display: 'block', textAlign: 'center' }}>Action</span>,
                 cell: ({ row }) => null,
-                size: 150,
+                size: 100,
             },
         ],
         [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect]
@@ -1058,6 +1217,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <TimeClockHeader
+                selectedRows={selectedRows}
                 timeClock={timeClock}
                 allUsers={allUsers}
                 currentUserIndex={currentUserIndex}
@@ -1070,6 +1230,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onDateRangeChange={handleDateRangeChange}
                 onPendingRequest={handlePendingRequest}
                 onConflicts={handleConflicts}
+                filterValue={filterValue}
+                onFilterChange={handleFilterChange}
+                onExportData={handleExportData}
+                onAddLeave={handleAddLeave}
             />
 
             <TimeClockStats
@@ -1123,6 +1287,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 cancelEditingProject={cancelEditingProject}
                 saveProjectChanges={saveProjectChanges}
                 onDeleteClick={handleDeleteWorklog}
+                conflictsByDate={conflictsByDate}
+                openConflictsSideBar={handleConflicts}
+                openChecklogsSidebar={handleChecklogs}
             />
 
             <ActionBar
@@ -1157,6 +1324,47 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     fetchTimeClockData={() => fetchTimeClockData(startDate || defaultStart, endDate || defaultEnd)}
                     startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
+                />
+            </Drawer>
+
+            <Drawer
+                anchor="right"
+                open={checklogsSidebar}
+                onClose={closeChecklogsSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '450px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <Checklogs
+                    worklogId={selectedWorkId}
+                    onClose={closeChecklogsSidebar}
+                />
+            </Drawer>
+
+            <Drawer
+                anchor="right"
+                open={addLeaveSidebar}
+                onClose={closeAddLeaveSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <AddLeave
+                    onClose={closeAddLeaveSidebar}
                 />
             </Drawer>
 

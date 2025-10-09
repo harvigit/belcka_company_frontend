@@ -31,9 +31,11 @@ interface WorksTabProps {
   addressId: number;
   companyId: number;
 }
+
 type FilterState = {
   type: string;
 };
+
 export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const [tabData, setTabData] = useState<any[]>([]);
   const [searchWork, setSearchWork] = useState<string>("");

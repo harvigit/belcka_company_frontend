@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     TableRow,
     TableCell,
@@ -6,10 +6,9 @@ import {
     Select,
     MenuItem,
     TextField,
-    Button,
-    Stack,
 } from '@mui/material';
 import { NewRecord, Shift, Project } from '@/app/components/apps/time-clock/types/timeClock';
+import { DateTime } from 'luxon';
 
 interface NewRecordRowProps {
     recordKey: string;
@@ -25,18 +24,27 @@ interface NewRecordRowProps {
 }
 
 const NewRecordRow: React.FC<NewRecordRowProps> = ({
-                                                       recordKey,
-                                                       newRecord,
-                                                       shifts,
-                                                       projects,
-                                                       isSaving,
-                                                       visibleColumnConfigs,
-                                                       validateAndFormatTime,
-                                                       updateNewRecord,
-                                                       saveNewRecord,
-                                                       cancelNewRecord,
-                                                   }) => {
+    recordKey,
+    newRecord,
+    shifts,
+    projects,
+    isSaving,
+    visibleColumnConfigs,
+    validateAndFormatTime,
+    updateNewRecord,
+    saveNewRecord,
+    cancelNewRecord,
+}) => {
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    const [blurredFields, setBlurredFields] = useState<{ start: boolean; end: boolean }>({ start: false, end: false });
 
+    // Hide row if none of the required fields are filled
+    const isRowEmpty = !newRecord.shift_id && !newRecord.start && !newRecord.end;
+    if (isRowEmpty) {
+        return null;
+    }
+
+    // Set default values for project_id and shift_id when available
     useEffect(() => {
         if (!newRecord.project_id && projects.length > 0) {
             updateNewRecord(recordKey, 'project_id', projects[0].id);
@@ -46,6 +54,45 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         }
     }, [newRecord, projects, shifts, recordKey, updateNewRecord]);
 
+    // Track blur state for start and end fields
+    const handleBlur = (field: 'start' | 'end') => {
+        const formattedTime = validateAndFormatTime((newRecord[field] as string) || '');
+        updateNewRecord(recordKey, field, formattedTime);
+        setBlurredFields((prev) => ({ ...prev, [field]: true }));
+    };
+
+    // Automatically save when required fields are filled, blurred, and valid
+    useEffect(() => {
+        if (isSaving) return;
+
+        const { shift_id, start, end } = newRecord;
+
+        if (shift_id && start && end && blurredFields.start && blurredFields.end) {
+            const formattedStart = validateAndFormatTime(start);
+            const formattedEnd = validateAndFormatTime(end);
+            const parsedDate = DateTime.fromFormat(newRecord.date, 'ccc d/M');
+
+            if (
+                timeRegex.test(formattedStart) &&
+                timeRegex.test(formattedEnd) &&
+                parsedDate.isValid
+            ) {
+                saveNewRecord(recordKey);
+            }
+        }
+    }, [
+        newRecord.shift_id,
+        newRecord.start,
+        newRecord.end,
+        newRecord.date,
+        blurredFields.start,
+        blurredFields.end,
+        isSaving,
+        recordKey,
+        saveNewRecord,
+        validateAndFormatTime,
+    ]);
+    
     return (
         <TableRow
             key={recordKey}
@@ -141,12 +188,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                                     const raw = e.target.value.replace(/[^\d:]/g, '');
                                     updateNewRecord(recordKey, field as keyof NewRecord, raw);
                                 }}
-                                onBlur={() => {
-                                    const formattedTime = validateAndFormatTime(
-                                        (newRecord[field as keyof NewRecord] as string) || ''
-                                    );
-                                    updateNewRecord(recordKey, field as keyof NewRecord, formattedTime);
-                                }}
+                                onBlur={() => handleBlur(field as 'start' | 'end')}
                                 disabled={isSaving}
                                 sx={{
                                     width: '70px',
@@ -158,36 +200,11 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
             )}
 
             {visibleColumnConfigs.totalHours?.visible && (
-                <TableCell align="center" sx={{ py: 0.5 }}>
-                    <Stack direction="row" justifyContent="center" spacing={1} alignItems="center">
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="primary"
-                            onClick={() => saveNewRecord(recordKey)}
-                            disabled={isSaving || !newRecord.shift_id || !newRecord.start || !newRecord.end}
-                            sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
-                        >
-                            {isSaving ? 'Saving...' : 'Save'}
-                        </Button>
-                    </Stack>
-                </TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}></TableCell>
             )}
 
             {visibleColumnConfigs.priceWorkAmount?.visible && (
-                <TableCell align="center" sx={{ py: 0.5 }}>
-                    <Stack direction="row" justifyContent="center" spacing={1} alignItems="center">
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => cancelNewRecord(recordKey)}
-                            disabled={isSaving}
-                            sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: '60px' }}
-                        >
-                            Cancel
-                        </Button>
-                    </Stack>
-                </TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}></TableCell>
             )}
         </TableRow>
     );
