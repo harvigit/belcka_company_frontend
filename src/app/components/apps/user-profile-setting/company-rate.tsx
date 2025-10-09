@@ -7,9 +7,6 @@ import {
   CircularProgress,
   TextField,
   Button,
-  Autocomplete,
-  Paper,
-  AccordionDetails,
   Alert,
 } from "@mui/material";
 import api from "@/utils/axios";
@@ -19,12 +16,9 @@ import { Grid } from "@mui/system";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import CustomTextField from "../../forms/theme-elements/CustomTextField";
-
 interface ProjectListingProps {
   active: boolean;
 }
-
 export interface TradeList {
   id: number;
   name: string;
@@ -44,6 +38,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   const [gross, setGross] = useState<any>();
   const [cis, setCis] = useState<any>();
   const [payRate, setPayRate] = useState<string | null>(null);
+  const [ratePermisison, setRatePermission] = useState<boolean | null>(null);
 
   const [formData, setFormData] = useState<{
     trade_id: number | null;
@@ -98,12 +93,26 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       const res = await api.get(
         `setting/user-payrate-permission?user_id=${user.id}&company_id=${user.company_id}`
       );
-      if (res.data) {
-        const showRate = res.data?.info?.show_pay_rate || null;
+
+      if (res.data && res.data.info) {
+        const info = res.data.info;
+
+        const showRate = info?.show_pay_rate || null;
         setPayRate(showRate);
+
+        const hasRatePermission = info.hasOwnProperty("rate_permission")
+          ? info.rate_permission
+          : true;
+
+        setRatePermission(hasRatePermission);
+      } else {
+        setPayRate(null);
+        setRatePermission(true);
       }
     } catch (err) {
-      console.error("Failed to fetch trades", err);
+      console.error("Failed to fetch payrate permission:", err);
+      setPayRate(null);
+      setRatePermission(true);
     }
   };
 
@@ -217,100 +226,101 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       className="company_rate_wrapper"
       height="450px !important"
     >
-      {user.user_role_id == 1 && comapny.is_pending_request === true && (
-        <>
-          <Box display={"flex"} justifyContent={"space-between"} mb={1}>
-            <Typography
-              color="#487bb3ff"
-              fontSize="16px !important"
-              sx={{ mb: 1 }}
-            >
-              Edit rate
-            </Typography>
-          </Box>
-
+      {user.user_role_id !== 1 &&
+        comapny.is_pending_request &&
+        ratePermisison && (
           <Box mb={4} display={"flex"}>
-            <Alert
-              severity="info"
-              variant="outlined"
-              className="pending-request"
-              sx={{
-                alignItems: "center",
-                borderColor: "red !important",
-                color: "black !important",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Typography sx={{ color: "black !important", mr: 2 }}>
-                  Rate request is pending please take an action.
-                </Typography>
-
-                <Button
-                  variant="outlined"
-                  color="success"
-                  startIcon={<IconCheck size={16} />}
-                  onClick={() => handleApprove(comapny?.request_log_id)}
-                  sx={{ mr: 1 }}
-                >
-                  Approve
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<IconX size={16} />}
-                  onClick={() => handleReject(comapny?.request_log_id)}
-                >
-                  Reject
-                </Button>
-              </Box>
+            <Alert severity="error" variant="filled">
+              Your rate request has been pending.
             </Alert>
           </Box>
-        </>
-      )}
-
-      {user.user_role_id !== 1 && comapny.is_pending_request && (
-        <Box mb={4} display={"flex"}>
-          <Alert severity="error" variant="filled">
-            Your rate request has been pending.
-          </Alert>
-        </Box>
-      )}
-
-      <Grid container spacing={2} mb={2}>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            fullWidth
-            className="custom_color"
-            disabled
-            value={
-              Object.keys(comapny?.diff_data || {}).includes("trade_id")
-                ? trade.find((t) => t.id === comapny.diff_data.trade_id.old)
-                    ?.name ?? ""
-                : trade.find((t) => t.id === formData.trade_id)?.name ?? ""
-            }
-            label="Trade"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            fullWidth
-            className="custom_color"
-            label="Join Company Date"
-            value={comapny?.joining_date}
-            disabled
-          />
-        </Grid>
-      </Grid>
-
-      {payRate ? (
+        )}
+      {payRate && ratePermisison ? (
         <>
+          {user.user_role_id == 1 && comapny.is_pending_request === true && (
+            <>
+              <Box display={"flex"} justifyContent={"space-between"} mb={1}>
+                <Typography
+                  color="#487bb3ff"
+                  fontSize="16px !important"
+                  sx={{ mb: 1 }}
+                >
+                  Edit rate
+                </Typography>
+              </Box>
+
+              <Box mb={4} display={"flex"}>
+                <Alert
+                  severity="info"
+                  variant="outlined"
+                  className="pending-request"
+                  sx={{
+                    alignItems: "center",
+                    borderColor: "red !important",
+                    color: "black !important",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Typography sx={{ color: "black !important", mr: 2 }}>
+                      Rate request is pending please take an action.
+                    </Typography>
+
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      startIcon={<IconCheck size={16} />}
+                      onClick={() => handleApprove(comapny?.request_log_id)}
+                      sx={{ mr: 1 }}
+                    >
+                      Approve
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<IconX size={16} />}
+                      onClick={() => handleReject(comapny?.request_log_id)}
+                    >
+                      Reject
+                    </Button>
+                  </Box>
+                </Alert>
+              </Box>
+            </>
+          )}
+
+          <Grid container spacing={2} mb={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                className="custom_color"
+                disabled
+                value={
+                  Object.keys(comapny?.diff_data || {}).includes("trade_id")
+                    ? trade.find((t) => t.id === comapny.diff_data.trade_id.old)
+                        ?.name ?? ""
+                    : trade.find((t) => t.id === formData.trade_id)?.name ?? ""
+                }
+                label="Trade"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                className="custom_color"
+                label="Join Company Date"
+                value={comapny?.joining_date}
+                disabled
+              />
+            </Grid>
+          </Grid>
+
           <Grid container spacing={2} mb={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
@@ -325,7 +335,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
                     : formData.rate
                 }
                 disabled={
-                  // disable if permission is "view" or missing, or if diff_data already exists
                   Object.keys(comapny?.diff_data || {}).includes(
                     "net_rate_perday"
                   ) ||
@@ -354,20 +363,24 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
               </Typography>
             </Box>
           </Grid>
+          <Box mt={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleUpdate}
+              disabled={comapny.is_pending_request}
+            >
+              Update
+            </Button>
+          </Box>
         </>
       ) : (
-        ""
+        <Box mt={4} display={"flex"}>
+          <Typography color="textSecondary" className="f-18" sx={{ m: "auto" }}>
+            You do not have permission to view this information.
+          </Typography>
+        </Box>
       )}
-      <Box mt={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleUpdate}
-          disabled={comapny.is_pending_request}
-        >
-          Update
-        </Button>
-      </Box>
     </Box>
   );
 };

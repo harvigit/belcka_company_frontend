@@ -66,7 +66,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
   const getWorkzones = async () => {
     if (!user?.company_id) return;
     try {
-      const res = await api.get(`work-zone/get?company_id=${user.company_id}`);
+      const res = await api.get(`work-zone/get?company_id=${user.company_id}&is_project=${true}`);
       if (res.data.info) setWorkZones(res.data.info);
     } catch (err) {
       console.error(err);

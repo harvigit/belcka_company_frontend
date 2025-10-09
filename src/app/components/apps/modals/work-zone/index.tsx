@@ -51,7 +51,7 @@ export default function WorkZone({
 }: Props) {
   const [sites, setSites] = useState<any[]>([]);
   const [activeSite, setActiveSite] = useState<any | null>(null);
-  const [task, setTask] = useState<any[]>([]);
+  const [project, setProject] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -81,7 +81,9 @@ export default function WorkZone({
     if (!user?.company_id) return;
     setLoading(true);
     try {
-      const res = await api.get(`work-zone/get?company_id=${user.company_id}`);
+      const res = await api.get(
+        `work-zone/get?company_id=${user.company_id}&is_project=${true}`
+      );
       setSites(res.data.info || []);
     } catch (err) {
       console.error(err);
@@ -93,10 +95,8 @@ export default function WorkZone({
   const getJobList = async () => {
     if (!user?.company_id) return;
     try {
-      const res = await api.get(
-        `company-tasks/get-jobs?company_id=${user.company_id}`
-      );
-      if (res.data.IsSuccess) setTask(res.data.info);
+      const res = await api.get(`project/get?company_id=${user.company_id}`);
+      if (res.data.IsSuccess) setProject(res.data.info);
     } catch (err) {}
   };
 
@@ -248,7 +248,7 @@ export default function WorkZone({
         address: activeSite.address || "",
         lat: boundary?.lat ?? circleCenter?.lat ?? Number(activeSite.lat || 0),
         lng: boundary?.lng ?? circleCenter?.lng ?? Number(activeSite.lng || 0),
-        job_ids: activeSite.jobs?.map((j: any) => j.id) || [],
+        project_id: activeSite.project_id ? activeSite.project_id : null,
         color: activeSite.color || "#000000",
         type: activeSite.type,
         boundary: JSON.stringify(boundary),
@@ -356,7 +356,7 @@ export default function WorkZone({
                 setActiveSite({
                   name: "",
                   address: "",
-                  jobs: [],
+                  project_id: null,
                   color: "#000000",
                 });
                 setAddressInput("");
@@ -506,21 +506,29 @@ export default function WorkZone({
                 </Box>
 
                 <Box mt={2}>
-                  <Typography>Available Job list</Typography>
+                  <Typography>Available Project</Typography>
                   <Autocomplete
                     fullWidth
-                    multiple
-                    options={task}
-                    value={activeSite.jobs || []}
+                    options={project}
+                    value={
+                      project.find((p) => p.id === activeSite.project_id) ||
+                      null
+                    }
                     onChange={(event, newValue) =>
-                      updateActiveSite("jobs", newValue)
+                      updateActiveSite(
+                        "project_id",
+                        newValue ? newValue.id : null
+                      )
                     }
                     getOptionLabel={(option) => option.name}
                     isOptionEqualToValue={(option, value) =>
                       option.id === value.id
                     }
                     renderInput={(params) => (
-                      <CustomTextField {...params} placeholder="Select job" />
+                      <CustomTextField
+                        {...params}
+                        placeholder="Select project"
+                      />
                     )}
                   />
                 </Box>

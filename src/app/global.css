@@ -366,3 +366,9 @@ input#project_id::placeholder {
 .slider_wrapper .MuiSlider-track {
     height: 6px;
 }
+.f-18 {
+    font-size: 18px !important;
+}
+.permission_dialog .mui-uh5o6n-MuiPaper-root-MuiDialog-paper {
+    width: 20%;
+}
