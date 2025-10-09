@@ -369,6 +369,6 @@ input#project_id::placeholder {
 .f-18 {
     font-size: 18px !important;
 }
-.permission_dialog .mui-uh5o6n-MuiPaper-root-MuiDialog-paper {
+.permission_dialog .mui-uh5o6n-MuiPaper-root-MuiDialog-paper , .permission_dialog .mui-z5w32z{
     width: 20%;
 }
