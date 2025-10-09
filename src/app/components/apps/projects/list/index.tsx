@@ -22,6 +22,9 @@ import {
   Drawer,
   Autocomplete,
   CircularProgress,
+  ListItem,
+  ListItemButton,
+  List,
 } from "@mui/material";
 import {
   IconChartPie,
@@ -29,6 +32,7 @@ import {
   IconDotsVertical,
   IconFilter,
   IconLocation,
+  IconPencil,
   IconPlus,
   IconSearch,
 } from "@tabler/icons-react";
@@ -54,6 +58,15 @@ import { IconTrash } from "@tabler/icons-react";
 import ArchiveAddress from "./archive-address-list";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import CreateProject from "../create";
+import {
+  Circle,
+  GoogleMap,
+  Marker,
+  useJsApiLoader,
+} from "@react-google-maps/api";
+import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
+import EditProject from "../edit";
+import ArchiveProject from "./archive-project-list";
 
 dayjs.extend(customParseFormat);
 
@@ -83,6 +96,19 @@ export interface TradeList {
   name: string;
 }
 
+const GOOGLE_MAP_LIBRARIES: (
+  | "places"
+  | "drawing"
+  | "geometry"
+  | "visualization"
+)[] = ["places", "drawing"];
+
+interface Boundary {
+  lat: number;
+  lng: number;
+  radius: number;
+}
+
 const TablePagination: React.FC<ProjectListingProps> = ({
   onProjectUpdated,
 }) => {
@@ -103,8 +129,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [archiveList, setArchiveList] = useState<boolean>(false);
+  const [archiveProjectList, setArchiveProjectList] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
+  const [projectEditOpen, setProjectEditOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectList | null>(
+    null
+  );
 
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
@@ -127,6 +158,17 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [sidebar, setSidebar] = useState(false);
   const COOKIE_PREFIX = "project_";
   const projectID = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const [predictions, setPredictions] = useState<
+    google.maps.places.AutocompletePrediction[]
+  >([]);
+  const [radius, setRadius] = useState(100);
+  const [typedAddress, setTypedAddress] = useState(false);
+
   const [formData, setFormData] = useState<any>({
     project_id: Number(projectID),
     company_id: user.company_id,
@@ -353,6 +395,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       const payload = {
         ...formData,
         project_id: projectId,
+        type: "circle",
       };
       const result = await api.post("address/create", payload);
       if (result.data.IsSuccess === true) {
@@ -427,6 +470,42 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     }
   };
 
+  const handleEditProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        company_id: user.company_id,
+        budget: Number(formData.budget),
+      };
+
+      const result = await api.put("project/update", payload);
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setFormData({
+          name: "",
+          address: "",
+          budget: "",
+          description: "",
+          code: "",
+          shift_ids: "",
+          team_ids: "",
+          company_id: user.company_id,
+          is_pricework: false,
+          repeatable_job: false,
+        });
+        fetchProjects();
+        setProjectEditOpen(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
@@ -450,18 +529,98 @@ const TablePagination: React.FC<ProjectListingProps> = ({
 
   const paginatedFeeds = history?.slice(0, page * limit) || [];
 
-  // if (loading == true) {
-  //   return (
-  //     <Box
-  //       display="flex"
-  //       justifyContent="center"
-  //       alignItems="center"
-  //       minHeight="300px"
-  //     >
-  //       <CircularProgress />
-  //     </Box>
-  //   );
-  // }
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
+    libraries: GOOGLE_MAP_LIBRARIES,
+  });
+
+  useEffect(() => {
+    if (isLoaded && formData?.name?.trim()) {
+      // Autocomplete API call
+      const service = new google.maps.places.AutocompleteService();
+      service.getPlacePredictions(
+        { input: formData.name },
+        (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            setPredictions(results);
+          } else {
+            setPredictions([]);
+          }
+        }
+      );
+    }
+  }, [formData.name, isLoaded]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, name: e.target.value });
+    setTypedAddress(true);
+  };
+
+  const selectPrediction = (placeId: string) => {
+    const service = new google.maps.places.PlacesService(
+      document.createElement("div")
+    );
+    service.getDetails({ placeId }, (place, status) => {
+      if (
+        status === google.maps.places.PlacesServiceStatus.OK &&
+        place?.geometry?.location
+      ) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setFormData({ ...formData, lat: lat, lng: lng });
+
+        const newBoundary: Boundary = {
+          lat,
+          lng,
+          radius,
+        };
+
+        setSelectedLocation({ lat, lng });
+        setFormData({
+          ...formData,
+          name: place.formatted_address || "",
+          lat,
+          lng,
+          boundary: JSON.stringify(newBoundary),
+        });
+        setPredictions([]);
+      }
+    });
+  };
+
+  const handleRadiusChange = (event: Event, newValue: number | number[]) => {
+    const value = Array.isArray(newValue) ? newValue[0] : newValue;
+
+    setRadius(value);
+
+    if (selectedLocation) {
+      const newBoundary: Boundary = {
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng,
+        radius: value,
+      };
+
+      setFormData({
+        ...formData,
+        boundary: JSON.stringify(newBoundary),
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!sidebar) {
+      setFormData((prev: any) => ({
+        ...prev,
+        name: "",
+        boundary: "",
+        lat: null,
+        lng: null,
+      }));
+
+      setSelectedLocation(null);
+    }
+  }, [sidebar]);
+
   return (
     <Box>
       <Stack
@@ -609,28 +768,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  setSidebar(true);
-                }}
-                style={{
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconLocation width={18} />
-                </ListItemIcon>
-                Add Address
-              </Link>
-            </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
                   handleOpenCreateDrawer();
                 }}
                 style={{
@@ -646,6 +783,28 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   <IconPlus width={18} />
                 </ListItemIcon>
                 Add Task
+              </Link>
+            </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSidebar(true);
+                }}
+                style={{
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconLocation width={18} />
+                </ListItemIcon>
+                Add Address
               </Link>
             </MenuItem>
             <MenuItem onClick={handleClose}>
@@ -688,6 +847,29 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   <IconNotes width={18} />
                 </ListItemIcon>
                 Project detail
+              </Link>
+            </MenuItem>
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setArchiveProjectList(true);
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconNotes width={18} />
+                </ListItemIcon>
+                Archive project list
               </Link>
             </MenuItem>
           </Menu>
@@ -802,15 +984,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         address_id={null}
         projectId={projectId}
       />
+
       <Drawer
         anchor="right"
         open={sidebar}
         onClose={() => setSidebar(false)}
         sx={{
-          width: 350,
+          width: 500,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: 350,
+            width: 500,
             padding: 2,
             backgroundColor: "#f9f9f9",
           },
@@ -819,9 +1002,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         <Box display="flex" flexDirection="column" height="100%">
           <Box height={"100%"}>
             <form onSubmit={handleSubmit} className="address-form">
-              {" "}
               <Grid container mt={3}>
-                <Grid size={{ lg: 12, xs: 12 }}>
+                <Grid size={{ xs: 12 }}>
                   <Box
                     display={"flex"}
                     alignContent={"center"}
@@ -831,49 +1013,122 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     <IconButton onClick={() => setSidebar(false)}>
                       <IconArrowLeft />
                     </IconButton>
-                    <Typography variant="h5" fontWeight={700}>
+                    <Typography variant="h6" color="inherit" fontWeight={700}>
                       Add Address
                     </Typography>
                   </Box>
-                  <Typography variant="h5" mt={3}>
-                    Name
-                  </Typography>
-                  <CustomTextField
+
+                  <Typography variant="h5" mt={3}></Typography>
+                  <TextField
+                    label="Enter address"
                     id="name"
                     name="name"
-                    placeholder="Enter address name.."
+                    placeholder="Search for address.."
                     value={formData.name}
-                    onChange={handleChange}
+                    onChange={handleSearchChange}
                     variant="outlined"
                     fullWidth
                   />
+
+                  {/* Display address predictions */}
+                  {typedAddress && predictions.length > 0 && (
+                    <List
+                      sx={{
+                        border: "1px solid #ccc",
+                        maxHeight: 200,
+                        overflow: "auto",
+                        marginTop: 1,
+                      }}
+                    >
+                      {predictions.map((prediction) => (
+                        <ListItem key={prediction.place_id} disablePadding>
+                          <ListItemButton
+                            onClick={() =>
+                              selectPrediction(prediction.place_id)
+                            }
+                          >
+                            {prediction.description}
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+
+                  {selectedLocation && (
+                    <Box
+                      sx={{ marginTop: 3 }}
+                      width={"98%"}
+                      className="slider_wrapper"
+                    >
+                      <Typography variant="h6">
+                        Area size [{radius} Meter]
+                      </Typography>
+                      <CustomRangeSlider
+                        value={radius}
+                        onChange={handleRadiusChange}
+                        min={0}
+                        max={100}
+                        step={1}
+                        sx={{ height: "1px" }}
+                      />
+
+                      <GoogleMap
+                        zoom={17}
+                        center={selectedLocation}
+                        mapContainerStyle={{
+                          width: "100%",
+                          height: "400px",
+                          marginTop: "20px",
+                        }}
+                      >
+                        <Marker position={selectedLocation} />
+                        <Circle
+                          center={selectedLocation}
+                          radius={radius}
+                          options={{
+                            fillColor: "#FF0000",
+                            fillOpacity: 0.3,
+                            strokeColor: "#FF0000",
+                            strokeOpacity: 1,
+                            strokeWeight: 1,
+                          }}
+                        />
+                      </GoogleMap>
+                    </Box>
+                  )}
                 </Grid>
               </Grid>
+
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "start",
                   gap: 2,
+                  marginTop: 3,
                 }}
               >
                 <Button
-                  color="error"
-                  onClick={() => setSidebar(false)}
-                  variant="contained"
-                  size="medium"
-                  fullWidth
-                >
-                  Close
-                </Button>
-                <Button
                   color="primary"
                   variant="contained"
-                  size="medium"
+                  size="large"
                   type="submit"
-                  disabled={isSaving}
-                  fullWidth
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  Save
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => setSidebar(false)}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
                 </Button>
               </Box>
             </form>
@@ -971,6 +1226,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         onClose={() => setArchiveList(false)}
         onWorkUpdated={fetchAddresses}
       />
+      <ArchiveProject
+        open={archiveProjectList}
+        companyId={Number(user.company_id)}
+        onClose={() => setArchiveProjectList(false)}
+        onWorkUpdated={fetchProjects}
+      />
+
       <Drawer
         anchor="left"
         open={dialogOpen}
@@ -1067,7 +1329,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   </Typography>
                   <IconChevronRight style={{ color: "GrayText" }} />
                 </Box>
-                <IconButton color="error" sx={{ ml: 2 }}>
+                <IconButton color="primary" sx={{ ml: 2 }}>
+                  <IconPencil
+                    size={18}
+                    onClick={() => {
+                      setEditingProject(project);
+                      setProjectEditOpen(true);
+                    }}
+                  />
+                </IconButton>
+                <IconButton color="error">
                   <IconTrash
                     size={18}
                     onClick={() => {
@@ -1085,6 +1356,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             formData={formData}
             setFormData={setFormData}
             handleSubmit={handleProjectSubmit}
+            isSaving={isSaving}
+          />
+
+          <EditProject
+            open={projectEditOpen}
+            onClose={() => setProjectEditOpen(false)}
+            formData={formData}
+            setFormData={setFormData}
+            project={editingProject}
+            handleSubmit={handleEditProject}
             isSaving={isSaving}
           />
         </Box>

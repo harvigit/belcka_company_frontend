@@ -358,3 +358,11 @@ input#project_id::placeholder {
 .header-icons:hover {
     color: #1e4db7;
 }
+
+.drawer_buttons {
+    width: 30%
+}
+
+.slider_wrapper .MuiSlider-track {
+    height: 6px;
+}

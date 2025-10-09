@@ -480,31 +480,32 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                   />
                 </Typography>
               </Box>
-              <Box mt={2} display="flex" justifyContent="space-between" gap={2}>
-                <Button
-                  color="error"
-                  onClick={() => {
-                    // setFormData(initialFormData);
-                    // setSelectedTasks(null);
-                    // setQuantityInput("");
-                    onClose();
-                  }}
-                  variant="contained"
-                  size="medium"
-                  fullWidth
-                >
-                  Cancel
-                </Button>
-
+              <Box mt={2} display="flex" justifyContent="start" gap={2}>
                 <Button
                   color="primary"
                   variant="contained"
-                  size="medium"
+                  size="large"
                   type="submit"
                   disabled={isSaving}
-                  fullWidth
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
                 >
                   {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => {
+                    onClose();
+                  }}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Cancel
                 </Button>
               </Box>
             </Box>

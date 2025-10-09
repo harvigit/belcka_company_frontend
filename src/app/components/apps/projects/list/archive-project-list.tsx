@@ -17,11 +17,11 @@ import api from "@/utils/axios";
 import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 
-interface ArchiveAddressProps {
+interface ArchiveProjectProps {
   open: boolean;
   onClose: () => void;
   onWorkUpdated?: () => void;
-  projectId?: number | null;
+  companyId?: number | null;
 }
 export interface TradeList {
   trade_id: number;
@@ -33,11 +33,11 @@ export type TeamList = {
   name: string;
 };
 
-const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
+const ArchiveProject: React.FC<ArchiveProjectProps> = ({
   open,
   onClose,
   onWorkUpdated,
-  projectId,
+  companyId,
 }) => {
   const [data, setData] = useState<TeamList[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -46,22 +46,22 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
     action: "restore" | "delete";
   } | null>(null);
   // Fetch data
-  const fetchTeams = useCallback(async () => {
-    if (!projectId) return;
+  const fetchProjects = useCallback(async () => {
+    if (!companyId) return;
 
     try {
-      const res = await api.get(`address/archive-list?project_id=${projectId}`);
+      const res = await api.get(`project/archive-list?company_id=${companyId}`);
 
       if (res.data) {
         setData(res.data.info);
       }
     } catch (err) {
-      console.error("Failed to fetch trades", err);
+      console.error("Failed to fetch archive projects", err);
     }
-  }, [projectId]);
+  }, [companyId]);
 
   useEffect(() => {
-    fetchTeams();
+    fetchProjects();
   }, [open]);
 
   const handleConfirmAction = async () => {
@@ -73,20 +73,18 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
       };
 
       if (selectedItem.action === "restore") {
-        const response = await api.post("address/unarchive", payload);
+        const response = await api.post("project/unarchive", payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
-          fetchTeams();
+          fetchProjects();
           onWorkUpdated?.();
           onClose?.();
         }
       } else if (selectedItem.action === "delete") {
-        const response = await api.delete(
-          `/address/delete?id=${selectedItem.id}`
-        );
+        const response = await api.post(`project/delete`, payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
-          fetchTeams();
+          fetchProjects();
           onWorkUpdated?.();
         }
       }
@@ -127,7 +125,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Address List
+                  Archive Project List
                 </Typography>
               </Box>
 
@@ -240,4 +238,4 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
   );
 };
 
-export default ArchiveAddress;
+export default ArchiveProject;

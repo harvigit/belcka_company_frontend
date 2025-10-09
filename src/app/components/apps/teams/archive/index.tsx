@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Drawer,
@@ -196,11 +196,15 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
 
       <Box mt={2}>
         <Button
-          color="error"
+          color="inherit"
           onClick={onClose}
           variant="contained"
-          size="medium"
-          fullWidth
+          size="large"
+          sx={{
+            backgroundColor: "transparent",
+            borderRadius: 3,
+            color: "GrayText",
+          }}
         >
           Close
         </Button>
@@ -234,9 +238,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
               setOpenDialog(false);
             }}
           >
-           {selectedItem?.action === "restore"
-            ? "Confirm"
-            : "Delete"} 
+            {selectedItem?.action === "restore" ? "Confirm" : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>

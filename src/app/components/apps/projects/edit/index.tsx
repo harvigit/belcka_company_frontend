@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 
 interface FormData {
+  id?: number;
   name: string;
   address: string;
   budget: string;
@@ -42,21 +43,23 @@ interface Geofence {
   name: string;
 }
 
-interface CreateProjectProps {
+interface EditProjectProps {
   open: boolean;
   onClose: () => void;
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
   handleSubmit: (e: React.FormEvent) => void;
   isSaving: boolean;
+  project: any;
 }
 
-const CreateProject: React.FC<CreateProjectProps> = ({
+const EditProject: React.FC<EditProjectProps> = ({
   open,
   onClose,
   formData,
   setFormData,
   handleSubmit,
+  project,
   isSaving,
 }) => {
   const handleChange = (
@@ -73,6 +76,24 @@ const CreateProject: React.FC<CreateProjectProps> = ({
       [name]: value,
     }));
   };
+
+  useEffect(() => {
+    if (project) {
+      setFormData({
+        id: project.id,
+        name: project.name || "",
+        address: project.address || "",
+        budget: String(project.budget || ""),
+        description: project.description || "",
+        code: Number(project.code) || 0,
+        company_id: project.company_id || 0,
+        shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
+        team_ids: (project.teams || []).map((t: any) => t.id).join(","),
+        workzone_ids: (project.geofences || []).map((g: any) => g.id).join(","),
+      });
+    }
+  }, [project]);
+
   const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
@@ -166,7 +187,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                     <IconArrowLeft />
                   </IconButton>
                   <Typography variant="h5" fontWeight={700}>
-                    Add Project
+                    Edit Project
                   </Typography>
                 </Box>
                 <Typography variant="h5" mt={2}>
@@ -190,10 +211,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                   id="shift_ids"
                   options={shift}
                   value={shift.filter((item) =>
-                    formData.shift_ids
-                      ?.split(",")
-                      .map((id) => Number(id))
-                      .includes(item.id ?? -1)
+                    formData.shift_ids?.split(",").includes(String(item.id))
                   )}
                   onChange={(event, newValue) => {
                     const selectedIds = newValue
@@ -221,10 +239,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                   id="team_ids"
                   options={team}
                   value={team.filter((item) =>
-                    formData.team_ids
-                      ?.split(",")
-                      .map((id) => Number(id))
-                      .includes(item.id ?? -1)
+                    formData.team_ids?.split(",").includes(String(item.id))
                   )}
                   onChange={(event, newValue) => {
                     const selectedIds = newValue
@@ -252,10 +267,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                   id="workzone_ids"
                   options={geofence}
                   value={geofence.filter((item) =>
-                    formData.workzone_ids
-                      ?.split(",")
-                      .map((id) => Number(id))
-                      .includes(item.id ?? -1)
+                    formData.workzone_ids?.split(",").includes(String(item.id))
                   )}
                   onChange={(event, newValue) => {
                     const selectedIds = newValue
@@ -373,4 +385,4 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   );
 };
 
-export default CreateProject;
+export default EditProject;

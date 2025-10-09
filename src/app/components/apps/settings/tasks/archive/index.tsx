@@ -255,11 +255,15 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
 
       <Box mt={2}>
         <Button
-          color="error"
+          color="inherit"
           onClick={onClose}
           variant="contained"
-          size="medium"
-          fullWidth
+          size="large"
+          sx={{
+            backgroundColor: "transparent",
+            borderRadius: 3,
+            color: "GrayText",
+          }}
         >
           Close
         </Button>

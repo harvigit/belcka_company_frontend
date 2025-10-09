@@ -88,7 +88,7 @@ const EditTask: React.FC<EditTaskProps> = ({
               company_id: task.company_id || "",
               duration: task.duration || 0,
               rate: task.is_pricework ? task.rate : 0,
-              units: task.is_pricework  ? task.units : null,
+              units: task.is_pricework ? task.units : null,
               is_pricework: task.is_pricework || false,
               repeatable_job: task.repeatable_job || false,
             });
@@ -273,7 +273,8 @@ const EditTask: React.FC<EditTaskProps> = ({
                   id="trade_id"
                   options={trade}
                   value={
-                    trade.find((trade) => trade.id === formData.trade_id) ?? null
+                    trade.find((trade) => trade.id === formData.trade_id) ??
+                    null
                   }
                   onChange={(event, newValue) => {
                     setFormData({
@@ -299,29 +300,34 @@ const EditTask: React.FC<EditTaskProps> = ({
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "start",
                 gap: 2,
                 mt: 3,
               }}
             >
               <Button
-                color="error"
-                onClick={onClose}
-                variant="contained"
-                size="medium"
-                fullWidth
-              >
-                Close
-              </Button>
-              <Button
                 color="primary"
                 variant="contained"
-                size="medium"
+                size="large"
                 type="submit"
                 disabled={isSaving}
-                fullWidth
+                sx={{ borderRadius: 3 }}
+                className="drawer_buttons"
               >
                 {isSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                color="inherit"
+                onClick={onClose}
+                variant="contained"
+                size="large"
+                sx={{
+                  backgroundColor: "transparent",
+                  borderRadius: 3,
+                  color: "GrayText",
+                }}
+              >
+                Close
               </Button>
             </Box>
           </form>
