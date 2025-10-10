@@ -164,20 +164,25 @@ const TablePagination = () => {
         const isChecked = selectedRowIds.has(user.id);
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <CustomCheckbox
-              checked={isChecked}
-              onChange={() => {
-                const newSelected = new Set(selectedRowIds);
-                if (newSelected.has(user.id)) {
-                  newSelected.delete(user.id);
-                } else {
-                  newSelected.add(user.id);
-                }
-                setSelectedRowIds(newSelected);
-              }}
-            />
-            <Link href={`/apps/users/${user.id}`} passHref>
+          <Link href={`/apps/users/${user.id}`} passHref>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={4}
+              sx={{ pl: 1 }}
+            >
+              <CustomCheckbox
+                checked={isChecked}
+                onChange={() => {
+                  const newSelected = new Set(selectedRowIds);
+                  if (newSelected.has(user.id)) {
+                    newSelected.delete(user.id);
+                  } else {
+                    newSelected.add(user.id);
+                  }
+                  setSelectedRowIds(newSelected);
+                }}
+              />
               <Stack direction="row" alignItems="center" spacing={4}>
                 <Avatar
                   src={user.user_image || defaultImage}
@@ -197,8 +202,8 @@ const TablePagination = () => {
                   </Typography>
                 </Box>
               </Stack>
-            </Link>
-          </Stack>
+            </Stack>
+          </Link>
         );
       },
     }),

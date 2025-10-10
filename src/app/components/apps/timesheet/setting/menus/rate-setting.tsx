@@ -328,7 +328,7 @@ const RateSetting = () => {
         {/* Displaying Pay Rate Users */}
         <List className={enabled ? "" : "disabled_location"}>
           {data.map((user: any) => (
-            <>
+            <Box>
               <ListItem
                 key={user.id}
                 sx={{
@@ -365,7 +365,7 @@ const RateSetting = () => {
                 </ListItemSecondaryAction>
               </ListItem>
               <Divider sx={{ borderWidth: 1 }} />
-            </>
+            </Box>
           ))}
         </List>
       </Box>

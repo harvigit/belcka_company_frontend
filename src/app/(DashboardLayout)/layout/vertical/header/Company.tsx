@@ -1,4 +1,4 @@
-import React, { use, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useEffect } from "react";
 import { Box, Grid } from "@mui/system";
 import {
@@ -20,8 +20,14 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
-import { IconArrowLeft, IconBell, IconX } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconBell,
+  IconSpeakerphone,
+  IconX,
+} from "@tabler/icons-react";
 import { getFcmToken, onForegroundMessage } from "@/utils/firebase";
+import AnnouncementsList from "@/app/components/apps/settings/announcement";
 
 export interface Feed {
   id: number;
@@ -44,7 +50,9 @@ const Company = () => {
   const [count, setCount] = useState<number>(0);
   const session = useSession();
   const [filterRequest, setFilterRequest] = useState<string>("all");
-
+  const [announcemntCount, setAnnouncemntCount] = useState<number>(0);
+  const [openannouncementDrawer, setOpenAnnouncementDrawer] = useState(false);
+  const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const limit = 20;
 
@@ -79,11 +87,12 @@ const Company = () => {
       if (Notification.permission === "granted") {
         new Notification(payload?.notification?.title || "Notification", {
           body: payload?.notification?.body || "",
-          icon: "/images/logos/belcka_logo.png"
+          icon: "/images/logos/belcka_logo.png",
         });
       }
 
       fetchFeeds();
+      fetchList();
     });
 
     return () => {
@@ -174,6 +183,28 @@ const Company = () => {
     setLoading(false);
   };
 
+  const fetchList = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(
+        `announcements/get-announcements?company_id=${user.company_id}&user_id=${user.id}`
+      );
+      const data = res.data.info || [];
+      setItems(data);
+      setAnnouncemntCount(data[0]?.unread_count ?? 0);
+    } catch (err) {
+      console.error("Error fetching announcements:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user.company_id, user.id]);
+
+  useEffect(() => {
+    if (openannouncementDrawer) {
+      fetchList();
+    }
+  }, [openannouncementDrawer, fetchList]);
+
   const filteredFeeds = feed?.filter((item) => {
     if (filterRequest === "all") return true;
     return item.request_name === filterRequest;
@@ -218,9 +249,22 @@ const Company = () => {
         color="error"
         overlap="circular"
       >
-        <IconButton onClick={() => setOpenDrawer(true)}>
-          <IconBell size={24} />
-        </IconButton>
+        <IconBell
+          size={24}
+          onClick={() => setOpenDrawer(true)}
+          className="header-icons"
+        />
+      </Badge>
+      <Badge
+        badgeContent={announcemntCount > 0 ? announcemntCount : null}
+        color="error"
+        overlap="circular"
+      >
+        <IconSpeakerphone
+          size={24}
+          onClick={() => setOpenAnnouncementDrawer(true)}
+          className="header-icons"
+        />
       </Badge>
       <Drawer
         anchor="bottom"
@@ -364,6 +408,79 @@ const Company = () => {
                     </Typography>
                   </Box>
                 )}
+              </Grid>
+            </Grid>
+          </Box>
+        </Box>
+      </Drawer>
+
+      <Drawer
+        anchor="bottom"
+        open={openannouncementDrawer}
+        onClose={() => setOpenAnnouncementDrawer(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            height: "95vh",
+            boxShadow: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            paddingRight: 1,
+          }}
+        >
+          <Box className="task-form">
+            <Grid container mt={3}>
+              <Grid size={{ xs: 12, lg: 12 }}>
+                <Box
+                  display={"flex"}
+                  justifyContent={"space-between"}
+                  width={"100%"}
+                >
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    flexWrap="wrap"
+                    width={"100%"}
+                  >
+                    <IconButton
+                      onClick={() => setOpenAnnouncementDrawer(false)}
+                    >
+                      <IconArrowLeft />
+                    </IconButton>
+
+                    <Typography variant="h5" fontWeight={700}>
+                      Announcement
+                    </Typography>
+                  </Box>
+                  <Box
+                    display="flex"
+                    width={"100%"}
+                    justifyContent={"flex-end"}
+                  >
+                    <IconButton
+                      onClick={() => setOpenAnnouncementDrawer(false)}
+                    >
+                      <IconX />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                <AnnouncementsList
+                  companyId={Number(user.company_id)}
+                  userId={user.id}
+                  announcement={items}
+                  onUpdate={fetchList}
+                  isDrawerOpen={openannouncementDrawer}
+                  onDrawerClose={() => setOpenAnnouncementDrawer(false)}
+                />
               </Grid>
             </Grid>
           </Box>
