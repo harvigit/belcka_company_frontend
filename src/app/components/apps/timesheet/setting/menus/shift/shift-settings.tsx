@@ -211,10 +211,10 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         const dayLength = Array(7).fill(8);
                         const shiftBreaks = data.shift_breaks
                             ? data.shift_breaks.map((b: any) => ({
-                                  id: b.id,
-                                  start: b.break_start_time,
-                                  end: b.break_end_time,
-                              }))
+                                id: b.id,
+                                start: b.break_start_time,
+                                end: b.break_end_time,
+                            }))
                             : [];
                         setShiftDetail({
                             id: data.id,
@@ -321,7 +321,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 default_start_time: shiftDetail.default_start_time,
                 default_end_time: shiftDetail.default_end_time,
             };
-            
+
             const response = await api.post('/setting/save-shift-setting', payload);
 
             if (response.data?.IsSuccess) {
@@ -618,6 +618,26 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                 </Button>
                             </>
                         )}
+                    </Box>
+
+                    <Box
+                        sx={{
+                            p: 2,
+                            bgcolor: '#fff',
+                            borderRadius: 2,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                            mb: 2,
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                            Select Days
+                        </Typography>
+                        <WorkDaySelector
+                            workDays={shiftDetail.workDays}
+                            dayLength={shiftDetail.dayLength}
+                            onDayClick={handleDayClick}
+                            onDayLengthChange={handleDayLengthChange}
+                        />
                     </Box>
                 </Box>
             </LocalizationProvider>
