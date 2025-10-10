@@ -534,25 +534,23 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     libraries: GOOGLE_MAP_LIBRARIES,
   });
 
-  useEffect(() => {
-    if (isLoaded && formData?.name?.trim()) {
-      // Autocomplete API call
-      const service = new google.maps.places.AutocompleteService();
-      service.getPlacePredictions(
-        { input: formData.name },
-        (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            setPredictions(results);
-          } else {
-            setPredictions([]);
-          }
-        }
-      );
-    }
-  }, [formData.name, isLoaded]);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, name: e.target.value });
+  };
+
+  const handleSearchClick = () => {
+    if (formData.name.trim() === "") {
+      setPredictions([]);
+      return;
+    }
+    const service = new google.maps.places.AutocompleteService();
+    service.getPlacePredictions({ input: formData.name }, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        setPredictions(results);
+      } else {
+        setPredictions([]);
+      }
+    });
     setTypedAddress(true);
   };
 
@@ -1019,17 +1017,25 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                   </Box>
 
                   <Typography variant="h5" mt={3}></Typography>
-                  <TextField
-                    label="Enter address"
-                    id="name"
-                    name="name"
-                    placeholder="Search for address.."
-                    value={formData.name}
-                    onChange={handleSearchChange}
-                    variant="outlined"
-                    fullWidth
-                  />
-
+                  <Box display={"flex"} justifyContent={"space-between"} gap={3}>
+                    <TextField
+                      label="Enter address"
+                      id="name"
+                      name="name"
+                      placeholder="Search for address.."
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      variant="outlined"
+                      fullWidth
+                    />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleSearchClick}
+                    >
+                      Search
+                    </Button>
+                  </Box>
                   {/* Display address predictions */}
                   {typedAddress && predictions.length > 0 && (
                     <List
