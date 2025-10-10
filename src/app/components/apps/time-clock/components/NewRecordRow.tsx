@@ -38,13 +38,11 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     const [blurredFields, setBlurredFields] = useState<{ start: boolean; end: boolean }>({ start: false, end: false });
 
-    // Hide row if none of the required fields are filled
     const isRowEmpty = !newRecord.shift_id && !newRecord.start && !newRecord.end;
     if (isRowEmpty) {
         return null;
     }
 
-    // Set default values for project_id and shift_id when available
     useEffect(() => {
         if (!newRecord.project_id && projects.length > 0) {
             updateNewRecord(recordKey, 'project_id', projects[0].id);
@@ -54,14 +52,12 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         }
     }, [newRecord, projects, shifts, recordKey, updateNewRecord]);
 
-    // Track blur state for start and end fields
     const handleBlur = (field: 'start' | 'end') => {
         const formattedTime = validateAndFormatTime((newRecord[field] as string) || '');
         updateNewRecord(recordKey, field, formattedTime);
         setBlurredFields((prev) => ({ ...prev, [field]: true }));
     };
 
-    // Automatically save when required fields are filled, blurred, and valid
     useEffect(() => {
         if (isSaving) return;
 
@@ -97,7 +93,6 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         <TableRow
             key={recordKey}
             sx={{
-                backgroundColor: 'rgba(25, 118, 210, 0.04)',
                 '& td': { textAlign: 'center' },
             }}
         >
@@ -200,11 +195,15 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
             )}
 
             {visibleColumnConfigs.totalHours?.visible && (
-                <TableCell align="center" sx={{ py: 0.5 }}></TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>--</TableCell>
             )}
-
+            
             {visibleColumnConfigs.priceWorkAmount?.visible && (
-                <TableCell align="center" sx={{ py: 0.5 }}></TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>--</TableCell>
+            )}
+            
+            {visibleColumnConfigs.checkins?.visible && (
+                <TableCell align="center" sx={{ py: 0.5 }}>--</TableCell>
             )}
         </TableRow>
     );

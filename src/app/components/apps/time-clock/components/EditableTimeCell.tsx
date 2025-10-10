@@ -1,5 +1,6 @@
-import React from 'react';
-import { Box, TextField } from '@mui/material';
+import React, { useState } from 'react'; // Import useState
+import { Box, TextField, Tooltip } from '@mui/material';
+import { IconPointFilled } from '@tabler/icons-react';
 import { EditingWorklog } from '@/app/components/apps/time-clock/types/timeClock';
 
 interface EditableTimeCellProps {
@@ -36,9 +37,57 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     const isSaving = savingWorklogs.has(worklogId);
     const isLocked = log?.status === 6 || log?.status === '6';
 
+    const isEdited = field === 'start' ? !!log?.start_time_edited_by : !!log?.end_time_edited_by;
+    const editedByName = field === 'start' ? log?.start_time_edited_by_name : log?.end_time_edited_by_name;
+    const editedAt = field === 'start' ? log?.start_time_edited_at : log?.end_time_edited_at;
+
+    // State to track icon hover
+    const [isIconHovered, setIsIconHovered] = useState(false);
+
+    if (isEdited || isEditing) {
+        console.log(`${field} state:`, { isEditing, isEdited, editedByName, editedAt });
+    }
+
+    const tooltipStyles = {
+        '& .MuiTooltip-arrow': { color: '#1a1f29' },
+    };
+
     if (isEditing && !isLocked) {
         return (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '32px' }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 'fit-content',
+                    minHeight: '32px',
+                    px: '8px',
+                }}
+            >
+                {isEdited && (
+                    <Tooltip
+                        title={`Modified by ${editedByName} on ${editedAt}`}
+                        arrow
+                        placement="top"
+                        sx={tooltipStyles}
+                    >
+                        <Box
+                            component="span"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                mr: 1,
+                                '&:hover': {
+                                    cursor: 'pointer',
+                                },
+                            }}
+                            onMouseEnter={() => setIsIconHovered(true)} 
+                            onMouseLeave={() => setIsIconHovered(false)} 
+                        >
+                            <IconPointFilled size={18} style={{ color: '#ff9800' }} />
+                        </Box>
+                    </Tooltip>
+                )}
                 <TextField
                     type="text"
                     value={editingData[field] || ''}
@@ -79,16 +128,27 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     autoFocus
                     disabled={isSaving}
                     sx={{
-                        width: '70px',
-                        '& .MuiInputBase-root': { height: '32px' },
-                        '& .MuiInputBase-input': { fontSize: '0.875rem', textAlign: 'center', p: '6px 8px' },
+                        width: 'auto',
+                        minWidth: '60px',
+                        '& .MuiInputBase-root': {
+                            height: '32px',
+                            fontSize: '0.875rem',
+                            borderRadius: '4px',
+                        },
+                        '& .MuiInputBase-input': {
+                            p: '6px 8px',
+                            textAlign: 'center',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: isSaving ? 'grey.500' : '#1976d2',
+                        },
                     }}
                 />
             </Box>
         );
     }
 
-    return (
+    const cellContent = (
         <Box
             onClick={() => !isLocked && startEditingField(worklogId, field, log)}
             sx={{
@@ -104,14 +164,54 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                 px: '8px',
                 '&:hover': !isLocked
                     ? {
-                        borderColor: '#1976d2', 
+                        borderColor: '#1976d2',
                         boxShadow: '0 0 0 1px #1976d2',
                     }
                     : {},
             }}
-            title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit'}
         >
+            {isEdited && (
+                <Tooltip
+                    title={`Modified by ${editedByName} on ${editedAt}`}
+                    arrow
+                    placement="top"
+                    sx={tooltipStyles}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            mr: 1,
+                            '&:hover': {
+                                cursor: 'pointer',
+                            },
+                        }}
+                        onMouseEnter={() => setIsIconHovered(true)} 
+                        onMouseLeave={() => setIsIconHovered(false)} 
+                    >
+                        <IconPointFilled size={18} style={{ color: '#ff9800' }} />
+                    </Box>
+                </Tooltip>
+            )}
             {sanitizeDateTime(currentValue)}
+        </Box>
+    );
+
+    return isEdited && editedByName && editedAt ? (
+        <Tooltip
+            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : `Updated by ${editedByName}`} 
+            arrow
+            placement="top"
+            sx={tooltipStyles}
+        >
+            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Updated by ${editedByName}`}>
+                {cellContent}
+            </Box>
+        </Tooltip>
+    ) : (
+        <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Updated by ${editedByName}`}>
+            {cellContent}
         </Box>
     );
 };
