@@ -79,6 +79,7 @@ export default function AddLeave({ onClose }: AddLeaveProps) {
             alert('Please fill out all required fields');
             return;
         }
+        console.log('Submitting leave request:', formData);
         onClose();
     };
 

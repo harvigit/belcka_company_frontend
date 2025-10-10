@@ -44,6 +44,10 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     // State to track icon hover
     const [isIconHovered, setIsIconHovered] = useState(false);
 
+    if (isEdited || isEditing) {
+        console.log(`${field} state:`, { isEditing, isEdited, editedByName, editedAt });
+    }
+
     const tooltipStyles = {
         '& .MuiTooltip-arrow': { color: '#1a1f29' },
     };
