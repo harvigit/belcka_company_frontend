@@ -41,7 +41,7 @@ interface CompanyUser {
 
 interface CompanySettings {
     dailyLimit: string;
-    autoClockOut: string;
+    autoClockOut: number;
     showDiff: boolean;
     timeZone: string;
     users: string[];
@@ -91,7 +91,7 @@ const parseTimeString = (timeString: string | null): Dayjs | null => {
 
 const getDefaultSettings = (): Omit<SettingsState, 'isSaving'> => ({
     dailyLimit: '12:00 Hours',
-    autoClockOut: '13:00 Hours',
+    autoClockOut: 1,
     showDiff: false,
     timeZone: '',
     users: [],
@@ -183,7 +183,7 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
             if (response.data?.IsSuccess) {
                 const apiSettings: CompanySettings = {
                     dailyLimit: response.data.dailyLimit || getDefaultSettings().dailyLimit,
-                    autoClockOut: response.data.autoClockOut || getDefaultSettings().autoClockOut,
+                    autoClockOut: Number(response.data.autoClockOut) || getDefaultSettings().autoClockOut,
                     showDiff: response.data.showDiff ?? getDefaultSettings().showDiff,
                     timeZone: response.data.timeZone || getDefaultSettings().timeZone,
                     users: response.data.pay_rate_users
@@ -271,7 +271,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
 
                     updateSettings({
                         dailyLimit: fetchedSettings.daily_limit || defaults.dailyLimit,
-                        autoClockOut: fetchedSettings.auto_clock_out || defaults.autoClockOut,
+                        autoClockOut: Number(fetchedSettings.auto_clock_out) || defaults.autoClockOut,
                         showDiff: fetchedSettings.show_diff ?? defaults.showDiff,
                         timeZone: fetchedSettings.timezone_id ? String(fetchedSettings.timezone_id) : defaults.timeZone,
                         users: payRateUsers.map((user: any) => String(user.user_id)),
@@ -309,7 +309,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             tz.value.toLowerCase().includes(timezoneDropdown.searchText.toLowerCase())
         );
     }, [allTimezones, timezoneDropdown.searchText]);
-    
+
     const styles = useMemo(() => ({
         sharedSelectStyles: {
             minWidth: 100,
@@ -364,6 +364,40 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
             const value = parseInt(event.target.value) || 0;
             updateSettings({ [field]: Math.max(0, value) });
         }, [updateSettings]);
+
+    const handleAutoClockOutChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        const inputValue = event.target.value;
+
+        if (inputValue === '') {
+            updateSettings({ autoClockOut: 0 as any });
+            return;
+        }
+
+        const numValue = parseInt(inputValue);
+
+        if (isNaN(numValue)) {
+            return;
+        }
+
+        let clampedValue = numValue;
+        if (numValue < 1) {
+            clampedValue = Number(settings.autoClockOut) || 1;
+        } else if (numValue > 24) {
+            clampedValue = 24;
+        }
+
+        updateSettings({ autoClockOut: clampedValue });
+    }, [updateSettings, settings.autoClockOut]);
+
+    const handleAutoClockOutBlur = useCallback(() => {
+        // On blur, ensure we have a valid value between 1-24
+        const currentValue = Number(settings.autoClockOut);
+        if (!currentValue || currentValue < 1) {
+            updateSettings({ autoClockOut: 1 });
+        } else if (currentValue > 24) {
+            updateSettings({ autoClockOut: 24 });
+        }
+    }, [settings.autoClockOut, updateSettings]);
 
     const createSelectHandler = useCallback((field: keyof SettingsState) =>
         (event: SelectChangeEvent<any>) => {
@@ -434,16 +468,6 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 <Box sx={{ flex: 1, overflowY: 'auto', p: 3, bgcolor: 'white' }}>
                     <Box sx={{ maxWidth: 900, mx: 'auto' }}>
 
-                        {/*/!* Overtime & Pay Rules *!/*/}
-                        {/*<Box py={4}>*/}
-                        {/*    <Typography variant="body1" color="text.primary" mb={1}>Overtime & Pay rules</Typography>*/}
-                        {/*    <Typography variant="body2" color="text.secondary">*/}
-                        {/*        Ensure fair compensation by setting up overtime rules and policies.*/}
-                        {/*    </Typography>*/}
-                        {/*</Box>*/}
-                        
-                        {/*<Divider sx={{ my: 1 }} />*/}
-
                         {/* Daily Limit & Auto Clock Out */}
                         <Box pb={3}>
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
@@ -490,18 +514,23 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         </Typography>
                                     </Box>
                                 </Box>
-                                <Select
-                                    value={settings.autoClockOut}
-                                    onChange={createSelectHandler('autoClockOut')}
-                                    size="small"
-                                    sx={styles.sharedSelectStyles}
-                                    MenuProps={styles.dropdownMenuProps}
-                                    disabled={!settings.isAutoClock}
-                                >
-                                    {timeOptions.map((option) => (
-                                        <MenuItem key={option} value={option} sx={{ fontSize: 14 }}>{option}</MenuItem>
-                                    ))}
-                                </Select>
+                                <Box display="flex" alignItems="center" gap={1}>
+                                    <TextField
+                                        variant="outlined"
+                                        size="small"
+                                        type="text"
+                                        value={settings.autoClockOut}
+                                        onChange={handleAutoClockOutChange}
+                                        onBlur={handleAutoClockOutBlur}
+                                        disabled={!settings.isAutoClock}
+                                        inputProps={{
+                                            style: { width: '20px', backgroundColor: '#fff' },
+                                            min: 1,
+                                            max: 24
+                                        }}
+                                    />
+                                    Hours
+                                </Box>
                             </Box>
 
                             <Box display="flex" alignItems="center" gap={1} mb={2}>
