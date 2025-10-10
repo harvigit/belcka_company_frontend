@@ -105,7 +105,6 @@ export default function WorkDetailPage({
     const checklogId =
       work?.checklog_id || work?.images?.[0]?.record_id || null;
 
-    console.log(checklogId, work.id, "checklogId");
     formData.append("checklog_id", checklogId);
     formData.append("company_task_id", work.id);
 
@@ -180,7 +179,7 @@ export default function WorkDetailPage({
                 <IconButton onClick={onClose}>
                   <IconArrowLeft />
                 </IconButton>
-                <Typography variant="h6" color="inherit" fontWeight={700}>
+                <Typography variant="h6" fontWeight={700}>
                   Work details
                 </Typography>
               </Box>
@@ -203,7 +202,6 @@ export default function WorkDetailPage({
 
           {/* Work Info */}
           <Box p={2}>
-            {/* Tags */}
             <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
               <Box
                 sx={{
@@ -289,7 +287,6 @@ export default function WorkDetailPage({
               </Typography>
             )}
 
-            {/* Progress */}
             {work.progress !== undefined && (
               <Box>
                 <Typography
@@ -347,7 +344,6 @@ export default function WorkDetailPage({
                           borderRadius: 8,
                           objectFit: "cover",
                         }}
-                        onClick={() => handleRemoveExisting(img.id, "before")}
                         onMouseEnter={(e) => {
                           setHoveredImage(img.image_url);
                           const rect = e.currentTarget.getBoundingClientRect();
@@ -368,6 +364,7 @@ export default function WorkDetailPage({
                             right: 4,
                             background: "#fff",
                           }}
+                          onClick={() => handleRemoveExisting(img.id, "before")}
                         >
                           <IconTrash size={16} />
                         </IconButton>
