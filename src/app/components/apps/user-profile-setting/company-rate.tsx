@@ -8,6 +8,12 @@ import {
   TextField,
   Button,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Divider,
+  FormControlLabel,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -16,15 +22,20 @@ import { Grid } from "@mui/system";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
+import dayjs from "dayjs";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 interface ProjectListingProps {
   active: boolean;
+  name: string | null;
 }
 export interface TradeList {
   id: number;
   name: string;
 }
 
-const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
+const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const params = useParams();
   const userId = Number(params?.id);
@@ -39,7 +50,20 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   const [cis, setCis] = useState<any>();
   const [payRate, setPayRate] = useState<string | null>(null);
   const [ratePermisison, setRatePermission] = useState<boolean | null>(null);
+  const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [showAllDates, setShowAllDates] = useState(true);
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
 
+  const handleOpen = () => {
+    setOpen(true);
+    fetchRateHistory();
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
   const [formData, setFormData] = useState<{
     trade_id: number | null;
     rate: string;
@@ -113,6 +137,42 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       console.error("Failed to fetch payrate permission:", err);
       setPayRate(null);
       setRatePermission(true);
+    }
+  };
+
+  const fetchRateHistory = async (start?: string, end?: string) => {
+    try {
+      let url = `requests/get-rate-history?company_id=${user.company_id}&user_id=${userId}`;
+      if (start && end) {
+        url += `&start_date=${start}&end_date=${end}`;
+      }
+
+      const res = await api.get(url);
+      if (res.data?.IsSuccess) setHistory(res.data.info || []);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchRateHistory();
+  }, []);
+
+  useEffect(() => {
+    if (!showAllDates && startDate && endDate) {
+      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
+      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
+      fetchRateHistory(formattedStart, formattedEnd);
+    }
+  }, [startDate, endDate]);
+
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    setShowAllDates(checked);
+    if (checked) {
+      setStartDate(null);
+      setEndDate(null);
+      fetchRateHistory();
     }
   };
 
@@ -226,15 +286,25 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       className="company_rate_wrapper"
       height="450px !important"
     >
-      {user.user_role_id !== 1 &&
+      <Box display={"flex"} justifyContent={"space-between"} mb={2}>
+        {user.user_role_id !== 1 &&
         comapny.is_pending_request &&
-        ratePermisison && (
-          <Box mb={4} display={"flex"}>
-            <Alert severity="error" variant="filled">
-              Your rate request has been pending.
-            </Alert>
-          </Box>
+        ratePermisison ? (
+          <Alert severity="error" variant="filled">
+            Your rate request has been pending.
+          </Alert>
+        ) : (
+          <Box></Box>
         )}
+        <Button
+          color="primary"
+          variant="outlined"
+          onClick={handleOpen}
+          sx={{ float: "end" }}
+        >
+          Rate History
+        </Button>
+      </Box>
       {payRate && ratePermisison ? (
         <>
           {user.user_role_id == 1 && comapny.is_pending_request === true && (
@@ -381,6 +451,203 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
           </Typography>
         </Box>
       )}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
+        <DialogTitle textAlign={"center"} color="textSecondary" mb={2}>
+          {name ? `${name}'s pay rates` : ""}
+
+          <IconButton
+            aria-label="close"
+            onClick={handleClose}
+            size="large"
+            sx={{
+              position: "absolute",
+              right: 12,
+              top: 6,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 45,
+              height: 45,
+            }}
+          >
+            <IconX size={40} style={{ width: 40, height: 40 }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loading ? (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              p={4}
+            >
+              <CircularProgress />
+            </Box>
+          ) : history.length > 0 ? (
+            <>
+              <Box display="flex" alignItems="center" gap={2}>
+                <FormControlLabel
+                  control={
+                    <CustomCheckbox
+                      checked={showAllDates}
+                      onChange={handleCheckboxChange}
+                    />
+                  }
+                  label="Show all dates"
+                />
+                {!showAllDates && (
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <Box display="flex" gap={1}>
+                      <DatePicker
+                        label="Start date"
+                        value={startDate}
+                        onChange={(newValue) => setStartDate(newValue)}
+                        format="DD/MM/YYYY"
+                      />
+                      <DatePicker
+                        label="End date"
+                        value={endDate}
+                        onChange={(newValue) => setEndDate(newValue)}
+                        format="DD/MM/YYYY"
+                      />
+                    </Box>
+                  </LocalizationProvider>
+                )}
+              </Box>
+              <Box
+                sx={{
+                  position: "relative",
+                  mt: 2,
+                  pl: 4,
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    left: "2px",
+                    top: 0,
+                    bottom: 0,
+                    width: "2px",
+                    backgroundColor: "#1976d2",
+                  },
+                }}
+              >
+                {history?.map((item: any, index: number) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      position: "relative",
+                      pl: 1,
+                      mb: 3,
+                    }}
+                  >
+                    {/* Blue dot */}
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        left: "-35px",
+                        top: "16px",
+                        width: "12px",
+                        height: "12px",
+                        backgroundColor: "#1976d2",
+                        borderRadius: "50%",
+                      }}
+                    />
+
+                    {/* Card box */}
+                    <Box
+                      sx={{
+                        border: 1,
+                        p: 2,
+                        borderColor: "#c5c3c3ff",
+                        borderRadius: 2,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        backgroundColor: "#fff",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="textSecondary"
+                        mb={1}
+                        sx={{
+                          backgroundColor: "#888c8f1f",
+                          p: 1,
+                          borderRadius: 4,
+                          width: "fit-content",
+                          px: 2,
+                        }}
+                      >
+                        Effective date: {item.effective_date}
+                      </Typography>
+
+                      <Box
+                        display={"flex"}
+                        justifyContent={"space-between"}
+                        alignItems={"center"}
+                      >
+                        {/* New rate */}
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          alignContent={"center"}
+                        >
+                          <Typography variant="h6" fontWeight="bold">
+                            New rate :
+                          </Typography>
+                          <Typography variant="body1" fontWeight="bold">
+                            {item.currency}
+                            {item.new_net_rate_perday
+                              ? item.new_net_rate_perday
+                              : 0}
+                            <Typography component="span" color="textSecondary">
+                              /day
+                            </Typography>
+                          </Typography>
+                        </Box>
+
+                        {/* Old rate */}
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          mt={1}
+                        >
+                          <Typography variant="h6" fontWeight="bold">
+                            Old rate :
+                          </Typography>
+                          <Typography variant="body1" fontWeight="bold">
+                            {item.currency}
+                            {item.old_net_rate_perday
+                              ? item.old_net_rate_perday
+                              : 0}
+                            <Typography component="span" color="textSecondary">
+                              /day
+                            </Typography>
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Divider sx={{ mt: 2, mb: 1 }} />
+
+                      {item.user_name && (
+                        <Typography variant="caption" color="textSecondary">
+                          Modified by {item.action_by} on {item.date} at{" "}
+                          {item.time}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </>
+          ) : (
+            <Box sx={{ height: "150px !important" }}>
+              <Typography align="center" color="textSecondary">
+                No rate history found.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
