@@ -189,7 +189,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   }, [comapny]);
 
   const handleUpdate = async () => {
-    if (!formData.trade_id) {
+    if (comapny.user_role_id !== 1 && !formData.trade_id) {
       toast.error("Please select trade");
       return;
     }

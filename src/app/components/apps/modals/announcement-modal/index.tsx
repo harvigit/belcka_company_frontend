@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -13,16 +14,16 @@ import {
   Typography,
   IconButton,
   InputLabel,
-  Input,
-  FormHelperText,
+  useTheme,
 } from "@mui/material";
 import { Grid } from "@mui/system";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconTrash } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import { useDropzone } from "react-dropzone";
 
 type Props = {
   open: boolean;
@@ -50,10 +51,77 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<Users[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const theme = useTheme();
+  const { data: session } = useSession();
+  const user = session?.user as User & { company_id?: number | null };
 
-  const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      "image/*": [],
+      "video/*": [],
+    },
+    onDrop: (acceptedFiles) =>
+      setUploadedFiles((prev) => [...prev, ...acceptedFiles]),
+  });
+
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // File previews
+  const fileList = uploadedFiles.map((file, i) => {
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+
+    return (
+      <Box
+        key={i}
+        display="flex"
+        alignItems="center"
+        py={1.5}
+        mt={1.5}
+        sx={{
+          borderTop: `1px solid ${theme.palette.divider}`,
+          justifyContent: "space-between",
+          gap: 2,
+        }}
+      >
+        <Box display="block" alignItems="center" gap={2}>
+          {isImage && (
+            <img
+              src={URL.createObjectURL(file)}
+              alt={file.name}
+              style={{
+                width: 80,
+                height: 80,
+                objectFit: "cover",
+                borderRadius: 8,
+              }}
+            />
+          )}
+          {isVideo && (
+            <video
+              src={URL.createObjectURL(file)}
+              controls
+              style={{
+                width: 120,
+                height: 80,
+                borderRadius: 8,
+                objectFit: "cover",
+              }}
+            />
+          )}
+          <Typography variant="body1" fontWeight={500} noWrap>
+            {file.name}
+          </Typography>
+        </Box>
+        <IconButton color="error" onClick={() => handleRemoveFile(i)}>
+          <IconTrash />
+        </IconButton>
+      </Box>
+    );
+  });
 
   useEffect(() => {
     if (!open) {
@@ -62,21 +130,16 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
       setCompanyUsers(true);
       setSelectedTeams([]);
       setSelectedUsers([]);
-      setFiles(null);
+      setUploadedFiles([]);
     }
   }, [open]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(e.target.files);
-    }
-  };
-
+  // Fetch Teams
   useEffect(() => {
     const getTeams = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`
+          `get-company-resources?flag=teamList&company_id=${user?.company_id}`
         );
         if (res.data?.info) setTeams(res.data.info);
       } catch (err) {
@@ -86,12 +149,13 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
     if (user?.company_id) getTeams();
   }, [user?.company_id]);
 
+  // Fetch Users
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
         const res = await api.get("user/get-user-lists");
-        if (res.data) setUsers(res.data.info);
+        if (res.data?.info) setUsers(res.data.info);
       } catch (err) {
         console.error("Failed to fetch users", err);
       }
@@ -101,6 +165,11 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   }, [user?.company_id]);
 
   async function handleSubmit() {
+    if (!title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("title", title);
     fd.append("body", body);
@@ -110,32 +179,39 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
     fd.append("send_as", sendAs);
 
     if (!companyUsers) {
-      selectedTeams.forEach((t) => fd.append("team_ids[]", String(Number(t))));
-      selectedUsers.forEach((u) => fd.append("user_ids[]", String(Number(u))));
+      selectedTeams.forEach((t) => fd.append("team_ids[]", String(t)));
+      selectedUsers.forEach((u) => fd.append("user_ids[]", String(u)));
     }
 
-    if (files) {
-      Array.from(files).forEach((f) => fd.append("files", f));
-    }
+    uploadedFiles.forEach((file) => fd.append("files", file));
 
-    const res = await api.post("announcements/create", fd);
-    if (res.data.IsSuccess) {
-      toast.success(res.data.message);
-      onCreated?.();
-      onClose();
-    } else {
-      toast.error(res.data.message || "Failed to create announcement");
+    try {
+      const res = await api.post("announcements/create", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        onCreated?.();
+        onClose();
+      } else {
+        toast.error(res.data.message || "Failed to create announcement");
+      }
+    } catch (err) {
+      console.error("Error uploading files:", err);
+      toast.error("Upload failed");
     }
   }
 
   return (
     <Box sx={{ flex: 1, overflowY: "auto", pr: 1 }}>
       <Grid size={{ xs: 12, lg: 12 }}>
+        {/* Header */}
         <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
           <IconButton onClick={onClose}>
             <IconArrowLeft />
           </IconButton>
-          <Typography variant="h6" color="inherit" fontWeight={600}>
+          <Typography variant="h6" fontWeight={600}>
             Announcement
           </Typography>
         </Box>
@@ -145,16 +221,14 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           Write Announcement
         </Typography>
         <CustomTextField
-          id="title"
           multiline
-          name="title"
           placeholder="Enter title..."
           fullWidth
           value={title}
           onChange={(e: any) => setTitle(e.target.value)}
         />
 
-        {/* Company Users Toggle */}
+        {/* Company Users */}
         <FormControlLabel
           sx={{ mt: 2 }}
           control={
@@ -172,7 +246,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           label="Company Users"
         />
 
-        {/* Teams Dropdown */}
+        {/* Teams */}
         <Typography variant="h6" mt={2}>
           Select Teams
         </Typography>
@@ -183,14 +257,14 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           getOptionLabel={(o) => o.name}
           value={teams.filter((t) => selectedTeams.includes(t.id!))}
           onChange={(_, v) =>
-            setSelectedTeams(v.map((x) => x.id!).filter((id) => id !== null))
+            setSelectedTeams(v.map((x) => x.id!).filter(Boolean))
           }
           renderInput={(params) => (
             <TextField {...params} label="Teams" placeholder="Select teams" />
           )}
         />
 
-        {/* Users Dropdown */}
+        {/* Users */}
         <Typography variant="h6" mt={2}>
           Select Users
         </Typography>
@@ -201,7 +275,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           getOptionLabel={(o) => o.name}
           value={users.filter((u) => selectedUsers.includes(u.id!))}
           onChange={(_, v) =>
-            setSelectedUsers(v.map((x) => x.id!).filter((id) => id !== null))
+            setSelectedUsers(v.map((x) => x.id!).filter(Boolean))
           }
           renderInput={(params) => (
             <TextField {...params} label="Users" placeholder="Select users" />
@@ -211,7 +285,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
         {/* Send As */}
         <Box mt={2}>
           <FormControl component="fieldset">
-            <FormLabel component="legend">Send notification as</FormLabel>
+            <FormLabel>Send notification as</FormLabel>
             <RadioGroup
               row
               value={sendAs}
@@ -231,37 +305,41 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           </FormControl>
         </Box>
 
-        {/* Upload Files */}
-        <InputLabel htmlFor="file-upload">Choose files</InputLabel>
-        <FormControl fullWidth sx={{ marginBottom: 2 }}>
-          <Input
-            id="file-upload"
-            type="file"
-            onChange={handleFileChange}
-            inputProps={{ multiple: true }}
-            sx={{
-              padding: "6px 14px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              "& .MuiInput-input": {
-                cursor: "pointer",
-                color: files && files.length > 0 ? "black" : "#888",
-              },
-            }}
-          />
-          {files && files.length > 0 && (
-            <FormHelperText
-              sx={{ marginTop: 1 }}
-              variant="filled"
-              color="success"
-            >
-              {`${files.length} file${files.length > 1 ? "s" : ""} selected`}
-            </FormHelperText>
-          )}
-        </FormControl>
+        {/* File Upload */}
+        <InputLabel htmlFor="file-upload" sx={{ mt: 2 }}>
+          Choose files
+        </InputLabel>
+        <Box
+          mt={2}
+          fontSize="12px"
+          sx={{
+            backgroundColor: "primary.light",
+            color: "primary.main",
+            padding: "25px",
+            textAlign: "center",
+            border: `1px dashed`,
+            borderColor: "primary.main",
+            borderRadius: 1,
+            cursor: "pointer",
+          }}
+          {...getRootProps()}
+        >
+          <input {...getInputProps()} />
+          <Typography>Drag & drop files here, or click to select</Typography>
+        </Box>
+
+        {/* File Previews */}
+        {uploadedFiles.length > 0 && (
+          <Box mt={2}>
+            <Typography variant="h6" fontSize="15px" mb={1}>
+              Files Preview
+            </Typography>
+            {fileList}
+          </Box>
+        )}
 
         {/* Actions */}
-        <Box display="flex" justifyContent="space-between" mt={2}>
+        <Box display="flex" justifyContent="space-between" mt={3}>
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="contained" onClick={handleSubmit}>
             Save
