@@ -18,13 +18,13 @@ const Logo = () => {
     overflow: "hidden",
     display: "block",
     marginBottom: "10px",
-    marginTop:'5px',
-    marginLeft:"-5px"
+    marginTop: "5px",
+    marginLeft: "-5px",
   }));
 
   if (activeDir === "ltr") {
     return (
-      <LinkStyled href="/">
+      <>
         {activeMode === "dark" ? (
           <Image
             src={"/images/logos/belcka.png"}
@@ -42,12 +42,12 @@ const Logo = () => {
             priority
           />
         )}
-      </LinkStyled>
+      </>
     );
   }
 
   return (
-    <LinkStyled href="/">
+    <>
       {activeMode === "dark" ? (
         <Image
           src={"/images/logos/belcka.png"}
@@ -65,7 +65,7 @@ const Logo = () => {
           priority
         />
       )}
-    </LinkStyled>
+    </>
   );
 };
 
