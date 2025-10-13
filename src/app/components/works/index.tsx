@@ -183,12 +183,7 @@ export default function WorkDetailPage({
                   Work details
                 </Typography>
               </Box>
-              {!editing && work.images.length > 0 && (
-                <Button variant="contained" onClick={() => setEditing(true)}>
-                  Edit
-                </Button>
-              )}
-              {editing && work.images.length > 0 && (
+              {work.images.length > 0 && (
                 <Button
                   variant="contained"
                   color="success"
@@ -315,9 +310,26 @@ export default function WorkDetailPage({
           {/* Photos Before */}
           {work?.images.length > 0 && (
             <Box p={2}>
-              <Typography fontWeight="bold" mb={1}>
-                Photos Before
-              </Typography>
+              <Box display={"flex"} justifyContent={"space-between"} mb={2}>
+                <Typography fontWeight="bold" mb={1}>
+                  Photos Before
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<IconPlus />}
+                  component="label"
+                  size="small"
+                >
+                  Add Photos
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleAddFiles(e, "before")}
+                  />
+                </Button>
+              </Box>
               <Grid container spacing={2}>
                 {work.images
                   ?.filter((i: any) => i.is_before)
@@ -354,42 +366,25 @@ export default function WorkDetailPage({
                         }}
                         onMouseLeave={() => setHoveredImage(null)}
                       />
-                      {editing && (
-                        <IconButton
-                          color="error"
-                          size="small"
-                          sx={{
-                            position: "absolute",
-                            top: 4,
-                            right: 4,
-                            background: "#fff",
-                          }}
-                          onClick={() => handleRemoveExisting(img.id, "before")}
-                        >
-                          <IconTrash size={16} />
-                        </IconButton>
-                      )}
+                      <IconButton
+                        color="error"
+                        size="small"
+                        sx={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          background: "#fff",
+                        }}
+                        onClick={() => handleRemoveExisting(img.id, "before")}
+                      >
+                        <IconTrash size={16} />
+                      </IconButton>
                     </Grid>
                   ))}
               </Grid>
 
-              {editing && work?.images.length > 0 && (
+              {work?.images.length > 0 && (
                 <Box mt={2}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<IconPlus />}
-                    component="label"
-                    size="small"
-                  >
-                    Add Before Photos
-                    <input
-                      type="file"
-                      hidden
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => handleAddFiles(e, "before")}
-                    />
-                  </Button>
                   <Box mt={1} display="flex" gap={1} flexWrap="wrap">
                     {newBeforeFiles.map((file, idx) => (
                       <Typography key={idx} variant="body2">
@@ -405,9 +400,26 @@ export default function WorkDetailPage({
           {/* Photos After */}
           {work?.images.length > 0 && (
             <Box p={2}>
-              <Typography fontWeight="bold" mb={1}>
-                Photos After
-              </Typography>
+              <Box display={"flex"} justifyContent={"space-between"} mb={2}>
+                <Typography fontWeight="bold" mb={1}>
+                  Photos After
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<IconPlus />}
+                  component="label"
+                  size="small"
+                >
+                  Add Photos
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleAddFiles(e, "after")}
+                  />
+                </Button>
+              </Box>
               <Grid container spacing={2}>
                 {work.images
                   ?.filter((i: any) => !i.is_before)
@@ -444,42 +456,25 @@ export default function WorkDetailPage({
                         }}
                         onMouseLeave={() => setHoveredImage(null)}
                       />
-                      {editing && (
-                        <IconButton
-                          color="error"
-                          size="small"
-                          sx={{
-                            position: "absolute",
-                            top: 4,
-                            right: 4,
-                            background: "#fff",
-                          }}
-                          onClick={() => handleRemoveExisting(img.id, "after")}
-                        >
-                          <IconTrash size={16} />
-                        </IconButton>
-                      )}
+                      <IconButton
+                        color="error"
+                        size="small"
+                        sx={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          background: "#fff",
+                        }}
+                        onClick={() => handleRemoveExisting(img.id, "after")}
+                      >
+                        <IconTrash size={16} />
+                      </IconButton>
                     </Grid>
                   ))}
               </Grid>
 
-              {editing && work?.images.length > 0 && (
+              {work?.images.length > 0 && (
                 <Box mt={2}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<IconPlus />}
-                    component="label"
-                    size="small"
-                  >
-                    Add After Photos
-                    <input
-                      type="file"
-                      hidden
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => handleAddFiles(e, "after")}
-                    />
-                  </Button>
                   <Box mt={1} display="flex" gap={1} flexWrap="wrap">
                     {newAfterFiles.map((file, idx) => (
                       <Typography key={idx} variant="body2">
