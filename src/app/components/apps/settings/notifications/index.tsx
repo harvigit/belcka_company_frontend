@@ -158,8 +158,6 @@ export default function NotificationSettings() {
               <TableCell>
                 <Typography
                   variant="subtitle1"
-                  fontWeight="bold"
-                  color="#7D92A9"
                 >
                   Titles
                 </Typography>
@@ -167,8 +165,6 @@ export default function NotificationSettings() {
               <TableCell align="center">
                 <Typography
                   variant="subtitle1"
-                  fontWeight="bold"
-                  color="#7D92A9"
                 >
                   Push
                 </Typography>
@@ -176,8 +172,6 @@ export default function NotificationSettings() {
               <TableCell align="center">
                 <Typography
                   variant="subtitle1"
-                  fontWeight="bold"
-                  color="#7D92A9"
                 >
                   Feed
                 </Typography>
