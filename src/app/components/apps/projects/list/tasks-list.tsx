@@ -350,8 +350,6 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
                                                     >
                                                         <Typography
                                                             variant="subtitle2"
-                                                            fontWeight="inherit"
-                                                            color="#7D92A9"
                                                         >
                                                             {flexRender(
                                                                 header.column.columnDef.header,
