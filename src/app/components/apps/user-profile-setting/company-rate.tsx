@@ -8,18 +8,18 @@ import {
   TextField,
   Button,
   Alert,
-  Dialog,
-  DialogTitle,
   DialogContent,
   IconButton,
   Divider,
   FormControlLabel,
+  Drawer,
+  Autocomplete,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useParams } from "next/navigation";
 import { Grid } from "@mui/system";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import { IconCheck, IconHistory, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
@@ -39,11 +39,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const params = useParams();
   const userId = Number(params?.id);
-  const session = useSession();
-  const user = session.data?.user as User & { user_role_id?: number | null } & {
-    id: number;
-  } & { company_id: number };
-
   const [comapny, setCompany] = useState<any>();
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [gross, setGross] = useState<any>();
@@ -55,6 +50,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   const [showAllDates, setShowAllDates] = useState(true);
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  const { data: session, update } = useSession();
+  const user = session?.user as User & { user_role_id?: number | null } & {
+    id: number;
+  } & { company_id: number };
 
   const handleOpen = () => {
     setOpen(true);
@@ -209,13 +208,23 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
     try {
       const payload = {
         company_id: comapny.id,
-        trade_id: formData.trade_id,
+        trade_id: Number(formData.trade_id),
         new_rate_perDay: Number(formData.rate),
         user_id: userId,
       };
       const res = await api.post("user-billing/change-company-rate", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
+        if (Number(userId) === Number(user?.id)) {
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              trade_id: res.data.info.trade_id,
+              trade_name: res.data.info.trade_name,
+            },
+          });
+        }
         getCompanyData();
       } else {
         toast.error(res.data.message || "Update failed");
@@ -297,10 +306,17 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
           <Box></Box>
         )}
         <Button
-          color="primary"
-          variant="outlined"
+          color="inherit"
+          startIcon={<IconHistory />}
+          variant="contained"
+          size="large"
+          sx={{
+            backgroundColor: "transparent",
+            borderRadius: 3,
+            color: "#047bff",
+            float: "inline-end",
+          }}
           onClick={handleOpen}
-          sx={{ float: "end" }}
         >
           Rate History
         </Button>
@@ -367,17 +383,34 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
           <Grid container spacing={2} mb={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
+              <Autocomplete
                 className="custom_color"
-                disabled
+                options={trade}
+                disabled={user.user_role_id !== 1}
+                getOptionLabel={(opt: any) => opt?.name || ""}
                 value={
                   Object.keys(comapny?.diff_data || {}).includes("trade_id")
-                    ? trade.find((t) => t.id === comapny.diff_data.trade_id.old)
-                        ?.name ?? ""
-                    : trade.find((t) => t.id === formData.trade_id)?.name ?? ""
+                    ? trade.find(
+                        (t) => t.id === comapny.diff_data.trade_id.old
+                      ) || null
+                    : trade.find((t) => t.id === formData.trade_id) || null
                 }
-                label="Trade"
+                onChange={(_, newValue) => {
+                  setFormData({
+                    ...formData,
+                    trade_id: newValue ? newValue.id : null,
+                  });
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Trade"
+                    placeholder="Search trade type..."
+                    fullWidth
+                  />
+                )}
+                clearOnEscape
+                fullWidth
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -451,9 +484,26 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
           </Typography>
         </Box>
       )}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle textAlign={"center"} color="textSecondary" mb={2}>
-          {name ? `${name}'s pay rates` : ""}
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={handleClose}
+        sx={{
+          width: 600,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 600,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <Box textAlign={"center"} color="textSecondary" mb={2}>
+          <Typography color="textSecondary">
+            {name ? `${name}'s pay rates` : ""}
+          </Typography>
 
           <IconButton
             aria-label="close"
@@ -472,7 +522,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
           >
             <IconX size={40} style={{ width: 40, height: 40 }} />
           </IconButton>
-        </DialogTitle>
+        </Box>
         <DialogContent dividers>
           {loading ? (
             <Box
@@ -485,19 +535,26 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
             </Box>
           ) : history.length > 0 ? (
             <>
-              <Box display="flex" alignItems="center" gap={2}>
-                <FormControlLabel
-                  control={
-                    <CustomCheckbox
-                      checked={showAllDates}
-                      onChange={handleCheckboxChange}
-                    />
-                  }
-                  label="Show all dates"
-                />
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent={"space-between"}
+                className="rate_history_wrapper"
+              >
+                <Box>
+                  <FormControlLabel
+                    control={
+                      <CustomCheckbox
+                        checked={showAllDates}
+                        onChange={handleCheckboxChange}
+                      />
+                    }
+                    label="Show all dates"
+                  />
+                </Box>
                 {!showAllDates && (
                   <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <Box display="flex" gap={1}>
+                    <Box display="flex" gap={2} alignItems={"center"}>
                       <DatePicker
                         label="Start date"
                         value={startDate}
@@ -630,8 +687,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
                       {item.user_name && (
                         <Typography variant="caption" color="textSecondary">
-                          Modified by {item.action_by} on {item.date} at{" "}
-                          {item.time}
+                          {item.action_by
+                            ? `Modified by  ${item.action_by}  on ${item.date} at ${item.time}`
+                            : ""}{" "}
+                          on {item.date} at {item.time}
                         </Typography>
                       )}
                     </Box>
@@ -647,7 +706,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
             </Box>
           )}
         </DialogContent>
-      </Dialog>
+      </Drawer>
     </Box>
   );
 };

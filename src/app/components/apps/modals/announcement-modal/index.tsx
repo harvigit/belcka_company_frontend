@@ -58,11 +58,28 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
-      "image/*": [],
-      "video/*": [],
+      "image/jpeg": [".jpeg", ".jpg"],
+      "image/png": [".png"],
+      "image/webp": [".webp"],
+      "image/heic": [".heic"],
+      "image/gif": [".gif"],
+      "video/mp4": [".mp4"],
+      "video/quicktime": [".mov"],
+      "video/x-msvideo": [".avi"],
+      "audio/mpeg": [".mp3"],
+      "audio/wav": [".wav"],
+      "audio/aac": [".aac"],
+      "application/pdf": [".pdf"],
     },
-    onDrop: (acceptedFiles) =>
-      setUploadedFiles((prev) => [...prev, ...acceptedFiles]),
+    onDrop: (acceptedFiles) => {
+      setUploadedFiles(acceptedFiles);
+    },
+
+    onDropRejected: () => {
+      toast.error(
+        "Invalid file type. Please upload an image, video, audio, or PDF."
+      );
+    },
   });
 
   const handleRemoveFile = (index: number) => {

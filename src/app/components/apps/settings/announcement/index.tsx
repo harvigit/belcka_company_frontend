@@ -134,38 +134,42 @@ export default function AnnouncementsList({
                               mt: 1,
                             }}
                           >
-                            {it.documents.map((src: string, idx: number) => {
+                            {it.documents?.map((doc: any, idx: number) => {
                               const isVideo = /\.(mp4|mov|webm|avi)$/i.test(
-                                src
+                                doc.image_url
                               );
+
                               return (
                                 <Box
-                                  key={idx}
+                                  key={doc.id ?? idx}
                                   sx={{
                                     borderRadius: 1,
                                     transition: "transform .2s",
                                     overflow: "visible",
                                     cursor: "pointer",
+                                    "&:hover": { transform: "scale(1.05)" },
                                   }}
                                 >
                                   {isVideo ? (
                                     <video
-                                      src={src}
-                                      width="20%"
-                                      height="100%"
+                                      src={doc.image_url}
+                                      width="200"
+                                      height="120"
                                       controls
                                       style={{
                                         objectFit: "cover",
+                                        borderRadius: "8px",
                                       }}
                                     />
                                   ) : (
                                     <Image
-                                      src={src}
+                                      src={doc.thumb_url || doc.image_url}
                                       alt={`announcement-media-${idx}`}
                                       height={100}
                                       width={100}
                                       style={{
                                         objectFit: "cover",
+                                        borderRadius: "8px",
                                         transition:
                                           "transform 0.3s ease-in-out",
                                       }}
