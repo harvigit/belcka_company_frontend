@@ -640,27 +640,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                         justifyContent={"space-between"}
                         alignItems={"center"}
                       >
-                        {/* New rate */}
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          alignContent={"center"}
-                        >
-                          <Typography variant="h6" fontWeight="bold">
-                            New rate :
-                          </Typography>
-                          <Typography variant="body1" fontWeight="bold">
-                            {item.currency}
-                            {item.new_net_rate_perday
-                              ? item.new_net_rate_perday
-                              : 0}
-                            <Typography component="span" color="textSecondary">
-                              /day
-                            </Typography>
-                          </Typography>
-                        </Box>
-
                         {/* Old rate */}
                         <Box
                           display="flex"
@@ -681,6 +660,26 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                             </Typography>
                           </Typography>
                         </Box>
+                        {/* New rate */}
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          alignContent={"center"}
+                        >
+                          <Typography variant="h6" fontWeight="bold">
+                            New rate :
+                          </Typography>
+                          <Typography variant="body1" fontWeight="bold">
+                            {item.currency}
+                            {item.new_net_rate_perday
+                              ? item.new_net_rate_perday
+                              : 0}
+                            <Typography component="span" color="textSecondary">
+                              /day
+                            </Typography>
+                          </Typography>
+                        </Box>
                       </Box>
 
                       <Divider sx={{ mt: 2, mb: 1 }} />
@@ -691,11 +690,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                             ? "Approved"
                             : item.status_text == "rejected"
                             ? "Rejected"
-                            : "Modified"}{" "}
+                            : `Modified on ${item.date} at ${item.time} `}{" "}
                           {item.action_by
                             ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
                             : ""}{" "}
-                          on {item.date} at {item.time}
                         </Typography>
                       )}
                     </Box>
