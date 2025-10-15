@@ -168,15 +168,6 @@ const RateSetting = () => {
       const response = await api.post("company/edit-company", payload);
 
       if (response.data.IsSuccess == true) {
-        if (Number(user?.company_id)) {
-          await update({
-            ...session,
-            user: {
-              ...session?.user,
-              currency: response.data.info.currency,
-            },
-          });
-        }
         toast.success(response.data.message);
         setCurrency(Number(response.data.info.currency));
       }
@@ -229,13 +220,11 @@ const RateSetting = () => {
   }, [user?.company_id]);
 
   useEffect(() => {
-    if (user?.currency_id) {
-      setCurrency(Number(user.currency_id));
-    } else if (user?.company_id) {
+    if (user?.company_id) {
       (async () => {
         try {
           const res = await api.get(
-            `company/get-company?id=${user.company_id}`
+            `company/get-company?company_id=${user.company_id}`
           );
           if (res.data.IsSuccess && res.data.info.currency_id) {
             setCurrency(Number(res.data.info.currency_id));
