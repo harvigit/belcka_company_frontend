@@ -687,8 +687,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
                       {item.user_name && (
                         <Typography variant="caption" color="textSecondary">
-                          {item.action_by
-                            ? `Modified by  ${item.action_by}  on ${item.date} at ${item.time}`
+                          Modified {item.action_by
+                            ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
                             : ""}{" "}
                           on {item.date} at {item.time}
                         </Typography>

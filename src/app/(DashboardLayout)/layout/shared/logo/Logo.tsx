@@ -1,8 +1,6 @@
 "use client";
 import { useContext } from "react";
 
-import Link from "next/link";
-import { styled } from "@mui/material";
 import config from "@/app/context/config";
 import Image from "next/image";
 import { CustomizerContext } from "@/app/context/customizerContext";
@@ -12,33 +10,25 @@ const Logo = () => {
     useContext(CustomizerContext);
   const TopbarHeight = config.topbarHeight;
 
-  const LinkStyled = styled(Link)(() => ({
-    height: TopbarHeight,
-    width: isCollapse == "mini-sidebar" && !isSidebarHover ? "65px" : "150px",
-    overflow: "hidden",
-    display: "block",
-    marginBottom: "10px",
-    marginTop: "5px",
-    marginLeft: "-5px",
-  }));
-
   if (activeDir === "ltr") {
     return (
       <>
         {activeMode === "dark" ? (
           <Image
-            src={"/images/logos/belcka.png"}
+            src={"/images/logos/belcka.svg"}
             alt="logo"
             height={TopbarHeight}
             width={150}
+            style={{ marginLeft: 20 }}
             priority
           />
         ) : (
           <Image
-            src={"/images/logos/belcka.png"}
+            src={"/images/logos/belcka.svg"}
             alt="logo"
             height={TopbarHeight}
             width={150}
+            style={{ marginLeft: 20 }}
             priority
           />
         )}
@@ -50,17 +40,19 @@ const Logo = () => {
     <>
       {activeMode === "dark" ? (
         <Image
-          src={"/images/logos/belcka.png"}
+          src={"/images/logos/belcka.svg"}
           alt="logo"
           height={TopbarHeight}
           width={150}
+          style={{ marginLeft: 20 }}
           priority
         />
       ) : (
         <Image
-          src={"/images/logos/belcka.png"}
+          src={"/images/logos/belcka.svg"}
           alt="logo"
           height={TopbarHeight}
+          style={{ marginLeft: 20 }}
           width={150}
           priority
         />

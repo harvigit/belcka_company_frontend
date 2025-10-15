@@ -87,7 +87,7 @@ const Company = () => {
       if (Notification.permission === "granted") {
         new Notification(payload?.notification?.title || "Notification", {
           body: payload?.notification?.body || "",
-          icon: "/images/logos/belcka_logo.png",
+          icon: "/favicon.ico",
         });
       }
 

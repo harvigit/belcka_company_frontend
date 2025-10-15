@@ -29,10 +29,9 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const RateSetting = () => {
-  const session = useSession();
   const [users, setUsers] = useState<any[]>([]);
   const [data, setData] = useState<any>([]);
-  const [currency, setCurrency] = useState<string>("1");
+  const [currency, setCurrency] = useState<number>();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [permission, setPermission] = useState<string>("view");
@@ -40,8 +39,10 @@ const RateSetting = () => {
   const [enabled, setEnabled] = useState<boolean>(true);
 
   const [timeZone, setTimeZone] = useState<any>(0);
-
-  const user = session.data?.user as User & { company_id?: string | null };
+  const { data: session, update } = useSession();
+  const user = session?.user as User & { company_id?: string | null } & {
+    currency_id?: number | null;
+  };
 
   // Get all users
   const fetchCompanyUsers = async () => {
@@ -90,7 +91,6 @@ const RateSetting = () => {
 
   const handleSave = async () => {
     if (!selectedUser) return;
-    console.log(selectedUser, "selectedUser");
     try {
       const payload = {
         user_id: selectedUser,
@@ -158,7 +158,7 @@ const RateSetting = () => {
     e: React.ChangeEvent<{ value: unknown }>
   ) => {
     const selectedCurrency = e.target.value as string;
-    setCurrency(selectedCurrency);
+    setCurrency(Number(selectedCurrency));
     setLoading(true);
     const payload = {
       id: Number(user.company_id),
@@ -167,9 +167,18 @@ const RateSetting = () => {
     try {
       const response = await api.post("company/edit-company", payload);
 
-      if (response.data.IsSuccess) {
+      if (response.data.IsSuccess == true) {
+        if (Number(user?.company_id)) {
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              currency: response.data.info.currency,
+            },
+          });
+        }
         toast.success(response.data.message);
-        setCurrency(response.data.info.currency);
+        setCurrency(Number(response.data.info.currency));
       }
     } catch (error) {
       console.error("API call failed:", error);
@@ -203,9 +212,7 @@ const RateSetting = () => {
 
   const fetchGeneralSetting = async () => {
     try {
-      const res = await api.get(
-        `setting/general-settings`
-      );
+      const res = await api.get(`setting/general-settings`);
       if (res.data.IsSuccess && res.data.data) {
         setEnabled(!!res.data.data.pay_rate_permission);
         setTimeZone(res.data.data.timezone_id);
@@ -220,6 +227,26 @@ const RateSetting = () => {
       fetchGeneralSetting();
     }
   }, [user?.company_id]);
+
+  useEffect(() => {
+    if (user?.currency_id) {
+      setCurrency(Number(user.currency_id));
+    } else if (user?.company_id) {
+      (async () => {
+        try {
+          const res = await api.get(
+            `company/get-company?id=${user.company_id}`
+          );
+          if (res.data.IsSuccess && res.data.info.currency_id) {
+            setCurrency(Number(res.data.info.currency_id));
+          } 
+        } catch (err) {
+          console.error("Failed to fetch company currency", err);
+        }
+      })();
+    }
+  }, [user?.company_id]);
+
   return (
     <Box display={"flex"} overflow="auto">
       <Box sx={{ p: 3 }} m="auto" width={"60%"}>
@@ -272,11 +299,11 @@ const RateSetting = () => {
                     padding: "8px 12px",
                   },
                 }}
-                value={currency}
+                value={currency ?? ""}
                 onChange={(e: any) => handleCurrencyChange(e)}
               >
-                <MenuItem value="1">£ - British Pound Sterling</MenuItem>
-                <MenuItem value="2">$ - USD Dollar</MenuItem>
+                <MenuItem value={1}>£ - British Pound Sterling</MenuItem>
+                <MenuItem value={2}>$ - USD Dollar</MenuItem>
               </Select>
             </Box>
           </Box>

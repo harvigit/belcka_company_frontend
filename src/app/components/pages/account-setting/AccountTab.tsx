@@ -51,7 +51,7 @@ const AccountTab = () => {
                   src={
                     user?.user_image
                       ? `${user.user_image}`
-                      : "/images/logos/belcka_logo.png"
+                      : "/favicon.ico"
                   }
                   // src={"/images/logos/logoIcon.svg"}
                   alt={user.first_name || ''}
