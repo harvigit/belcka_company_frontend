@@ -51,7 +51,7 @@ const AccountTab = () => {
                   src={
                     user?.user_image
                       ? `${user.user_image}`
-                      : "/favicon.ico"
+                      : "/favicon.svg"
                   }
                   // src={"/images/logos/logoIcon.svg"}
                   alt={user.first_name || ''}

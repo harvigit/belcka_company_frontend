@@ -60,7 +60,7 @@ const Profile = () => {
         onClick={handleClick2}
       >
         <Avatar
-         src={user?.user_image ? `${user?.user_image}` : "/favicon.ico"}
+         src={user?.user_image ? `${user?.user_image}` : "/favicon.svg"}
           // src={"/images/logos/belcka_logo.png"}
           alt={user.first_name || ''}
           sx={{

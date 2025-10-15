@@ -111,7 +111,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                                 <Stack direction="row" justifyContent="center" spacing={1}>
                                     <Box
                                         component="img"
-                                        src="/favicon.ico"
+                                        src="/favicon.svg"
                                         alt="Belcka Logo"
                                         height={70}
                                     />

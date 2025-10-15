@@ -687,7 +687,12 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
                       {item.user_name && (
                         <Typography variant="caption" color="textSecondary">
-                          Modified {item.action_by
+                          {item.status_text == "approved"
+                            ? "Approved"
+                            : item.status_text == "rejected"
+                            ? "Rejected"
+                            : "Modified"}{" "}
+                          {item.action_by
                             ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
                             : ""}{" "}
                           on {item.date} at {item.time}
