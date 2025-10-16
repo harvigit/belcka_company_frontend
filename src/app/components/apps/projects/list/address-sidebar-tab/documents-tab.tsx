@@ -1,25 +1,27 @@
-"use client";
-
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
-  Badge,
   Box,
   Button,
   Card,
   Checkbox,
+  IconButton,
   InputAdornment,
+  Stack,
   TextField,
   Typography,
-  IconButton,
-  Stack,
+  Badge,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import {
-  IconFilter,
-  IconSearch,
   IconDownload,
-  IconPhoto,
+  IconPlus,
+  IconTrash,
+  IconSearch,
+  IconFilter,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
+import toast from "react-hot-toast";
 
 interface DocumentsTabProps {
   addressId: number;
@@ -34,18 +36,18 @@ export const DocumentsTab = ({
 }: DocumentsTabProps) => {
   const [tabData, setTabData] = useState<any[]>([]);
   const [searchUser, setSearchUser] = useState<string>("");
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
-  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
-  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number }>({
-    x: 0,
-    y: 0,
-  });
+  const [selectedTaskId, setSelectedTaskId] = useState<number>();
+  const [attachmentsPayload, setAttachmentsPayload] = useState<{
+    add: Record<string, { before: File[]; after: File[] }>;
+    delete: Record<string, string[]>;
+  }>({ add: {}, delete: {} });
+
+  const [imageType, setImageType] = useState<"before" | "after">("before"); // For before/after image selection
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (addressId) {
-      fetchDocumentTabData();
-    }
+    if (addressId) fetchDocumentTabData();
   }, [addressId, projectId]);
 
   const fetchDocumentTabData = async () => {
@@ -80,8 +82,90 @@ export const DocumentsTab = ({
     }
   };
 
-  const handleImageError = (imageUrl: string) => {
-    setImageErrors((prev) => new Set(prev).add(imageUrl));
+  const handleAddImage = (
+    recordId: string | number,
+    files: FileList | null
+  ) => {
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files);
+    const key = String(recordId);
+    setAttachmentsPayload((prev) => ({
+      ...prev,
+      add: {
+        ...prev.add,
+        [key]: {
+          ...prev.add[key],
+          [imageType]: [...(prev.add[key]?.[imageType] || []), ...newFiles],
+        },
+      },
+    }));
+  };
+
+  const handleDeleteImage = (
+    companyTaskId: number | string,
+    recordId: string | number,
+    attachmentId: string | number
+  ) => {
+    setTabData((prev) =>
+      prev.map((doc) =>
+        doc.id === Number(companyTaskId)
+          ? {
+              ...doc,
+              images: doc.images.filter((img: any) => img.id !== attachmentId),
+            }
+          : doc
+      )
+    );
+
+    setAttachmentsPayload((prev) => ({
+      ...prev,
+      delete: {
+        ...prev.delete,
+        [String(recordId)]: [
+          ...(prev.delete[String(recordId)] || []),
+          String(attachmentId),
+        ],
+      },
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    const formData = new FormData();
+    formData.append("address_id", String(addressId));
+    formData.append("company_id", String(companyId));
+    if (selectedTaskId !== undefined) {
+      formData.append("company_task_id", String(selectedTaskId));
+    }
+
+    Object.entries(attachmentsPayload.add).forEach(([recordId, types]) => {
+      if (!recordId) return;
+      Object.entries(types).forEach(([type, files]) => {
+        files.forEach((file) => {
+          formData.append(`attachments[${recordId}][${type}]`, file);
+        });
+      });
+    });
+
+    // Remove attachments
+    Object.entries(attachmentsPayload.delete).forEach(([recordId, ids]) => {
+      ids.forEach((id) => {
+        formData.append("remove_attachment_ids[]", id);
+        formData.append("record_id", recordId);
+      });
+    });
+
+    try {
+      const res = await api.post("address/add-attachments", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data?.IsSuccess || res.data?.isSuccess) {
+        toast.success(res.data.message);
+        fetchDocumentTabData();
+        setAttachmentsPayload({ add: {}, delete: {} });
+      }
+    } catch (err) {
+      console.error("Attachment update failed", err);
+    }
   };
 
   const handleCheckboxChange = (taskId: number) => {
@@ -90,14 +174,6 @@ export const DocumentsTab = ({
         ? prev.filter((id) => id !== taskId)
         : [...prev, taskId]
     );
-  };
-
-  const handleDownloadSelected = () => {
-    const tasksWithImages = selectedTasks.filter((taskId) => {
-      const task = tabData.find((doc) => doc.id === taskId);
-      return task?.images?.length > 0;
-    });
-    if (tasksWithImages.length > 0) handleDownloadZip(tasksWithImages);
   };
 
   const hasTasksWithImages = useMemo(() => {
@@ -116,6 +192,10 @@ export const DocumentsTab = ({
         item.created_at?.toLowerCase().includes(search)
     );
   }, [searchUser, tabData]);
+
+  const handleImageError = (imageUrl: string) => {
+    setImageErrors((prev) => new Set(prev).add(imageUrl));
+  };
 
   return (
     <Box>
@@ -142,7 +222,7 @@ export const DocumentsTab = ({
         <Stack direction="row" spacing={1}>
           <IconButton
             color="primary"
-            onClick={handleDownloadSelected}
+            onClick={() => handleDownloadZip(selectedTasks)}
             disabled={!hasTasksWithImages}
             sx={{
               border: "1px solid",
@@ -159,9 +239,15 @@ export const DocumentsTab = ({
         </Stack>
       </Stack>
 
+      <Box display={"flex"} justifyContent={"end"} mb={2}>
+        <Button variant="contained" color="primary" onClick={handleSaveChanges}>
+          Save Changes
+        </Button>
+      </Box>
+
       {filteredData.length > 0 ? (
         filteredData.map((doc) => (
-          <Box key={doc.id} mb={3}>
+          <Box key={doc.record_id} mb={3}>
             <Stack
               direction="row"
               alignItems="center"
@@ -174,20 +260,37 @@ export const DocumentsTab = ({
                   onChange={() => handleCheckboxChange(doc.id)}
                 />
                 <Typography variant="h6" fontWeight={600}>
-                  {doc.title || `Document #${doc.id}`}
+                  {doc.title || `Document #${doc.record_id}`}
                 </Typography>
               </Stack>
-              <Badge
-                badgeContent={doc.images?.length || 0}
-                color="error"
-                overlap="circular"
-              >
-                <IconButton
+              <Stack direction="row" spacing={1}>
+                <Badge
+                  badgeContent={doc.images?.length || 0}
                   color="error"
-                  onClick={() => handleDownloadZip([doc.id])}
+                  overlap="circular"
+                >
+                  <IconButton
+                    color="error"
+                    onClick={() => handleDownloadZip([doc.id])}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "error.main",
+                      borderRadius: "8px",
+                      display:
+                        doc.images && doc.images.length === 0
+                          ? "none"
+                          : "inline-flex",
+                    }}
+                  >
+                    <IconDownload size={20} />
+                  </IconButton>
+                </Badge>
+                <IconButton
+                  color="primary"
+                  component="label"
                   sx={{
                     border: "1px solid",
-                    borderColor: "error.main",
+                    borderColor: "primary.main",
                     borderRadius: "8px",
                     display:
                       doc.images && doc.images.length === 0
@@ -195,95 +298,86 @@ export const DocumentsTab = ({
                         : "inline-flex",
                   }}
                 >
-                  <IconDownload size={20} />
+                  <IconPlus size={20} />
+                  <input
+                    hidden
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => {
+                      setSelectedTaskId(doc.id);
+                      handleAddImage(
+                        doc.images[0].record_id ?? doc.id,
+                        e.target.files
+                      );
+                    }}
+                  />
                 </IconButton>
-              </Badge>
+                {/* Image Type Toggle */}
+                <ToggleButtonGroup
+                  value={imageType}
+                  exclusive
+                  onChange={(_, newType) => newType && setImageType(newType)}
+                >
+                  <ToggleButton value="before">Before</ToggleButton>
+                  <ToggleButton value="after">After</ToggleButton>
+                </ToggleButtonGroup>
+              </Stack>
             </Stack>
 
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              {doc.images && doc.images.length > 0 ? (
-                doc.images.map((image: any, idx: number) => {
-                  const imageUrl =
-                    image.image_url || image.image_thumb_url || "";
-                  const hasError = imageErrors.has(imageUrl);
-
-                  return (
-                    <Box
-                      key={idx}
+              {doc.images
+                ?.filter(
+                  (image: any) => image.is_before === (imageType === "before")
+                )
+                .map((image: any) => (
+                  <Box
+                    key={image.id}
+                    sx={{ width: "100px", position: "relative" }}
+                  >
+                    <Card
                       sx={{
-                        width: {
-                          xs: "calc(0% - 8px)",
-                          sm: "calc(25% - 12px)",
-                        },
-                        position: "relative",
+                        height: "140px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#f5f5f5",
                       }}
                     >
-                      <Card
+                      <Box
+                        component="img"
+                        src={image.image_url}
+                        alt={`Image ${image.id}`}
                         sx={{
-                          height: "140px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: "#f5f5f5",
-                          cursor: "pointer",
-                          overflow: "hidden",
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
                         }}
-                        onMouseEnter={(e) => {
-                          if (!hasError && imageUrl) {
-                            setHoveredImage(imageUrl);
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            setHoverPosition({
-                              x: rect.right + 10,
-                              y: rect.top,
-                            });
-                          }
-                        }}
-                        onMouseLeave={() => setHoveredImage(null)}
-                      >
-                        {hasError || !imageUrl ? (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 1,
-                              color: "text.secondary",
-                            }}
-                          >
-                            <IconPhoto size={40} stroke={1.5} />
-                            <Typography variant="caption">
-                              Image not available
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Box
-                            component="img"
-                            src={imageUrl}
-                            alt={image.name || `Image ${idx + 1}`}
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              transition: "transform 0.3s ease-in-out",
-                            }}
-                            onError={() => handleImageError(imageUrl)}
-                          />
-                        )}
-                      </Card>
-                    </Box>
-                  );
-                })
-              ) : (
-                <Typography
-                  variant="body2"
-                  color="textSecondary"
-                  sx={{ width: "100%", textAlign: "center" }}
-                >
-                  No images available
-                </Typography>
-              )}
+                        onError={() => handleImageError(image.image_url)}
+                      />
+                    </Card>
+                    <IconButton
+                      color="error"
+                      size="small"
+                      onClick={() =>
+                        handleDeleteImage(
+                          doc.id, 
+                          image.record_id ?? doc.record_id, 
+                          image.id
+                        )
+                      }
+                      sx={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        backgroundColor: "white",
+                        "&:hover": { backgroundColor: "#fee" },
+                      }}
+                    >
+                      <IconTrash size={16} />
+                    </IconButton>
+                  </Box>
+                ))}
             </Box>
           </Box>
         ))
@@ -292,32 +386,6 @@ export const DocumentsTab = ({
           <Typography variant="body1" color="textSecondary">
             No documents found
           </Typography>
-        </Box>
-      )}
-
-      {/* Hover Preview */}
-      {hoveredImage && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: "30%",
-            left: "35%",
-            width: "25%",
-            maxHeight: "80vh",
-            zIndex: 2000,
-            border: "1px solid #ccc",
-            borderRadius: 2,
-            overflow: "hidden",
-            backgroundColor: "#fff",
-            boxShadow: 3,
-          }}
-        >
-          <Box
-            component="img"
-            src={hoveredImage}
-            alt="Preview"
-            sx={{ width: "100%", height: "100%", objectFit: "contain" }}
-          />
         </Box>
       )}
     </Box>
