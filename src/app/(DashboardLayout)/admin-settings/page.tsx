@@ -5,8 +5,7 @@ import PageContainer from "@/app/components/container/PageContainer";
 import { Grid, Tabs, Tab, Box, Stack } from "@mui/material";
 import CreateWork from "@/app/components/apps/settings/tasks/list";
 import LocationList from "@/app/components/apps/settings/locations/list";
-import LeaveList from "@/app/components/apps/settings/leaves/list";
-import { IconBell, IconMap, IconNotebook, IconDoorExit } from "@tabler/icons-react";
+import { IconBell, IconMap, IconNotebook } from "@tabler/icons-react";
 import BlankCard from "@/app/components/shared/BlankCard";
 import NotificationSettings from "@/app/components/apps/settings/notifications";
 
@@ -90,19 +89,12 @@ const AdminSetting = () => {
                     label="Locations"
                     {...a11yProps(1)}
                   />
-                    <Tab
-                    className="admin-settings"
-                    iconPosition="start"
-                    icon={<IconDoorExit size="20" />}
-                    label="Leaves"
-                    {...a11yProps(2)}
-                  />
                   <Tab
                     className="admin-settings"
                     iconPosition="start"
                     icon={<IconBell size="20" />}
                     label="Notification Setting"
-                    {...a11yProps(3)}
+                    {...a11yProps(2)}
                   />
                 </Tabs>
               </Stack>
@@ -122,10 +114,7 @@ const AdminSetting = () => {
               <TabPanel value={value} index={1}>
                 <LocationList />
               </TabPanel>
-                <TabPanel value={value} index={2}>
-                    <LeaveList />
-                </TabPanel>
-               <TabPanel value={value} index={3}>
+               <TabPanel value={value} index={2}>
                 <NotificationSettings />
               </TabPanel>
             </BlankCard>

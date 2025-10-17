@@ -97,7 +97,6 @@ export type TimeClock = {
 };
 
 type TimeClockResponse = {
-    company_id: number;
     IsSuccess: boolean;
     info: TimeClock[];
     currency: string;
@@ -155,9 +154,8 @@ const TimeClock = () => {
     const [hoveredRow, setHoveredRow] = useState<string | null>(null);
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
-    const [hasDataChanged, setHasDataChanged] = useState<boolean>(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [companyId, setCompanyId] = useState<number | null>(null)
+    const [hasDataChanged, setHasDataChanged] = useState<boolean>(false); // New state to track changes
+    const [errorMessage, setErrorMessage] = useState<string | null>(null); // State for error feedback
 
     const fetchData = async (start: Date, end: Date): Promise<void> => {
         try {
@@ -172,7 +170,6 @@ const TimeClock = () => {
 
             if (response.data.IsSuccess) {
                 setData(response.data.info);
-                setCompanyId(response.data.company_id);
                 if (response.data.currency !== null) {
                     setCurrency(response.data.currency);
                 }
@@ -390,7 +387,7 @@ const TimeClock = () => {
                                         return (
                                             <TableCell
                                                 key={header.id}
-                                                align="left"
+                                                align="center"
                                                 sx={{
                                                     position: 'sticky',
                                                     top: 0,
@@ -458,7 +455,7 @@ const TimeClock = () => {
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} sx={{ padding: "10px" }} align="left">
+                                        <TableCell key={cell.id} sx={{ padding: "10px" }} align="center">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
@@ -555,7 +552,6 @@ const TimeClock = () => {
                     open={detailsOpen}
                     timeClock={selectedTimeClock}
                     user_id={selectedTimeClock?.user_id}
-                    companyId={companyId}
                     currency={currency}
                     allUsers={filteredData}
                     onClose={closeDetails}

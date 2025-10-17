@@ -509,7 +509,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     <Box>
                                         <Typography variant="body2">Auto clock out</Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            Employees will be automatically clocked out once they exceed their daily working limit.
+                                            Employees exceeding daily limit, will be automatically clocked out
                                         </Typography>
                                     </Box>
                                 </Box>

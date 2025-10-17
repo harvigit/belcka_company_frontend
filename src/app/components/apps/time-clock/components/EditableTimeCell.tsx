@@ -44,6 +44,10 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     // State to track icon hover
     const [isIconHovered, setIsIconHovered] = useState(false);
 
+    if (isEdited || isEditing) {
+        console.log(`${field} state:`, { isEditing, isEdited, editedByName, editedAt });
+    }
+
     const tooltipStyles = {
         '& .MuiTooltip-arrow': { color: '#1a1f29' },
     };
@@ -196,17 +200,17 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
 
     return isEdited && editedByName && editedAt ? (
         <Tooltip
-            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`} 
+            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : `Updated by ${editedByName}`} 
             arrow
             placement="top"
             sx={tooltipStyles}
         >
-            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`}>
+            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Updated by ${editedByName}`}>
                 {cellContent}
             </Box>
         </Tooltip>
     ) : (
-        <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`}>
+        <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Updated by ${editedByName}`}>
             {cellContent}
         </Box>
     );

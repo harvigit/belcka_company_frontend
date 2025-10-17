@@ -233,41 +233,41 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                 </Stack>
 
                 <Stack direction="row" spacing={1}>
-                    <Button
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                        sx={{
-                            p: 1,
-                            '&:hover': {
-                                backgroundColor: 'transparent',
-                                borderColor: 'inherit',
-                                boxShadow: 'none',
-                                color: '#1e4db7',
-                            },
-                        }}
-                        onClick={handleAddClick}
-                        endIcon={openAddleave ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}
-                    >
-                        <Typography sx={{ fontWeight: 600 }}>
-                            Add
-                        </Typography>
-                    </Button>
-                    <Menu
-                        anchorEl={addDropDown}
-                        open={openAddleave}
-                        onClose={handleAddClose}
-                        anchorOrigin={{
-                            vertical: 'bottom',
-                            horizontal: 'right',
-                        }}
-                        transformOrigin={{
-                            vertical: 'top',
-                            horizontal: 'right',
-                        }}
-                    >
-                        <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
-                    </Menu>
+                    {/*<Button*/}
+                    {/*    size="small"*/}
+                    {/*    variant="outlined"*/}
+                    {/*    color="primary"*/}
+                    {/*    sx={{*/}
+                    {/*        px: 2,*/}
+                    {/*        '&:hover': {*/}
+                    {/*            backgroundColor: 'transparent',*/}
+                    {/*            borderColor: 'inherit',*/}
+                    {/*            boxShadow: 'none',*/}
+                    {/*            color: '#1e4db7',*/}
+                    {/*        },*/}
+                    {/*    }}*/}
+                    {/*    onClick={handleAddClick}*/}
+                    {/*    endIcon={openAddleave ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}*/}
+                    {/*>*/}
+                    {/*    <Typography sx={{ fontWeight: 600 }}>*/}
+                    {/*        Add*/}
+                    {/*    </Typography>*/}
+                    {/*</Button>*/}
+                    {/*<Menu*/}
+                    {/*    anchorEl={addDropDown}*/}
+                    {/*    open={openAddleave}*/}
+                    {/*    onClose={handleAddClose}*/}
+                    {/*    anchorOrigin={{*/}
+                    {/*        vertical: 'bottom',*/}
+                    {/*        horizontal: 'right',*/}
+                    {/*    }}*/}
+                    {/*    transformOrigin={{*/}
+                    {/*        vertical: 'top',*/}
+                    {/*        horizontal: 'right',*/}
+                    {/*    }}*/}
+                    {/*>*/}
+                    {/*    <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>*/}
+                    {/*</Menu>*/}
 
                     {selectedRows.size > 0 && (
                         <>

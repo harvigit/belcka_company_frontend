@@ -45,7 +45,6 @@ export interface TimeClockDetailsProps {
     open: boolean;
     timeClock: TimeClock | null;
     user_id: any;
-    companyId: any;
     currency: string;
     allUsers: TimeClock[];
     onClose: () => void;
@@ -67,8 +66,6 @@ export type TimeClockDetailResponse = {
     worked_days?: number;
     pending_request_count?: number;
     total_conflicts?: number;
-    total_leave_requests?: number;
-    pending_leave_requests?: LeaveRequestDetail[];
 };
 
 export type TimeClockResourcesResponse = {
@@ -102,27 +99,6 @@ export interface ConflictDetail {
     formatted_date: string;
     date: string;
     items: ConflictItem[];
-}
-
-export interface LeaveRequestDetail {
-    leave_id: number;
-    user_id: number;
-    first_name: string;
-    last_name: string;
-    user_thumb_image: string;
-    leave_type: string;
-    leave_type_id: number;
-    is_allday_leave: boolean;
-    start_date: string;
-    end_date: string;
-    display_date: string;
-    start_time: string | null;
-    end_time: string | null;
-    request_status: string;
-    manager_note: string;
-    total_time_of_days: string;
-    work_hours: number;
-    created_at: string;
 }
 
 export type CheckLog = {

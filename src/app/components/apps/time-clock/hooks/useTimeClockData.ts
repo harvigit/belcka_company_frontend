@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import api from '@/utils/axios';
-import {ConflictDetail, Shift, Project, TimeClockDetailResponse, LeaveRequestDetail} from '@/app/components/apps/time-clock/types/timeClock';
+import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
 import { TimeClock } from '@/app/components/apps/time-clock/time-clock';
 
 export const useTimeClockData = (user_id: any, currency: string) => {
@@ -12,8 +12,6 @@ export const useTimeClockData = (user_id: any, currency: string) => {
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
-    const [leaveRequestCount, setLeaveRequestCount] = useState<number>(0);
-    const [leaveRequestDetails, setLeaveRequestDetails] = useState<LeaveRequestDetail[]>([]);
 
     const fetchTimeClockData = useCallback(async (start: Date, end: Date): Promise<void> => {
         try {
@@ -31,8 +29,6 @@ export const useTimeClockData = (user_id: any, currency: string) => {
                 setTotalConflicts(response.data.total_conflicts || 0);
                 setConflictDetails(response.data.conflicts || []);
                 fetchTimeClockResources(response.data.company_id);
-                setLeaveRequestCount(response.data.total_leave_requests || 0);
-                setLeaveRequestDetails(response.data.pending_leave_requests || []);
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
@@ -59,9 +55,6 @@ export const useTimeClockData = (user_id: any, currency: string) => {
         totalConflicts,
         setTotalConflicts,
         conflictDetails,
-        leaveRequestCount,
-        setLeaveRequestCount,
-        leaveRequestDetails,
         shifts,
         projects,
         fetchTimeClockData,
