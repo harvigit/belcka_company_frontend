@@ -90,7 +90,7 @@ const RateSetting = () => {
 
   const handleSave = async () => {
     if (!selectedUser) return;
-    console.log(selectedUser, "selectedUser");
+
     try {
       const payload = {
         user_id: selectedUser,

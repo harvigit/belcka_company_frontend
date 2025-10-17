@@ -23,7 +23,7 @@ import {
     IconExclamationMark,
     IconExclamationCircle,
     IconPlus,
-    IconTrash,
+    IconTrash, IconSun,
 } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import EditableTimeCell from './EditableTimeCell';
@@ -80,6 +80,9 @@ interface TimeClockTableProps {
     conflictsByDate?: { [key: string]: number };
     openConflictsSideBar?: () => Promise<void>;
     openChecklogsSidebar?: (worklogId: number) => Promise<void>;
+    leaveRequestCount: number;
+    leaveRequestByDate?: { [key: string]: number };
+    openLeaveRequestsSideBar?: () => Promise<void>;
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -122,7 +125,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            onDeleteClick,
                                                            conflictsByDate = {},
                                                            openConflictsSideBar,
-                                                           openChecklogsSidebar
+                                                           openChecklogsSidebar,
+                                                           leaveRequestCount,
+                                                           leaveRequestByDate,
+                                                           openLeaveRequestsSideBar,
                                                        }) => {
     const [conflictAnchorEl, setConflictAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -151,8 +157,17 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         setConflictAnchorEl(null);
         openConflictsSideBar?.();
     };
+    
+    const handleRequests = () => {
+        setConflictAnchorEl(null);
+        openLeaveRequestsSideBar?.();
+    };
 
-    // Validation function to check if required fields are filled
+    const leaveDaysCount = useMemo(() => {
+        if (!leaveRequestByDate) return 0;
+        return Object.keys(leaveRequestByDate).filter(date => leaveRequestByDate[date] > 0).length;
+    }, [leaveRequestByDate]);
+    
     const isNewRecordValid = (newRecord: NewRecord) => {
         return (
             !!newRecord.shift_id &&
@@ -260,6 +275,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             const hasRecords = hasValidWorklogData(rowData) || dateNewRecords.length > 0;
 
                             const hasConflicts = conflictsByDate && conflictsByDate[rowData.date] > 0;
+                            const hasLeaves = leaveRequestByDate && leaveRequestByDate[rowData.date] > 0;
 
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
@@ -393,16 +409,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             width: `${visibleColumnConfigs.conflicts.width}px`,
                                                         }}
                                                     >
-                                                        {hasConflicts && (
+                                                        {(hasLeaves || hasConflicts) && (
                                                             <Tooltip
-                                                                title={`${conflictDaysCount} Issue${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                title={`${conflictDaysCount + leaveDaysCount} Issue${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
                                                                 arrow
                                                                 placement="top"
                                                             >
                                                                 <IconButton
                                                                     size="small"
                                                                     color="error"
-                                                                    aria-label={`${conflictDaysCount} scheduling conflict${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                    aria-label={`${conflictDaysCount + leaveDaysCount} scheduling conflict${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
                                                                     onClick={(e) => setConflictAnchorEl(e.currentTarget)}
                                                                     sx={{
                                                                         p: 0,
@@ -490,29 +506,51 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_pricework || isLogLocked ? (
-                                                            <Box sx={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                opacity: isLogLocked ? 0.6 : 1
-                                                            }}>
-                                                                {log.shift_name || '--'}
+                                                        {log.is_leave ? (
+                                                            <Box
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                }}
+                                                            >
+                                                                <IconSun size={18} color='#32bf90' />
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    opacity: isLogLocked ? 0.6 : 1,
+                                                                    textTransform: 'capitalize',
+                                                                    marginLeft: '4px',
+                                                                    color: '#32bf90'
+                                                                }}>
+                                                                    {log.leave_name || '--'}
+                                                                </Box>
                                                             </Box>
                                                         ) : (
-                                                            <EditableShiftCell
-                                                                worklogId={worklogId}
-                                                                currentShiftId={log.shift_id}
-                                                                currentShiftName={log.shift_name}
-                                                                log={log}
-                                                                shifts={shifts}
-                                                                editingShifts={editingShifts}
-                                                                savingWorklogs={savingWorklogs}
-                                                                startEditingShift={startEditingShift}
-                                                                updateEditingShift={updateEditingShift}
-                                                                saveShiftChanges={saveShiftChanges}
-                                                                cancelEditingShift={cancelEditingShift}
-                                                            />
+                                                            log.is_pricework || isLogLocked ? (
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    opacity: isLogLocked ? 0.6 : 1
+                                                                }}>
+                                                                    {log.shift_name || '--'}
+                                                                </Box>
+                                                            ) : (
+                                                                <EditableShiftCell
+                                                                    worklogId={worklogId}
+                                                                    currentShiftId={log.shift_id}
+                                                                    currentShiftName={log.shift_name}
+                                                                    log={log}
+                                                                    shifts={shifts}
+                                                                    editingShifts={editingShifts}
+                                                                    savingWorklogs={savingWorklogs}
+                                                                    startEditingShift={startEditingShift}
+                                                                    updateEditingShift={updateEditingShift}
+                                                                    saveShiftChanges={saveShiftChanges}
+                                                                    cancelEditingShift={cancelEditingShift}
+                                                                />
+                                                            )
                                                         )}
                                                     </TableCell>
                                                 )}
@@ -525,7 +563,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_pricework || isLogLocked ? (
+                                                        {log.is_leave || log.is_pricework || isLogLocked ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
@@ -568,7 +606,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_pricework || isLogLocked ? (
+                                                        {log.is_leave || log.is_pricework || isLogLocked ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
@@ -615,7 +653,23 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit')
                                                         }}
                                                     >
-                                                        {log.is_pricework ? '--' : formatHour(log.total_hours)}
+                                                        {log.is_leave ? (
+                                                            <Box
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    opacity: isLogLocked ? 0.6 : 1,
+                                                                    textTransform: 'capitalize',
+                                                                    marginLeft: '4px',
+                                                                    color: '#32bf90'
+                                                                }}
+                                                            >
+                                                                {formatHour(log?.total_hours ?? 0)} ({log?.leave_type ?? ''})
+                                                            </Box>
+                                                        ) : (
+                                                            log.is_pricework ? '--' : formatHour(log?.total_hours ?? 0)
+                                                        )}
                                                     </TableCell>
                                                 )}
 
@@ -661,7 +715,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            color: hasConflicts ? '#fc4b6c' : ((rowData.isMoreThanWork || rowData.isLessThanWork) ? '#1976d2' : 'inherit')
+                                                            color: (hasLeaves || hasConflicts) ? '#fc4b6c' : ((rowData.isMoreThanWork || rowData.isLessThanWork) ? '#1976d2' : 'inherit')
                                                         }}
                                                     >
                                                         {rowData.dailyTotal}
@@ -880,16 +934,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             textAlign: 'center',
                                                         }}
                                                     >
-                                                        {hasConflicts && (
+                                                        {(hasLeaves || hasConflicts) && (
                                                             <Tooltip
-                                                                title={`${conflictDaysCount} Issue${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                title={`${conflictDaysCount + leaveDaysCount} Issue${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
                                                                 arrow
                                                                 placement="top"
                                                             >
                                                                 <IconButton
                                                                     size="small"
                                                                     color="error"
-                                                                    aria-label={`${conflictDaysCount} scheduling conflict${conflictDaysCount !== 1 ? 's' : ''}`}
+                                                                    aria-label={`${conflictDaysCount + leaveDaysCount} scheduling conflict${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
                                                                     onClick={(e) => setConflictAnchorEl(e.currentTarget)}
                                                                     sx={{
                                                                         p: 0,
@@ -1108,7 +1162,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                         borderRadius: '8px',
                         minWidth: '280px',
-                    }
+                    },
                 }}
             >
                 <Box sx={{ p: 2 }}>
@@ -1117,37 +1171,52 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         fontWeight={600}
                         sx={{ mb: 1.5 }}
                     >
-                        {conflictDaysCount} unresolved issue{conflictDaysCount !== 1 ? 's' : ''}
+                        {conflictDaysCount + leaveDaysCount} unresolved issue{conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}
                     </Typography>
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                    }}>
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5
-                        }}>
-                            <IconExclamationCircle size={18} color="#d32f2f"/>
-                            <Typography variant="body2">
-                                {conflictDaysCount} Conflict{conflictDaysCount !== 1 ? 's' : ''}
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                size="small"
-                                onClick={handleConflicts}
-                                sx={{
-                                    textTransform: 'none',
-                                    color: 'primary.main',
-                                    fontWeight: 500
-                                }}
-                            >
-                                Review
-                            </Button>
-                        </Box>
-                    </Box>
+                    <Stack direction="column" spacing={1}>
+                        {conflictDaysCount > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <IconExclamationCircle size={18} color="#d32f2f" />
+                                    <Typography variant="body2">
+                                        {conflictDaysCount} Conflict{conflictDaysCount !== 1 ? 's' : ''}
+                                    </Typography>
+                                </Box>
+                                <Button
+                                    size="small"
+                                    onClick={handleConflicts}
+                                    sx={{
+                                        textTransform: 'none',
+                                        color: 'primary.main',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Review
+                                </Button>
+                            </Box>
+                        )}
+                        {leaveDaysCount > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <IconSun size={18} color="#32bf90" /> {/* Use IconSun and green color for leave requests */}
+                                    <Typography variant="body2">
+                                        {leaveDaysCount} Leave request{leaveDaysCount !== 1 ? 's' : ''}
+                                    </Typography>
+                                </Box>
+                                <Button
+                                    size="small"
+                                    onClick={handleRequests}
+                                    sx={{
+                                        textTransform: 'none',
+                                        color: 'primary.main',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Review
+                                </Button>
+                            </Box>
+                        )}
+                    </Stack>
                 </Box>
             </Popover>
         </Box>
