@@ -86,26 +86,11 @@ const TablePagination = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: string | null };
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl);
-
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      let url = "";
-      if (projectId) {
-        url = `user/get-user-lists?project_id=${projectId}`;
-      } else {
-        url = "user/get-user-lists";
-      }
-      const res = await api.get(url);
+      const res = await api.get("user/get-user-lists");
       if (res.data) {
         setData(res.data.info);
       }
@@ -355,20 +340,6 @@ const TablePagination = () => {
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
-          <Stack>
-            <Box display="flex">
-              <IconButton
-                sx={{ margin: "0px" }}
-                id="basic-button"
-                aria-controls={openMenu ? "basic-menu" : undefined}
-                aria-haspopup="true"
-                aria-expanded={openMenu ? "true" : undefined}
-                onClick={handleClick}
-              >
-                <IconDotsVertical width={18} />
-              </IconButton>
-            </Box>
-          </Stack>
         </Grid>
         <Dialog
           open={open}

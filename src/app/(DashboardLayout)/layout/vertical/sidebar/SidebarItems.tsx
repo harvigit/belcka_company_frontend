@@ -1,32 +1,76 @@
-import Menuitems from './MenuItems';
+import Menuitems from "./MenuItems";
 import { usePathname } from "next/navigation";
-import { Box, List, useMediaQuery } from '@mui/material';
-import NavItem from './NavItem';
-import NavCollapse from './NavCollapse';
-import NavGroup from './NavGroup/NavGroup';
-import { useContext } from 'react';
-import { CustomizerContext } from '@/app/context/customizerContext';
-import React from 'react';
+import { Box, List, useMediaQuery } from "@mui/material";
+import NavItem from "./NavItem";
+import NavCollapse from "./NavCollapse";
+import NavGroup from "./NavGroup/NavGroup";
+import { useContext, useEffect, useState } from "react";
+import { CustomizerContext } from "@/app/context/customizerContext";
+import React from "react";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import api from "@/utils/axios";
 
+interface Permission {
+  id: number;
+  name: string;
+  is_web: boolean;
+}
 
 const SidebarItems = () => {
   const pathname = usePathname() ?? "/";
   const pathDirect = pathname;
-  const pathWithoutLastPart = pathname.slice(0, pathname.lastIndexOf('/'));
-  const { isSidebarHover, isCollapse, isMobileSidebar, setIsMobileSidebar } = useContext(CustomizerContext);
+  const pathWithoutLastPart = pathname.slice(0, pathname.lastIndexOf("/"));
 
-  const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'));
-  const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : '';
+  // States and Contexts
+  const { isSidebarHover, isCollapse, isMobileSidebar, setIsMobileSidebar } =
+    useContext(CustomizerContext);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: string | null } & {
+    company_name?: string | null;
+  } & {
+    company_image?: number | null;
+  } & { id: number };
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      try {
+        const payload = {
+          user_id: Number(user.id),
+          company_id: Number(user.company_id),
+        };
+
+        const response = await api.post("/dashboard/user/permissions", payload);
+        setPermissions(response.data.permissions);
+      } catch (error) {
+        console.error("Error fetching permissions:", error);
+      }
+    };
+
+    fetchPermissions();
+  }, []);
+
+  const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
+  const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
+
+  const filteredMenuItems = Menuitems.filter((item) => {
+    const permission = permissions.find(
+      (perm) => perm.name === item.title && perm.is_web === true
+    );
+    return permission !== undefined;
+  });
 
   return (
     <Box sx={{ px: 3 }}>
       <List sx={{ pt: 0 }} className="sidebarNav">
-        {Menuitems.map((item) => {
+        {filteredMenuItems.map((item) => {
           // {/********SubHeader**********/}
           if (item.subheader) {
-            return <NavGroup item={item} hideMenu={hideMenu} key={item.subheader} />;
-            // {/********If Sub Menu**********/}
-            /* eslint no-else-return: "off" */
+            return (
+              <NavGroup item={item} hideMenu={hideMenu} key={item.subheader} />
+            );
           } else if (item.children) {
             return (
               <NavCollapse
@@ -39,11 +83,15 @@ const SidebarItems = () => {
                 onClick={() => setIsMobileSidebar(!isMobileSidebar)}
               />
             );
-
-            // {/********If Sub No Menu**********/}
           } else {
             return (
-              <NavItem item={item} key={item.id} pathDirect={pathDirect} hideMenu={hideMenu} onClick={() => setIsMobileSidebar(!isMobileSidebar)} />
+              <NavItem
+                item={item}
+                key={item.id}
+                pathDirect={pathDirect}
+                hideMenu={hideMenu}
+                onClick={() => setIsMobileSidebar(!isMobileSidebar)}
+              />
             );
           }
         })}
@@ -51,4 +99,5 @@ const SidebarItems = () => {
     </Box>
   );
 };
+
 export default SidebarItems;
