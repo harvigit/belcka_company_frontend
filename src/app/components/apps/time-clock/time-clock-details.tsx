@@ -18,7 +18,8 @@ import ActionBar from './components/ActionBar';
 import { DailyBreakdown, TimeClockDetailsProps } from '@/app/components/apps/time-clock/types/timeClock';
 import { IconExclamationMark } from '@tabler/icons-react';
 import Checklogs from './time-clock-details/checklogs/index';
-import AddLeave from './time-clock-details/add-leave';
+import AddLeave from './time-clock-details/leaves/add-leave';
+import LeaveRequest from './time-clock-details/leaves/leave-request';
 
 const STORAGE_KEY = 'time-clock-details-page';
 
@@ -76,6 +77,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                                                                        open,
                                                                        timeClock,
                                                                        user_id,
+                                                                       companyId,
                                                                        currency,
                                                                        allUsers = [],
                                                                        onClose,
@@ -122,12 +124,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [checklogsSidebar, setChecklogsSidebar] = useState<boolean>(false);
     const [selectedWorkId, setSelectedWorkId] = useState<number>(0);
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
+    const [leaveRequestByDate, setLeaveRequestByDate] = useState<{[key: string]: number}>({});
+    const [leaveRequestSidebar, setLeaveRequestSidebar] = useState<boolean>(false);
 
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
     }, [startDate, endDate, columnVisibility]);
-    
+
     // Custom hooks
     const {
         data,
@@ -137,17 +141,21 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         totalConflicts,
         setTotalConflicts,
         conflictDetails,
+        leaveRequestCount,
+        setLeaveRequestCount,
+        leaveRequestDetails,
         shifts,
         projects,
         fetchTimeClockData,
     } = useTimeClockData(user_id, currency);
 
     useEffect(() => {
+        // Process conflicts
         if (conflictDetails && conflictDetails.length > 0) {
-            const conflicts: {[key: string]: number} = {};
+            const conflicts: { [key: string]: number } = {};
 
             conflictDetails.forEach((conflictGroup: any) => {
-                const formattedDate = conflictGroup.formatted_date; 
+                const formattedDate = conflictGroup.formatted_date;
                 const items = conflictGroup.items || [];
 
                 if (items.length > 0) {
@@ -156,7 +164,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const dayName = daysOfWeek[dateObj.getDay()];
-                    const formattedKey = `${dayName} ${parseInt(day)}/${parseInt(month)}`; // "Wed 1/10"
+                    const formattedKey = `${dayName} ${parseInt(day)}/${parseInt(month)}`; // e.g., "Wed 15/10"
 
                     conflicts[formattedKey] = items.length;
                 }
@@ -166,8 +174,31 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         } else {
             setConflictsByDate({});
         }
-    }, [conflictDetails]);
-    
+
+        if (leaveRequestDetails && leaveRequestDetails.length > 0) {
+            const leaveRequests: { [key: string]: number } = {};
+
+            leaveRequestDetails.forEach((leave: any) => {
+                const dateStr = leave.start_date;
+                if (dateStr) {
+                    const [day, month, year] = dateStr.split('/');
+                    const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    if (!isNaN(dateObj.getTime())) {
+                        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                        const dayName = daysOfWeek[dateObj.getDay()];
+                        const formattedKey = `${dayName} ${parseInt(day)}/${parseInt(month)}`;
+
+                        leaveRequests[formattedKey] = (leaveRequests[formattedKey] || 0) + 1;
+                    }
+                }
+            });
+
+            setLeaveRequestByDate(leaveRequests);
+        } else {
+            setLeaveRequestByDate({});
+        }
+    }, [conflictDetails, leaveRequestDetails]);
+
     const {
         editingWorklogs,
         savingWorklogs,
@@ -203,6 +234,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const handlePreviousUser = () => {
         setTotalConflicts(0);
+        setLeaveRequestCount(0);
         setPendingRequestCount(0);
         clearNewRecords();
         if (currentUserIndex > 0 && onUserChange) {
@@ -212,6 +244,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const handleNextUser = () => {
         setTotalConflicts(0);
+        setLeaveRequestCount(0);
         setPendingRequestCount(0);
         clearNewRecords();
         if (currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1 && onUserChange) {
@@ -424,7 +457,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const handleConflicts = async () => {
         setConflictSidebar(true);
     };
-
+    
     const closeConflictSidebar = async () => {
         setConflictSidebar(false);
         try {
@@ -439,12 +472,30 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
+    const handleLeaveRequests = async () => {
+        setLeaveRequestSidebar(true);
+    };
 
+    
+    const closeLeaveRequestSidebar = async () => {
+        setLeaveRequestSidebar(false);
+        try {
+            if (conflictDetails?.length > 0) {
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                onDataChange?.();
+            }
+        } catch (error) {
+            console.error('Error fetching time clock data after closing conflict sidebar:', error);
+        }
+    };
+    
     const handleChecklogs = async (worklogId: number) => {
         setChecklogsSidebar(true);
         setSelectedWorkId(worklogId)
     };
-    
+
     const closeChecklogsSidebar = async () => {
         setChecklogsSidebar(false);
         try {
@@ -472,7 +523,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             console.error('Error fetching time clock data after closing add leave sidebar:', error);
         }
     };
-    
+
     const handlePendingRequest = async () => {
         setRequestListOpen(true);
     };
@@ -710,7 +761,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     filteredWorklogs = filteredWorklogs.filter(
                         (log: any) => log.status === '7' || log.status === 7
                     );
-                } 
+                }
 
                 const hasWorklogs = filteredWorklogs.length > 0;
 
@@ -1175,7 +1226,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 size: 100,
             },
         ],
-        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect]
+        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect, leaveRequestByDate]
     );
 
     const table = useReactTable({
@@ -1288,8 +1339,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 saveProjectChanges={saveProjectChanges}
                 onDeleteClick={handleDeleteWorklog}
                 conflictsByDate={conflictsByDate}
+                leaveRequestByDate={leaveRequestByDate}
                 openConflictsSideBar={handleConflicts}
                 openChecklogsSidebar={handleChecklogs}
+                leaveRequestCount={leaveRequestCount}
+                openLeaveRequestsSideBar={handleLeaveRequests}
             />
 
             <ActionBar
@@ -1324,6 +1378,28 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     fetchTimeClockData={() => fetchTimeClockData(startDate || defaultStart, endDate || defaultEnd)}
                     startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
+                />
+            </Drawer>
+            
+            <Drawer
+                anchor="right"
+                open={leaveRequestSidebar}
+                onClose={closeLeaveRequestSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <LeaveRequest
+                    open
+                    leaveRequestDetails={leaveRequestDetails}
+                    onClose={closeLeaveRequestSidebar}
                 />
             </Drawer>
 
@@ -1365,6 +1441,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             >
                 <AddLeave
                     onClose={closeAddLeaveSidebar}
+                    userId={user_id}
+                    companyId={companyId}
                 />
             </Drawer>
 
