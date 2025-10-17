@@ -352,7 +352,7 @@ input#project_id::placeholder {
 
 .header-icons{
     cursor: pointer;
-    color: #0000008a;
+    color: #11142cee;
 }
 
 .header-icons:hover {
@@ -371,4 +371,9 @@ input#project_id::placeholder {
 }
 .permission_dialog .mui-uh5o6n-MuiPaper-root-MuiDialog-paper , .permission_dialog .mui-z5w32z{
     width: 20%;
+}
+
+.rate_history_wrapper .MuiPickersInputBase-sectionsContainer{
+    padding: 9.5px 0 !important;
+    width: 100px !important;
 }

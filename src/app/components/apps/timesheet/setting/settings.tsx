@@ -20,7 +20,7 @@ import {
     IconPaperclip,
     IconRefresh,
     IconTiltShift,
-    IconCoinRupee,
+    IconCoinPound,
 } from '@tabler/icons-react';
 import GeneralSetting from './menus/general';
 import ShiftLists from './menus/shift/index';
@@ -30,7 +30,7 @@ import RateSetting from "./menus/rate-setting";
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
     { icon: <IconTiltShift size={18} />, label: "Shift" },
-    { icon: <IconCoinRupee size={18} />, label: "Rate settings" },
+    { icon: <IconCoinPound size={18} />, label: "Rate settings" },
     // { icon: <IconTools size={18} />, label: "Clock in & out" },
     // { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     // { icon: <IconCoffee size={18} />, label: "Breaks" },

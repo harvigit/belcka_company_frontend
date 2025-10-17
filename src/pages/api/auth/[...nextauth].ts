@@ -58,6 +58,9 @@ export const authOptions: NextAuthOptions = {
             company_id: companyData.info.id,
             company_name: companyData.info.name,
             company_image: companyData.info.image,
+            trade_id: companyData.info.trade_id,
+            trade_name: companyData.info.trade_name,
+            currency_id: companyData.info.currency_id
           };
           
         } catch (err) {
@@ -101,6 +104,9 @@ export const authOptions: NextAuthOptions = {
             company_id: data.info.id,
             company_name: data.info.name,
             company_image: data.info.image,
+            trade_id: data.info.trade_id,
+            trade_name: data.info.trade_name,
+            currency_id: data.info.currency_id
           };
         } else {
           console.error("Failed to fetch updated company data:", data);

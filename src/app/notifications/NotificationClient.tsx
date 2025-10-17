@@ -37,7 +37,7 @@ useEffect(() => {
         unsub = onForegroundMessage((payload: any) => {
           const title = payload?.notification?.title || "Notification";
           const body = payload?.notification?.body || "";
-          const icon = "/images/logos/belcka_logo.png";
+          const icon = "/favicon.svg";
 
           if (Notification.permission === "granted") {
             new Notification(title, {

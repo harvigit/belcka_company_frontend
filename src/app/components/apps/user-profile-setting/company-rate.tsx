@@ -8,38 +8,61 @@ import {
   TextField,
   Button,
   Alert,
+  DialogContent,
+  IconButton,
+  Divider,
+  FormControlLabel,
+  Drawer,
+  Autocomplete,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useParams } from "next/navigation";
 import { Grid } from "@mui/system";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import { IconCheck, IconHistory, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
+import dayjs from "dayjs";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 interface ProjectListingProps {
   active: boolean;
+  name: string | null;
 }
 export interface TradeList {
   id: number;
   name: string;
 }
 
-const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
+const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const params = useParams();
   const userId = Number(params?.id);
-  const session = useSession();
-  const user = session.data?.user as User & { user_role_id?: number | null } & {
-    id: number;
-  } & { company_id: number };
-
   const [comapny, setCompany] = useState<any>();
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [gross, setGross] = useState<any>();
   const [cis, setCis] = useState<any>();
   const [payRate, setPayRate] = useState<string | null>(null);
   const [ratePermisison, setRatePermission] = useState<boolean | null>(null);
+  const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [showAllDates, setShowAllDates] = useState(true);
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  const { data: session, update } = useSession();
+  const user = session?.user as User & { user_role_id?: number | null } & {
+    id: number;
+  } & { company_id: number };
 
+  const handleOpen = () => {
+    setOpen(true);
+    fetchRateHistory();
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
   const [formData, setFormData] = useState<{
     trade_id: number | null;
     rate: string;
@@ -116,6 +139,42 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
     }
   };
 
+  const fetchRateHistory = async (start?: string, end?: string) => {
+    try {
+      let url = `requests/get-rate-history?company_id=${user.company_id}&user_id=${userId}`;
+      if (start && end) {
+        url += `&start_date=${start}&end_date=${end}`;
+      }
+
+      const res = await api.get(url);
+      if (res.data?.IsSuccess) setHistory(res.data.info || []);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchRateHistory();
+  }, []);
+
+  useEffect(() => {
+    if (!showAllDates && startDate && endDate) {
+      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
+      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
+      fetchRateHistory(formattedStart, formattedEnd);
+    }
+  }, [startDate, endDate]);
+
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    setShowAllDates(checked);
+    if (checked) {
+      setStartDate(null);
+      setEndDate(null);
+      fetchRateHistory();
+    }
+  };
+
   useEffect(() => {
     if (!userId || !active) return;
     getCompanyData();
@@ -129,7 +188,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
   }, [comapny]);
 
   const handleUpdate = async () => {
-    if (!formData.trade_id) {
+    if (comapny.user_role_id !== 1 && !formData.trade_id) {
       toast.error("Please select trade");
       return;
     }
@@ -149,13 +208,23 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
     try {
       const payload = {
         company_id: comapny.id,
-        trade_id: formData.trade_id,
+        trade_id: Number(formData.trade_id),
         new_rate_perDay: Number(formData.rate),
         user_id: userId,
       };
       const res = await api.post("user-billing/change-company-rate", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
+        if (Number(userId) === Number(user?.id)) {
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              trade_id: res.data.info.trade_id,
+              trade_name: res.data.info.trade_name,
+            },
+          });
+        }
         getCompanyData();
       } else {
         toast.error(res.data.message || "Update failed");
@@ -226,15 +295,32 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
       className="company_rate_wrapper"
       height="450px !important"
     >
-      {user.user_role_id !== 1 &&
+      <Box display={"flex"} justifyContent={"space-between"} mb={2}>
+        {user.user_role_id !== 1 &&
         comapny.is_pending_request &&
-        ratePermisison && (
-          <Box mb={4} display={"flex"}>
-            <Alert severity="error" variant="filled">
-              Your rate request has been pending.
-            </Alert>
-          </Box>
+        ratePermisison ? (
+          <Alert severity="error" variant="filled">
+            Your rate request has been pending.
+          </Alert>
+        ) : (
+          <Box></Box>
         )}
+        <Button
+          color="inherit"
+          startIcon={<IconHistory />}
+          variant="contained"
+          size="large"
+          sx={{
+            backgroundColor: "transparent",
+            borderRadius: 3,
+            color: "#047bff",
+            float: "inline-end",
+          }}
+          onClick={handleOpen}
+        >
+          Rate History
+        </Button>
+      </Box>
       {payRate && ratePermisison ? (
         <>
           {user.user_role_id == 1 && comapny.is_pending_request === true && (
@@ -297,17 +383,34 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
 
           <Grid container spacing={2} mb={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
+              <Autocomplete
                 className="custom_color"
-                disabled
+                options={trade}
+                disabled={user.user_role_id !== 1}
+                getOptionLabel={(opt: any) => opt?.name || ""}
                 value={
                   Object.keys(comapny?.diff_data || {}).includes("trade_id")
-                    ? trade.find((t) => t.id === comapny.diff_data.trade_id.old)
-                        ?.name ?? ""
-                    : trade.find((t) => t.id === formData.trade_id)?.name ?? ""
+                    ? trade.find(
+                        (t) => t.id === comapny.diff_data.trade_id.old
+                      ) || null
+                    : trade.find((t) => t.id === formData.trade_id) || null
                 }
-                label="Trade"
+                onChange={(_, newValue) => {
+                  setFormData({
+                    ...formData,
+                    trade_id: newValue ? newValue.id : null,
+                  });
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Trade"
+                    placeholder="Search trade type..."
+                    fullWidth
+                  />
+                )}
+                clearOnEscape
+                fullWidth
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -381,6 +484,232 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active }) => {
           </Typography>
         </Box>
       )}
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={handleClose}
+        sx={{
+          width: 600,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 600,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <Box textAlign={"center"} color="textSecondary" mb={2}>
+          <Typography color="textSecondary">
+            {name ? `${name}'s pay rates` : ""}
+          </Typography>
+
+          <IconButton
+            aria-label="close"
+            onClick={handleClose}
+            size="large"
+            sx={{
+              position: "absolute",
+              right: 12,
+              top: 6,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 45,
+              height: 45,
+            }}
+          >
+            <IconX size={40} style={{ width: 40, height: 40 }} />
+          </IconButton>
+        </Box>
+        <DialogContent dividers>
+          {loading ? (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              p={4}
+            >
+              <CircularProgress />
+            </Box>
+          ) : history.length > 0 ? (
+            <>
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent={"space-between"}
+                className="rate_history_wrapper"
+              >
+                <Box>
+                  <FormControlLabel
+                    control={
+                      <CustomCheckbox
+                        checked={showAllDates}
+                        onChange={handleCheckboxChange}
+                      />
+                    }
+                    label="Show all dates"
+                  />
+                </Box>
+                {!showAllDates && (
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <Box display="flex" gap={2} alignItems={"center"}>
+                      <DatePicker
+                        label="Start date"
+                        value={startDate}
+                        onChange={(newValue) => setStartDate(newValue)}
+                        format="DD/MM/YYYY"
+                      />
+                      <DatePicker
+                        label="End date"
+                        value={endDate}
+                        onChange={(newValue) => setEndDate(newValue)}
+                        format="DD/MM/YYYY"
+                      />
+                    </Box>
+                  </LocalizationProvider>
+                )}
+              </Box>
+              <Box
+                sx={{
+                  position: "relative",
+                  mt: 2,
+                  pl: 4,
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    left: "2px",
+                    top: 0,
+                    bottom: 0,
+                    width: "2px",
+                    backgroundColor: "#1976d2",
+                  },
+                }}
+              >
+                {history?.map((item: any, index: number) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      position: "relative",
+                      pl: 1,
+                      mb: 3,
+                    }}
+                  >
+                    {/* Blue dot */}
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        left: "-35px",
+                        top: "16px",
+                        width: "12px",
+                        height: "12px",
+                        backgroundColor: "#1976d2",
+                        borderRadius: "50%",
+                      }}
+                    />
+
+                    {/* Card box */}
+                    <Box
+                      sx={{
+                        border: 1,
+                        p: 2,
+                        borderColor: "#c5c3c3ff",
+                        borderRadius: 2,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        backgroundColor: "#fff",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="textSecondary"
+                        mb={1}
+                        sx={{
+                          backgroundColor: "#888c8f1f",
+                          p: 1,
+                          borderRadius: 4,
+                          width: "fit-content",
+                          px: 2,
+                        }}
+                      >
+                        Effective date: {item.effective_date}
+                      </Typography>
+
+                      <Box
+                        display={"flex"}
+                        justifyContent={"space-between"}
+                        alignItems={"center"}
+                      >
+                        {/* Old rate */}
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          mt={1}
+                        >
+                          <Typography variant="h6" fontWeight="bold">
+                            Old rate :
+                          </Typography>
+                          <Typography variant="body1" fontWeight="bold">
+                            {item.currency}
+                            {item.old_net_rate_perday
+                              ? item.old_net_rate_perday
+                              : 0}
+                            <Typography component="span" color="textSecondary">
+                              /day
+                            </Typography>
+                          </Typography>
+                        </Box>
+                        {/* New rate */}
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          alignContent={"center"}
+                        >
+                          <Typography variant="h6" fontWeight="bold">
+                            New rate :
+                          </Typography>
+                          <Typography variant="body1" fontWeight="bold">
+                            {item.currency}
+                            {item.new_net_rate_perday
+                              ? item.new_net_rate_perday
+                              : 0}
+                            <Typography component="span" color="textSecondary">
+                              /day
+                            </Typography>
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Divider sx={{ mt: 2, mb: 1 }} />
+
+                      {item.user_name && (
+                        <Typography variant="caption" color="textSecondary">
+                          {item.status_text == "approved"
+                            ? "Approved"
+                            : item.status_text == "rejected"
+                            ? "Rejected"
+                            : `Modified on ${item.date} at ${item.time} `}{" "}
+                          {item.action_by
+                            ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
+                            : ""}{" "}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </>
+          ) : (
+            <Box sx={{ height: "150px !important" }}>
+              <Typography align="center" color="textSecondary">
+                No rate history found.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+      </Drawer>
     </Box>
   );
 };

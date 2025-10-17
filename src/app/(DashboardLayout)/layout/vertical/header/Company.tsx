@@ -87,7 +87,7 @@ const Company = () => {
       if (Notification.permission === "granted") {
         new Notification(payload?.notification?.title || "Notification", {
           body: payload?.notification?.body || "",
-          icon: "/images/logos/belcka_logo.png",
+          icon: "/favicon.svg",
         });
       }
 
@@ -330,6 +330,7 @@ const Company = () => {
                       <MenuItem value="Project">Project</MenuItem>
                       <MenuItem value="Timesheet">Timesheet</MenuItem>
                       <MenuItem value="Comapny">Comapny</MenuItem>
+                      <MenuItem value="Company">Comapny Rate</MenuItem>
                       <MenuItem value="Shift">Worklog</MenuItem>
                     </TextField>
                   </Box>

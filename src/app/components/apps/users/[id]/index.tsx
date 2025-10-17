@@ -480,7 +480,7 @@ const TablePagination = () => {
                 />
               </Box>
               <Box hidden={value !== 2}>
-                <ComapnyRate active={value === 2} />
+                <ComapnyRate active={value === 2} name={formData.first_name} />
               </Box>
               <Box hidden={value !== 3}>
                 <Notifications
