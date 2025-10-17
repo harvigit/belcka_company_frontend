@@ -1,25 +1,22 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Button,
   Card,
   Checkbox,
   IconButton,
-  InputAdornment,
   Stack,
-  TextField,
   Typography,
   Badge,
-  ToggleButton,
-  ToggleButtonGroup,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
 } from "@mui/material";
-import {
-  IconDownload,
-  IconPlus,
-  IconTrash,
-  IconSearch,
-  IconFilter,
-} from "@tabler/icons-react";
+import { IconDownload, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 
@@ -43,8 +40,14 @@ export const DocumentsTab = ({
     delete: Record<string, string[]>;
   }>({ add: {}, delete: {} });
 
-  const [imageType, setImageType] = useState<"before" | "after">("before"); // For before/after image selection
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [openDialog, setOpenDialog] = useState<boolean>(false);
+  const [selectedImageType, setSelectedImageType] = useState<
+    "before" | "after"
+  >("before");
+  const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
 
   useEffect(() => {
     if (addressId) fetchDocumentTabData();
@@ -83,22 +86,61 @@ export const DocumentsTab = ({
   };
 
   const handleAddImage = (
+    companyTaskId: number | string,
     recordId: string | number,
-    files: FileList | null
+    files: FileList | null,
+    type: "before" | "after"
   ) => {
     if (!files || files.length === 0) return;
     const newFiles = Array.from(files);
     const key = String(recordId);
+
+    setSelectedTaskId(Number(companyTaskId));
     setAttachmentsPayload((prev) => ({
       ...prev,
       add: {
         ...prev.add,
         [key]: {
           ...prev.add[key],
-          [imageType]: [...(prev.add[key]?.[imageType] || []), ...newFiles],
+          [type]: [...(prev.add[key]?.[type] || []), ...newFiles],
         },
       },
     }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleOpenDialog = (doc: any) => {
+    setSelectedDoc(doc);
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedDoc(null);
+  };
+
+  const handleSaveImage = async () => {
+    console.log(selectedDoc, "selectedFile");
+    if (!selectedDoc) return;
+    const key = String(selectedDoc.record_id);
+    setSelectedTaskId(selectedDoc.id);
+
+    setAttachmentsPayload((prev) => ({
+      ...prev,
+      add: {
+        ...prev.add,
+        [key]: {
+          ...prev.add[key],
+          [selectedImageType]: [
+            ...(prev.add[key]?.[selectedImageType] || []),
+            selectedDoc,
+          ],
+        },
+      },
+    }));
+    await handleSaveChanges();
+    setHasUnsavedChanges(true);
+    setOpenDialog(false);
   };
 
   const handleDeleteImage = (
@@ -127,13 +169,16 @@ export const DocumentsTab = ({
         ],
       },
     }));
+
+    setSelectedTaskId(Number(companyTaskId));
+    setHasUnsavedChanges(true);
   };
 
   const handleSaveChanges = async () => {
     const formData = new FormData();
     formData.append("address_id", String(addressId));
     formData.append("company_id", String(companyId));
-    if (selectedTaskId !== undefined) {
+    if (selectedTaskId) {
       formData.append("company_task_id", String(selectedTaskId));
     }
 
@@ -146,7 +191,6 @@ export const DocumentsTab = ({
       });
     });
 
-    // Remove attachments
     Object.entries(attachmentsPayload.delete).forEach(([recordId, ids]) => {
       ids.forEach((id) => {
         formData.append("remove_attachment_ids[]", id);
@@ -155,16 +199,20 @@ export const DocumentsTab = ({
     });
 
     try {
+      setIsSaving(true);
       const res = await api.post("address/add-attachments", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (res.data?.IsSuccess || res.data?.isSuccess) {
         toast.success(res.data.message);
-        fetchDocumentTabData();
+        await fetchDocumentTabData();
         setAttachmentsPayload({ add: {}, delete: {} });
+        setHasUnsavedChanges(false);
       }
     } catch (err) {
       console.error("Attachment update failed", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -176,13 +224,6 @@ export const DocumentsTab = ({
     );
   };
 
-  const hasTasksWithImages = useMemo(() => {
-    return selectedTasks.some((taskId) => {
-      const task = tabData.find((doc) => doc.id === taskId);
-      return task?.images?.length > 0;
-    });
-  }, [selectedTasks, tabData]);
-
   const filteredData = useMemo(() => {
     const search = searchUser.trim().toLowerCase();
     if (!search) return tabData;
@@ -193,58 +234,8 @@ export const DocumentsTab = ({
     );
   }, [searchUser, tabData]);
 
-  const handleImageError = (imageUrl: string) => {
-    setImageErrors((prev) => new Set(prev).add(imageUrl));
-  };
-
   return (
     <Box>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={3}
-      >
-        <TextField
-          placeholder="Search..."
-          size="small"
-          value={searchUser}
-          onChange={(e) => setSearchUser(e.target.value)}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconSearch size={16} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ width: "70%" }}
-        />
-        <Stack direction="row" spacing={1}>
-          <IconButton
-            color="primary"
-            onClick={() => handleDownloadZip(selectedTasks)}
-            disabled={!hasTasksWithImages}
-            sx={{
-              border: "1px solid",
-              borderColor: hasTasksWithImages ? "primary.main" : "grey.400",
-              borderRadius: "8px",
-              padding: "8px",
-            }}
-          >
-            <IconDownload size={20} />
-          </IconButton>
-          <Button variant="contained">
-            <IconFilter width={18} />
-          </Button>
-        </Stack>
-      </Stack>
-
-      <Box display={"flex"} justifyContent={"end"} mb={2}>
-        <Button variant="contained" color="primary" onClick={handleSaveChanges}>
-          Save Changes
-        </Button>
-      </Box>
-
       {filteredData.length > 0 ? (
         filteredData.map((doc) => (
           <Box key={doc.record_id} mb={3}>
@@ -287,7 +278,7 @@ export const DocumentsTab = ({
                 </Badge>
                 <IconButton
                   color="primary"
-                  component="label"
+                  onClick={() => handleOpenDialog(doc)}
                   sx={{
                     border: "1px solid",
                     borderColor: "primary.main",
@@ -299,85 +290,58 @@ export const DocumentsTab = ({
                   }}
                 >
                   <IconPlus size={20} />
-                  <input
-                    hidden
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => {
-                      setSelectedTaskId(doc.id);
-                      handleAddImage(
-                        doc.images[0].record_id ?? doc.id,
-                        e.target.files
-                      );
-                    }}
-                  />
                 </IconButton>
-                {/* Image Type Toggle */}
-                <ToggleButtonGroup
-                  value={imageType}
-                  exclusive
-                  onChange={(_, newType) => newType && setImageType(newType)}
-                >
-                  <ToggleButton value="before">Before</ToggleButton>
-                  <ToggleButton value="after">After</ToggleButton>
-                </ToggleButtonGroup>
               </Stack>
             </Stack>
 
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              {doc.images
-                ?.filter(
-                  (image: any) => image.is_before === (imageType === "before")
-                )
-                .map((image: any) => (
-                  <Box
-                    key={image.id}
-                    sx={{ width: "100px", position: "relative" }}
+              {doc.images.map((image: any) => (
+                <Box
+                  key={image.id}
+                  sx={{ width: "100px", position: "relative" }}
+                >
+                  <Card
+                    sx={{
+                      height: "140px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#f5f5f5",
+                    }}
                   >
-                    <Card
+                    <Box
+                      component="img"
+                      src={image.image_url}
+                      alt={`Image ${image.id}`}
                       sx={{
-                        height: "140px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: "#f5f5f5",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
                       }}
-                    >
-                      <Box
-                        component="img"
-                        src={image.image_url}
-                        alt={`Image ${image.id}`}
-                        sx={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                        onError={() => handleImageError(image.image_url)}
-                      />
-                    </Card>
-                    <IconButton
-                      color="error"
-                      size="small"
-                      onClick={() =>
-                        handleDeleteImage(
-                          doc.id, 
-                          image.record_id ?? doc.record_id, 
-                          image.id
-                        )
-                      }
-                      sx={{
-                        position: "absolute",
-                        top: 4,
-                        right: 4,
-                        backgroundColor: "white",
-                        "&:hover": { backgroundColor: "#fee" },
-                      }}
-                    >
-                      <IconTrash size={16} />
-                    </IconButton>
-                  </Box>
-                ))}
+                    />
+                  </Card>
+                  <IconButton
+                    color="error"
+                    size="small"
+                    onClick={() =>
+                      handleDeleteImage(
+                        doc.id,
+                        image.record_id ?? doc.record_id,
+                        image.id
+                      )
+                    }
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      backgroundColor: "white",
+                      "&:hover": { backgroundColor: "#fee" },
+                    }}
+                  >
+                    <IconTrash size={16} />
+                  </IconButton>
+                </Box>
+              ))}
             </Box>
           </Box>
         ))
@@ -388,6 +352,73 @@ export const DocumentsTab = ({
           </Typography>
         </Box>
       )}
+
+      {hasUnsavedChanges && (
+        <Box mt={3} textAlign="center">
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveChanges}
+            disabled={isSaving}
+            sx={{ px: 4 }}
+          >
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+        </Box>
+      )}
+
+      {/* Dialog for selecting image and type */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth>
+        <Box display={"flex"} justifyContent={"space-between"} mt={1} pr={1}>
+          <DialogTitle>Choose Image Type</DialogTitle>
+          <IconButton>
+            <IconX size={22} onClick={handleCloseDialog} />
+          </IconButton>
+        </Box>
+        <DialogContent>
+          <RadioGroup
+            value={selectedImageType}
+            onChange={(e) =>
+              setSelectedImageType(e.target.value as "before" | "after")
+            }
+          >
+            <FormControlLabel
+              value="before"
+              control={<Radio />}
+              label="Before"
+            />
+            <FormControlLabel value="after" control={<Radio />} label="After" />
+          </RadioGroup>
+          <Button
+            variant="contained"
+            color="primary"
+            component="label"
+            sx={{ marginTop: 2 }}
+          >
+            Select image
+            <input
+              type="file"
+              hidden
+              multiple
+              accept="image/*"
+              onChange={(e) =>
+                handleAddImage(
+                  selectedDoc?.id ?? 0,
+                  selectedDoc?.images?.[0]?.record_id ?? selectedDoc?.record_id,
+                  e.target.files,
+                  selectedImageType
+                )
+              }
+            />
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleSaveImage} color="primary">
+            Upload images
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
