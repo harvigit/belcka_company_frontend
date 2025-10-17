@@ -36,6 +36,7 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconDotsVertical,
   IconFilter,
   IconSearch,
   IconTrash,
@@ -52,6 +53,7 @@ import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { format } from "date-fns";
 
 dayjs.extend(customParseFormat);
 
@@ -64,6 +66,8 @@ export interface UserList {
   team_name: string;
   shifts: string;
   status: number;
+  is_invited: boolean;
+  logged_in_at: any;
 }
 
 const TablePagination = () => {
@@ -82,6 +86,15 @@ const TablePagination = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: string | null };
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -116,6 +129,15 @@ const TablePagination = () => {
     ],
     [data]
   );
+
+  const formatDate = (date?: Date | string | null) => {
+    if (!date) return "-";
+    try {
+      return format(new Date(date), "dd/MM/yyyy");
+    } catch {
+      return "-";
+    }
+  };
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -217,6 +239,30 @@ const TablePagination = () => {
         </Typography>
       ),
     }),
+
+    columnHelper.accessor((row) => row.is_invited, {
+      id: "is_invited",
+      header: () => "Login",
+      cell: (info) => {
+        const row = info.row.original;
+        const notLoggedIn = row.is_invited;
+
+        return (
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            fontWeight={notLoggedIn ? 500 : 400}
+          >
+            {row.is_invited
+              ? "Not logged in"
+              : formatDate(row.logged_in_at)
+              ? formatDate(row.logged_in_at)
+              : "-"}
+          </Typography>
+        );
+      },
+    }),
+
     columnHelper.accessor((row) => row.status, {
       id: "status",
       header: () => "Status",
@@ -309,6 +355,20 @@ const TablePagination = () => {
           <Button variant="contained" onClick={() => setOpen(true)}>
             <IconFilter width={18} />
           </Button>
+          <Stack>
+            <Box display="flex">
+              <IconButton
+                sx={{ margin: "0px" }}
+                id="basic-button"
+                aria-controls={openMenu ? "basic-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={openMenu ? "true" : undefined}
+                onClick={handleClick}
+              >
+                <IconDotsVertical width={18} />
+              </IconButton>
+            </Box>
+          </Stack>
         </Grid>
         <Dialog
           open={open}
@@ -514,9 +574,7 @@ const TablePagination = () => {
                                 "&:hover .hoverIcon": { opacity: 1 },
                               }}
                             >
-                              <Typography
-                                variant="subtitle2"
-                              >
+                              <Typography variant="subtitle2">
                                 {flexRender(
                                   header.column.columnDef.header,
                                   header.getContext()

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
   Button,
@@ -19,6 +19,7 @@ import {
 import { IconDownload, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
+import { Grid } from "@mui/system";
 
 interface DocumentsTabProps {
   addressId: number;
@@ -40,6 +41,12 @@ export const DocumentsTab = ({
     delete: Record<string, string[]>;
   }>({ add: {}, delete: {} });
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
+  const handleBoxClick = () => {
+    fileInputRef.current?.click(); // Trigger file input click
+  };
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -238,7 +245,7 @@ export const DocumentsTab = ({
     <Box>
       {filteredData.length > 0 ? (
         filteredData.map((doc) => (
-          <Box key={doc.record_id} mb={3}>
+          <Box key={doc.id} mb={3}>
             <Stack
               direction="row"
               alignItems="center"
@@ -356,11 +363,12 @@ export const DocumentsTab = ({
       {hasUnsavedChanges && (
         <Box mt={3} textAlign="center">
           <Button
-            variant="contained"
             color="primary"
+            variant="contained"
             onClick={handleSaveChanges}
             disabled={isSaving}
-            sx={{ px: 4 }}
+            sx={{ borderRadius: 3 }}
+            className="drawer_buttons"
           >
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
@@ -376,7 +384,80 @@ export const DocumentsTab = ({
           </IconButton>
         </Box>
         <DialogContent>
+          <Box
+            mt={2}
+            fontSize="12px"
+            sx={{
+              backgroundColor: "primary.light",
+              color: "primary.main",
+              padding: "25px",
+              textAlign: "center",
+              border: `1px dashed`,
+              borderColor: "primary.main",
+              borderRadius: 1,
+              cursor: "pointer",
+            }}
+            onClick={handleBoxClick}
+          >
+            <input
+              type="file"
+              multiple
+              hidden
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={(e) => {
+                const files = e.target.files ? Array.from(e.target.files) : [];
+                setSelectedFiles(files); // save files to state
+                handleAddImage(
+                  selectedDoc?.id ?? 0,
+                  selectedDoc?.images?.[0]?.record_id ?? selectedDoc?.record_id,
+                  e.target.files,
+                  selectedImageType
+                );
+              }}
+            />
+
+            <Typography>Drag & drop files here, or click to select</Typography>
+          </Box>
+
+          {/* Show uploaded file names */}
+          <Grid container spacing={2} mt={2}>
+            {selectedFiles.length > 0 ? (
+              selectedFiles.map((file, idx) => (
+                <Grid size={{ xs: 6, md: 3 }} key={idx}>
+                  <Box
+                    sx={{
+                      padding: 1,
+                      border: "1px solid #ddd",
+                      borderRadius: 1,
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    <Typography variant="body2">{file.name}</Typography>
+                  </Box>
+                </Grid>
+              ))
+            ) : (
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="body2" color="textSecondary">
+                  No files selected
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+
           <RadioGroup
+            sx={{
+              display: "flex !important",
+              justifyContent: "space-between",
+              flexDirection: "row",
+              width: "30%",
+              flexWrap: "nowrap",
+              mt: 2,
+            }}
             value={selectedImageType}
             onChange={(e) =>
               setSelectedImageType(e.target.value as "before" | "after")
@@ -389,32 +470,12 @@ export const DocumentsTab = ({
             />
             <FormControlLabel value="after" control={<Radio />} label="After" />
           </RadioGroup>
-          <Button
-            variant="contained"
-            color="primary"
-            component="label"
-            sx={{ marginTop: 2 }}
-          >
-            Select image
-            <input
-              type="file"
-              hidden
-              multiple
-              accept="image/*"
-              onChange={(e) =>
-                handleAddImage(
-                  selectedDoc?.id ?? 0,
-                  selectedDoc?.images?.[0]?.record_id ?? selectedDoc?.record_id,
-                  e.target.files,
-                  selectedImageType
-                )
-              }
-            />
-          </Button>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSaveImage} color="primary">
+          <Button onClick={handleCloseDialog} color="error" variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleSaveImage} color="primary" variant="contained">
             Upload images
           </Button>
         </DialogActions>
