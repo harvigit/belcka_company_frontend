@@ -79,6 +79,7 @@ interface ShiftPayload {
     company_id: string | number;
     default_start_time: string;
     default_end_time: string;
+    deleted_break_ids?: number[];
 }
 
 const WorkDaySelector = React.memo<WorkDaySelectorProps>(
@@ -181,6 +182,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
     });
     const [breaksEnabled, setBreaksEnabled] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [deletedBreakIds, setDeletedBreakIds] = useState<number[]>([]);
 
     useEffect(() => {
         if (!isNewShift) {
@@ -263,20 +265,55 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
 
     const handleBreakChange = (index: number, field: 'start' | 'end', value: Dayjs | null) => {
         const updatedBreaks = [...shiftDetail.shift_breaks];
+        const newTime = value ? value.format('HH:mm') : '';
         updatedBreaks[index] = {
             ...updatedBreaks[index],
-            [field]: value ? value.format('HH:mm') : '',
+            [field]: newTime,
         };
+
+        const breakItem = updatedBreaks[index];
+        if (breakItem.start && breakItem.end && breakItem.start === breakItem.end) {
+            setErrorMessage('Break start time and end time cannot be the same');
+            return;
+        }
+
         updateShiftSettings({ shift_breaks: updatedBreaks });
     };
 
     const addBreak = () => {
+        let newStartTime = 13;
+        let newEndTime = 14;
+
+        while (
+            shiftDetail.shift_breaks.some(
+                (b) => b.start === `${String(newStartTime).padStart(2, '0')}:00`
+            )
+            ) {
+            newStartTime++;
+            newEndTime++;
+
+            if (newStartTime >= 24) {
+                newStartTime = 0;
+                newEndTime = 1;
+                break;
+            }
+        }
+
+        const formattedStart = `${String(newStartTime).padStart(2, '0')}:00`;
+        const formattedEnd = `${String(newEndTime).padStart(2, '0')}:00`;
+
         updateShiftSettings({
-            shift_breaks: [...shiftDetail.shift_breaks, { start: '13:00', end: '14:00' }],
+            shift_breaks: [...shiftDetail.shift_breaks, { start: formattedStart, end: formattedEnd }],
         });
     };
 
     const removeBreak = (index: number) => {
+        const breakToRemove = shiftDetail.shift_breaks[index];
+
+        if (breakToRemove.id) {
+            setDeletedBreakIds((prev) => [...prev, breakToRemove.id!]);
+        }
+
         updateShiftSettings({
             shift_breaks: shiftDetail.shift_breaks.filter((_, i) => i !== index),
         });
@@ -295,6 +332,49 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
 
     const handleSave = async () => {
         try {
+            if (breaksEnabled && shiftDetail.shift_breaks.length > 0) {
+                const invalidBreak = shiftDetail.shift_breaks.find(
+                    (b) => b.start && b.end && b.start === b.end
+                );
+                if (invalidBreak) {
+                    setErrorMessage('Break start time and end time cannot be the same');
+                    return;
+                }
+
+                for (let i = 0; i < shiftDetail.shift_breaks.length; i++) {
+                    for (let j = i + 1; j < shiftDetail.shift_breaks.length; j++) {
+                        const break1 = shiftDetail.shift_breaks[i];
+                        const break2 = shiftDetail.shift_breaks[j];
+
+                        if (break1.start === break2.start) {
+                            setErrorMessage(`Breaks cannot have the same start time`);
+                            return;
+                        }
+
+                        if (break1.end === break2.end) {
+                            setErrorMessage(`Breaks cannot have the same end time`);
+                            return;
+                        }
+
+                        const start1 = dayjs(break1.start, 'HH:mm');
+                        const end1 = dayjs(break1.end, 'HH:mm');
+                        const start2 = dayjs(break2.start, 'HH:mm');
+                        const end2 = dayjs(break2.end, 'HH:mm');
+
+                        if (
+                            (start2.isAfter(start1) && start2.isBefore(end1)) ||
+                            (end2.isAfter(start1) && end2.isBefore(end1)) ||
+                            (start1.isAfter(start2) && start1.isBefore(end2)) ||
+                            (end1.isAfter(start2) && end1.isBefore(end2)) ||
+                            (start1.isSame(start2) && end1.isSame(end2))
+                        ) {
+                            setErrorMessage(`Break times cannot overlap (${break1.start}-${break1.end} and ${break2.start}-${break2.end})`);
+                            return;
+                        }
+                    }
+                }
+            }
+
             const days = DAY_NAMES.map((fullName, idx) => ({
                 name: fullName.toLowerCase(),
                 status: shiftDetail.workDays[idx],
@@ -320,11 +400,13 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 company_id: shiftDetail.company_id,
                 default_start_time: shiftDetail.default_start_time,
                 default_end_time: shiftDetail.default_end_time,
+                deleted_break_ids: deletedBreakIds,
             };
 
             const response = await api.post('/setting/save-shift-setting', payload);
 
             if (response.data?.IsSuccess) {
+                setDeletedBreakIds([]);
                 onSaveSuccess();
             } else {
                 setErrorMessage(response.data?.message || 'Failed to save shift settings');
