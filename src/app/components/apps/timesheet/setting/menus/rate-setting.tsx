@@ -130,6 +130,7 @@ const RateSetting = () => {
 
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
+        fetchUsers();
       } else {
         fetchUsers();
       }
