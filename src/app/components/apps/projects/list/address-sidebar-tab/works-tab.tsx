@@ -385,7 +385,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   </Typography>
                 </Box>
 
-                {work.is_checklog === false && (
+                {work.is_checklog === false && work.is_completed == false &&(
                   <IconButton
                     color="error"
                     onClick={(e) => {

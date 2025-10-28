@@ -42,6 +42,7 @@ import {
   IconFilter,
   IconSearch,
   IconTrash,
+  IconUserCheck,
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -73,6 +74,7 @@ export interface UserList {
   status: number;
   is_invited: boolean;
   logged_in_at: any;
+  created_at: any;
   company_id: number | null;
 }
 
@@ -355,25 +357,23 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         const value = info.getValue();
-        const hasCompany = !!row.company_id;
+        const hasCompany = row.is_invited;
 
-        if (!hasCompany) {
+        if (hasCompany) {
           return (
-            <Button
+            <Chip
               size="small"
-              variant="outlined"
-              color="primary"
-              onClick={() => handleInviteUser(row)}
+              label={
+                row.is_invited ? `Inited on ${formatDate(row.created_at)}` : ""
+              }
               sx={{
-                textTransform: "none",
-                borderRadius: "6px",
-                px: 1.5,
-                ml: 2,
+                backgroundColor: (theme) => theme.palette.primary.light,
+                color: (theme) => theme.palette.primary.main,
                 fontWeight: 500,
+                borderRadius: "10px",
+                px: 1.5,
               }}
-            >
-              Invite
-            </Button>
+            />
           );
         }
 
@@ -587,6 +587,7 @@ const TablePagination = () => {
             variant="outlined"
             color="primary"
             onClick={() => setInviteUser(true)}
+            startIcon={<IconUserCheck size={18} />}
           >
             Invite User
           </Button>
