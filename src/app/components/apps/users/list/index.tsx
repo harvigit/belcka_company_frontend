@@ -206,7 +206,7 @@ const TablePagination = () => {
         company_id: user.company_id,
         team_id: selectedTeam.id,
         trade_id: selectedTrade.id,
-        phone: phone,
+        phone: nationalPhone,
         extension: extension,
       };
 

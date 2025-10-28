@@ -147,7 +147,7 @@ const AddressesList = ({
     if (!projectId) return;
     setLoading(true);
     try {
-      const res = await api.get(`address/get?project_id=${projectId}`);
+      const res = await api.get(`address/get?project_id=${projectId}&company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
       }
