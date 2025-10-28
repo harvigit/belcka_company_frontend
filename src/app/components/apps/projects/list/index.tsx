@@ -630,7 +630,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       >
         <Grid
           display="flex"
-          width="80%"
+          width="95%"
           gap={1}
           alignItems="center"
           justifyContent="flex-start"
@@ -725,7 +725,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
           </IconButton>
         </Grid>
         <Stack
-          width="20%"
+          width="5%"
           display="flex"
           justifyContent="flex-end"
           direction={{ xs: "row", sm: "row" }}

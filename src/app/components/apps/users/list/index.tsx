@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, SetStateAction } from "react";
 import {
   TableContainer,
   Table,
@@ -22,6 +22,8 @@ import {
   DialogTitle,
   DialogContent,
   Dialog,
+  Drawer,
+  Autocomplete,
 } from "@mui/material";
 import {
   flexRender,
@@ -34,9 +36,9 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
+  IconArrowLeft,
   IconChevronLeft,
   IconChevronRight,
-  IconDotsVertical,
   IconFilter,
   IconSearch,
   IconTrash,
@@ -53,7 +55,10 @@ import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { format } from "date-fns";
+import { format, lastDayOfDecade } from "date-fns";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/material.css";
 
 dayjs.extend(customParseFormat);
 
@@ -68,12 +73,18 @@ export interface UserList {
   status: number;
   is_invited: boolean;
   logged_in_at: any;
+  company_id: number | null;
+}
+
+export interface TradeList {
+  id: number;
+  name: string;
 }
 
 const TablePagination = () => {
   const [data, setData] = useState<UserList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [filters, setFilters] = useState({ team: "", supervisor: "" });
@@ -86,9 +97,23 @@ const TablePagination = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: string | null };
+  const [inviteUser, setInviteUser] = useState(false);
+  const [trade, setTrade] = useState<TradeList[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [firstName, setfirstName] = useState("");
+  const [lastName, setlastName] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState<any>(0);
+  const [selectedTrade, setSelectedTrade] = useState<any>(0);
+  const [phone, setPhone] = useState("");
+  const [userId, setUserId] = useState(0);
+  const [extension, setExtension] = useState("+44");
+  const [nationalPhone, setNationalPhone] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const fetchUsers = async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const res = await api.get("user/get-user-lists");
       if (res.data) {
@@ -97,11 +122,55 @@ const TablePagination = () => {
     } catch (err) {
       console.error("Failed to fetch trades", err);
     }
-    setLoading(false);
+    // setLoading(false);
   };
   useEffect(() => {
     fetchUsers();
   }, [projectId]);
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await api.get(
+          `trade/get-trades?company_id=${user.company_id}`
+        );
+        if (res.data) setTrade(res.data.info);
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+    fetchTrades();
+  }, []);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const res = await api.get(
+          `get-company-resources?flag=teamList&company_id=${user.company_id}`
+        );
+        if (res.data) setTeams(res.data.info);
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+    fetchTeams();
+  }, []);
+  const handleInviteUser = (user: any | null = null) => {
+    setUserId(user.id);
+    setfirstName(user.first_name || "");
+    setlastName(user.last_name || "");
+    setEmail(user.email || "");
+    setExtension(user.extension || "+44");
+    setPhone(user.phone || "");
+    setNationalPhone(user.phone || "");
+    setSelectedUser(user);
+    setInviteUser(true);
+  };
+
+  const closeInviteDrawer = () => {
+    setInviteUser(false);
+    setSelectedUser(null);
+  };
 
   const uniqueTeams = useMemo(
     () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],
@@ -121,6 +190,43 @@ const TablePagination = () => {
       return format(new Date(date), "dd/MM/yyyy");
     } catch {
       return "-";
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    setLoading(true);
+    e.preventDefault();
+    try {
+      const payload = {
+        user_id: userId,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        company_id: user.company_id,
+        team_id: selectedTeam.id,
+        trade_id: selectedTrade.id,
+        phone: phone,
+        extension: extension,
+      };
+
+      const response = await api.post("invite-user", payload);
+
+      if (response.data.IsSuccess === true) {
+        toast.success(response.data.message);
+        setfirstName("");
+        setlastName("");
+        setEmail("");
+        setPhone("");
+        setNationalPhone("");
+        setSelectedTeam([]);
+        setSelectedTrade([]);
+        setInviteUser(false);
+        fetchUsers();
+      }
+    } catch (error: any) {
+      setLoading(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -171,25 +277,20 @@ const TablePagination = () => {
         const isChecked = selectedRowIds.has(user.id);
 
         return (
-          <Link href={`/apps/users/${user.id}`} passHref>
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={4}
-              sx={{ pl: 1 }}
-            >
-              <CustomCheckbox
-                checked={isChecked}
-                onChange={() => {
-                  const newSelected = new Set(selectedRowIds);
-                  if (newSelected.has(user.id)) {
-                    newSelected.delete(user.id);
-                  } else {
-                    newSelected.add(user.id);
-                  }
-                  setSelectedRowIds(newSelected);
-                }}
-              />
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+            <CustomCheckbox
+              checked={isChecked}
+              onChange={() => {
+                const newSelected = new Set(selectedRowIds);
+                if (newSelected.has(user.id)) {
+                  newSelected.delete(user.id);
+                } else {
+                  newSelected.add(user.id);
+                }
+                setSelectedRowIds(newSelected);
+              }}
+            />
+            <Link href={`/apps/users/${user.id}`} passHref>
               <Stack direction="row" alignItems="center" spacing={4}>
                 <Avatar
                   src={user.user_image || defaultImage}
@@ -209,8 +310,8 @@ const TablePagination = () => {
                   </Typography>
                 </Box>
               </Stack>
-            </Stack>
-          </Link>
+            </Link>
+          </Stack>
         );
       },
     }),
@@ -252,7 +353,30 @@ const TablePagination = () => {
       id: "status",
       header: () => "Status",
       cell: (info) => {
+        const row = info.row.original;
         const value = info.getValue();
+        const hasCompany = !!row.company_id;
+
+        if (!hasCompany) {
+          return (
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              onClick={() => handleInviteUser(row)}
+              sx={{
+                textTransform: "none",
+                borderRadius: "6px",
+                px: 1.5,
+                ml: 2,
+                fontWeight: 500,
+              }}
+            >
+              Invite
+            </Button>
+          );
+        }
+
         return value ? (
           <Chip
             size="small"
@@ -447,6 +571,7 @@ const TablePagination = () => {
             <Button
               variant="outlined"
               color="error"
+              sx={{ ml: 2 }}
               startIcon={<IconTrash width={18} />}
               onClick={() => {
                 const selectedIds = Array.from(selectedRowIds);
@@ -458,6 +583,13 @@ const TablePagination = () => {
               Remove
             </Button>
           )}
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => setInviteUser(true)}
+          >
+            Invite User
+          </Button>
         </Stack>
       </Stack>
       <Divider />
@@ -669,6 +801,196 @@ const TablePagination = () => {
           </Stack>
         </Box>
       </Stack>
+
+      <Drawer
+        anchor="right"
+        open={inviteUser}
+        onClose={() => setInviteUser(false)}
+        sx={{
+          width: 500,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 500,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+          },
+        }}
+      >
+        <Box display="flex" flexDirection="column" height="100%">
+          <Box
+            display={"flex"}
+            alignContent={"center"}
+            alignItems={"center"}
+            flexWrap={"wrap"}
+          >
+            <IconButton onClick={closeInviteDrawer} sx={{ p: 0 }}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h5" fontWeight={700}>
+              Invite User
+            </Typography>
+            <IconButton
+              aria-label="close"
+              onClick={closeInviteDrawer}
+              size="small"
+              sx={{
+                position: "absolute",
+                right: 0,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <IconX size={18} />
+            </IconButton>
+          </Box>
+          <Box height={"100%"}>
+            <form onSubmit={handleRegister} className="address-form">
+              <Grid container spacing={2} mt={1}>
+                <Grid size={{ lg: 12, xs: 12 }}>
+                  <Typography variant="caption" mt={2}>
+                    First Name
+                  </Typography>
+                  <CustomTextField
+                    id="first_name"
+                    variant="outlined"
+                    fullWidth
+                    value={firstName}
+                    sx={{ mb: 1 }}
+                    onChange={(e: {
+                      target: { value: SetStateAction<string> };
+                    }) => setfirstName(e.target.value)}
+                  />
+                  <Typography variant="caption" mt={2}>
+                    Last Name
+                  </Typography>
+                  <CustomTextField
+                    id="last_name"
+                    variant="outlined"
+                    fullWidth
+                    value={lastName}
+                    sx={{ mb: 1 }}
+                    onChange={(e: {
+                      target: { value: SetStateAction<string> };
+                    }) => setlastName(e.target.value)}
+                  />
+                  <Typography variant="caption" mt={2}>
+                    Email Address
+                  </Typography>
+                  <CustomTextField
+                    id="email"
+                    variant="outlined"
+                    fullWidth
+                    value={email}
+                    sx={{ mb: 2 }}
+                    onChange={(e: {
+                      target: { value: SetStateAction<string> };
+                    }) => setEmail(e.target.value)}
+                  />
+                  <PhoneInput
+                    country={"gb"}
+                    value={phone}
+                    inputClass="form_inputs"
+                    onChange={(value, country: any) => {
+                      setPhone(value);
+                      setExtension("+" + country.dialCode);
+
+                      const numberOnly = value.replace(country.dialCode, "");
+                      setNationalPhone(numberOnly);
+                    }}
+                    inputStyle={{ width: "100%", marginBottom: 4 }}
+                    enableSearch
+                    inputProps={{ required: true }}
+                  />
+                  <Typography variant="caption" mt={6}>
+                    Select Teams
+                  </Typography>
+                  <Autocomplete
+                    fullWidth
+                    id="team_id"
+                    sx={{ mb: 2 }}
+                    options={teams}
+                    value={
+                      teams.find((p: any) => p.id === selectedTeam.id) || null
+                    }
+                    onChange={(event, newValue) => {
+                      setSelectedTeam(newValue);
+                    }}
+                    getOptionLabel={(option) => option?.name || ""}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    renderInput={(params) => (
+                      <CustomTextField
+                        {...params}
+                        placeholder="Select Team"
+                        onClick={() => setDialogOpen(true)}
+                      />
+                    )}
+                  />
+                  <Typography variant="caption" mt={2}>
+                    Select Trades
+                  </Typography>
+                  <Autocomplete
+                    fullWidth
+                    id="trade_id"
+                    sx={{ mb: 2 }}
+                    options={trade}
+                    value={
+                      trade.find((p: any) => p.id === selectedTrade.id) || null
+                    }
+                    onChange={(event, newValue) => {
+                      setSelectedTrade(newValue);
+                    }}
+                    getOptionLabel={(option) => option?.name || ""}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    renderInput={(params) => (
+                      <CustomTextField
+                        {...params}
+                        placeholder="Select Trade"
+                        onClick={() => setDialogOpen(true)}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
+              <Box>
+                <Box mt={2} display="flex" justifyContent="start" gap={2}>
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    size="large"
+                    type="submit"
+                    sx={{ borderRadius: 3 }}
+                    className="drawer_buttons"
+                    disabled={loading}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    color="inherit"
+                    onClick={() => setInviteUser(false)}
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      backgroundColor: "transparent",
+                      borderRadius: 3,
+                      color: "GrayText",
+                    }}
+                  >
+                    Close
+                  </Button>
+                </Box>
+              </Box>
+            </form>
+          </Box>
+        </Box>
+      </Drawer>
     </Box>
   );
 };

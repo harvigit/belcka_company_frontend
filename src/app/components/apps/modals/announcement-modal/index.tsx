@@ -50,7 +50,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   const [sendAs, setSendAs] = useState<"company" | "admin">("company");
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<Users[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const theme = useTheme();
   const { data: session } = useSession();
@@ -169,14 +169,12 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   // Fetch Users
   useEffect(() => {
     const fetchUsers = async () => {
-      setLoading(true);
       try {
         const res = await api.get("user/get-user-lists");
         if (res.data?.info) setUsers(res.data.info);
       } catch (err) {
         console.error("Failed to fetch users", err);
       }
-      setLoading(false);
     };
     if (user?.company_id) fetchUsers();
   }, [user?.company_id]);
@@ -203,6 +201,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
     uploadedFiles.forEach((file) => fd.append("files", file));
 
     try {
+      setLoading(true);
       const res = await api.post("announcements/create", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -211,9 +210,11 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
         toast.success(res.data.message);
         onCreated?.();
         onClose();
+        setLoading(false);
       } else {
         toast.error(res.data.message || "Failed to create announcement");
       }
+      setLoading(false);
     } catch (err) {
       console.error("Error uploading files:", err);
       toast.error("Upload failed");
@@ -358,7 +359,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
         {/* Actions */}
         <Box display="flex" justifyContent="space-between" mt={3}>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}>
+          <Button variant="contained" onClick={handleSubmit} disabled={loading}>
             Save
           </Button>
         </Box>

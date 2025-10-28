@@ -92,7 +92,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
         const cisAmount = netRate * 0.2;
         const grossAmount = netRate + cisAmount;
-        setCis(cisAmount);
+        setCis(cisAmount.toFixed(2));
         setGross(grossAmount);
       }
     } catch (error) {
@@ -210,6 +210,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
         company_id: comapny.id,
         trade_id: Number(formData.trade_id),
         new_rate_perDay: Number(formData.rate),
+        new_rate_perHour: Number((gross / 8).toFixed(2)),
         user_id: userId,
       };
       const res = await api.post("user-billing/change-company-rate", payload);
@@ -535,42 +536,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
             </Box>
           ) : history.length > 0 ? (
             <>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent={"space-between"}
-                className="rate_history_wrapper"
-              >
-                <Box>
-                  <FormControlLabel
-                    control={
-                      <CustomCheckbox
-                        checked={showAllDates}
-                        onChange={handleCheckboxChange}
-                      />
-                    }
-                    label="Show all dates"
-                  />
-                </Box>
-                {!showAllDates && (
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <Box display="flex" gap={2} alignItems={"center"}>
-                      <DatePicker
-                        label="Start date"
-                        value={startDate}
-                        onChange={(newValue) => setStartDate(newValue)}
-                        format="DD/MM/YYYY"
-                      />
-                      <DatePicker
-                        label="End date"
-                        value={endDate}
-                        onChange={(newValue) => setEndDate(newValue)}
-                        format="DD/MM/YYYY"
-                      />
-                    </Box>
-                  </LocalizationProvider>
-                )}
-              </Box>
               <Box
                 sx={{
                   position: "relative",

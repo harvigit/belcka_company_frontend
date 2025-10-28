@@ -140,7 +140,7 @@ export default function PrivacyPolicy() {
             <Typography lineHeight={1.0} mb={1}>
               We use the information to:
             </Typography>
-            <Box ml={2}>
+            <Typography ml={2}>
               <li>Operate, manage, and maintain the Belcka ERP system</li>
               <li>Track employee productivity and time logs</li>
               <li>Manage projects and allocate tasks efficiently</li>
@@ -148,7 +148,7 @@ export default function PrivacyPolicy() {
               <li>Provide customer support and respond to inquiries</li>
               <li>Improve app and platform performance</li>
               <li>Comply with legal obligations</li>
-            </Box>
+            </Typography>
             <Typography
               variant="h2"
               mt={1}
@@ -162,7 +162,7 @@ export default function PrivacyPolicy() {
               We do <b>not sell</b> your personal data. We may share data only
               with:
             </Typography>
-            <Box ml={2}>
+            <Typography ml={2}>
               <li>
                 <b>Authorized users</b> within your organization
               </li>
@@ -178,7 +178,7 @@ export default function PrivacyPolicy() {
                 In case of a <b>merger, acquisition, or sale</b> of assets (with
                 notice)
               </li>
-            </Box>
+            </Typography>
             <Typography
               variant="h2"
               mt={1}
@@ -191,12 +191,12 @@ export default function PrivacyPolicy() {
             <Typography lineHeight={1.0} mb={1}>
               We implement industry-standard safeguards including:
             </Typography>
-            <Box ml={2}>
+            <Typography ml={2}>
               <li>Encryption of data in transit and at rest</li>
               <li>Role-based access controls</li>
               <li>Regular security audits and vulnerability assessments</li>
               <li>Secure user authentication mechanisms</li>
-            </Box>
+            </Typography>
             <Typography
               variant="h2"
               mt={1}
@@ -209,14 +209,14 @@ export default function PrivacyPolicy() {
             <Typography lineHeight={1.0} mb={1}>
               We retain your data:
             </Typography>
-            <Box ml={2}>
+            <Typography ml={2}>
               <li>As long as your organization is actively using Belcka ERP</li>
               <li>As required by law or internal policy</li>
               <li>
                 You can request deletion of your data, subject to
                 contractual/legal obligations
               </li>
-            </Box>
+            </Typography>
             <Typography
               variant="h2"
               mt={1}
@@ -229,16 +229,16 @@ export default function PrivacyPolicy() {
             <Typography lineHeight={1.0} mb={1}>
               Depending on your jurisdiction, you may have the right to:
             </Typography>
-            <Box ml={2}>
+            <Typography ml={2}>
               <li>Access the data we store about you</li>
               <li>Request correction of inaccurate information</li>
               <li>Request deletion of your personal data</li>
               <li>Withdraw consent (where processing is based on consent)</li>
-            </Box>
-            <Box mt={1}>
+            </Typography>
+            <Typography mt={1}>
               You can exercise these rights by contacting us at 
               <a href="#" > [support@belcka.com]</a>
-            </Box>
+            </Typography>
             <Typography
               variant="h2"
               mt={1}
@@ -248,7 +248,7 @@ export default function PrivacyPolicy() {
             >
               7. Third-Party Integrations
             </Typography>
-            <Typography lineHeight={1.0} mb={1}>
+            <Typography mb={1}>
               Belcka may integrate with third-party tools (e.g., calendar apps,
               payment processors). These platforms have their own privacy
               policies. We recommend reviewing them before use.
@@ -262,7 +262,7 @@ export default function PrivacyPolicy() {
             >
               8. Children&#39;s Privacy
             </Typography>
-            <Typography lineHeight={1.0} mb={1}>
+            <Typography mb={1}>
               Belcka ERP is not intended for use by individuals under the age of
               18. We do not knowingly collect data from children.
             </Typography>
@@ -275,7 +275,7 @@ export default function PrivacyPolicy() {
             >
               9. Changes to This Privacy Policy
             </Typography>
-            <Typography lineHeight={1.0} mb={1}>
+            <Typography mb={1}>
               We may update this Privacy Policy periodically. Changes will be
               posted within the app and on our website. Continued use of the
               platform after updates constitutes your acceptance.
@@ -289,7 +289,7 @@ export default function PrivacyPolicy() {
             >
               10. Contact Us
             </Typography>
-            <Typography lineHeight={1.0} mb={1}>
+            <Typography mb={1}>
               If you have any questions, concerns, or requests regarding this
               <b> Privacy Policy:</b>
             </Typography>
