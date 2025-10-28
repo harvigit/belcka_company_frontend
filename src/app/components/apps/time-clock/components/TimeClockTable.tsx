@@ -23,7 +23,8 @@ import {
     IconExclamationMark,
     IconExclamationCircle,
     IconPlus,
-    IconTrash, IconSun,
+    IconTrash,
+    IconSun,
 } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import EditableTimeCell from './EditableTimeCell';
@@ -157,7 +158,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         setConflictAnchorEl(null);
         openConflictsSideBar?.();
     };
-    
+
     const handleRequests = () => {
         setConflictAnchorEl(null);
         openLeaveRequestsSideBar?.();
@@ -167,7 +168,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         if (!leaveRequestByDate) return 0;
         return Object.keys(leaveRequestByDate).filter(date => leaveRequestByDate[date] > 0).length;
     }, [leaveRequestByDate]);
-    
+
     const isNewRecordValid = (newRecord: NewRecord) => {
         return (
             !!newRecord.shift_id &&
@@ -179,8 +180,17 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     };
 
     return (
-        <Box sx={{ flex: 1, overflow: 'auto', paddingBottom: selectedRows.size > 0 ? '80px' : '0px' }}>
-            <TableContainer sx={{ overflowY: 'hidden' }}>
+        <Box sx={{
+            flex: 1,
+            overflow: 'auto',
+            paddingBottom: selectedRows.size > 0 ? '80px' : '0px',
+            maxHeight: 'calc(100vh - 250px)',
+            position: 'relative'
+        }}>
+            <TableContainer sx={{
+                maxHeight: '100%',
+                overflow: 'auto',
+            }}>
                 <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                     <TableHead>
                         {table.getHeaderGroups().map((hg: any) => (
@@ -193,7 +203,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             fontSize: '0.875rem',
                                             position: 'sticky',
                                             top: 0,
-                                            zIndex: 10,
+                                            zIndex: 999,
                                             width: `${header.column.columnDef.size || 100}px`,
                                             minWidth: `${header.column.columnDef.size || 100}px`,
                                             maxWidth: `${header.column.columnDef.size || 100}px`,
@@ -210,6 +220,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         color: '#fff',
                                                         backgroundColor: '#fc4b6c',
                                                         borderRadius: '50%',
+                                                        display: 'inline-block',
+                                                        padding: '2px 6px',
                                                     }}
                                                 >
                                                     {conflictDaysCount}
@@ -369,13 +381,13 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             gap: 1,
                                                             height: '100%'
                                                         }}>
-                                                            <Typography variant="h4">{rowData.date}</Typography>
+                                                            <Typography variant="h4" sx={{ textAlign: 'center' }}>{rowData.date}</Typography>
                                                             {!isLogLocked && !hasRecords && (
                                                                 <Box className="plus-icon" sx={{
                                                                     display: 'none',
                                                                     height: '100%',
                                                                     alignItems: 'center',
-                                                                    justifyContent: 'center'
+                                                                    justifyContent: 'center',
                                                                 }}>
                                                                     <IconButton
                                                                         onClick={() => startAddingNewRecord(rowData.date as string, projects as any, shifts as any)}
@@ -897,7 +909,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             gap: 1,
                                                             height: '100%'
                                                         }}>
-                                                            <Typography variant="h4">{row.original.date}</Typography>
+                                                            <Typography variant="h4" sx={{ textAlign: 'center' }}>{row.original.date}</Typography>
                                                             {!isRowLocked && (
                                                                 <Box className="plus-icon" sx={{
                                                                     display: 'none',
@@ -1198,7 +1210,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         {leaveDaysCount > 0 && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <IconSun size={18} color="#32bf90" /> {/* Use IconSun and green color for leave requests */}
+                                    <IconSun size={18} color="#32bf90" />
                                     <Typography variant="body2">
                                         {leaveDaysCount} Leave request{leaveDaysCount !== 1 ? 's' : ''}
                                     </Typography>
