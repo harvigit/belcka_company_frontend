@@ -47,7 +47,7 @@ const RateSetting = () => {
   // Get all users
   const fetchCompanyUsers = async () => {
     try {
-      const res = await api.get("user/get-user-lists");
+      const res = await api.get(`get-company-resources?company_id=${user.company_id}&flag=usersList`);
       if (res.data) {
         setUsers(res.data.info);
       }
