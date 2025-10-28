@@ -200,7 +200,6 @@ const TablePagination = () => {
     e.preventDefault();
     try {
       const payload = {
-        user_id: userId,
         first_name: firstName,
         last_name: lastName,
         email,

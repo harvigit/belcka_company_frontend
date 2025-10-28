@@ -19,7 +19,7 @@ const Logo = () => {
             alt="logo"
             height={TopbarHeight}
             width={150}
-            style={{ marginLeft: 20 }}
+            style={{ marginLeft: 10 }}
             priority
           />
         ) : (
@@ -28,7 +28,7 @@ const Logo = () => {
             alt="logo"
             height={TopbarHeight}
             width={150}
-            style={{ marginLeft: 20 }}
+            style={{ marginLeft: 10 }}
             priority
           />
         )}
@@ -44,7 +44,7 @@ const Logo = () => {
           alt="logo"
           height={TopbarHeight}
           width={150}
-          style={{ marginLeft: 20 }}
+          style={{ marginLeft: 10 }}
           priority
         />
       ) : (
@@ -52,7 +52,7 @@ const Logo = () => {
           src={"/images/logos/belcka.svg"}
           alt="logo"
           height={TopbarHeight}
-          style={{ marginLeft: 20 }}
+          style={{ marginLeft: 10 }}
           width={150}
           priority
         />
