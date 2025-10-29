@@ -759,7 +759,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
 
                                                 {/* Action Column */}
-                                                {visibleColumnConfigs.action?.visible && (
+                                                {!log.is_leave && visibleColumnConfigs.action?.visible && (
                                                     <TableCell
                                                         align="center"
                                                         className="action-cell"

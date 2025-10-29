@@ -5,49 +5,63 @@ import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
 
-const Menuitems: NavGroup[] = [
+const MenuItems: NavGroup[] = [
   // {
   //   id: uniqueId(),
   //   title: "Dashboard",
+  //   slug: "Dashboard",
   //   icon: IconChartPie,
   //   href: "/",
   // },
   {
     id: uniqueId(),
-    title: "Users",
+    title: "Users", 
+    slug: "users",
     icon: IconUsers,
     href: "/apps/users/list",
   },
   {
     id: uniqueId(),
-    title: "Teams",
+    title: "Teams", 
+    slug: "teams",
     icon: IconUserPlus,
     href: "/apps/teams/list",
   },
   {
     id: uniqueId(),
-    title: "Timesheet",
+    title: "Timesheet", 
+    slug: "timesheet",
     icon: IconTicket,
     href: "/apps/timesheet/list",
   },
   {
     id: uniqueId(),
-    title: "Projects",
+    title: "Projects", 
+    slug: "projects",
     icon: IconFiles,
     href: "/apps/projects/index",
   },
   {
     id: uniqueId(),
-    title: "Clients",
+    title: "Clients", 
+    slug: "clients",
     icon: IconUsers,
     href: "/apps/clients/list",
   },
   {
     id: uniqueId(),
-    title: "Settings",
+    title: "Requests", 
+    slug: "requests",
+    icon: IconUsers,
+    href: "/apps/requests/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Settings", 
+    slug: "settings",
     icon: IconSettings,
     href: "/admin-settings",
   },
 ];
 
-export default Menuitems;
+export default MenuItems;

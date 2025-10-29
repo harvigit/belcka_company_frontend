@@ -1,4 +1,4 @@
-import Menuitems from "./MenuItems";
+import MenuItems from "./MenuItems";
 import { usePathname } from "next/navigation";
 import { Box, List, useMediaQuery } from "@mui/material";
 import NavItem from "./NavItem";
@@ -55,7 +55,7 @@ const SidebarItems = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
 
-  const filteredMenuItems = Menuitems.filter((item) => {
+  const filteredMenuItems = MenuItems.filter((item) => {
     const permission = permissions.find(
       (perm) => perm.name === item.title && perm.is_web === true
     );

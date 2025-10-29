@@ -7,6 +7,7 @@ export type NavGroup = {
   navlabel?: boolean;
   subheader?: string;
   title?: string;
+  slug?: string;
   icon?: ElementType;
   href?: string;
   children?: NavGroup[];
