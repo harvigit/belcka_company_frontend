@@ -20,6 +20,7 @@ import { Stack } from "@mui/system";
 import {
   IconChevronRight,
   IconFilter,
+  IconPaperclip,
   IconSearch,
   IconTrash,
   IconX,
@@ -293,7 +294,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   left: 16,
                   right: 16,
                   display: "flex",
-                  justifyContent:"space-between",
+                  justifyContent: "space-between",
                   gap: 1,
                   flexWrap: "wrap",
                   zIndex: 1,
@@ -371,12 +372,31 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     {work.status_text}
                   </Box>
                 </Box>
-                <Box>
+                <Box display={"flex"} gap={1} alignItems={"center"}>
                   <Badge
                     badgeContent={work.count}
                     color="error"
                     overlap="circular"
-                  ></Badge>
+                  >
+                    {work.count > 0 && (
+                      <IconButton
+                        sx={{
+                          minHeight: "20px !important",
+                          height: "10px",
+                          top: "3px",
+                          backgroundColor: "white",
+                          "&:hover": {
+                            backgroundColor: "white !important",
+                          },
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <IconPaperclip color="#1e4db7" />
+                      </IconButton>
+                    )}
+                  </Badge>
                 </Box>
               </Box>
 

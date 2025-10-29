@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const PUBLIC_ROUTES = ["/auth", "/privacy-policy", "/app-info"];
+const PUBLIC_ROUTES = ["/auth", "/privacy-policy", "/app-info","/help"];
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { status } = useSession();

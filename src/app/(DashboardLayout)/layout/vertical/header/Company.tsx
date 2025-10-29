@@ -197,7 +197,7 @@ const Company = () => {
     } finally {
       setLoading(false);
     }
-  }, [user.company_id, user.id]);
+  }, [user?.company_id, user?.id]);
 
   useEffect(() => {
     if (openannouncementDrawer) {
@@ -214,11 +214,11 @@ const Company = () => {
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
-      {user.id && (
+      {user?.id && (
         <Tooltip title={user.company_name || "Select Company"}>
           <Avatar
-            src={user?.company_image ? `${user.company_image}` : ""}
-            alt={user.company_name || ""}
+            src={user?.company_image ? `${user?.company_image}` : ""}
+            alt={user?.company_name || ""}
             sx={{
               width: 30,
               height: 30,

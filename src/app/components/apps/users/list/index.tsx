@@ -274,7 +274,6 @@ const TablePagination = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const user = row.original;
-        const defaultImage = "/images/users/user.png";
         const isChecked = selectedRowIds.has(user.id);
 
         return (
@@ -294,7 +293,7 @@ const TablePagination = () => {
             <Link href={`/apps/users/${user.id}`} passHref>
               <Stack direction="row" alignItems="center" spacing={4}>
                 <Avatar
-                  src={user.user_image || defaultImage}
+                  src={user.user_image}
                   alt={user.name}
                   sx={{ width: 36, height: 36 }}
                 />
