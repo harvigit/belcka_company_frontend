@@ -243,8 +243,10 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                 <Switch
                                     checked={shift.enabled}
                                     onChange={(e) => {
-                                        e.stopPropagation();
                                         toggleShift(shift.id);
+                                    }}
+                                    onClick={(e) =>{
+                                        e.stopPropagation();
                                     }}
                                     color="primary"
                                     aria-label={`Toggle ${shift.name} shift`}
