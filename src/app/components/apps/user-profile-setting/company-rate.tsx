@@ -322,7 +322,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
           Rate History
         </Button>
       </Box>
-      {payRate && ratePermisison ? (
+      {payRate || ratePermisison ? (
         <>
           {user.user_role_id == 1 && comapny.is_pending_request === true && (
             <>
