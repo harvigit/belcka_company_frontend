@@ -272,7 +272,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       console.error("Rejection failed:", err);
     }
   };
-
   if (loading) {
     return (
       <Box
@@ -439,11 +438,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                     : formData.rate
                 }
                 disabled={
-                  Object.keys(comapny?.diff_data || {}).includes(
-                    "net_rate_perday"
-                  ) ||
-                  payRate === "view" ||
-                  !payRate
+                  comapny?.is_pending_request === true ||
+                  Object.keys(comapny?.diff_data || {}).length > 0
                 }
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, rate: e.target.value }))
