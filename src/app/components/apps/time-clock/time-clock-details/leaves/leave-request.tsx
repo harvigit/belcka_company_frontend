@@ -22,6 +22,7 @@ import {
     Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { DateTime } from 'luxon';
+import api from '@/utils/axios';
 
 interface LeaveRequestDetails {
     leave_id: number;
@@ -72,9 +73,12 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
     const handleApprove = async (leave_id: number) => {
         setIsLoading(true);
         try {
-            console.log('Approve leave request:', leave_id, 'Note:', responseNotes[leave_id]);
-            // await api.post('/leave/approve', { id: leave_id, note: responseNotes[leave_id] });
-            // fetchTimeClockData();
+            const response = await api.post(`/user-leaves/approve?user_leave_id=${leave_id}`);
+            // await api.post('/user-leaves/approve', null, { params: { user_leave_id: leave_id } });
+            
+            if(response.data.IsSuccess){
+             onClose()   
+            }
         } catch (error) {
             console.error('Failed to approve leave:', error);
         } finally {
@@ -85,9 +89,12 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
     const handleReject = async (leave_id: number) => {
         setIsLoading(true);
         try {
-            console.log('Reject leave request:', leave_id, 'Note:', responseNotes[leave_id]);
-            // await api.post('/leave/reject', { id: leave_id, note: responseNotes[leave_id] });
-            // fetchTimeClockData();
+            const response = await api.post(`/user-leaves/reject?user_leave_id=${leave_id}`);
+            // await api.post('/user-leaves/reject', null, { params: { user_leave_id: leave_id } });
+            
+            if(response.data.IsSuccess){
+             onClose()   
+            }
         } catch (error) {
             console.error('Failed to reject leave:', error);
         } finally {

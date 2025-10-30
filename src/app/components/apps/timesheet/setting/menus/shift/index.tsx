@@ -12,6 +12,7 @@ import {
 import api from '@/utils/axios';
 import ShiftSettings from './shift-settings';
 import { IconPlus } from '@tabler/icons-react';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 interface Shift {
     id: number;
@@ -240,7 +241,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                                         <strong>Break:</strong> {shift.break}
                                     </Typography>
                                 </Box>
-                                <Switch
+                                <IOSSwitch
                                     checked={shift.enabled}
                                     onChange={(e) => {
                                         toggleShift(shift.id);

@@ -17,6 +17,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
 import { Box } from "@mui/system";
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 interface NotificationItem {
   id: number;
@@ -196,7 +197,7 @@ export default function NotificationSettings() {
                         </Typography>
                       </TableCell>
                       <TableCell align="center" sx={{ padding: "10px" }}>
-                        <Switch
+                        <IOSSwitch
                           checked={
                             getCategorySwitchState(category, "is_push") === "on"
                           }
@@ -211,7 +212,7 @@ export default function NotificationSettings() {
                         />
                       </TableCell>
                       <TableCell align="center" sx={{ padding: "10px" }}>
-                        <Switch
+                        <IOSSwitch
                           checked={
                             getCategorySwitchState(category, "is_feed") === "on"
                           }
@@ -233,7 +234,7 @@ export default function NotificationSettings() {
                           {notification.name}
                         </TableCell>
                         <TableCell align="center" sx={{ padding: "10px" }}>
-                          <Switch
+                          <IOSSwitch
                             checked={notification.is_push}
                             onChange={(e) =>
                               updateNotificationState(
@@ -246,7 +247,7 @@ export default function NotificationSettings() {
                           />
                         </TableCell>
                         <TableCell align="center" sx={{ padding: "10px" }}>
-                          <Switch
+                          <IOSSwitch
                             checked={notification.is_feed}
                             onChange={(e) =>
                               updateNotificationState(

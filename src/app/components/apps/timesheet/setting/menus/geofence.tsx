@@ -25,6 +25,8 @@ import {
   Marker,
 } from "@react-google-maps/api";
 
+import IOSSwitch from '@/app/components/common/IOSSwitch';
+
 interface GeneralSettingProps {
   onSaveSuccess: () => void;
 }
@@ -319,7 +321,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                   Require admin’s approval if users clock out outside the Geo
                   fence
                 </Typography>
-                <Switch
+                <IOSSwitch
                   color="primary"
                   disabled={selectedOption == "off" && !shareLocation}
                 />

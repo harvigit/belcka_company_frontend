@@ -478,14 +478,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     
     const closeLeaveRequestSidebar = async () => {
-        setLeaveRequestSidebar(false);
         try {
-            if (conflictDetails?.length > 0) {
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                onDataChange?.();
-            }
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+                
+            setLeaveRequestSidebar(false);
         } catch (error) {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }

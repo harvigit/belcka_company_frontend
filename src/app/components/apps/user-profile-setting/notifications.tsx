@@ -18,6 +18,7 @@ import {
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useParams } from "next/navigation";
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -211,7 +212,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                         </Typography>
                       </TableCell>
                       <TableCell align="center" sx={{ padding: "10px" }}>
-                        <Switch
+                        <IOSSwitch
                           checked={
                             getCategorySwitchState(category, "is_push") === "on"
                           }
@@ -226,7 +227,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                         />
                       </TableCell>
                       <TableCell align="center" sx={{ padding: "10px" }}>
-                        <Switch
+                        <IOSSwitch
                           checked={
                             getCategorySwitchState(category, "is_feed") === "on"
                           }
@@ -250,7 +251,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                           </Typography>
                         </TableCell>
                         <TableCell align="center" sx={{ padding: "10px" }}>
-                          <Switch
+                          <IOSSwitch
                             checked={notification.is_push}
                             onChange={(e) =>
                               updateNotificationState(
@@ -263,7 +264,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                           />
                         </TableCell>
                         <TableCell align="center" sx={{ padding: "10px" }}>
-                          <Switch
+                          <IOSSwitch
                             checked={notification.is_feed}
                             onChange={(e) =>
                               updateNotificationState(

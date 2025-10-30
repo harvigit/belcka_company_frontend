@@ -19,6 +19,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import api from '@/utils/axios';
 import { IconHelp, IconX } from '@tabler/icons-react';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 interface ShiftBreak {
     id?: number;
@@ -591,7 +592,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                             <Typography variant="body2">Breaks</Typography>
-                            <Switch
+                            <IOSSwitch
                                 checked={breaksEnabled}
                                 onChange={handleBreaksToggle}
                                 color="primary"

@@ -66,6 +66,7 @@ import {format} from 'date-fns';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 dayjs.extend(customParseFormat);
 
@@ -446,21 +447,18 @@ const TablePagination = () => {
                 const firstActivePermission = activePermissions[0]?.name;
 
                 return (
-                    <Button
-                        variant="outlined"
+                    <Chip
                         size="small"
                         onClick={() => handleOpenPermissionsDrawer(user)}
-                        sx={{textTransform: 'none'}}
-                    >
-                        {permissionCount === 0 ? (
-                            'Select'
-                        ) : (
-                            <>
-                                {firstActivePermission || 'None'}{' '}
-                                {permissionCount > 1 && `+${permissionCount - 1}`}
-                            </>
-                        )}
-                    </Button>
+                        label={permissionCount === 0 ? `Select` : `${firstActivePermission} ${permissionCount > 1 ? `+${permissionCount - 1}` : ''}`}
+                        sx={{
+                            backgroundColor: (theme) => theme.palette.primary.light,
+                            color: (theme) => theme.palette.primary.main,
+                            fontWeight: 500,
+                            borderRadius: '10px',
+                            px: 1.5,
+                        }}
+                    />
                 );
             },
         }),
@@ -790,13 +788,13 @@ const TablePagination = () => {
                                 py: 1,
                                 px: 1,
                                 borderRadius: 1,
-                                '&:hover': {backgroundColor: 'rgba(0,0,0,0.04)'},
+                                '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
                                 cursor: 'pointer',
                             }}
                             onClick={handleSelectAll}
                         >
                             <Typography>Select All</Typography>
-                            <Switch
+                            <IOSSwitch
                                 checked={allFilteredSelected}
                                 onChange={handleSelectAll}
                                 size="small"
@@ -804,7 +802,7 @@ const TablePagination = () => {
                             />
                         </Box>
 
-                        <Box sx={{flexGrow: 1, overflowY: 'auto'}}>
+                        <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
                             {filteredPermissions.map((permission) => (
                                 <Box
                                     key={permission.id}
@@ -815,13 +813,13 @@ const TablePagination = () => {
                                         py: 1,
                                         px: 1,
                                         borderRadius: 1,
-                                        '&:hover': {backgroundColor: 'rgba(0,0,0,0.04)'},
+                                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
                                         cursor: 'pointer',
                                     }}
                                     onClick={() => handlePermissionToggle(permission.id)}
                                 >
                                     <Typography>{permission.name}</Typography>
-                                    <Switch
+                                    <IOSSwitch
                                         checked={tempPermissions.has(permission.id)}
                                         onChange={() => handlePermissionToggle(permission.id)}
                                         size="small"

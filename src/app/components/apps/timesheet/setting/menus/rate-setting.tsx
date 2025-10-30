@@ -27,6 +27,7 @@ import { User } from "next-auth";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 const RateSetting = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -256,7 +257,7 @@ const RateSetting = () => {
               Enable pay rates
             </Typography>
             {enabled !== null && (
-              <Switch
+              <IOSSwitch
                 color="primary"
                 checked={enabled}
                 onChange={handleToggle}

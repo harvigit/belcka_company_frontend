@@ -15,6 +15,7 @@ import {
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 import {Box} from '@mui/system';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 interface PermissionItem {
     color: string
@@ -187,7 +188,7 @@ export default function PermissionSettings() {
                                         {permission.name}
                                     </TableCell>
                                     <TableCell align="center" sx={{padding: '10px'}}>
-                                        <Switch
+                                        <IOSSwitch
                                             checked={permission.status}
                                             onChange={(e) =>
                                                 updatePermissionState(
