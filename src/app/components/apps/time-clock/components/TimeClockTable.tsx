@@ -191,7 +191,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                 maxHeight: '100%',
                 overflow: 'auto',
             }}>
-                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
+                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', paddingBottom: '2rem' }}>
                     <TableHead>
                         {table.getHeaderGroups().map((hg: any) => (
                             <TableRow key={hg.id}>
@@ -242,6 +242,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             const rowId = `row-${row.index}`;
                             const isRowSelected = selectedRows.has(rowId);
                             const isRowLocked = isRecordLocked(rowData);
+
+                            console.log(rowData, 'rowDatarowDatarowData')
 
                             if (rowData.rowType === 'week') {
                                 const visibleColumnsCount = table.getVisibleLeafColumns().length;
@@ -309,7 +311,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     height: '45px',
                                                     minHeight: '45px',
                                                     maxHeight: '45px',
-                                                    '& td': { textAlign: 'center', verticalAlign: 'middle' },
+                                                    '& td': {
+                                                        textAlign: 'center',
+                                                        verticalAlign: 'middle',
+                                                        borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                    },
                                                     backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
                                                     cursor: 'pointer',
                                                     '&:hover': {
@@ -326,7 +332,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         justifyContent: 'center',
                                                     },
                                                     '&:hover .action-icon': {
-                                                        display: 'flex',
+                                                        display: 'flex !important',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         padding: 0,
@@ -483,29 +489,40 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {isLogLocked ? (
+                                                        {log.is_leave ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                opacity: isLogLocked ? 0.6 : 1
+                                                                opacity: isLogLocked ? 0.6 : 1,
                                                             }}>
-                                                                {log.project_name || '--'}
+                                                                --
                                                             </Box>
-                                                        ) : (
-                                                            <EditableProjectCell
-                                                                worklogId={worklogId}
-                                                                currentProjectId={log.project_id}
-                                                                currentProjectName={log.project_name}
-                                                                log={log}
-                                                                projects={projects}
-                                                                editingProjects={editingProjects}
-                                                                savingWorklogs={savingWorklogs}
-                                                                startEditingProject={startEditingProject}
-                                                                updateEditingProject={updateEditingProject}
-                                                                saveProjectChanges={saveProjectChanges}
-                                                                cancelEditingProject={cancelEditingProject}
-                                                            />
+                                                        )  : (
+                                                            isLogLocked ? (
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    opacity: isLogLocked ? 0.6 : 1
+                                                                }}>
+                                                                    {log.project_name || '--'}
+                                                                </Box>
+                                                            ) : (
+                                                                <EditableProjectCell
+                                                                    worklogId={worklogId}
+                                                                    currentProjectId={log.project_id}
+                                                                    currentProjectName={log.project_name}
+                                                                    log={log}
+                                                                    projects={projects}
+                                                                    editingProjects={editingProjects}
+                                                                    savingWorklogs={savingWorklogs}
+                                                                    startEditingProject={startEditingProject}
+                                                                    updateEditingProject={updateEditingProject}
+                                                                    saveProjectChanges={saveProjectChanges}
+                                                                    cancelEditingProject={cancelEditingProject}
+                                                                />
+                                                            )
                                                         )}
                                                     </TableCell>
                                                 )}
@@ -759,7 +776,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
 
                                                 {/* Action Column */}
-                                                {!log.is_leave && visibleColumnConfigs.action?.visible && (
+                                                {visibleColumnConfigs.action?.visible && (
                                                     <TableCell
                                                         align="center"
                                                         className="action-cell"
@@ -768,29 +785,32 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             textAlign: 'center',
+                                                            position: 'relative',
                                                         }}
                                                     >
-                                                        <Button
-                                                            size="small"
-                                                            className="action-icon"
-                                                            sx={{
-                                                                display: 'none',
-                                                                padding: 0,
-                                                                width: '30px',
-                                                                height: '30px',
-                                                                background: 'none',
-                                                                '&:hover': {
-                                                                    color: '#fc4b6c',
+                                                        { !log.is_leave && (
+                                                            <Button
+                                                                size="small"
+                                                                className="action-icon"
+                                                                sx={{
+                                                                    display: 'none',
+                                                                    padding: 0,
+                                                                    minWidth: '30px',
+                                                                    width: '30px',
+                                                                    height: '30px',
                                                                     background: 'none',
-                                                                },
-                                                            }}
-                                                            onClick={() => onDeleteClick(log.worklog_id)}
-                                                            aria-label="Delete worklog"
-                                                        >
-                                                            <IconTrash size={18}/>
-                                                        </Button>
+                                                                    '&:hover': {
+                                                                        color: '#fc4b6c',
+                                                                        background: 'none',
+                                                                    },
+                                                                }}
+                                                                onClick={() => onDeleteClick(log.worklog_id)}
+                                                                aria-label="Delete worklog"
+                                                            >
+                                                                <IconTrash size={18}/>
+                                                            </Button>
+                                                        )}
                                                     </TableCell>
                                                 )}
                                             </TableRow>
@@ -981,7 +1001,15 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 if (column.id === 'project') {
                                                     return (
-                                                        <TableCell align="center" sx={{ py: 0.5, width: '100%', minHeight: '45px' }}>
+                                                        <TableCell 
+                                                            align="center"
+                                                            sx={{
+                                                                py: 0.5,
+                                                                width: '100%',
+                                                                minHeight: '45px',
+                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                            }}
+                                                        >
                                                             <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
                                                                 <Select
                                                                     value={newRecord.project_id || ''}
@@ -1025,7 +1053,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 py: 0.5,
                                                                 width: '100%',
                                                                 minHeight: '45px',
-                                                                padding: '6px'
+                                                                padding: '6px',
+                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             }}
                                                         >
                                                             <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
@@ -1069,7 +1098,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     const isFieldValid = fieldValue && validateAndFormatTime(fieldValue) !== '';
 
                                                     return (
-                                                        <TableCell key={cell.id} align="center" sx={{ py: 0.5 }}>
+                                                        <TableCell
+                                                            key={cell.id}
+                                                            align="center"
+                                                            sx={{
+                                                                py: 0.5,
+                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                            }}
+                                                        >
                                                             <TextField
                                                                 type="text"
                                                                 value={fieldValue}

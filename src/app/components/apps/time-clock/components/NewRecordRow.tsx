@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     TableRow,
     TableCell,
@@ -7,8 +7,8 @@ import {
     MenuItem,
     TextField,
 } from '@mui/material';
-import { NewRecord, Shift, Project } from '@/app/components/apps/time-clock/types/timeClock';
-import { DateTime } from 'luxon';
+import {NewRecord, Shift, Project} from '@/app/components/apps/time-clock/types/timeClock';
+import {DateTime} from 'luxon';
 
 interface NewRecordRowProps {
     recordKey: string;
@@ -24,19 +24,19 @@ interface NewRecordRowProps {
 }
 
 const NewRecordRow: React.FC<NewRecordRowProps> = ({
-    recordKey,
-    newRecord,
-    shifts,
-    projects,
-    isSaving,
-    visibleColumnConfigs,
-    validateAndFormatTime,
-    updateNewRecord,
-    saveNewRecord,
-    cancelNewRecord,
-}) => {
+                                                       recordKey,
+                                                       newRecord,
+                                                       shifts,
+                                                       projects,
+                                                       isSaving,
+                                                       visibleColumnConfigs,
+                                                       validateAndFormatTime,
+                                                       updateNewRecord,
+                                                       saveNewRecord,
+                                                       cancelNewRecord,
+                                                   }) => {
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    const [blurredFields, setBlurredFields] = useState<{ start: boolean; end: boolean }>({ start: false, end: false });
+    const [blurredFields, setBlurredFields] = useState<{ start: boolean; end: boolean }>({start: false, end: false});
 
     const isRowEmpty = !newRecord.shift_id && !newRecord.start && !newRecord.end;
     if (isRowEmpty) {
@@ -55,13 +55,13 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
     const handleBlur = (field: 'start' | 'end') => {
         const formattedTime = validateAndFormatTime((newRecord[field] as string) || '');
         updateNewRecord(recordKey, field, formattedTime);
-        setBlurredFields((prev) => ({ ...prev, [field]: true }));
+        setBlurredFields((prev) => ({...prev, [field]: true}));
     };
 
     useEffect(() => {
         if (isSaving) return;
 
-        const { shift_id, start, end } = newRecord;
+        const {shift_id, start, end} = newRecord;
 
         if (shift_id && start && end && blurredFields.start && blurredFields.end) {
             const formattedStart = validateAndFormatTime(start);
@@ -88,20 +88,43 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         saveNewRecord,
         validateAndFormatTime,
     ]);
-    
+
     return (
         <TableRow
             key={recordKey}
             sx={{
-                '& td': { textAlign: 'center' },
+                '& td': {textAlign: 'center'},
             }}
         >
-            {visibleColumnConfigs.exclamation?.visible && <TableCell align="center" sx={{ py: 0.5 }}></TableCell>}
-            {visibleColumnConfigs.expander?.visible && <TableCell align="center" sx={{ py: 0.5 }}></TableCell>}
-
+            {visibleColumnConfigs.exclamation?.visible && (
+                <TableCell
+                    align="center"
+                    sx={{
+                        py: 0.5,
+                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
+                    }}
+                >--
+                </TableCell>
+            )}
+            {visibleColumnConfigs.expander?.visible && (
+                <TableCell
+                    align="center"
+                    sx={{
+                        py: 0.5,
+                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
+                    }}
+                >--
+                </TableCell>
+            )}
+            
             {visibleColumnConfigs.project?.visible && (
-                <TableCell align="center" sx={{ py: 0.5, width: '100%', minHeight: '45px' }}>
-                    <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                <TableCell align="center" sx={{
+                    py: 0.5,
+                    width: '100%',
+                    minHeight: '45px',
+                    borderBottom: '1px solid rgba(224, 224, 224, 1) !important',
+                }}>
+                    <FormControl size="small" sx={{minWidth: '100px', width: '100%', maxWidth: '100px'}}>
                         <Select
                             value={newRecord.project_id || ''}
                             onChange={(e) => updateNewRecord(recordKey, 'project_id', e.target.value)}
@@ -115,7 +138,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                                     px: '8px',
                                     textAlign: 'center',
                                 },
-                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                '& .MuiOutlinedInput-notchedOutline': {borderColor: '#e0e0e0'},
                             }}
                         >
                             <MenuItem value="" disabled>Project</MenuItem>
@@ -139,9 +162,10 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                         justifyContent: 'center',
                         width: '100%',
                         minHeight: '45px',
+                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important',
                     }}
                 >
-                    <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
+                    <FormControl size="small" sx={{minWidth: '100px', width: '100%', maxWidth: '100px'}}>
                         <Select
                             value={newRecord.shift_id || ''}
                             onChange={(e) => updateNewRecord(recordKey, 'shift_id', e.target.value)}
@@ -155,7 +179,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                                     px: '8px',
                                     textAlign: 'center',
                                 },
-                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                '& .MuiOutlinedInput-notchedOutline': {borderColor: '#e0e0e0'},
                             }}
                         >
                             <MenuItem value="" disabled>Shift</MenuItem>
@@ -172,7 +196,8 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
             {['start', 'end'].map(
                 (field) =>
                     visibleColumnConfigs[field]?.visible && (
-                        <TableCell key={field} align="center" sx={{ py: 0.5 }}>
+                        <TableCell key={field} align="center"
+                                   sx={{py: 0.5, borderBottom: '1px solid rgba(224, 224, 224, 1) !important',}}>
                             <TextField
                                 type="text"
                                 value={(newRecord[field as keyof NewRecord] as string) || ''}
@@ -187,7 +212,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                                 disabled={isSaving}
                                 sx={{
                                     width: '70px',
-                                    '& .MuiInputBase-input': { fontSize: '0.75rem', textAlign: 'center' },
+                                    '& .MuiInputBase-input': {fontSize: '0.75rem', textAlign: 'center'},
                                 }}
                             />
                         </TableCell>
@@ -195,15 +220,47 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
             )}
 
             {visibleColumnConfigs.totalHours?.visible && (
-                <TableCell align="center" sx={{ py: 0.5 }}>--</TableCell>
+                <TableCell
+                    align="center"
+                    sx={{
+                        py: 0.5,
+                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
+                    }}
+                > --
+                </TableCell>
             )}
-            
+
             {visibleColumnConfigs.priceWorkAmount?.visible && (
-                <TableCell align="center" sx={{ py: 0.5 }}>--</TableCell>
+                <TableCell
+                    align="center"
+                    sx={{
+                        py: 0.5, 
+                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
+                    }}
+                >--
+                </TableCell>
             )}
-            
+
             {visibleColumnConfigs.checkins?.visible && (
-                <TableCell align="center" sx={{ py: 0.5 }}>--</TableCell>
+                <TableCell
+                    align="center"
+                    sx={{
+                        py: 0.5,
+                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
+                    }}
+                >--
+                </TableCell>
+            )}
+
+            {visibleColumnConfigs.action?.visible && (
+                <TableCell
+                    align="center"
+                    sx={{
+                        py: 0.5,
+                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
+                    }}
+                >--
+                </TableCell>
             )}
         </TableRow>
     );

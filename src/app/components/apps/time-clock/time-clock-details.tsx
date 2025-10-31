@@ -752,6 +752,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const dayRows = (week.days || []).flatMap((day: any) => {
                 let filteredWorklogs = (day.worklogs || []);
 
+                console.log(day, 'daydaydaydaydaydaydaydaydaydaydaydaydaydaydaydaydayday')
                 if (filterValue === 'lock') {
                     filteredWorklogs = filteredWorklogs.filter(
                         (log: any) => log.status === '6' || log.status === 6
@@ -765,6 +766,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const hasWorklogs = filteredWorklogs.length > 0;
 
                 if (hasWorklogs) {
+                    const totalPayableAmount = filteredWorklogs.reduce((sum: number, log: any) => {
+                        return sum + (parseFloat(log.payable_amount) || 0);
+                    }, 0);
+
                     return [{
                         rowType: 'day' as const,
                         date: day.date ?? '--',
@@ -776,7 +781,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         priceWorkAmount: '--',
                         totalHours: '--',
                         dailyTotal: formatHour(day.daily_total),
-                        payableAmount: `${currency}${day.daily_payable_amount || 0}`,
+                        payableAmount: `${currency}${totalPayableAmount.toFixed(2)}`,
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
                         managerNotes: day.manager_notes || '--',

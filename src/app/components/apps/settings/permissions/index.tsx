@@ -42,12 +42,14 @@ export default function PermissionSettings() {
     const fetchPermissions = async () => {
         setLoading(true);
         try {
-            const res = await api.get(
-                `dashboard/company/permissions`
-            );
+            const res = await api.get('dashboard/company/permissions', {
+                params: { is_web: true }
+            });
+
             if (res.data?.IsSuccess) {
-                setPermissions(res.data.permissions);
-                setOriginalPermissions(res.data.permissions);
+                const permissions = res.data.permissions;
+                setPermissions(permissions);
+                setOriginalPermissions(permissions);
                 setHasChanges(false);
             }
 
@@ -101,9 +103,7 @@ export default function PermissionSettings() {
                     status: perm.status ? 1 : 0,
                 }))
             };
-
-            console.log('Sending payload:', payload); // Debug log
-
+            
             const response = await api.post(
                 `dashboard/company/change-bulk-permission-status`,
                 payload
