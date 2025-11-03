@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import Breadcrumb from "@/app/(DashboardLayout)/layout/shared/breadcrumb/Breadcrumb";
 import PageContainer from "@/app/components/container/PageContainer";
@@ -21,7 +22,7 @@ const RequestListing = () => {
         <Breadcrumb title="Request List" items={BCrumb} />
         <BlankCard>
           {/* <CardContent> */}
-            <RequestList open={true} onClose={()=> {}}/>
+          <RequestList open={true} onClose={() => {}} />
           {/* </CardContent> */}
         </BlankCard>
       </PageContainer>
