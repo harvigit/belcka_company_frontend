@@ -261,7 +261,7 @@ export default function UserRequests({ open, onClose }: Props) {
       </Box>
 
       {/* Search */}
-      <Box mb={2} display={"flex"} gap={1} alignContent={"center"} ml={1}>
+      <Box mb={2} display={"flex"} gap={1} alignContent={"center"}>
         <TextField
           placeholder="Search requests..."
           value={searchTerm}
