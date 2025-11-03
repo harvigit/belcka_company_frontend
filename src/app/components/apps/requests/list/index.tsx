@@ -37,7 +37,7 @@ interface CompanyList {
   user_id: number;
 }
 
-interface WorkDetailPageProps {
+interface Props {
   open: boolean;
   onClose: () => void;
 }
@@ -72,7 +72,7 @@ const saveDateRangeToStorage = (
   }
 };
 
-export default function UserRequests({ open, onClose }: WorkDetailPageProps) {
+export default function UserRequests({ open, onClose }: Props) {
   const router = useRouter();
   const today = new Date();
   const defaultStart = new Date(today);
