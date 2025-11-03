@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Grid,
-  CardContent,
-} from "@mui/material";
+import { Grid, CardContent } from "@mui/material";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -15,6 +12,8 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import Cookies from "js-cookie";
 import toast from "react-hot-toast";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(customParseFormat);
 
@@ -40,7 +39,6 @@ const TablePagination = () => {
   const [data, setData] = useState<ProjectList[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [projectId, setProjectId] = useState<number | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -48,6 +46,8 @@ const TablePagination = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
   const [budget, setBudget] = useState<number | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState<any>({
     name: "",
     address: "",
@@ -58,6 +58,19 @@ const TablePagination = () => {
     team_ids: "",
     company_id: user.company_id,
   });
+
+  useEffect(() => {
+    const queryProjectId = searchParams ? searchParams.get("id") : "";
+    if (queryProjectId) {
+      setProjectId(Number(queryProjectId));
+      if (user?.id && user?.company_id) {
+        Cookies.set(COOKIE_PREFIX + user.id + user.company_id, queryProjectId, {
+          expires: 30,
+        });
+      }
+      router.push("/apps/projects/index");
+    }
+  }, [searchParams, user?.id, user?.company_id]);
 
   const fetchProjects = async () => {
     try {

@@ -16,7 +16,13 @@ import {
   RadioGroup,
   FormControlLabel,
 } from "@mui/material";
-import { IconDownload, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import {
+  IconDownload,
+  IconFilter,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { Grid } from "@mui/system";
@@ -231,6 +237,23 @@ export const DocumentsTab = ({
     );
   };
 
+  const handleDownloadSelected = () => {
+    const tasksWithImages = selectedTasks.filter((taskId) => {
+      const task = tabData.find((doc) => doc.id === taskId);
+      return task?.images?.length > 0;
+    });
+    if (tasksWithImages.length > 0) {
+      handleDownloadZip(tasksWithImages);
+    }
+  };
+
+  const hasTasksWithImages = useMemo(() => {
+    return selectedTasks.some((taskId) => {
+      const task = tabData.find((doc) => doc.id === taskId);
+      return task?.images?.length > 0;
+    });
+  }, [selectedTasks, tabData]);
+
   const filteredData = useMemo(() => {
     const search = searchUser.trim().toLowerCase();
     if (!search) return tabData;
@@ -243,6 +266,29 @@ export const DocumentsTab = ({
 
   return (
     <Box>
+      <Stack
+        direction="row"
+        spacing={1}
+        display={"flex"}
+        justifyContent={"flex-end"}
+      >
+        <IconButton
+          color="primary"
+          onClick={handleDownloadSelected}
+          disabled={!hasTasksWithImages}
+          sx={{
+            border: "1px solid",
+            borderColor: hasTasksWithImages ? "primary.main" : "grey.400",
+            borderRadius: "8px",
+            padding: "8px",
+          }}
+        >
+          <IconDownload size={18} />
+        </IconButton>
+        <Button variant="contained">
+          <IconFilter width={18} />
+        </Button>
+      </Stack>
       {filteredData.length > 0 ? (
         filteredData.map((doc) => (
           <Box key={doc.id} mb={3}>

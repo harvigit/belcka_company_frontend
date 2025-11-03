@@ -61,6 +61,18 @@ const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null) =>
     }
 };
 
+const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
+    try {
+        const dateRange = {
+            startDate: startDate ? startDate.toDateString() : null,
+            endDate: endDate ? endDate.toDateString() : null,
+            columnVisibility: {},
+        };
+            localStorage.setItem(STORAGE_TIMESHEET_KEY, JSON.stringify(dateRange));
+    } catch (error) {
+        console.log('Error saving date range to localStorage:', error);
+    }
+};
 const loadDateRangeFromStorage = () => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -374,18 +386,7 @@ const TimeClock = () => {
         );
 
         if (foundUser) {
-            const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null) => {
-                try {
-                    const dateRange = {
-                        startDate: startDate ? startDate.toDateString() : null,
-                        endDate: endDate ? endDate.toDateString() : null,
-                        columnVisibility: {},
-                    };
-                     localStorage.setItem(STORAGE_TIMESHEET_KEY, JSON.stringify(dateRange));
-                } catch (error) {
-                    console.log('Error saving date range to localStorage:', error);
-                }
-            };
+            saveDateToStorage(startDate,endDate);
             setSelectedTimeClock(foundUser);
             setDetailsOpen(true);
             router.replace("/apps/timesheet/list", { scroll: false });

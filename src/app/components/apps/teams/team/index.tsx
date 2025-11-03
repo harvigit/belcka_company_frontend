@@ -53,7 +53,7 @@ import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -130,7 +130,7 @@ const TablePagination = () => {
 
   const [openOtpDialog, setOpenOtpDialog] = useState(false);
   const [otp, setOtp] = useState("");
-
+  const router = useRouter();
   // fetch compnay trades
   useEffect(() => {
     const fetchTrades = async () => {
@@ -195,6 +195,9 @@ const TablePagination = () => {
 
         setData(flattened);
       }
+      if (res.data?.info.length <= 0 && teamId !== null) {
+        router.push("/apps/teams/list");
+      }
       setLoading(false);
     } catch (err) {
       console.error("Failed to fetch users", err);
@@ -217,6 +220,9 @@ const TablePagination = () => {
   useEffect(() => {
     fetchUniqueUsers();
     fetchData();
+    if (teamId == "null") {
+      router.push("/apps/teams/list");
+    }
   }, []);
 
   // fetch user list

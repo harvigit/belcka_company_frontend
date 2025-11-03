@@ -30,24 +30,31 @@ import {
 import { getFcmToken, onForegroundMessage } from "@/utils/firebase";
 import AnnouncementsList from "@/app/components/apps/settings/announcement";
 import UserRequests from "@/app/components/apps/requests/list";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 
-export interface Feed {
-  id: number;
-  message: string;
-  user_image?: string;
-  date_added: string;
-  user_name: string;
-  unread_feeds: number;
-  request_name: string;
-  request_type: number;
-}
-
+const STORAGE_KEY = "feed-date-range";
+const loadDateRangeFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+      };
+    }
+  } catch (error) {
+    console.error("Error loading date range from localStorage:", error);
+  }
+  return null;
+};
 const Company = () => {
   const [companies, setCompanies] = useState<any[]>([]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [openDrawer, setOpenDrawer] = useState(false);
-  const [feed, setFeed] = useState<Feed[]>([]);
+  const [feed, setFeed] = useState<any[]>([]);
   const [unreedFeed, setUnreedFeed] = useState<Set<number>>(new Set());
   const [count, setCount] = useState<number>(0);
   const session = useSession();
@@ -64,6 +71,34 @@ const Company = () => {
   } & {
     company_image?: number | null;
   } & { id: number };
+
+  const router = useRouter();
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+
+  // Load from localStorage or use defaults
+  const getInitialDates = () => {
+    const stored = loadDateRangeFromStorage();
+    if (stored && stored.startDate && stored.endDate) {
+      return {
+        startDate: stored.startDate,
+        endDate: stored.endDate,
+      };
+    }
+    return {
+      startDate: defaultStart,
+      endDate: defaultEnd,
+    };
+  };
+
+  const initialDates = getInitialDates();
+  const [startDate, setStartDate] = useState<Date | null>(
+    initialDates.startDate
+  );
+  const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
   // Fetch user companies
   useEffect(() => {
@@ -215,6 +250,59 @@ const Company = () => {
 
   const paginatedFeeds = filteredFeeds?.slice(0, page * limit) || [];
 
+  const REQUEST_ROUTE_MAP: Record<
+    string,
+    (recordId?: number, startDate?: string, endDate?: string) => string
+  > = {
+    Shift: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
+
+      return url;
+    },
+    Timesheet: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
+
+      return url;
+    },
+    "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
+    "Company": (id) => `/apps/users/${id}?tab=rate`,
+    "Comapny": (id) => `/apps/users/${id}?tab=billing`,
+    "Project": (id) => `/apps/projects/index?id=${id}`,
+    Team: (id) => `/apps/teams/team?team_id=${id}`,
+    // Leave: (recordId, startDate, endDate) => {
+    //   let url = `/apps/timesheet/list`;
+    //   const params: any[] = [];
+
+    //   if (recordId) params.push(`user_id=${recordId}`);
+    //   if (startDate) params.push(`start_date=${startDate}`);
+    //   if (endDate) params.push(`end_date=${endDate}`);
+
+    //   if (params.length > 0) {
+    //     url += `?${params.join("&")}`;
+    //   }
+
+    //   return url;
+    // },
+  };
+
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
       {user?.id && (
@@ -360,7 +448,54 @@ const Company = () => {
                 {paginatedFeeds?.length > 0 ? (
                   <>
                     {paginatedFeeds.map((item, index) => (
-                      <Box key={item.id}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          bgcolor: "white",
+                          transition: "0.2s",
+                          cursor: "pointer",
+                          "&:hover": {
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                            transform: "translateY(-1px)",
+                          },
+                        }}
+                        key={item.id}
+                        onClick={() => {
+                          const routeFn = REQUEST_ROUTE_MAP[item.request_name];
+
+                          if (
+                            (item.request_name === "Shift" ||
+                              item.request_name === "Timesheet") &&
+                            item.action === "stop"
+                          ) {
+                            return; 
+                          }
+
+                          if (routeFn) {
+                            if (
+                              item.request_name === "Shift" ||
+                              (item.request_name === "Timesheet" &&
+                                item.action !== "stop")
+                            ) {
+                              const start = startDate
+                                ? format(startDate, "yyyy-MM-dd")
+                                : undefined;
+                              const end = endDate
+                                ? format(endDate, "yyyy-MM-dd")
+                                : undefined;
+                              router.push(routeFn(item.user_id, start, end));
+                            } else if (item.request_name === "Team") {
+                              router.push(routeFn(item.team_id));
+                            } else if (item.request_name === "Project") {
+                              router.push(routeFn(item.project_id ?? item.record_id));
+                            } else {
+                              router.push(routeFn(item.user_id));
+                            }
+
+                            setOpenDrawer(false);
+                          }
+                        }}
+                      >
                         <Box
                           p={2}
                           ml={1}

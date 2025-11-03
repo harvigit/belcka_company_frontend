@@ -143,7 +143,7 @@ export default function UserRequests({ open, onClose }: Props) {
   useEffect(() => {
     if (startDate && endDate) fetchRequests(startDate, endDate);
     // if (open) fetchRequests(startDate,endDate);
-  }, [startDate && endDate]);
+  }, [startDate && endDate, open]);
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -304,8 +304,6 @@ export default function UserRequests({ open, onClose }: Props) {
                         router.push(routeFn(work.user_id));
                       }
                       onClose();
-                    } else {
-                      router.push(`/requests/${work.id}`);
                     }
                   }}
                   sx={{
