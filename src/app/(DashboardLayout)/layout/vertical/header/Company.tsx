@@ -23,11 +23,13 @@ import toast from "react-hot-toast";
 import {
   IconArrowLeft,
   IconBell,
+  IconNotes,
   IconSpeakerphone,
   IconX,
 } from "@tabler/icons-react";
 import { getFcmToken, onForegroundMessage } from "@/utils/firebase";
 import AnnouncementsList from "@/app/components/apps/settings/announcement";
+import UserRequests from "@/app/components/apps/requests/list";
 
 export interface Feed {
   id: number;
@@ -52,6 +54,7 @@ const Company = () => {
   const [filterRequest, setFilterRequest] = useState<string>("all");
   const [announcemntCount, setAnnouncemntCount] = useState<number>(0);
   const [openannouncementDrawer, setOpenAnnouncementDrawer] = useState(false);
+  const [requestDrawer, setRequestDrawer] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const limit = 20;
@@ -266,6 +269,15 @@ const Company = () => {
           className="header-icons"
         />
       </Badge>
+      <IconNotes
+        size={24}
+        onClick={() => setRequestDrawer(true)}
+        className="header-icons"
+      />
+      <UserRequests
+        open={requestDrawer}
+        onClose={() => setRequestDrawer(false)}
+      />
       <Drawer
         anchor="bottom"
         open={openDrawer}

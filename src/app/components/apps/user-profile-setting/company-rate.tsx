@@ -272,6 +272,23 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       console.error("Rejection failed:", err);
     }
   };
+
+  useEffect(() => {
+    if (
+      Object.keys(comapny?.diff_data || {}).includes("net_rate_perday") &&
+      comapny?.diff_data.net_rate_perday?.old
+        ? comapny?.diff_data.net_rate_perday?.old
+        : comapny?.diff_data.net_rate_perday?.new
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        rate:
+          comapny.is_pending_request == false && comapny?.status !== 12
+            ? comapny.diff_data.net_rate_perday.new
+            : comapny.diff_data.net_rate_perday.old,
+      }));
+    }
+  }, [comapny]);
   if (loading) {
     return (
       <Box
@@ -321,9 +338,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
           Rate History
         </Button>
       </Box>
-      {payRate || ratePermisison ? (
+      {ratePermisison ? (
         <>
-          {user.user_role_id == 1 && comapny.is_pending_request === true && (
+          {user.user_role_id === 1 ? (
             <>
               <Box display={"flex"} justifyContent={"space-between"} mb={1}>
                 <Typography
@@ -334,145 +351,259 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                   Edit rate
                 </Typography>
               </Box>
-
-              <Box mb={4} display={"flex"}>
-                <Alert
-                  severity="info"
-                  variant="outlined"
-                  className="pending-request"
-                  sx={{
-                    alignItems: "center",
-                    borderColor: "red !important",
-                    color: "black !important",
-                  }}
-                >
-                  <Box
+              {comapny.is_pending_request && (
+                <Box mb={4} display={"flex"}>
+                  <Alert
+                    severity="info"
+                    variant="outlined"
+                    className="pending-request"
                     sx={{
-                      display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
+                      borderColor: "red !important",
+                      color: "black !important",
                     }}
                   >
-                    <Typography sx={{ color: "black !important", mr: 2 }}>
-                      Rate request is pending please take an action.
-                    </Typography>
-
-                    <Button
-                      variant="outlined"
-                      color="success"
-                      startIcon={<IconCheck size={16} />}
-                      onClick={() => handleApprove(comapny?.request_log_id)}
-                      sx={{ mr: 1 }}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
                     >
-                      Approve
-                    </Button>
+                      <Typography sx={{ color: "black !important", mr: 2 }}>
+                        Rate request is pending please take an action.
+                      </Typography>
 
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<IconX size={16} />}
-                      onClick={() => handleReject(comapny?.request_log_id)}
-                    >
-                      Reject
-                    </Button>
-                  </Box>
-                </Alert>
-              </Box>
-            </>
-          )}
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        startIcon={<IconCheck size={16} />}
+                        onClick={() => handleApprove(comapny?.request_log_id)}
+                        sx={{ mr: 1 }}
+                      >
+                        Approve
+                      </Button>
 
-          <Grid container spacing={2} mb={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Autocomplete
-                className="custom_color"
-                options={trade}
-                disabled={user.user_role_id !== 1}
-                getOptionLabel={(opt: any) => opt?.name || ""}
-                value={
-                  Object.keys(comapny?.diff_data || {}).includes("trade_id")
-                    ? trade.find(
-                        (t) => t.id === comapny.diff_data.trade_id.old
-                      ) || null
-                    : trade.find((t) => t.id === formData.trade_id) || null
-                }
-                onChange={(_, newValue) => {
-                  setFormData({
-                    ...formData,
-                    trade_id: newValue ? newValue.id : null,
-                  });
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Trade"
-                    placeholder="Search trade type..."
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<IconX size={16} />}
+                        onClick={() => handleReject(comapny?.request_log_id)}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  </Alert>
+                </Box>
+              )}
+
+              <Grid container spacing={2} mb={2}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Autocomplete
+                    className="custom_color"
+                    options={trade}
+                    getOptionLabel={(opt: any) => opt?.name || ""}
+                    value={
+                      Object.keys(comapny?.diff_data || {}).includes("trade_id")
+                        ? trade.find(
+                            (t) => t.id === comapny.diff_data.trade_id.old
+                          ) || null
+                        : trade.find((t) => t.id === formData.trade_id) || null
+                    }
+                    onChange={(_, newValue) => {
+                      setFormData({
+                        ...formData,
+                        trade_id: newValue ? newValue.id : null,
+                      });
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Trade" fullWidth />
+                    )}
                     fullWidth
                   />
-                )}
-                clearOnEscape
-                fullWidth
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                className="custom_color"
-                label="Join Company Date"
-                value={comapny?.joining_date}
-                disabled
-              />
-            </Grid>
-          </Grid>
+                </Grid>
 
-          <Grid container spacing={2} mb={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                className="custom_color"
-                label={`(${comapny?.currency}) Net Per Day`}
-                value={
-                  Object.keys(comapny?.diff_data || {}).includes(
-                    "net_rate_perday"
-                  )
-                    ? comapny?.diff_data.net_rate_perday?.old ?? ""
-                    : formData.rate
-                }
-                disabled={
-                  comapny?.is_pending_request === true ||
-                  Object.keys(comapny?.diff_data || {}).length > 0
-                }
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, rate: e.target.value }))
-                }
-              />
-            </Grid>
-          </Grid>
-          <Grid size={{ xs: 6, sm: 6 }}>
-            <Box display={"flex"} justifyContent={"space-between"} mb={2}>
-              <Typography color="textSecondary">Gross Per Day</Typography>
-              <Typography color="textSecondary">
-                {comapny?.currency}
-                {gross}
-              </Typography>
-            </Box>
-            <Box display={"flex"} justifyContent={"space-between"}>
-              <Typography color="textSecondary">CIS (20%)</Typography>
-              <Typography color="textSecondary">
-                {comapny?.currency}
-                {cis}
-              </Typography>
-            </Box>
-          </Grid>
-          <Box mt={2}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleUpdate}
-              disabled={comapny.is_pending_request}
-            >
-              Update
-            </Button>
-          </Box>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    className="custom_color"
+                    label="Join Company Date"
+                    value={comapny?.joining_date}
+                    disabled
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    inputMode="numeric"
+                    className="custom_color"
+                    label={`(${comapny?.currency}) Net Per Day`}
+                    value={formData.rate ?? ""}
+                    disabled={comapny?.is_pending_request}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^\d*\.?\d*$/.test(value)) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          rate: value,
+                        }));
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Gross & CIS Summary */}
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography color="textSecondary">Gross Per Day</Typography>
+                  <Typography color="textSecondary">
+                    {comapny?.currency}
+                    {gross}
+                  </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography color="textSecondary">CIS (20%)</Typography>
+                  <Typography color="textSecondary">
+                    {comapny?.currency}
+                    {cis}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Box mt={2}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleUpdate}
+                  disabled={comapny.is_pending_request}
+                >
+                  Update
+                </Button>
+              </Box>
+            </>
+          ) : (
+            <>
+              {payRate || user.id === comapny?.user_id ? (
+                <>
+                  <Grid container spacing={2} mb={2}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Autocomplete
+                        className="custom_color"
+                        options={trade}
+                        disabled={
+                          ((payRate === "view" || !payRate) &&
+                            user.id !== comapny?.user_id) ||
+                          comapny.is_pending_request
+                        }
+                        getOptionLabel={(opt: any) => opt?.name || ""}
+                        value={
+                          Object.keys(comapny?.diff_data || {}).includes(
+                            "trade_id"
+                          )
+                            ? trade.find(
+                                (t) => t.id === comapny.diff_data.trade_id.old
+                              ) || null
+                            : trade.find((t) => t.id === formData.trade_id) ||
+                              null
+                        }
+                        onChange={(_, newValue) => {
+                          setFormData({
+                            ...formData,
+                            trade_id: newValue ? newValue.id : null,
+                          });
+                        }}
+                        renderInput={(params) => (
+                          <TextField {...params} label="Trade" fullWidth />
+                        )}
+                        fullWidth
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        className="custom_color"
+                        label="Join Company Date"
+                        value={comapny?.joining_date}
+                        disabled
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        inputMode="decimal"
+                        className="custom_color"
+                        label={`(${comapny?.currency}) Net Per Day`}
+                        value={formData.rate ?? ""}
+                        disabled={
+                          ((payRate === "view" || !payRate) &&
+                            user.id !== comapny?.user_id) ||
+                          comapny?.is_pending_request
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              rate: value,
+                            }));
+                          }
+                        }}
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 6 }}></Grid>
+
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Box display="flex" justifyContent="space-between" mb={1}>
+                        <Typography color="textSecondary">
+                          Gross Per Day
+                        </Typography>
+                        <Typography color="textSecondary">
+                          {comapny?.currency}
+                          {gross}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography color="textSecondary">CIS (20%)</Typography>
+                        <Typography color="textSecondary">
+                          {comapny?.currency}
+                          {cis}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+
+                  <Box mt={2}>
+                    {(payRate === "view_edit" ||
+                      user.id === comapny?.user_id) && (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleUpdate}
+                      >
+                        Update
+                      </Button>
+                    )}
+                  </Box>
+                </>
+              ) : (
+                <Box mt={4} display={"flex"}>
+                  <Typography
+                    color="textSecondary"
+                    className="f-18"
+                    sx={{ m: "auto" }}
+                  >
+                    You do not have permission to view this information.
+                  </Typography>
+                </Box>
+              )}
+            </>
+          )}
         </>
       ) : (
         <Box mt={4} display={"flex"}>
@@ -651,8 +782,8 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                             ? "Approved"
                             : item.status_text == "rejected"
                             ? "Rejected"
-                            : `Modified on ${item.date} at ${item.time} `}{" "}
-                          {item.action_by
+                            : `Requested ${item.action_by !== null ? `by ${item.action_by}` : ''} on ${item.date} at ${item.time}`}{" "}
+                          {item.action_by && item.status_text !== "pending"
                             ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
                             : ""}{" "}
                         </Typography>

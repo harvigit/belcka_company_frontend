@@ -42,10 +42,12 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css'
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
 const STORAGE_KEY = 'timesheet-date-range';
+const STORAGE_TIMESHEET_KEY = 'time-clock-details-page';
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null) => {
     try {
@@ -159,7 +161,7 @@ const TimeClock = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [companyId, setCompanyId] = useState<number | null>(null)
 
-    const fetchData = async (start: Date, end: Date): Promise<void> => {
+    const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
         try {
             const params: Record<string, string> = {
                 start_date: format(start, 'dd/MM/yyyy'),
@@ -176,10 +178,12 @@ const TimeClock = () => {
                 if (response.data.currency !== null) {
                     setCurrency(response.data.currency);
                 }
+                return response.data.info; 
             }
         } catch (error) {
             setErrorMessage('Failed to fetch timesheet data. Please try again.');
         }
+        return []; 
     };
 
     useEffect(() => {
@@ -348,6 +352,49 @@ const TimeClock = () => {
             },
         },
     });
+
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+    const userIdParam = searchParams?.get("user_id");
+    const startParam = searchParams?.get("start_date");
+    const endParam = searchParams?.get("end_date");
+
+    if (userIdParam && startParam && endParam) {
+        const startDateObj = new Date(startParam);
+        const endDateObj = new Date(endParam);
+
+        setStartDate(startDateObj);
+        setEndDate(endDateObj);
+
+        fetchData(startDateObj, endDateObj).then((fetchedData) => {
+        const foundUser = fetchedData.find(
+            (item) => Number(item.user_id) === Number(userIdParam)
+        );
+
+        if (foundUser) {
+            const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null) => {
+                try {
+                    const dateRange = {
+                        startDate: startDate ? startDate.toDateString() : null,
+                        endDate: endDate ? endDate.toDateString() : null,
+                        columnVisibility: {},
+                    };
+                     localStorage.setItem(STORAGE_TIMESHEET_KEY, JSON.stringify(dateRange));
+                } catch (error) {
+                    console.log('Error saving date range to localStorage:', error);
+                }
+            };
+            setSelectedTimeClock(foundUser);
+            setDetailsOpen(true);
+            router.replace("/apps/timesheet/list", { scroll: false });
+        }else{
+            router.replace("/apps/timesheet/list", { scroll: false });
+        }
+        });
+    }
+    }, [searchParams]);
 
     return (
         <Box sx={{ position: 'relative', overflow: 'hidden' }}>

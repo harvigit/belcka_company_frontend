@@ -16,20 +16,19 @@ import {
   IconArrowLeft,
   IconEdit,
   IconMedal,
-  IconPencil,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
 
 import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import HealthInfo from "../../user-profile-setting/health-info";
 import BillingInfo from "../../user-profile-setting/billing-info";
-import { useSession, signIn, getSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
@@ -66,6 +65,7 @@ const TablePagination = () => {
   const [data, setData] = useState<TeamList>();
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { data: session, update } = useSession();
   const user = session?.user as User & { company_id?: number | null } & {
@@ -210,6 +210,22 @@ const TablePagination = () => {
     handleFieldChange("phone", numberOnly);
   };
 
+   useEffect(() => {
+    const tabParam = searchParams ? searchParams.get("tab"): "";
+    if (tabParam) {
+      switch (tabParam) {
+        case "billing":
+          setValue(1);
+          break;
+        case "rate":
+          setValue(2);
+          break;
+        default:
+          setValue(0);
+      }
+      router.replace(`/apps/users/${userId}`)
+    }
+  }, [searchParams]);
   if (loading) {
     return (
       <Box

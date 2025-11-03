@@ -1,501 +1,418 @@
 "use client";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
-import {
-  TableContainer,
-  Table,
-  TableRow,
-  TableCell,
-  TableBody,
-  TableHead,
-  Typography,
-  Box,
-  Grid,
-  Button,
-  Divider,
-  IconButton,
-  Stack,
-  TextField,
-  InputAdornment,
-  MenuItem,
-  Tooltip,
-  Chip,
-  FormControlLabel,
-} from "@mui/material";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  createColumnHelper,
-} from "@tanstack/react-table";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
-  IconSearch,
-} from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState, useMemo } from "react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import {
+  Box,
+  Grid,
+  Stack,
+  Drawer,
+  IconButton,
+  Typography,
+  TextField,
+  Avatar,
+} from "@mui/material";
+import { IconArrowLeft, IconX } from "@tabler/icons-react";
+import { format } from "date-fns";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(customParseFormat);
 
-export interface CompanyList {
+interface CompanyList {
   id: number;
   table_name: string;
-  requested_user: string;
+  user_name: string;
   message: string;
-  status: string;
+  status_text: string;
   date: string;
   action: string;
   note: string;
   company: string;
+  user_image: string;
+  type_name: string;
+  user_id: number;
 }
 
-const TablePagination = () => {
+interface WorkDetailPageProps {
+  open: boolean;
+  onClose: () => void;
+}
+const STORAGE_KEY = "request-date-range";
+const loadDateRangeFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+      };
+    }
+  } catch (error) {
+    console.error("Error loading date range from localStorage:", error);
+  }
+  return null;
+};
+const saveDateRangeToStorage = (
+  startDate: Date | null,
+  endDate: Date | null
+) => {
+  try {
+    const dateRange = {
+      startDate: startDate ? startDate.toDateString() : null,
+      endDate: endDate ? endDate.toDateString() : null,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
+  } catch (error) {
+    console.error("Error saving date range to localStorage:", error);
+  }
+};
+
+export default function UserRequests({ open, onClose }: WorkDetailPageProps) {
+  const router = useRouter();
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+
+  // Load from localStorage or use defaults
+  const getInitialDates = () => {
+    const stored = loadDateRangeFromStorage();
+    if (stored && stored.startDate && stored.endDate) {
+      return {
+        startDate: stored.startDate,
+        endDate: stored.endDate,
+      };
+    }
+    return {
+      startDate: defaultStart,
+      endDate: defaultEnd,
+    };
+  };
+
+  const initialDates = getInitialDates();
+
   const [data, setData] = useState<CompanyList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const rerender = React.useReducer(() => ({}), {})[1];
+  const [startDate, setStartDate] = useState<Date | null>(
+    initialDates.startDate
+  );
+  const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
+  const session = useSession();
+  const user = session.data?.user as User & {
+    company_id?: string | null;
+    company_name?: string | null;
+    company_image?: number | null;
+    id: number;
+    user_role_id: number;
+  };
 
-  const router = useRouter();
-  // Fetch data
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(`admin/get-all-request`);
-        if (res.data) {
-          setData(res.data.requests);
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+  const fetchRequests = async (start: Date, end: Date): Promise<void> => {
+    try {
+      setLoading(true);
+      const payload = {
+        user_id: Number(user?.id),
+        company_id: Number(user?.company_id),
+        start_date: format(start, "dd/MM/yyyy"),
+        end_date: format(end, "dd/MM/yyyy"),
+      };
+      const param = {
+        company_id: Number(user?.company_id),
+        start_date: format(start, "dd/MM/yyyy"),
+        end_date: format(end, "dd/MM/yyyy"),
+      };
+      let res;
+      if (user?.user_role_id === 1) {
+        res = await api.post(`requests/get-all-request`, param);
+      } else {
+        res = await api.post(`requests/get-all-request`, payload);
       }
-    };
-    fetchTrades();
-  }, [api]);
+      if (res.data?.requests) setData(res.data.requests);
+    } catch (err) {
+      console.error("Failed to fetch requests", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (startDate && endDate) fetchRequests(startDate, endDate);
+    // if (open) fetchRequests(startDate,endDate);
+  }, [startDate && endDate]);
+
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+      saveDateRangeToStorage(range.from, range.to);
+    }
+  };
+
+  const REQUEST_ROUTE_MAP: Record<
+    string,
+    (recordId?: number, startDate?: string, endDate?: string) => string
+  > = {
+    Shift: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
+
+      return url;
+    },
+    "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
+    Company: (id) => `/apps/users/${id}?tab=rate`,
+    // Leave: (recordId, startDate, endDate) => {
+    //   let url = `/apps/timesheet/list`;
+    //   const params: any[] = [];
+
+    //   if (recordId) params.push(`user_id=${recordId}`);
+    //   if (startDate) params.push(`start_date=${startDate}`);
+    //   if (endDate) params.push(`end_date=${endDate}`);
+
+    //   if (params.length > 0) {
+    //     url += `?${params.join("&")}`;
+    //   }
+
+    //   return url;
+    // },
+  };
 
   const filteredData = useMemo(() => {
-    return data.filter(
-      (item) =>
-        item.table_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.date?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.requested_user?.toLowerCase().includes(searchTerm.toLowerCase())
+    return data.filter((item) =>
+      [
+        item.table_name,
+        item.date,
+        item.status_text,
+        item.message,
+        item.company,
+        item.action,
+        item.user_name,
+        item.type_name,
+      ]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [data, searchTerm]);
 
-  type AllowedPaletteColor =
-    | "primary"
-    | "secondary"
-    | "error"
-    | "warning"
-    | "success"
-    | "info";
-
-  const STATUS_MAP: Record<
-    string,
-    { label: string; color: AllowedPaletteColor }
-  > = {
-    pending: { label: "Pending", color: "secondary" },
-    approved: { label: "Approved", color: "success" },
-    rejected: { label: "Rejected", color: "error" },
+  const STATUS_COLOR: Record<string, string> = {
+    pending: "#FF7F00",
+    approved: "#4CBC6D",
+    rejected: "#FF484B",
   };
 
-  const columnHelper = createColumnHelper<CompanyList>();
-  const columns = [
-    columnHelper.accessor("table_name", {
-      header: () => "Module",
-      cell: (info) => (
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box>
-            <Typography className="f-14" color="textSecondary">
-              {info.getValue() ?? "-"}
-            </Typography>
-          </Box>
-        </Stack>
-      ),
-    }),
-
-    columnHelper.accessor("action", {
-      header: () => "Action",
-      cell: (info) => (
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box>
-            <Typography
-              className="f-14"
-              color="textSecondary"
-              sx={{ textTransform: "capitalize" }}
-            >
-              {info.getValue() ?? "-"}
-            </Typography>
-          </Box>
-        </Stack>
-      ),
-    }),
-
-    columnHelper.accessor((row) => row?.requested_user, {
-      id: "requested_user",
-      header: () => "Requested User",
-      cell: (info) => (
-        <Typography className="f-14" color="textSecondary">
-          {info.getValue() ?? "-"}
-        </Typography>
-      ),
-    }),
-
-    columnHelper.accessor((row) => row?.company, {
-      id: "company",
-      header: () => "Company",
-      cell: (info) => (
-        <Typography className="f-14" color="textSecondary">
-          {info.getValue() ?? "-"}
-        </Typography>
-      ),
-    }),
-
-    columnHelper.accessor((row) => row?.date, {
-      id: "date",
-      header: () => "Date",
-      cell: (info) => {
-        const rawDate = info.getValue();
-
-        let date = null;
-        if (typeof rawDate === "string") {
-          if (rawDate.includes("/")) {
-            date = dayjs(rawDate, "DD/MM/YYYY");
-          } else {
-            date = dayjs(rawDate);
-          }
-        }
-
-        const formattedDate = date?.isValid()
-          ? date.format("DD MMMM, YYYY")
-          : "-";
-        return (
-          <Typography className="f-14" color="textSecondary">
-            {formattedDate}
-          </Typography>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.note, {
-      id: "note",
-      header: () => "Note",
-      cell: (info) => (
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box>
-            <Typography
-              className="f-14"
-              color="textSecondary"
-              sx={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 150,
-              }}
-            >
-              <Tooltip title={info.getValue()} placement="top-start">
-                <span>{info.getValue() ?? "-"}</span>
-              </Tooltip>
-            </Typography>
-          </Box>
-        </Stack>
-      ),
-    }),
-
-    columnHelper.accessor("message", {
-      header: () => "Message",
-      cell: (info) => (
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box>
-            <Typography
-              className="f-14"
-              color="textSecondary"
-              sx={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 150,
-              }}
-            >
-              <Tooltip title={info.getValue()} placement="top-start">
-                <span>{info.getValue() ?? "-"}</span>
-              </Tooltip>
-            </Typography>
-          </Box>
-        </Stack>
-      ),
-    }),
-
-    columnHelper.accessor((row) => row?.status, {
-      id: "status",
-      header: () => "Status",
-      cell: (info) => {
-        const value = info.getValue();
-        const status = STATUS_MAP[value] || {
-          label: "Unknown",
-          color: "secondary",
-        };
-
-        return (
-          <Chip
-            size="small"
-            label={status.label}
-            sx={{
-              backgroundColor: (theme) =>
-                theme.palette[status.color as AllowedPaletteColor].light,
-              color: (theme) =>
-                theme.palette[status.color as AllowedPaletteColor].main,
-              fontWeight: 500,
-              borderRadius: "6px",
-              px: 1.5,
-            }}
-          />
-        );
-      },
-    }),
-  ];
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: {
-      columnFilters,
-    },
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
+  const TYPE_COLOR: Record<string, string> = {
+    Shift: "#FF7F00",
+    "Billing Info": "#fc34b2d5",
+    Company: "#f5c21bf8",
+    Leave: "#FF484B",
+    "Work log": "#FFFF7F00",
+    Timesheet: "#FFFF7F00",
+    "User Account": "#FF3F51B5",
+  };
 
   return (
-    <Box>
-      {/* Render the search and table */}
-      <Stack
-        mt={1}
-        mr={2}
-        ml={2}
-        mb={1}
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      sx={{
+        width: 500,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: 500,
+          padding: 2,
+          backgroundColor: "#f9f9f9",
+        },
+      }}
+    >
+      {/* Header */}
+      <Box
+        display="flex"
         justifyContent="space-between"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 2, md: 4 }}
+        alignItems="center"
+        py={1.5}
       >
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <IconButton onClick={onClose}>
+            <IconArrowLeft />
+          </IconButton>
+          <Typography variant="h6" fontWeight={700}>
+            {user.user_role_id == 1 ? "Requests" : "My Requests"}
+          </Typography>
+        </Stack>
+        <IconButton onClick={onClose}>
+          <IconX />
+        </IconButton>
+      </Box>
+
+      {/* Search */}
+      <Box mb={2} display={"flex"} gap={1} alignContent={"center"} ml={1}>
         <TextField
-          id="search"
-          type="text"
-          size="small"
-          variant="outlined"
-          placeholder="Search..."
+          placeholder="Search requests..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconSearch size={"16"} />
-                </InputAdornment>
-              ),
-            },
-          }}
         />
-      </Stack>
-      <Divider />
+        <DateRangePickerBox
+          from={startDate}
+          to={endDate}
+          onChange={handleDateRangeChange}
+        />
+      </Box>
 
-      <Grid container spacing={3}>
-        <Grid size={12}>
-          <Box>
-            <TableContainer>
-              <Table
-                sx={{
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <TableHead>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableCell
-                          key={header.id}
+      {/* Content */}
+      <Box
+        flex={1}
+        overflow="auto"
+        px={2}
+        pb={2}
+        sx={{ maxHeight: "calc(95vh - 120px)" }}
+      >
+        {loading ? (
+          <></>
+        ) : filteredData.length > 0 ? (
+          <Grid container spacing={2}>
+            {filteredData.map((work, idx) => (
+              <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
+                <Box
+                  onClick={() => {
+                    const routeFn = REQUEST_ROUTE_MAP[work.type_name];
+                    if (routeFn) {
+                      if (work.type_name === "Shift") {
+                        const start = startDate
+                          ? format(startDate, "yyyy-MM-dd")
+                          : undefined;
+                        const end = endDate
+                          ? format(endDate, "yyyy-MM-dd")
+                          : undefined;
+                        router.push(routeFn(work.user_id, start, end));
+                      } else {
+                        router.push(routeFn(work.user_id));
+                      }
+                      onClose();
+                    } else {
+                      router.push(`/requests/${work.id}`);
+                    }
+                  }}
+                  sx={{
+                    border: "1px solid #ddd",
+                    borderRadius: 2,
+                    position: "relative",
+                    p: 2,
+                    bgcolor: "white",
+                    transition: "0.2s",
+                    cursor: "pointer",
+                    "&:hover": {
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                      transform: "translateY(-1px)",
+                    },
+                  }}
+                >
+                  <Box
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1}
+                    sx={{ top: -8, position: "absolute" }}
+                    flexWrap="wrap"
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        px: 1.2,
+                        py: 0.2,
+                        borderRadius: "12px",
+                        bgcolor: TYPE_COLOR[work.type_name] || "#757575",
+                        color: "#fff",
+                        fontSize: "0.75rem",
+                        fontWeight: 500,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {work.type_name}
+                    </Typography>
+                  </Box>
+                  <Box display={"flex"} gap={1} mt={1}>
+                    <Avatar
+                      src={work.user_image}
+                      alt={work.user_name}
+                      sx={{ width: 36, height: 36 }}
+                    />
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      width={"100%"}
+                    >
+                      <Box>
+                        <Typography variant="h1" fontSize={"16px !important"}>
+                          {work.user_name}
+                        </Typography>
+                        <Typography variant="subtitle1">
+                          {work.message}
+                        </Typography>
+                      </Box>
+                      <Box justifyContent={"flex-end"}>
+                        <Typography
+                          variant="body2"
                           sx={{
-                            width:
-                              header.column.id === "actions" ? 120 : "auto",
+                            px: 1.6,
+                            py: 0.7,
+                            borderRadius: "18px",
+                            border: 2,
+                            borderColor:
+                              STATUS_COLOR[work.status_text.toLowerCase()] ||
+                              "#757575",
+                            color:
+                              STATUS_COLOR[work.status_text.toLowerCase()] ||
+                              "#757575",
+                            fontSize: "0.75rem",
+                            fontWeight: 500,
+                            textTransform: "capitalize",
                           }}
                         >
-                          <Typography
-                            variant="h6"
-                            mb={1}
-                            onClick={header.column.getToggleSortingHandler()}
-                            className={
-                              header.column.getCanSort()
-                                ? "cursor-pointer select-none"
-                                : ""
-                            }
-                          >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                            {(() => {
-                              const sort = header.column.getIsSorted();
-                              if (sort === "asc") return " 🔼";
-                              if (sort === "desc") return " 🔽";
-                              return null;
-                            })()}
-                          </Typography>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHead>
-                <TableBody>
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-          <Divider />
-          <Stack
-            gap={1}
-            p={3}
-            alignItems="center"
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
+                          {work.status_text}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontSize={"12px !important"}
+                    >
+                      {work.date}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            textAlign="center"
+            mt={4}
           >
-            <Box display="flex" alignItems="center" gap={1}>
-              {/* <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => rerender()}
-                >
-                  Force Rerender
-                </Button> */}
-              <Typography color="textSecondary">
-                {table.getPrePaginationRowModel().rows.length} Rows
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: {
-                  xs: "block",
-                  sm: "flex",
-                },
-              }}
-              alignItems="center"
-              gap={1}
-            >
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Typography color="textSecondary">Page</Typography>
-                <Typography color="textSecondary" fontWeight={600}>
-                  {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </Typography>
-              </Stack>
-              <Stack
-                direction="row"
-                alignItems="center"
-                gap={1}
-                color="textSecondary"
-              >
-                <Typography color="textSecondary">| Go to page :</Typography>
-                <CustomTextField
-                  type="number"
-                  min="1"
-                  max={table.getPageCount()}
-                  defaultValue={table.getState().pagination.pageIndex + 1}
-                  onChange={(e: { target: { value: any } }) => {
-                    const page = e.target.value
-                      ? Number(e.target.value) - 1
-                      : 0;
-                    table.setPageIndex(page);
-                  }}
-                />
-              </Stack>
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[10, 15, 20, 25].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronsLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronsRight />
-              </IconButton>
-            </Box>
-          </Stack>
-        </Grid>
-      </Grid>
-    </Box>
+            No requests found.
+          </Typography>
+        )}
+      </Box>
+    </Drawer>
   );
-};
-
-export default TablePagination;
+}
