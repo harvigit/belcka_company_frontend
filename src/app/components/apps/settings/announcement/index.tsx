@@ -11,7 +11,12 @@ import {
   Avatar,
   CircularProgress,
 } from "@mui/material";
-import { IconPlus } from "@tabler/icons-react";
+import {
+  IconFile,
+  IconFileDownload,
+  IconPdf,
+  IconPlus,
+} from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import AnnouncementModal from "../../modals/announcement-modal";
@@ -130,29 +135,45 @@ export default function AnnouncementsList({
                             sx={{
                               display: "flex",
                               flexWrap: "wrap",
-                              gap: 1,
+                              gap: 1.5,
                               mt: 1,
                             }}
                           >
-                            {it.documents?.map((doc: any, idx: number) => {
+                            {it.documents.map((doc: any, idx: number) => {
+                              const url = doc.image_url || doc.thumb_url || "";
+                              const fileName = url.split("/").pop() || "";
+                              const isImage =
+                                /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
                               const isVideo = /\.(mp4|mov|webm|avi)$/i.test(
-                                doc.image_url
+                                url
                               );
-
+                              const isPDF = /\.pdf$/i.test(url);
                               return (
                                 <Box
                                   key={doc.id ?? idx}
                                   sx={{
                                     borderRadius: 1,
-                                    transition: "transform .2s",
-                                    overflow: "visible",
+                                    overflow: "hidden",
                                     cursor: "pointer",
+                                    transition: "transform 0.2s ease-in-out",
                                     "&:hover": { transform: "scale(1.05)" },
+                                    width: isVideo || isPDF ? 200 : 100,
                                   }}
                                 >
-                                  {isVideo ? (
+                                  {isImage ? (
+                                    <Image
+                                      src={doc.thumb_url || doc.image_url}
+                                      alt={`announcement-image-${idx}`}
+                                      height={100}
+                                      width={100}
+                                      style={{
+                                        objectFit: "cover",
+                                        borderRadius: "8px",
+                                      }}
+                                    />
+                                  ) : isVideo ? (
                                     <video
-                                      src={doc.image_url}
+                                      src={url}
                                       width="200"
                                       height="120"
                                       controls
@@ -161,19 +182,26 @@ export default function AnnouncementsList({
                                         borderRadius: "8px",
                                       }}
                                     />
+                                  ) : isPDF ? (
+                                    <Button
+                                      href={url}
+                                      target="_blank"
+                                      variant="outlined"
+                                      size="small"
+                                    >
+                                      <IconFile />
+                                      <IconPdf />
+                                    </Button>
                                   ) : (
-                                    <Image
-                                      src={doc.thumb_url || doc.image_url}
-                                      alt={`announcement-media-${idx}`}
-                                      height={100}
-                                      width={100}
-                                      style={{
-                                        objectFit: "cover",
-                                        borderRadius: "8px",
-                                        transition:
-                                          "transform 0.3s ease-in-out",
-                                      }}
-                                    />
+                                    <Button
+                                      href={url}
+                                      target="_blank"
+                                      variant="outlined"
+                                      size="small"
+                                      sx={{ mt: 1 }}
+                                    >
+                                      <IconFileDownload />
+                                    </Button>
                                   )}
                                 </Box>
                               );

@@ -291,7 +291,7 @@ export const DocumentsTab = ({
       </Stack>
       {filteredData.length > 0 ? (
         filteredData.map((doc) => (
-          <Box key={doc.id} mb={3}>
+          <Box key={doc.id} mb={3} mt={1}>
             <Stack
               direction="row"
               alignItems="center"
