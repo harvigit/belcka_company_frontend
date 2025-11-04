@@ -25,7 +25,7 @@ import { DateTime } from 'luxon';
 import api from '@/utils/axios';
 
 interface LeaveRequestDetails {
-    leave_id: number;
+    user_leave_id: number;
     user_id: number;
     first_name?: string;
     last_name?: string;
@@ -33,7 +33,6 @@ interface LeaveRequestDetails {
     start_date: string;
     end_date: string;
     leave_type: string;
-    leave_type_id?: number;
     manager_note?: string;
     created_at?: string;
     display_date?: string;
@@ -70,11 +69,11 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
         setResponseNotes({ ...responseNotes, [leave_id]: value });
     };
 
-    const handleApprove = async (leave_id: number) => {
+    const handleApprove = async (user_leave_id: number) => {
         setIsLoading(true);
         try {
-            const response = await api.post(`/user-leaves/approve?user_leave_id=${leave_id}`);
-            // await api.post('/user-leaves/approve', null, { params: { user_leave_id: leave_id } });
+            const response = await api.post(`/user-leaves/approve?user_leave_id=${user_leave_id}`);
+            // await api.post('/user-leaves/approve', null, { params: { user_leave_id: user_leave_id } });
             
             if(response.data.IsSuccess){
              onClose()   
@@ -86,11 +85,11 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
         }
     };
 
-    const handleReject = async (leave_id: number) => {
+    const handleReject = async (user_leave_id: number) => {
         setIsLoading(true);
         try {
-            const response = await api.post(`/user-leaves/reject?user_leave_id=${leave_id}`);
-            // await api.post('/user-leaves/reject', null, { params: { user_leave_id: leave_id } });
+            const response = await api.post(`/user-leaves/reject?user_leave_id=${user_leave_id}`);
+            // await api.post('/user-leaves/reject', null, { params: { user_leave_id: user_leave_id } });
             
             if(response.data.IsSuccess){
              onClose()   
@@ -231,7 +230,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
                 ) : (
                     filteredRequests.map((request) => (
                         <Paper
-                            key={request.leave_id}
+                            key={request.user_leave_id}
                             elevation={0}
                             sx={{
                                 mb: 2,
@@ -331,8 +330,8 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
                                         multiline
                                         rows={3}
                                         placeholder="Add a note to your response (optional)"
-                                        value={responseNotes[request.leave_id] || ''}
-                                        onChange={(e) => handleNoteChange(request.leave_id, e.target.value)}
+                                        value={responseNotes[request.user_leave_id] || ''}
+                                        onChange={(e) => handleNoteChange(request.user_leave_id, e.target.value)}
                                         sx={{ mb: 2 }}
                                         size="small"
                                     />
@@ -342,7 +341,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
                                             variant="contained"
                                             fullWidth
                                             startIcon={<CheckIcon />}
-                                            onClick={() => handleApprove(request.leave_id)}
+                                            onClick={() => handleApprove(request.user_leave_id)}
                                             disabled={isLoading}
                                             sx={{ textTransform: 'none' }}
                                         >
@@ -353,7 +352,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
                                             color="error"
                                             fullWidth
                                             startIcon={<ClearIcon />}
-                                            onClick={() => handleReject(request.leave_id)}
+                                            onClick={() => handleReject(request.user_leave_id)}
                                             disabled={isLoading}
                                             sx={{ textTransform: 'none' }}
                                         >
