@@ -157,7 +157,7 @@ export default function AnnouncementsList({
                                     cursor: "pointer",
                                     transition: "transform 0.2s ease-in-out",
                                     "&:hover": { transform: "scale(1.05)" },
-                                    width: isVideo || isPDF ? 200 : 100,
+                                    width: isVideo ? 200 : 100,
                                   }}
                                 >
                                   {isImage ? (
@@ -198,7 +198,6 @@ export default function AnnouncementsList({
                                       target="_blank"
                                       variant="outlined"
                                       size="small"
-                                      sx={{ mt: 1 }}
                                     >
                                       <IconFileDownload />
                                     </Button>

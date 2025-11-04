@@ -217,7 +217,6 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
       setLoading(false);
     } catch (err) {
       console.error("Error uploading files:", err);
-      toast.error("Upload failed");
     }
   }
 
