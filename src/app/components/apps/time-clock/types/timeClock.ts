@@ -105,6 +105,7 @@ export interface ConflictDetail {
 }
 
 export interface LeaveRequestDetail {
+    user_leave_id: number;
     leave_id: number;
     user_id: number;
     first_name: string;
