@@ -272,7 +272,6 @@ export default function AnnouncementsList({
                                         size="small"
                                         startIcon={<IconFileDownload />}
                                       >
-                                        Download
                                       </Button>
                                     )}
                                   </Box>
