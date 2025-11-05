@@ -25,6 +25,7 @@ interface ShiftBreak {
     id?: number;
     start: string;
     end: string;
+    is_paid: boolean;
 }
 
 interface ShiftDetails {
@@ -217,6 +218,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                 id: b.id,
                                 start: b.break_start_time,
                                 end: b.break_end_time,
+                                is_paid: b.is_paid ?? false,
                             }))
                             : [];
                         setShiftDetail({
@@ -281,6 +283,15 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         updateShiftSettings({ shift_breaks: updatedBreaks });
     };
 
+    const handleBreakIsPaidChange = (index: number, isPaid: boolean) => {
+        const updatedBreaks = [...shiftDetail.shift_breaks];
+        updatedBreaks[index] = {
+            ...updatedBreaks[index],
+            is_paid: isPaid,
+        };
+        updateShiftSettings({ shift_breaks: updatedBreaks });
+    };
+
     const addBreak = () => {
         let newStartTime = 13;
         let newEndTime = 14;
@@ -304,7 +315,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         const formattedEnd = `${String(newEndTime).padStart(2, '0')}:00`;
 
         updateShiftSettings({
-            shift_breaks: [...shiftDetail.shift_breaks, { start: formattedStart, end: formattedEnd }],
+            shift_breaks: [...shiftDetail.shift_breaks, { start: formattedStart, end: formattedEnd, is_paid: false }],
         });
     };
 
@@ -325,7 +336,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
             if (prev) {
                 updateShiftSettings({ shift_breaks: [] });
             } else {
-                updateShiftSettings({ shift_breaks: [{ start: '13:00', end: '14:00' }] });
+                updateShiftSettings({ shift_breaks: [{ start: '13:00', end: '14:00', is_paid: false }] });
             }
             return !prev;
         });
@@ -386,6 +397,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                 id: b.id || null,
                 break_start_time: b.start,
                 break_end_time: b.end,
+                is_paid: b.is_paid,
             }));
 
             const payload: ShiftPayload = {
@@ -683,6 +695,21 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                                             },
                                                         },
                                                     }}
+                                                />
+                                            </Box>
+
+                                            <Box sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                mt: 2
+                                            }}
+                                            >
+                                                <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">Is Paid</Typography>
+                                                <IOSSwitch
+                                                    checked={breakItem.is_paid}
+                                                    onChange={(e) => handleBreakIsPaidChange(index, e.target.checked)}
+                                                    color="primary"
                                                 />
                                             </Box>
                                         </Box>
