@@ -218,6 +218,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
     } catch (err) {
       console.error("Error uploading files:", err);
     }
+    setLoading(false);
   }
 
   return (
