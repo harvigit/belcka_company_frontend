@@ -57,6 +57,8 @@ export default function AnnouncementsList({
     number | null
   >(null);
   const [emojiDetails, setEmojiDetails] = useState<any[]>([]);
+  const [announcementDetails, setAnnouncementDetails] = useState<any>([]);
+  const [announcementDrawerOpen, setAnnouncementDrawerOpen] = useState(false);
 
   const limit = 20;
   const markAsRead = async () => {
@@ -111,10 +113,27 @@ export default function AnnouncementsList({
     }
   };
 
+  const fetchAnnouncementDetails = async (announcementId: number) => {
+    try {
+      const response = await api.get(
+        `announcements/detail?id=${announcementId}&user_id=${userId}`
+      );
+      const data = response.data.info;
+      setAnnouncementDetails(data);
+    } catch (error) {
+      console.error("Failed to fetch announcement details:", error);
+    }
+  };
+
   const handleOpenEmojiDrawer = (announcementId: number) => {
     setSelectedAnnouncementId(announcementId);
     setEmojiDrawerOpen(true);
     fetchEmojiDetails(announcementId);
+  };
+
+  const handleOpenAnnouncementDrawer = (announcementId: number) => {
+    setAnnouncementDrawerOpen(true);
+    fetchAnnouncementDetails(announcementId);
   };
 
   const handleCloseEmojiDrawer = () => {
@@ -167,8 +186,14 @@ export default function AnnouncementsList({
                     sx={{ height: 50, width: 50, mr: 4 }}
                   />
                   <ListItemText
+                    sx={{ cursor: "pointer" }}
                     primary={
-                      <>
+                      <Box
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenAnnouncementDrawer(it.id);
+                        }}
+                      >
                         <Typography variant="h6" color="inherit">
                           Announcement from {it.sender_name} • {it.type}
                         </Typography>
@@ -186,7 +211,7 @@ export default function AnnouncementsList({
                         >
                           {it.date}
                         </Typography>
-                      </>
+                      </Box>
                     }
                     secondary={
                       <>
@@ -271,8 +296,7 @@ export default function AnnouncementsList({
                                         variant="outlined"
                                         size="small"
                                         startIcon={<IconFileDownload />}
-                                      >
-                                      </Button>
+                                      ></Button>
                                     )}
                                   </Box>
                                 );
@@ -290,7 +314,6 @@ export default function AnnouncementsList({
                               mt: 2,
                               flexWrap: "wrap",
                             }}
-                            onClick={() => handleOpenEmojiDrawer(it.id)}
                           >
                             {Object.entries(
                               it.feeds.reduce((acc: any, feed: any) => {
@@ -312,6 +335,10 @@ export default function AnnouncementsList({
                                   "&:hover": {
                                     backgroundColor: "#e0e0e0",
                                   },
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEmojiDrawer(it.id);
                                 }}
                               >
                                 <Typography>{emoji}</Typography>
@@ -458,7 +485,7 @@ export default function AnnouncementsList({
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    <Avatar src={feed.user_thumb_image} alt={feed.user_name} />
+                    <Avatar src={feed.user_image} alt={feed.user_name} />
                     <Box
                       display={"flex"}
                       justifyContent={"space-between"}
@@ -474,6 +501,228 @@ export default function AnnouncementsList({
                     </Box>
                   </Box>
                 ))}
+              </Box>
+            )}
+          </Grid>
+        </Grid>
+      </Drawer>
+
+      {/* open announcement details */}
+      <Drawer
+        anchor="right"
+        sx={{
+          width: 400,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 400,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+        open={announcementDrawerOpen}
+        onClose={() => setAnnouncementDrawerOpen(false)}
+      >
+        <Grid container>
+          <Grid size={{ xs: 12, lg: 12 }}>
+            <Box display="flex" alignItems="center" flexWrap="wrap" mb={1}>
+              <IconButton onClick={() => setAnnouncementDrawerOpen(false)}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h6" color="inherit" fontWeight={700}>
+                Announcement Details
+              </Typography>
+            </Box>
+
+            {announcementDetails.length === 0 ? (
+              <Typography color="textSecondary">No reactions yet.</Typography>
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Box
+                  key={announcementDetails.id}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    borderRadius: 2,
+                    backgroundColor: "#f9f9f9",
+                  }}
+                >
+                  <Avatar
+                    alt={announcementDetails.sender_name}
+                    src={announcementDetails.sender_image}
+                    sx={{ height: 50, width: 50 }}
+                  />
+                  <Box>
+                    <Typography variant="h6" color="inherit">
+                      Announcement from {announcementDetails.sender_name} •{" "}
+                      {announcementDetails.type}
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      color="textSecondary"
+                      className="f-14"
+                    >
+                      {announcementDetails.name || announcementDetails.title}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      color="textSecondary"
+                      sx={{ fontSize: "12px !important" }}
+                    >
+                      {announcementDetails.date}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Divider />
+                <Box my={1}>
+                  <Typography variant="body1" color="textSecondary">
+                    Send notification as:
+                  </Typography>
+                  {announcementDetails.type}
+                </Box>
+                <Divider />
+                <Box>
+                  {announcementDetails.documents &&
+                    announcementDetails.documents.length > 0 && (
+                      <Box my={1}>
+                        Attachements
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 1.5,
+                            mt: 1,
+                          }}
+                        >
+                          {announcementDetails.documents.map(
+                            (doc: any, idx: number) => {
+                              const url = doc.image_url || doc.thumb_url || "";
+                              const isImage =
+                                /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                              const isVideo = /\.(mp4|mov|webm|avi)$/i.test(
+                                url
+                              );
+                              const isPDF = /\.pdf$/i.test(url);
+
+                              return (
+                                <Box
+                                  key={doc.id ?? idx}
+                                  sx={{
+                                    borderRadius: 1,
+                                    overflow: "hidden",
+                                    cursor: "pointer",
+                                    transition: "transform 0.2s ease-in-out",
+                                    "&:hover": { transform: "scale(1.05)" },
+                                    width: isVideo ? 200 : 100,
+                                  }}
+                                >
+                                  {isImage ? (
+                                    <Image
+                                      src={doc.thumb_url || doc.image_url}
+                                      alt={`announcement-image-${idx}`}
+                                      height={100}
+                                      width={100}
+                                      style={{
+                                        objectFit: "cover",
+                                        borderRadius: "8px",
+                                      }}
+                                    />
+                                  ) : isVideo ? (
+                                    <video
+                                      src={url}
+                                      width="200"
+                                      height="120"
+                                      controls
+                                      style={{
+                                        objectFit: "cover",
+                                        borderRadius: "8px",
+                                      }}
+                                    />
+                                  ) : isPDF ? (
+                                    <Button
+                                      href={url}
+                                      target="_blank"
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<IconFile />}
+                                    >
+                                      <IconPdf />
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      href={url}
+                                      target="_blank"
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<IconFileDownload />}
+                                    ></Button>
+                                  )}
+                                </Box>
+                              );
+                            }
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+                </Box>
+                {announcementDetails.documents.length ? (
+                  <>
+                    <Divider />
+                  </>
+                ) : (
+                  <></>
+                )}
+                <Box>
+                  {announcementDetails.feeds &&
+                    announcementDetails.feeds.length > 0 && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "start",
+                          gap: 1.5,
+                          mt: 1,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        Feeds
+                        {Object.entries(
+                          announcementDetails.feeds.reduce(
+                            (acc: any, feed: any) => {
+                              acc[feed.action] = (acc[feed.action] || 0) + 1;
+                              return acc;
+                            },
+                            {}
+                          )
+                        ).map(([emoji, count]: any) => (
+                          <Box
+                            key={emoji}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              backgroundColor: "#e0e0e0",
+                              borderRadius: "20px",
+                              px: 1.5,
+                              py: 0.5,
+                              cursor: "pointer",
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEmojiDrawer(announcementDetails.id);
+                            }}
+                          >
+                            <Typography>{emoji}</Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {count}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                </Box>
               </Box>
             )}
           </Grid>

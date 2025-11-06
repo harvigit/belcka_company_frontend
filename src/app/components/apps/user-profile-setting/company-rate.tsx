@@ -288,6 +288,20 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
             : comapny.diff_data.net_rate_perday.old,
       }));
     }
+    if (
+      Object.keys(comapny?.diff_data || {}).includes("trade_id") &&
+      comapny?.diff_data.trade_id?.old
+        ? comapny?.diff_data.trade_id?.old
+        : comapny?.diff_data.trade_id?.new
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        trade_id:
+          comapny.is_pending_request == false && comapny?.status !== 12
+            ? comapny.diff_data.trade_id.new
+            : comapny.diff_data.trade_id.old,
+      }));
+    }
   }, [comapny]);
   if (loading) {
     return (
@@ -406,7 +420,12 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                     value={
                       Object.keys(comapny?.diff_data || {}).includes("trade_id")
                         ? trade.find(
-                            (t) => t.id === comapny.diff_data.trade_id.old
+                            (t) =>
+                              t.id ===
+                              (comapny.is_pending_request ||
+                              comapny.status === 12
+                                ? comapny.diff_data.trade_id.old
+                                : comapny.diff_data.trade_id.new)
                           ) || null
                         : trade.find((t) => t.id === formData.trade_id) || null
                     }
@@ -503,7 +522,12 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                             "trade_id"
                           )
                             ? trade.find(
-                                (t) => t.id === comapny.diff_data.trade_id.old
+                                (t) =>
+                                  t.id ===
+                                  (comapny.status === 12 ||
+                                  comapny.is_pending_request
+                                    ? comapny.diff_data.trade_id.old
+                                    : comapny.diff_data.trade_id.new)
                               ) || null
                             : trade.find((t) => t.id === formData.trade_id) ||
                               null
@@ -782,7 +806,11 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
                             ? "Approved"
                             : item.status_text == "rejected"
                             ? "Rejected"
-                            : `Requested ${item.action_by !== null ? `by ${item.action_by}` : ''} on ${item.date} at ${item.time}`}{" "}
+                            : `Requested ${
+                                item.action_by !== null
+                                  ? `by ${item.action_by}`
+                                  : ""
+                              } on ${item.date} at ${item.time}`}{" "}
                           {item.action_by && item.status_text !== "pending"
                             ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
                             : ""}{" "}
