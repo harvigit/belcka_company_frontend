@@ -145,6 +145,9 @@ export default function UserRequests({ open, onClose }: Props) {
     // if (open) fetchRequests(startDate,endDate);
   }, [startDate && endDate, open]);
 
+  useEffect(() => {
+    setSearchTerm("");
+  }, [onClose]);
   const handleDateRangeChange = (range: {
     from: Date | null;
     to: Date | null;
