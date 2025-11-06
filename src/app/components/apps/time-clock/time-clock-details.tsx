@@ -21,7 +21,8 @@ import Checklogs from './time-clock-details/checklogs/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 
-const STORAGE_KEY = 'time-clock-details-page';
+const TIME_CLOCK_PAGE = 'time-clock-page';
+const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
 
 interface RowData {
     rowType: string;
@@ -46,7 +47,8 @@ const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, co
             endDate: endDate ? endDate.toDateString() : null,
             columnVisibility,
         };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(TIME_CLOCK_PAGE, JSON.stringify(data));
+        localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(data));
     } catch (error) {
         console.error('Error saving data to localStorage:', error);
     }
@@ -54,7 +56,7 @@ const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, co
 
 const loadDateRangeFromStorage = () => {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(TIME_CLOCK_DETAILS_PAGE);
         if (stored) {
             const parsed = JSON.parse(stored);
             return {

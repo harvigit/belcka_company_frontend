@@ -46,16 +46,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
-const STORAGE_KEY = 'timesheet-date-range';
-const STORAGE_TIMESHEET_KEY = 'time-clock-details-page';
+const TIME_CLOCK_PAGE = 'time-clock-page';
+const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null) => {
     try {
         const dateRange = {
-            startDate: startDate ? startDate.toDateString() : null,
-            endDate: endDate ? endDate.toDateString() : null
+            startDate: startDate ? startDate.toISOString() : null,
+            endDate: endDate ? endDate.toISOString() : null
         };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
+        localStorage.setItem(TIME_CLOCK_PAGE, JSON.stringify(dateRange));
+        localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
     } catch (error) {
         console.error('Error saving date range to localStorage:', error);
     }
@@ -68,14 +69,14 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
             endDate: endDate ? endDate.toDateString() : null,
             columnVisibility: {},
         };
-            localStorage.setItem(STORAGE_TIMESHEET_KEY, JSON.stringify(dateRange));
+            localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
     } catch (error) {
         console.log('Error saving date range to localStorage:', error);
     }
 };
 const loadDateRangeFromStorage = () => {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(TIME_CLOCK_PAGE);
         if (stored) {
             const parsed = JSON.parse(stored);
             return {
@@ -142,16 +143,18 @@ const TimeClock = () => {
     // Load from localStorage or use defaults
     const getInitialDates = () => {
         const stored = loadDateRangeFromStorage();
+
         if (stored && stored.startDate && stored.endDate) {
             return {
                 startDate: stored.startDate,
                 endDate: stored.endDate
             };
+        }else{
+            return {
+                startDate: defaultStart,
+                endDate: defaultEnd
+            };            
         }
-        return {
-            startDate: defaultStart,
-            endDate: defaultEnd
-        };
     };
 
     const initialDates = getInitialDates();
@@ -228,9 +231,12 @@ const TimeClock = () => {
         setDetailsOpen(false);
         setSelectedTimeClock(null);
 
-        if (hasDataChanged && startDate && endDate) {
+        const initialDates = getInitialDates();
+        
+        if (initialDates) {
             try {
-                await fetchData(startDate, endDate);
+                handleDateRangeChange({ from: initialDates.startDate, to: initialDates.endDate });
+                await fetchData(initialDates.startDate, initialDates.endDate);
                 setHasDataChanged(false);
             } catch (error) {
                 setErrorMessage('Failed to refresh data. Please try again.');
