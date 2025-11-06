@@ -67,6 +67,7 @@ import CustomTextField from '@/app/components/forms/theme-elements/CustomTextFie
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import PermissionGuard from "@/app/auth/PermissionGuard";
 
 dayjs.extend(customParseFormat);
 
@@ -559,7 +560,8 @@ const TablePagination = () => {
     }, [searchTerm, table]);
 
     return (
-        <Box>
+        <PermissionGuard permission="Users">
+            <Box>
             <Stack
                 mt={3}
                 mr={2}
@@ -1227,6 +1229,7 @@ const TablePagination = () => {
                 </Box>
             </Drawer>
         </Box>
+        </PermissionGuard>
     );
 };
 

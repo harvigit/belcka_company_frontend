@@ -242,9 +242,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             const rowId = `row-${row.index}`;
                             const isRowSelected = selectedRows.has(rowId);
                             const isRowLocked = isRecordLocked(rowData);
-
-                            console.log(rowData, 'rowDatarowDatarowData')
-
+                            
                             if (rowData.rowType === 'week') {
                                 const visibleColumnsCount = table.getVisibleLeafColumns().length;
                                 return (

@@ -29,8 +29,8 @@ const MenuItems: NavGroup[] = [
   },
   {
     id: uniqueId(),
-    title: "Timesheet", 
-    slug: "timesheet",
+    title: "Timesheets", 
+    slug: "timesheets",
     icon: IconTicket,
     href: "/apps/timesheet/list",
   },

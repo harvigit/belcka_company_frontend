@@ -61,6 +61,8 @@ import AuthRegister from "../../settings/auth";
 import EditClient from "@/app/components/apps/clients/edit";
 import relativeTime from "dayjs/plugin/relativeTime";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import PermissionGuard from "@/app/auth/PermissionGuard";
+
 dayjs.extend(relativeTime);
 
 dayjs.extend(customParseFormat);
@@ -462,7 +464,8 @@ const TablePagination = () => {
   }, [searchTerm, table]);
 
   return (
-    <Box>
+      <PermissionGuard permission="Clients">
+        <Box>
       {/* Render the search and table */}
       <Stack
         mt={3}
@@ -943,6 +946,7 @@ const TablePagination = () => {
         </Grid>
       </Grid>
     </Box>
+      </PermissionGuard>
   );
 };
 

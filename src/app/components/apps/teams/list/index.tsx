@@ -62,6 +62,7 @@ import GenerateCodeDialog from "../../modals/generate-code";
 import { IconEdit } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ArchiveTeam from "../archive";
+import PermissionGuard from "@/app/auth/PermissionGuard";
 
 dayjs.extend(customParseFormat);
 
@@ -437,7 +438,8 @@ const TablePagination = () => {
   }, [searchTerm, table]);
 
   return (
-    <Box>
+      <PermissionGuard permission="Teams">
+          <Box>
       {/* Render the search and table */}
       <Stack
         mt={3}
@@ -954,6 +956,7 @@ const TablePagination = () => {
         </Grid>
       </Grid>
     </Box>
+      </PermissionGuard>
   );
 };
 

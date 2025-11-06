@@ -10,6 +10,7 @@ import '@/app/global.css';
 import TimeClock from '@/app/components/apps/time-clock/time-clock';
 import { IconSettings } from '@tabler/icons-react';
 import Setting from './setting/settings';
+import PermissionGuard from "@/app/auth/PermissionGuard";
 
 const TimesheetPage = () => {
     const [value, setValue] = useState(0); // Changed to 0 since we only have one tab now
@@ -28,7 +29,8 @@ const TimesheetPage = () => {
     };
 
     return (
-        <Box p={2}>
+        <PermissionGuard permission="Timesheets">
+            <Box p={2}>
             <Box
                 display="flex"
                 justifyContent="space-between"
@@ -123,6 +125,7 @@ const TimesheetPage = () => {
                 onClose={handleSettingClose}
             />
         </Box>
+        </PermissionGuard>
     );
 };
 

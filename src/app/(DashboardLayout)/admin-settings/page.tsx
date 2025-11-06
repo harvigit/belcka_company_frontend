@@ -10,6 +10,7 @@ import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock} from '@tabler/i
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
+import PermissionGuard from "@/app/auth/PermissionGuard";
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -48,102 +49,104 @@ const AdminSetting = () => {
     };
 
     return (
-        <PageContainer
-            title="Account Setting"
-            description="This is Account Setting"
-        >
-            <Grid container spacing={1}>
-                <Grid
-                    container
-                    display={'flex'}
-                    size={{
-                        xs: 12,
-                        lg: 12,
-                    }}
-                >
+        <PermissionGuard permission="Settings">
+            <PageContainer
+                title="Account Setting"
+                description="This is Account Setting"
+            >
+                <Grid container spacing={1}>
                     <Grid
-                        size={{
-                            xs: 12,
-                            lg: 2,
-                        }}
-                    >
-                        <BlankCard className="tab-balnkcard">
-                            <Stack direction="row" mt={3} ml={2} mb={3} mr={2}>
-                                <Tabs
-                                    className="admin-settings-tabs"
-                                    orientation="vertical"
-                                    variant="scrollable"
-                                    value={value}
-                                    onChange={handleChange}
-                                >
-                                    <Tab
-                                        className="admin-settings"
-                                        color="textSecondary"
-                                        iconPosition="start"
-                                        icon={<IconNotebook size="20"/>}
-                                        label="Templates"
-                                        {...a11yProps(0)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconMap size="20"/>}
-                                        label="Locations"
-                                        {...a11yProps(1)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconDoorExit size="20"/>}
-                                        label="Leaves"
-                                        {...a11yProps(2)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconBell size="20"/>}
-                                        label="Notification Setting"
-                                        {...a11yProps(3)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconLock size="20"/>}
-                                        label="Permissions"
-                                        {...a11yProps(4)}
-                                    />
-                                </Tabs>
-                            </Stack>
-                        </BlankCard>
-                    </Grid>
-                    <Grid
+                        container
                         display={'flex'}
                         size={{
                             xs: 12,
-                            lg: 10,
+                            lg: 12,
                         }}
                     >
-                        <BlankCard>
-                            <TabPanel value={value} index={0}>
-                                <CreateWork/>
-                            </TabPanel>
-                            <TabPanel value={value} index={1}>
-                                <LocationList/>
-                            </TabPanel>
-                            <TabPanel value={value} index={2}>
-                                <LeaveList/>
-                            </TabPanel>
-                            <TabPanel value={value} index={3}>
-                                <NotificationSettings/>
-                            </TabPanel>
-                            <TabPanel value={value} index={4}>
-                                <PermissionSettings/>
-                            </TabPanel>
-                        </BlankCard>
+                        <Grid
+                            size={{
+                                xs: 12,
+                                lg: 2,
+                            }}
+                        >
+                            <BlankCard className="tab-balnkcard">
+                                <Stack direction="row" mt={3} ml={2} mb={3} mr={2}>
+                                    <Tabs
+                                        className="admin-settings-tabs"
+                                        orientation="vertical"
+                                        variant="scrollable"
+                                        value={value}
+                                        onChange={handleChange}
+                                    >
+                                        <Tab
+                                            className="admin-settings"
+                                            color="textSecondary"
+                                            iconPosition="start"
+                                            icon={<IconNotebook size="20"/>}
+                                            label="Templates"
+                                            {...a11yProps(0)}
+                                        />
+                                        <Tab
+                                            className="admin-settings"
+                                            iconPosition="start"
+                                            icon={<IconMap size="20"/>}
+                                            label="Locations"
+                                            {...a11yProps(1)}
+                                        />
+                                        <Tab
+                                            className="admin-settings"
+                                            iconPosition="start"
+                                            icon={<IconDoorExit size="20"/>}
+                                            label="Leaves"
+                                            {...a11yProps(2)}
+                                        />
+                                        <Tab
+                                            className="admin-settings"
+                                            iconPosition="start"
+                                            icon={<IconBell size="20"/>}
+                                            label="Notification Setting"
+                                            {...a11yProps(3)}
+                                        />
+                                        <Tab
+                                            className="admin-settings"
+                                            iconPosition="start"
+                                            icon={<IconLock size="20"/>}
+                                            label="Permissions"
+                                            {...a11yProps(4)}
+                                        />
+                                    </Tabs>
+                                </Stack>
+                            </BlankCard>
+                        </Grid>
+                        <Grid
+                            display={'flex'}
+                            size={{
+                                xs: 12,
+                                lg: 10,
+                            }}
+                        >
+                            <BlankCard>
+                                <TabPanel value={value} index={0}>
+                                    <CreateWork/>
+                                </TabPanel>
+                                <TabPanel value={value} index={1}>
+                                    <LocationList/>
+                                </TabPanel>
+                                <TabPanel value={value} index={2}>
+                                    <LeaveList/>
+                                </TabPanel>
+                                <TabPanel value={value} index={3}>
+                                    <NotificationSettings/>
+                                </TabPanel>
+                                <TabPanel value={value} index={4}>
+                                    <PermissionSettings/>
+                                </TabPanel>
+                            </BlankCard>
+                        </Grid>
                     </Grid>
                 </Grid>
-            </Grid>
-        </PageContainer>
+            </PageContainer>
+        </PermissionGuard>
     );
 };
 

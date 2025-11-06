@@ -54,7 +54,7 @@ const SidebarItems = () => {
 
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
-
+  
   const filteredMenuItems = MenuItems.filter((item) => {
     const permission = permissions.find(
       (perm) => perm.name === item.title && perm.is_web === true
