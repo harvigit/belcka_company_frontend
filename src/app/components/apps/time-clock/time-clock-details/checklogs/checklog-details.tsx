@@ -290,7 +290,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                         <Image
                                                             width={200}
                                                             height={200}
-                                                            src={img.thumb_url}
+                                                            src={img.image_url}
                                                             alt={`Before image ${idx + 1}`}
                                                             style={{
                                                                 borderRadius: 8,
@@ -329,7 +329,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                         <Image
                                                             width={200}
                                                             height={200}
-                                                            src={img.thumb_url}
+                                                            src={img.image_url}
                                                             alt={`After image ${idx + 1}`}
                                                             style={{
                                                                 borderRadius: 8,
