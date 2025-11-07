@@ -272,9 +272,9 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
                                 <Typography fontWeight="bold" fontSize="1.25rem">
                                     {formatHour(trade.total_work_hours)} H
                                 </Typography>
-                                <IconButton>
+                                {/* <IconButton>
                                     <IconChevronRight fontSize="small" />
-                                </IconButton>
+                                </IconButton> */}
                             </Stack>
                         </Box>
                     </Box>

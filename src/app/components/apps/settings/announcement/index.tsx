@@ -156,13 +156,13 @@ export default function AnnouncementsList({
   return (
     <Box>
       <Box display="flex" justifyContent="end" mt={1}>
-        <Button
+        {/* <Button
           variant="contained"
           onClick={() => setOpenDrawer(true)}
           startIcon={<IconPlus />}
         >
           Announcement
-        </Button>
+        </Button> */}
       </Box>
 
       <List sx={{ p: 2 }}>
