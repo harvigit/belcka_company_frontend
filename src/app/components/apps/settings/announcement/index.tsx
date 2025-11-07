@@ -581,7 +581,7 @@ export default function AnnouncementsList({
             </Box>
 
             {readDetails.length === 0 ? (
-              <Typography color="textSecondary">No reactions yet.</Typography>
+              <Typography color="textSecondary">No user read yet.</Typography>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {readDetails.map((feed: any) => (
