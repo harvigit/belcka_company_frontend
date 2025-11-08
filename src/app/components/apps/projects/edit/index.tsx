@@ -85,7 +85,7 @@ const EditProject: React.FC<EditProjectProps> = ({
         address: project.address || "",
         budget: String(project.budget || ""),
         description: project.description || "",
-        code: Number(project.code) || 0,
+        code: project.code || "",
         company_id: project.company_id || 0,
         shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),

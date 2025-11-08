@@ -1,20 +1,8 @@
 import React, { useState } from "react";
 import { useTheme } from "@mui/material/styles";
-import Link from "next/link";
-import {
-  Box,
-  Menu,
-  Avatar,
-  Typography,
-  Divider,
-  Button,
-} from "@mui/material";
+import { Box, Menu, Avatar, Typography, Button } from "@mui/material";
 import { Stack } from "@mui/system";
-import {
-  IconChevronDown,
-  IconCurrencyDollar,
-  IconMail,
-} from "@tabler/icons-react";
+import { IconChevronDown, IconMail } from "@tabler/icons-react";
 import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -30,19 +18,17 @@ const Profile = () => {
   };
   const session = useSession();
   const user = session?.data?.user as User & { user_role?: string | null } & {
-      phone?: number | null;
-    } & { user_image?: string | null } & { first_name?: string | null } & {
-      last_name?: string | null;
-    } & { trade_name : string | null };
+    phone?: number | null;
+  } & { user_image?: string | null } & { first_name?: string | null } & {
+    last_name?: string | null;
+  } & { trade_name: string | null };
   const [loading] = useState(false);
 
   const userLogout = () => {
-    toast.success("Logged out successfully!!")
+    toast.success("Logged out successfully!!");
     signOut({ callbackUrl: "/auth" });
     return loading;
   };
-
-  const theme = useTheme();
 
   return (
     <Box>
@@ -60,9 +46,9 @@ const Profile = () => {
         onClick={handleClick2}
       >
         <Avatar
-         src={user?.user_image ? `${user?.user_image}` : ""}
+          src={user?.user_image || "/default-avatar.png"}
           // src={"/images/logos/belcka_logo.png"}
-          alt={user.first_name || ''}
+          alt={user.first_name || "User"}
           sx={{
             width: 30,
             height: 30,
@@ -119,29 +105,35 @@ const Profile = () => {
         <Typography variant="h4">User Profile</Typography>
         <Stack direction="row" py={3} pb={0} spacing={2} alignItems="center">
           <Avatar
-            src={user?.user_image ? `${user?.user_image}` : ""}
-            // src={"/images/logos/logoIcon.svg"}
-            alt={user?.first_name || ''}
+            src={user?.user_image || "/default-avatar.png"}
+            // src={"/images/logos/belcka_logo.png"}
+            alt={user.first_name || "User"}
             sx={{ width: 95, height: 95 }}
           />
           <Box>
             <Typography variant="h4" color="textPrimary">
-            {user?.first_name} {user?.last_name}
+              {user?.first_name} {user?.last_name}
             </Typography>
-            <Typography variant="h6" color="textSecondary" sx={{ textTransform:"capitalize"}}>
+            <Typography
+              variant="h6"
+              color="textSecondary"
+              sx={{ textTransform: "capitalize" }}
+            >
               {user.trade_name ?? user.user_role}
             </Typography>
-            
-            {user.email ? <Typography
-              variant="subtitle2"
-              color="textSecondary"
-              display="flex"
-              alignItems="center"
-              gap={1}
-            >
-              <IconMail width="18" height="18" />
-              {user?.email}
-            </Typography> : null}
+
+            {user.email ? (
+              <Typography
+                variant="subtitle2"
+                color="textSecondary"
+                display="flex"
+                alignItems="center"
+                gap={1}
+              >
+                <IconMail width="18" height="18" />
+                {user?.email}
+              </Typography>
+            ) : null}
           </Box>
         </Stack>
 

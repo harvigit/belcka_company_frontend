@@ -387,7 +387,7 @@ const TablePagination = () => {
             enableSorting: true,
             cell: ({row}) => {
                 const user = row.original;
-                const defaultImage = '/images/users/user.png';
+                const defaultImage = '/default-avatar.png';
                 const isChecked = selectedRowIds.has(user.id);
 
                 return (

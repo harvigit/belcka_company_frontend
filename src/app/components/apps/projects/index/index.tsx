@@ -191,14 +191,11 @@ const TablePagination = () => {
   };
 
   useEffect(() => {
-    if (user.company_id && projectId) {
+    if (user.company_id && !Number.isNaN(projectId)) {
       fetchAddresses();
     }
   }, [user.company_id, projectId]);
 
-  const formatDate = (date: string | undefined) => {
-    return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
-  };
   // if (loading == true) {
   //   return (
   //     <Box
