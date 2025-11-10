@@ -184,7 +184,7 @@ const TablePagination = () => {
             if (res.data.IsSuccess) {
                 toast.success(res.data.message || "Account removed successfully");
 
-                router.push("/apps/users");
+                router.push("/apps/users/list");
             } else {
                 toast.error(res.data.message || "Failed to remove account");
             }

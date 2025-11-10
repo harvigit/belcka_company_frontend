@@ -191,7 +191,7 @@ const TablePagination = () => {
   };
 
   useEffect(() => {
-    if (user.company_id && !Number.isNaN(projectId)) {
+    if (user.company_id && !Number.isNaN(projectId) && projectId !== null) {
       fetchAddresses();
     }
   }, [user.company_id, projectId]);

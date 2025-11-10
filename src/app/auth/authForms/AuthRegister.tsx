@@ -342,19 +342,19 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
   return (
     <>
-      <form onSubmit={handleRegister}>
+      <form onSubmit={handleRegister} style={{ width: "100%"}}>
         <Box>
           <Box textAlign="center" mb={3}>
             <label htmlFor="upload-image">
               <Avatar
-                src={imagePreview || "/default-avatar.png"}
+                src={imagePreview || "/images/users/user.png"}
                 alt="User"
                 sx={{
                   width: 80,
                   height: 80,
                   mx: "auto",
                   mb: 1,
-                  border: "2px solid #ddd",
+                  // border: "2px solid #ddd",
                   cursor: "pointer",
                 }}
               />
@@ -371,31 +371,26 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
             </Typography>
           </Box>
 
-          <Box className="form_inputs" mb={2}>
-            <Typography mb={1}>First Name</Typography>
-            <CustomTextField
-              variant="outlined"
-              fullWidth
+          <Box className="form_inputs" mb={2} display={"flex"} gap={2}>
+            <TextField
               value={registerData.first_name}
               onChange={(e: any) =>
                 setRegisterData({ ...registerData, first_name: e.target.value })
               }
+              label="First name"
+              autoFocus
             />
-          </Box>
 
-          <Box className="form_inputs" mb={2}>
-            <Typography mb={1}>Last Name</Typography>
-            <CustomTextField
-              variant="outlined"
-              fullWidth
+            <TextField
               value={registerData.last_name}
               onChange={(e: any) =>
                 setRegisterData({ ...registerData, last_name: e.target.value })
               }
+              label="Last name"
+              autoFocus
             />
           </Box>
 
-          <Typography mb={1}>Mobile Number</Typography>
           <PhoneInput
             country={"gb"}
             value={registerData.phone}
@@ -407,7 +402,8 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
               })
             }
             inputStyle={{
-              width: "100%",
+              height: "47px",
+              width: "48%",
               borderColor: "#c0d1dc9c",
             }}
             enableSearch
@@ -599,14 +595,14 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                   <Box textAlign="center" mb={3}>
                     <label htmlFor="upload-company-image">
                       <Avatar
-                        src={preview || "/default-avatar.png"}
+                        src={preview || "/images/users/user.png"}
                         alt="Company Image"
                         sx={{
                           width: 80,
                           height: 80,
                           mx: "auto",
                           mb: 1,
-                          border: "2px solid #ddd",
+                          // border: "2px solid #ddd",
                           cursor: "pointer",
                         }}
                       />
@@ -657,7 +653,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                         extension: `+${country.dialCode}`,
                       })
                     }
-                    inputStyle={{ width: "100%" }}
+                    inputStyle={{ width: "100%", height: "47px" }}
                     enableSearch
                     inputProps={{ required: true }}
                   />
