@@ -30,6 +30,11 @@ export default function PermissionGuard({
 
     useEffect(() => {
         if (!loading) {
+            const getPermissions = permissions.filter((perm) => perm.is_web == true);
+            if(getPermissions?.length <= 0){
+                router.push("/")
+            };
+            
             let authorized = false;
 
             if (permission) {
