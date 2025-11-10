@@ -1,17 +1,17 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import {
-  Typography,
-  Box,
-  Grid,
-  CardContent,
-  Button,
-  Tab,
-  Tabs,
-  Badge,
-  IconButton,
-  CircularProgress,
-} from "@mui/material";
+    Typography,
+    Box,
+    Grid,
+    CardContent,
+    Button,
+    Tab,
+    Tabs,
+    Badge,
+    IconButton,
+    CircularProgress, Card,
+} from '@mui/material';
 import {
   IconArrowLeft,
   IconEdit,
@@ -66,13 +66,18 @@ const TablePagination = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
   const searchParams = useSearchParams();
-
+   
   const { data: session, update } = useSession();
-  const user = session?.user as User & { company_id?: number | null } & {
-    company_name?: string | null;
-  } & { user_image?: string | null } & { id: number } & {
-    user_thumb_image?: string | null;
-  };
+    const user = session?.user as User & {
+        company_id?: number | null;
+        company_name?: string | null;
+        user_image?: string | null;
+        id: number;
+        user_thumb_image?: string | null;
+        user_role_id?: number | null;
+    };
+
+    const userRole = user?.user_role_id;  
   const [phone, setPhone] = useState("");
 
   const [openIdCard, setOpenIdCard] = useState(false);
@@ -160,6 +165,33 @@ const TablePagination = () => {
       console.error("Update failed:", err);
     }
   };
+
+    const handleRemoveAccount = async (userId: number) => {
+        if (!userId) {
+            toast.error("User ID is required");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            "Are you sure you want to remove this account? This action cannot be undone."
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const res = await api.post("user/remove-company-account", { user_id: userId });
+
+            if (res.data.IsSuccess) {
+                toast.success(res.data.message || "Account removed successfully");
+
+                router.push("/apps/users");
+            } else {
+                toast.error(res.data.message || "Failed to remove account");
+            }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || "Failed to remove account");
+        }
+    };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length || !userId) return;
@@ -440,6 +472,21 @@ const TablePagination = () => {
               </Box>
             </Box>
           </BlankCard>
+
+            {userRole === 1 && (
+                <Card sx={{ mt: 3 }}>
+                    <Box sx={{ m: 3 }}>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleRemoveAccount(Number(data?.id))}
+                            fullWidth
+                        >
+                            Remove Account
+                        </Button>
+                    </Box>
+                </Card>
+            )}
         </Grid>
 
         <Grid
