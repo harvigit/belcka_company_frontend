@@ -129,7 +129,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                 const numberOnly = value.replace(country.dialCode, "");
                 setNationalPhone(numberOnly);
               }}
-              inputStyle={{ width: "100%",height: "47px" }}
+              inputStyle={{ width: "100%"}}
               // containerStyle={{ width: 300 }}
               enableSearch
               inputProps={{ required: true }}

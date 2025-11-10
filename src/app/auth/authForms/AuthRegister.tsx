@@ -15,6 +15,7 @@ import {
   Autocomplete,
   IconButton,
   Paper,
+  Tooltip,
 } from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
@@ -45,6 +46,8 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [teamSizes, setTeamSizes] = useState([]);
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [step, setStep] = useState(1);
+  const [canCloseModal, setCanCloseModal] = useState(false);
+
   const [registerData, setRegisterData] = useState({
     first_name: "",
     last_name: "",
@@ -249,6 +252,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       });
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
+        setCanCloseModal(true);
         login();
       }
     } catch {
@@ -295,6 +299,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       });
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
+        setCanCloseModal(true);
         login();
       }
     } catch (err) {
@@ -342,7 +347,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
   return (
     <>
-      <form onSubmit={handleRegister} style={{ width: "100%"}}>
+      <form onSubmit={handleRegister} style={{ width: "100%" }}>
         <Box>
           <Box textAlign="center" mb={3}>
             <label htmlFor="upload-image">
@@ -478,7 +483,9 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       {/* Company Modal */}
       <Dialog
         open={openCompanyModal}
-        onClose={() => setOpenCompanyModal(false)}
+        onClose={() => {
+          if (canCloseModal) setOpenCompanyModal(false);
+        }}
         fullWidth
         maxWidth="sm"
       >
@@ -493,21 +500,35 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
               <Tab label="Join Company" />
               <Tab label="Create Company" />
             </Tabs>
-            <IconButton onClick={() => setOpenCompanyModal(false)}>
-              <IconX />
-            </IconButton>
+            <Tooltip
+              placement="top"
+              title={
+                canCloseModal ? "Close" : "Complete company setup to close"
+              }
+            >
+              <span>
+                <IconButton
+                  onClick={() => {
+                    if (canCloseModal) setOpenCompanyModal(false);
+                  }}
+                  disabled={!canCloseModal}
+                >
+                  <IconX />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Box>
 
           {tabValue === 0 && (
-            <form
-              onSubmit={handleJoinCompany}
-              style={{ width: "67%", margin: "auto" }}
-            >
-              <Typography>Enter 6-digit Company Code</Typography>
+            <form onSubmit={handleJoinCompany}>
+              <Typography textAlign={"center"}>
+                Enter 6-digit Company Code
+              </Typography>
               <Stack
                 display={"block"}
                 direction="row"
                 justifyContent="center"
+                textAlign={"center"}
                 spacing={1}
                 mt={1}
               >
@@ -537,6 +558,10 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                   />
                 ))}
               </Stack>
+              <Typography color="textSecondary" mt={2}>
+                Use your company&apos;s unique 6-digit code.if you&apos;ve been
+                join the company.
+              </Typography>
               {isCodeVerified && (
                 <>
                   <Box mt={2}>
@@ -595,14 +620,15 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                   <Box textAlign="center" mb={3}>
                     <label htmlFor="upload-company-image">
                       <Avatar
-                        src={preview || "/images/users/user.png"}
+                        src={preview || "/default-image.png"}
                         alt="Company Image"
                         sx={{
                           width: 80,
                           height: 80,
                           mx: "auto",
                           mb: 1,
-                          // border: "2px solid #ddd",
+                          border: "2px solid #ddd",
+                          borderRadius: 3,
                           cursor: "pointer",
                         }}
                       />

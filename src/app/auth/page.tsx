@@ -181,7 +181,7 @@ export default function Login() {
                       }}
                     />
                   </Box>
-                  <Box mt={4}>
+                  <Box>
                     <AuthRegister title="Welcome to Belcka" />
                     <Stack
                       direction="row"
