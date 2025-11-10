@@ -40,6 +40,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [trade, setTrade] = useState<any[]>([]);
   const [user, setUser] = useState<any>({});
   const [id, setId] = useState(0);
+  const [companyId, setCompanyId] = useState(0);
   const [token, setToken] = useState("");
   const [isCodeVerified, setIsCodeVerified] = useState(false);
   const [businessFields, setBusinessFields] = useState([]);
@@ -223,6 +224,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
+        setCompanyId(res.data.info.company_id);
         setIsCodeVerified(true);
       }
     } catch (error) {
@@ -311,7 +313,9 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   // trades
   const fetchTrades = async () => {
     try {
-      const res = await api.get(`get-company-resources?flag=tradeList`);
+      const res = await api.get(
+        `get-company-resources?flag=tradeList&company_id=${companyId}`
+      );
       if (res.data?.info) setTrade(res.data.info);
     } catch (err) {}
   };
@@ -333,8 +337,10 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   };
 
   useEffect(() => {
-    fetchTrades();
-  }, [openCompanyModal]);
+    if (companyId) {
+      fetchTrades();
+    }
+  }, [companyId]);
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
