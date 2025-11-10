@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
+import Link from "next/link";
 
 const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const router = useRouter();
@@ -84,13 +85,13 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       const result = await signIn("credentials", {
         redirect: false,
         ...payload,
-         callbackUrl: "/apps/users/list",
+        callbackUrl: "/apps/users/list",
       });
 
       if (result?.ok) {
         window.location.href = "/apps/users/list";
         toast.success("Logged in successfully!!");
-      }  else {
+      } else {
         toast.error(result?.error || "Login failed");
       }
     } catch (error: any) {

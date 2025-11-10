@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import {
   IconArrowLeft,
+  IconEye,
   IconFile,
   IconFileDownload,
   IconPdf,
@@ -57,6 +58,8 @@ export default function AnnouncementsList({
     number | null
   >(null);
   const [emojiDetails, setEmojiDetails] = useState<any[]>([]);
+  const [readDetails, setReadDetails] = useState<any[]>([]);
+  const [readDrawerOpen, setReadDrawerOpen] = useState(false);
   const [announcementDetails, setAnnouncementDetails] = useState<any>([]);
   const [announcementDrawerOpen, setAnnouncementDrawerOpen] = useState(false);
 
@@ -113,6 +116,18 @@ export default function AnnouncementsList({
     }
   };
 
+  const fetchReadDetails = async (announcementId: number) => {
+    try {
+      const response = await api.get(
+        `announcements/read-detail?announcement_id=${announcementId}`
+      );
+      const data = response.data.info;
+      setReadDetails(data);
+    } catch (error) {
+      console.error("Failed to fetch read details:", error);
+    }
+  };
+
   const fetchAnnouncementDetails = async (announcementId: number) => {
     try {
       const response = await api.get(
@@ -129,6 +144,18 @@ export default function AnnouncementsList({
     setSelectedAnnouncementId(announcementId);
     setEmojiDrawerOpen(true);
     fetchEmojiDetails(announcementId);
+  };
+
+  const handleOpenReadDrawer = (announcementId: number) => {
+    setSelectedAnnouncementId(announcementId);
+    setReadDrawerOpen(true);
+    fetchReadDetails(announcementId);
+  };
+
+  const handleCloseReadDrawer = () => {
+    setReadDrawerOpen(false);
+    setSelectedAnnouncementId(null);
+    setReadDetails([]);
   };
 
   const handleOpenAnnouncementDrawer = (announcementId: number) => {
@@ -156,13 +183,13 @@ export default function AnnouncementsList({
   return (
     <Box>
       <Box display="flex" justifyContent="end" mt={1}>
-        <Button
+        {/* <Button
           variant="contained"
           onClick={() => setOpenDrawer(true)}
           startIcon={<IconPlus />}
         >
           Announcement
-        </Button>
+        </Button> */}
       </Box>
 
       <List sx={{ p: 2 }}>
@@ -305,53 +332,71 @@ export default function AnnouncementsList({
                           )}
                         </Box>
 
-                        {it.feeds && it.feeds.length > 0 && (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1.5,
-                              mt: 2,
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            {Object.entries(
-                              it.feeds.reduce((acc: any, feed: any) => {
-                                acc[feed.action] = (acc[feed.action] || 0) + 1;
-                                return acc;
-                              }, {})
-                            ).map(([emoji, count]: any) => (
-                              <Box
-                                key={emoji}
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 0.5,
-                                  backgroundColor: "#f5f5f5",
-                                  borderRadius: "20px",
-                                  px: 1.5,
-                                  py: 0.5,
-                                  cursor: "pointer",
-                                  "&:hover": {
-                                    backgroundColor: "#e0e0e0",
-                                  },
-                                }}
+                        <Box display={"flex"} justifyContent={"space-between"}>
+                          {it.feeds && it.feeds.length > 0 ? (
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                                mt: 2,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {Object.entries(
+                                it.feeds.reduce((acc: any, feed: any) => {
+                                  acc[feed.action] =
+                                    (acc[feed.action] || 0) + 1;
+                                  return acc;
+                                }, {})
+                              ).map(([emoji, count]: any) => (
+                                <Box
+                                  key={emoji}
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                    backgroundColor: "#f5f5f5",
+                                    borderRadius: "20px",
+                                    px: 1.5,
+                                    py: 0.5,
+                                    cursor: "pointer",
+                                    "&:hover": {
+                                      backgroundColor: "#e0e0e0",
+                                    },
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEmojiDrawer(it.id);
+                                  }}
+                                >
+                                  <Typography>{emoji}</Typography>
+                                  <Typography
+                                    variant="body2"
+                                    color="textSecondary"
+                                  >
+                                    {count}
+                                  </Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          ) : (
+                            <Box></Box>
+                          )}
+                          {it.read_count > 0 && (
+                            <Box>
+                              <IconButton
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleOpenEmojiDrawer(it.id);
+                                  handleOpenReadDrawer(it.id);
                                 }}
                               >
-                                <Typography>{emoji}</Typography>
-                                <Typography
-                                  variant="body2"
-                                  color="textSecondary"
-                                >
-                                  {count}
-                                </Typography>
-                              </Box>
-                            ))}
-                          </Box>
-                        )}
+                                <IconEye />
+                              </IconButton>
+                              {it.read_count}
+                            </Box>
+                          )}
+                        </Box>
                       </>
                     }
                   />
@@ -498,6 +543,70 @@ export default function AnnouncementsList({
                       <IconButton sx={{ color: "white" }}>
                         <span>{feed.emoji}</span>
                       </IconButton>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Grid>
+        </Grid>
+      </Drawer>
+
+      {/* open read details */}
+      <Drawer
+        anchor="right"
+        sx={{
+          width: 400,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 400,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+        open={readDrawerOpen}
+        onClose={handleCloseReadDrawer}
+      >
+        <Grid container>
+          <Grid size={{ xs: 12, lg: 12 }}>
+            <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
+              <IconButton onClick={handleCloseReadDrawer}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h6" color="inherit" fontWeight={700}>
+                Read by
+              </Typography>
+            </Box>
+
+            {readDetails.length === 0 ? (
+              <Typography color="textSecondary">No user read yet.</Typography>
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {readDetails.map((feed: any) => (
+                  <Box
+                    key={feed.id}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      p: 1,
+                      borderRadius: 2,
+                      backgroundColor: "#f9f9f9",
+                    }}
+                  >
+                    <Avatar src={feed.user_image} alt={feed.user_name} />
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      alignItems={"center"}
+                      width={"80%"}
+                    >
+                      <Typography>
+                        <strong>{feed.user_name}</strong>
+                      </Typography>
+                      <Typography color="textSecondary">{feed.read_at}</Typography>
                     </Box>
                   </Box>
                 ))}
