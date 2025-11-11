@@ -5,7 +5,6 @@ import { Box, Button, Tab, Tabs } from '@mui/material';
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css';
 
-// Commented out TimesheetList import
 // import TimesheetList from './list/timesheet';
 import TimeClock from '@/app/components/apps/time-clock/time-clock';
 import { IconSettings } from '@tabler/icons-react';
@@ -13,7 +12,7 @@ import Setting from './setting/settings';
 import PermissionGuard from "@/app/auth/PermissionGuard";
 
 const TimesheetPage = () => {
-    const [value, setValue] = useState(0); // Changed to 0 since we only have one tab now
+    const [value, setValue] = useState(0);
     const [settingOpen, setSettingOpen] = useState(false);
 
     const handleTabChange = (event: any, newValue: any) => {

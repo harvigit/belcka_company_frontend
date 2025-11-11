@@ -451,7 +451,7 @@ const TablePagination = () => {
                     <Chip
                         size="small"
                         onClick={() => handleOpenPermissionsDrawer(user)}
-                        label={permissionCount === 0 ? `Select` : `${firstActivePermission} ${permissionCount > 1 ? `+${permissionCount - 1}` : ''}`}
+                        label={permissionCount === 0 ? `Select` : `${permissionCount > 1 ? `${permissionCount - 1} Permissions` : ''}`}
                         sx={{
                             backgroundColor: (theme) => theme.palette.primary.light,
                             color: (theme) => theme.palette.primary.main,
@@ -856,20 +856,53 @@ const TablePagination = () => {
 
             {/* Remove user dialog */}
             <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogTitle>
+                    Confirm Deletion
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setConfirmOpen(false)}
+                        sx={{
+                            position: 'absolute',
+                            right: 8,
+                            top: 8,
+                            color: (theme) => theme.palette.grey[500],
+                        }}
+                    >
+                        <IconX />
+                    </IconButton>
+                </DialogTitle>
+
                 <DialogContent>
-                    <Typography color="textSecondary">
-                        Are you sure you want to remove {usersToDelete.length} user
-                        {usersToDelete.length > 1 ? 's' : ''} from the company?
+                    <Typography color="textSecondary" fontWeight={500}>
+                        This will permanently erase all actions, history, and activity associated with the user. Once deleted, the data cannot be recovered.
+                        <br /><br />
+                        To remove the user without losing their information, please select the Archive option instead.
                     </Typography>
                 </DialogContent>
+
                 <DialogActions>
                     <Button
-                        onClick={() => setConfirmOpen(false)}
+                        onClick={async () => {
+                            try {
+                                const payload = {
+                                    user_ids: usersToDelete.join(','),
+                                    company_id: user.company_id,
+                                };
+                                const response = await api.post('user/archive-account', payload);
+                                toast.success(response.data.message);
+                                setSelectedRowIds(new Set());
+                                await fetchUsers();
+                            } catch (error) {
+                                console.error('Failed to archive users', error);
+                                toast.error('Failed to archive users');
+                            } finally {
+                                setConfirmOpen(false);
+                            }
+                        }}
                         variant="outlined"
                         color="primary"
                     >
-                        Cancel
+                        Archive
                     </Button>
                     <Button
                         onClick={async () => {

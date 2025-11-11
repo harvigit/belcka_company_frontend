@@ -179,6 +179,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         );
     };
 
+    const getTruncatedProjectName = (name: string) => {
+        if (!name) return '--';
+        const firstWord = name.trim().split(' ')[0];
+        return firstWord.length > 10 ? firstWord.slice(0, 7) + '...' : firstWord + '...';
+    };
+
     return (
         <Box sx={{
             flex: 1,
@@ -496,16 +502,23 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             }}>
                                                                 --
                                                             </Box>
-                                                        )  : (
+                                                        ) : (
                                                             isLogLocked ? (
-                                                                <Box sx={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    opacity: isLogLocked ? 0.6 : 1
-                                                                }}>
-                                                                    {log.project_name || '--'}
-                                                                </Box>
+                                                                <Tooltip title={log.project_name || ''} arrow placement="top">
+                                                                    <Box sx={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        opacity: 0.6,
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'clip',
+                                                                        maxWidth: '100%',
+                                                                        px: 1
+                                                                    }}>
+                                                                        {getTruncatedProjectName(log.project_name)}
+                                                                    </Box>
+                                                                </Tooltip>
                                                             ) : (
                                                                 <EditableProjectCell
                                                                     worklogId={worklogId}
