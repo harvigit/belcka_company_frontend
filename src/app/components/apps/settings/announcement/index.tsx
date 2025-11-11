@@ -37,6 +37,7 @@ const emojiList = [
 
 export default function AnnouncementsList({
   userId,
+  roleId,
   announcement,
   onUpdate,
   isDrawerOpen,
@@ -44,6 +45,7 @@ export default function AnnouncementsList({
 }: {
   companyId: number;
   userId: number;
+  roleId: number;
   announcement: any;
   onUpdate: () => void;
   onDrawerClose: any;
@@ -183,13 +185,15 @@ export default function AnnouncementsList({
   return (
     <Box>
       <Box display="flex" justifyContent="end" mt={1}>
-        {/* <Button
-          variant="contained"
-          onClick={() => setOpenDrawer(true)}
-          startIcon={<IconPlus />}
-        >
-          Announcement
-        </Button> */}
+        {roleId == 1 && (
+          <Button
+            variant="contained"
+            onClick={() => setOpenDrawer(true)}
+            startIcon={<IconPlus />}
+          >
+            Announcement
+          </Button>
+        )}
       </Box>
 
       <List sx={{ p: 2 }}>
@@ -606,7 +610,9 @@ export default function AnnouncementsList({
                       <Typography>
                         <strong>{feed.user_name}</strong>
                       </Typography>
-                      <Typography color="textSecondary">{feed.read_at}</Typography>
+                      <Typography color="textSecondary">
+                        {feed.read_at}
+                      </Typography>
                     </Box>
                   </Box>
                 ))}

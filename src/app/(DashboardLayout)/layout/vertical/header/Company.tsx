@@ -57,6 +57,7 @@ const Company = () => {
   const [feed, setFeed] = useState<any[]>([]);
   const [unreedFeed, setUnreedFeed] = useState<Set<number>>(new Set());
   const [count, setCount] = useState<number>(0);
+  const [requestCount, setRequestCount] = useState<number>(0);
   const session = useSession();
   const [filterRequest, setFilterRequest] = useState<string>("all");
   const [announcemntCount, setAnnouncemntCount] = useState<number>(0);
@@ -70,7 +71,7 @@ const Company = () => {
     company_name?: string | null;
   } & {
     company_image?: number | null;
-  } & { id: number };
+  } & { id: number } & { user_role_id: number };
 
   const router = useRouter();
   const today = new Date();
@@ -149,6 +150,7 @@ const Company = () => {
         const feeds = res.data.info;
         setFeed(feeds);
         setCount(feeds?.[0]?.unread_feeds);
+        setRequestCount(feeds?.[0]?.request_count);
 
         if (feeds) {
           const unreadIds = feeds
@@ -283,9 +285,9 @@ const Company = () => {
       return url;
     },
     "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
-    "Company": (id) => `/apps/users/${id}?tab=rate`,
-    "Comapny": (id) => `/apps/users/${id}?tab=billing`,
-    "Project": (id) => `/apps/projects/index?id=${id}`,
+    Company: (id) => `/apps/users/${id}?tab=rate`,
+    Comapny: (id) => `/apps/users/${id}?tab=billing`,
+    Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
     // Leave: (recordId, startDate, endDate) => {
     //   let url = `/apps/timesheet/list`;
@@ -357,14 +359,21 @@ const Company = () => {
           className="header-icons"
         />
       </Badge>
-      <IconNotes
-        size={24}
-        onClick={() => setRequestDrawer(true)}
-        className="header-icons"
-      />
+      <Badge
+        badgeContent={requestCount > 0 ? requestCount : null}
+        color="error"
+        overlap="circular"
+      >
+        <IconNotes
+          size={24}
+          onClick={() => setRequestDrawer(true)}
+          className="header-icons"
+        />
+      </Badge>
       <UserRequests
         open={requestDrawer}
         onClose={() => setRequestDrawer(false)}
+        onRequestCountChange={(count: number) => setRequestCount(count)} 
       />
       <Drawer
         anchor="bottom"
@@ -468,7 +477,7 @@ const Company = () => {
                               item.request_name === "Timesheet") &&
                             item.action === "stop"
                           ) {
-                            return; 
+                            return;
                           }
 
                           if (routeFn) {
@@ -487,7 +496,9 @@ const Company = () => {
                             } else if (item.request_name === "Team") {
                               router.push(routeFn(item.team_id));
                             } else if (item.request_name === "Project") {
-                              router.push(routeFn(item.project_id ?? item.record_id));
+                              router.push(
+                                routeFn(item.project_id ?? item.record_id)
+                              );
                             } else {
                               router.push(routeFn(item.user_id));
                             }
@@ -624,6 +635,7 @@ const Company = () => {
                 <AnnouncementsList
                   companyId={Number(user.company_id)}
                   userId={user.id}
+                  roleId={user.user_role_id}
                   announcement={items}
                   onUpdate={fetchList}
                   isDrawerOpen={openannouncementDrawer}

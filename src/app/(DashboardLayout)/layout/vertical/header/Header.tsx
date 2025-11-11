@@ -113,9 +113,9 @@ const Header = () => {
 
           <IconButton color="inherit">
             {activeMode === "light" ? (
-              <IconMoon size="21" onClick={() => setActiveMode("dark")} />
+              <IconMoon size="21" onClick={() => setActiveMode("dark")}  className="header-icons"/>
             ) : (
-              <IconSun size="21" onClick={() => setActiveMode("light")} />
+              <IconSun size="21" onClick={() => setActiveMode("light")} className="header-icons"/>
             )}
           </IconButton>
 
