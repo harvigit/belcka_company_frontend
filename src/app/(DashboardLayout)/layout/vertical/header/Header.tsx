@@ -111,13 +111,13 @@ const Header = () => {
         <Stack direction="row" alignItems="center">
           <Company />
 
-          <IconButton color="inherit">
+          {/* <IconButton color="inherit">
             {activeMode === "light" ? (
               <IconMoon size="21" onClick={() => setActiveMode("dark")}  className="header-icons"/>
             ) : (
               <IconSun size="21" onClick={() => setActiveMode("light")} className="header-icons"/>
             )}
-          </IconButton>
+          </IconButton> */}
 
           {lgDown ? (
             <IconButton
