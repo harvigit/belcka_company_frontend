@@ -94,7 +94,7 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
                 <Box height="100%" p={2}>
                     <form onSubmit={handleSubmit} className="address-form">
                         <Box>
-                            <Typography variant="h6" mt={2}>
+                            <Typography mt={2}>
                                 Name
                             </Typography>
                             <CustomTextField
@@ -110,8 +110,6 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
 
                             <Stack mt={2}>
                                 <Typography
-                                    variant="body2"
-                                    fontWeight={600}
                                     color="#1a1a1a"
                                     component="label"
                                     htmlFor="type"

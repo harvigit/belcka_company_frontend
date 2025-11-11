@@ -122,7 +122,7 @@ const EditLeave: React.FC<EditLeaveProps> = ({
                 <Box height="100%" p={2}>
                     <form onSubmit={EditLeave} className="address-form">
                         <Box> {/* Replaced Grid with Box */}
-                            <Typography variant="h6" mt={2}>
+                            <Typography mt={2}>
                                 Name
                             </Typography>
                             <CustomTextField
@@ -137,8 +137,6 @@ const EditLeave: React.FC<EditLeaveProps> = ({
 
                             <Stack mt={2}>
                                 <Typography
-                                    variant="body2"
-                                    fontWeight={600}
                                     color="#1a1a1a"
                                     component="label"
                                     htmlFor="type"
