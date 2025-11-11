@@ -373,7 +373,6 @@ const Company = () => {
       <UserRequests
         open={requestDrawer}
         onClose={() => setRequestDrawer(false)}
-        onRequestCountChange={(count: number) => setRequestCount(count)} 
       />
       <Drawer
         anchor="bottom"
@@ -633,9 +632,9 @@ const Company = () => {
                 </Box>
 
                 <AnnouncementsList
-                  companyId={Number(user.company_id)}
-                  userId={user.id}
-                  roleId={user.user_role_id}
+                  companyId={Number(user?.company_id)}
+                  userId={user?.id}
+                  roleId={user?.user_role_id}
                   announcement={items}
                   onUpdate={fetchList}
                   isDrawerOpen={openannouncementDrawer}

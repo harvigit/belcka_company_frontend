@@ -358,7 +358,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
           <Box textAlign="center" mb={3}>
             <label htmlFor="upload-image">
               <Avatar
-                src={imagePreview || "/default-user.png"}
+                src={imagePreview || "/images/users/user.jpg"}
                 alt="User"
                 sx={{
                   width: 80,
@@ -627,7 +627,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                   <Box textAlign="center" mb={3}>
                     <label htmlFor="upload-company-image">
                       <Avatar
-                        src={preview || "/default-image.png"}
+                        src={preview || "/images/users/company.png"}
                         alt="Company Image"
                         sx={{
                           width: 80,

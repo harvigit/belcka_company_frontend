@@ -129,6 +129,7 @@ const EditLeave: React.FC<EditLeaveProps> = ({
                                 id="name"
                                 name="name"
                                 placeholder="Enter name..."
+                                className="custom_font"
                                 value={formData.name}
                                 onChange={handleChange}
                                 variant="outlined"
@@ -136,11 +137,7 @@ const EditLeave: React.FC<EditLeaveProps> = ({
                             />
 
                             <Stack mt={2}>
-                                <Typography
-                                    color="#1a1a1a"
-                                    component="label"
-                                    htmlFor="type"
-                                >
+                                <Typography>
                                     Leave Type
                                 </Typography>
                                 <FormControl fullWidth>

@@ -40,7 +40,6 @@ interface CompanyList {
 interface Props {
   open: boolean;
   onClose: () => void;
-  onRequestCountChange: (count: number) => void;
 }
 const STORAGE_KEY = "request-date-range";
 const loadDateRangeFromStorage = () => {
@@ -76,7 +75,6 @@ const saveDateRangeToStorage = (
 export default function UserRequests({
   open,
   onClose,
-  onRequestCountChange,
 }: Props) {
   const router = useRouter();
   const today = new Date();
@@ -141,7 +139,7 @@ export default function UserRequests({
       }
       if (res.data?.requests) setData(res.data.requests);
       setRequestCount(res.data.requests?.[0]?.count);
-      onRequestCountChange(requestCount);
+      // onRequestCountChange(requestCount);
     } catch (err) {
       console.error("Failed to fetch requests", err);
     } finally {
@@ -263,7 +261,7 @@ export default function UserRequests({
             <IconArrowLeft />
           </IconButton>
           <Typography variant="h6" fontWeight={700}>
-            {user.user_role_id == 1 ? "Requests" : "My Requests"}
+            {user?.user_role_id == 1 ? "Requests" : "My Requests"}
           </Typography>
         </Stack>
         <IconButton onClick={onClose}>

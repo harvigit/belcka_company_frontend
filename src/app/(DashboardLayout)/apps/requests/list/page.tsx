@@ -22,7 +22,7 @@ const RequestListing = () => {
         <Breadcrumb title="Request List" items={BCrumb} />
         <BlankCard>
           {/* <CardContent> */}
-          <RequestList open={true} onClose={() => {}} onRequestCountChange={() => {}} />
+          <RequestList open={true} onClose={() => {}} />
           {/* </CardContent> */}
         </BlankCard>
       </PageContainer>

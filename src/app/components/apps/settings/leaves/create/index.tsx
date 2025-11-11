@@ -100,6 +100,7 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
                             <CustomTextField
                                 id="name"
                                 name="name"
+                                className="custom_font"
                                 placeholder="Enter name..."
                                 value={formData.name}
                                 onChange={handleTextChange}

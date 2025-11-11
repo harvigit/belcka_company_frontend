@@ -48,7 +48,7 @@ const Profile = () => {
         <Avatar
           src={user?.user_image || "/default-avatar.png"}
           // src={"/images/logos/belcka_logo.png"}
-          alt={user.first_name || "User"}
+          alt={user?.first_name || "User"}
           sx={{
             width: 30,
             height: 30,
@@ -107,7 +107,7 @@ const Profile = () => {
           <Avatar
             src={user?.user_image || "/default-avatar.png"}
             // src={"/images/logos/belcka_logo.png"}
-            alt={user.first_name || "User"}
+            alt={user?.first_name || "User"}
             sx={{ width: 95, height: 95 }}
           />
           <Box>
@@ -119,10 +119,10 @@ const Profile = () => {
               color="textSecondary"
               sx={{ textTransform: "capitalize" }}
             >
-              {user.trade_name ?? user.user_role}
+              {user?.trade_name ?? user?.user_role}
             </Typography>
 
-            {user.email ? (
+            {user?.email ? (
               <Typography
                 variant="subtitle2"
                 color="textSecondary"
