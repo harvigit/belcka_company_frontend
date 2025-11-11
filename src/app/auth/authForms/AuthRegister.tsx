@@ -358,14 +358,15 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
           <Box textAlign="center" mb={3}>
             <label htmlFor="upload-image">
               <Avatar
-                src={imagePreview || "/images/users/user.png"}
+                src={imagePreview || "/default-user.png"}
                 alt="User"
                 sx={{
                   width: 80,
                   height: 80,
                   mx: "auto",
                   mb: 1,
-                  // border: "2px solid #ddd",
+                  border: "2px solid #ddd",
+                  borderRadius: 3,
                   cursor: "pointer",
                 }}
               />
