@@ -200,8 +200,21 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
     );
 
     const handleSwitchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData((prev) => ({ ...prev, isAllDay: event.target.checked }));
-        setAnchorEl(null);
+        const isAllDay = event.target.checked;
+        setFormData((prev) => ({ ...prev, isAllDay }));
+
+        if (isAllDay) {
+            if (!dateRange?.from) {
+                setDateRange({
+                    from: singleDate || new Date(),
+                    to: singleDate || new Date(),
+                });
+            }
+        } else {
+            if (dateRange?.from) {
+                setSingleDate(dateRange.from);
+            }
+        }
     };
 
     const handleDateButtonClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -668,13 +681,13 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
                                 }}
                             >
                                 <StyledDayPicker>
-                                    {formData.isAllDay && dateRange ? (
+                                    {formData.isAllDay ? (
                                         <DayPicker
                                             mode="range"
                                             selected={dateRange}
                                             onSelect={handleDateRangeChange}
                                             showOutsideDays
-                                            defaultMonth={new Date()}
+                                            defaultMonth={dateRange?.from || new Date()}
                                             modifiersClassNames={{
                                                 selected: 'rdp-day_selected',
                                                 range_start: 'rdp-day_selected',
@@ -687,7 +700,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
                                             selected={singleDate}
                                             onSelect={handleSingleDateChange}
                                             showOutsideDays
-                                            defaultMonth={new Date()}
+                                            defaultMonth={singleDate || new Date()}
                                             modifiersClassNames={{
                                                 selected: 'rdp-day_selected',
                                             }}

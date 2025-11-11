@@ -12,7 +12,6 @@ export default function Dashboard() {
     <PageContainer title="Dashboard" description="this is Dashboard">
       <Box mt={3}>
         <Grid container spacing={3}>
-          {/* ------------------------- row 1 ------------------------- */}
           <Grid
             size={{
               xs: 12,
@@ -23,33 +22,7 @@ export default function Dashboard() {
               <Grid size={12}>
                 <WelcomeCard />
               </Grid>
-              <Grid
-                size={{
-                  xs: 12,
-                  lg: 6,
-                  sm: 6,
-                }}
-              >
-                <Earnings />
-              </Grid>
-              <Grid
-                size={{
-                  xs: 12,
-                  lg: 6,
-                  sm: 6,
-                }}
-              >
-                <MonthlySales />
-              </Grid>
             </Grid>
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              lg: 6,
-            }}
-          >
-            <SalesOverview />
           </Grid>
         </Grid>
       </Box>
