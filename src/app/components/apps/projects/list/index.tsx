@@ -200,7 +200,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         const fetchTrades = async () => {
             try {
                 const res = await api.get(
-                    `trade/get-trades?company_id=${user.company_id}`
+                    `get-company-resources?flag=tradeList&company_id=${user.company_id}`
                 );
                 if (res.data) setTrade(res.data.info);
             } catch (err) {
@@ -367,12 +367,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     is_attchment: true,
                 });
             } else {
-                toast.error(result.data.message);
                 setLoading(false);
             }
         } catch (error) {
             console.error("Error creating task:", error);
-            toast.error("Failed to create task");
             setLoading(false);
         } finally {
             setIsSaving(false);
@@ -404,12 +402,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     name: "",
                 });
             } else {
-                toast.error(result.data.message);
                 setLoading(false);
             }
         } catch (error) {
             console.error("Error creating address:", error);
-            toast.error("Failed to create address");
             setLoading(false);
         } finally {
             setIsSaving(false);
@@ -618,7 +614,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 >
                     <Grid
                         display="flex"
-                        width="95%"
+                        width="85%"
                         gap={1}
                         alignItems="center"
                         justifyContent="flex-start"
@@ -713,7 +709,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                         </IconButton>
                     </Grid>
                     <Stack
-                        width="5%"
+                        width="15%"
                         display="flex"
                         justifyContent="flex-end"
                         direction={{ xs: "row", sm: "row" }}
