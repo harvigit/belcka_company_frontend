@@ -271,7 +271,7 @@ const TablePagination = () => {
 
   const uniqueTrades = useMemo(
     () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
-    [data]
+    [trade]
   );
 
   const filteredData = useMemo(() => {
