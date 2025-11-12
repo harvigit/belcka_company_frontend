@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Avatar,
     Box,
@@ -175,6 +175,13 @@ const TimeClock = () => {
     const [hasDataChanged, setHasDataChanged] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [companyId, setCompanyId] = useState<number | null>(null)
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const userIdParam = searchParams?.get('user_id');
+    const startParam = searchParams?.get('start_date');
+    const endParam = searchParams?.get('end_date');
+    const openParam = searchParams?.get('open');
+    const hasInitialized = useRef(false);
 
     const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
         try {
@@ -371,36 +378,40 @@ const TimeClock = () => {
         },
     });
 
-    const router = useRouter();
-    const searchParams = useSearchParams();
 
     useEffect(() => {
-    const userIdParam = searchParams?.get("user_id");
-    const startParam = searchParams?.get("start_date");
-    const endParam = searchParams?.get("end_date");
+        if (hasInitialized.current) return; 
+        hasInitialized.current = true;
 
-    if (userIdParam && startParam && endParam) {
+        if (!userIdParam || !startParam || !endParam) return;
+
         const startDateObj = new Date(startParam);
         const endDateObj = new Date(endParam);
 
         setStartDate(startDateObj);
         setEndDate(endDateObj);
 
-        fetchData(startDateObj, endDateObj).then((fetchedData) => {
-        const foundUser = fetchedData.find(
-            (item) => Number(item.user_id) === Number(userIdParam)
-        );
+        (async () => {
+            try {
+                const fetchedData = await fetchData(startDateObj, endDateObj);
+                const foundUser = fetchedData.find(
+                    (item) => Number(item.user_id) === Number(userIdParam)
+                );
 
-        if (foundUser) {
-            saveDateToStorage(startDate,endDate);
-            setSelectedTimeClock(foundUser);
-            setDetailsOpen(true);
-            router.replace("/apps/timesheet/list", { scroll: false });
-        }else{
-            router.replace("/apps/timesheet/list", { scroll: false });
-        }
-        });
-    }
+                if (foundUser) {
+                    saveDateToStorage(startDateObj, endDateObj);
+                    setSelectedTimeClock(foundUser);
+                    setDetailsOpen(true);
+                    router.replace("/apps/timesheet/list", { scroll: false });
+                }
+
+                setTimeout(() => {
+                    router.replace("/apps/timesheet/list", { scroll: false });
+                }, 500);
+            } catch (err) {
+                console.error("Failed to load data from query params:", err);
+            }
+        })();
     }, [searchParams]);
 
     return (
@@ -615,6 +626,11 @@ const TimeClock = () => {
                     onClose={closeDetails}
                     onUserChange={handleUserChange}
                     onDataChange={handleDataChange}
+                    queryParams={{
+                        start_date: startParam,
+                        end_date: endParam,
+                        open: openParam
+                    }}
                 />
             </Drawer>
 

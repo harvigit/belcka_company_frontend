@@ -26,6 +26,8 @@ import api from "@/utils/axios";
 import AnnouncementModal from "../../modals/announcement-modal";
 import Image from "next/image";
 import { Grid } from "@mui/system";
+import { User } from "next-auth";
+import { useSession } from "next-auth/react";
 
 const emojiList = [
   { emoji: "😊", code: "1f60a" },
@@ -64,7 +66,8 @@ export default function AnnouncementsList({
   const [readDrawerOpen, setReadDrawerOpen] = useState(false);
   const [announcementDetails, setAnnouncementDetails] = useState<any>([]);
   const [announcementDrawerOpen, setAnnouncementDrawerOpen] = useState(false);
-
+ const session = useSession();
+  const user = session.data?.user as User & { id?: number | null };
   const limit = 20;
   const markAsRead = async () => {
     try {
@@ -387,7 +390,7 @@ export default function AnnouncementsList({
                           ) : (
                             <Box></Box>
                           )}
-                          {it.read_count > 0 && (
+                          {it.read_count > 0 && it.user_id == user.id && (
                             <Box>
                               <IconButton
                                 onClick={(e) => {

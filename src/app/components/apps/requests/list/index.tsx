@@ -185,20 +185,21 @@ export default function UserRequests({
     },
     "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
     Company: (id) => `/apps/users/${id}?tab=rate`,
-    // Leave: (recordId, startDate, endDate) => {
-    //   let url = `/apps/timesheet/list`;
-    //   const params: any[] = [];
+    Leave: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
 
-    //   if (recordId) params.push(`user_id=${recordId}`);
-    //   if (startDate) params.push(`start_date=${startDate}`);
-    //   if (endDate) params.push(`end_date=${endDate}`);
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push(`open=true`);
 
-    //   if (params.length > 0) {
-    //     url += `?${params.join("&")}`;
-    //   }
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
 
-    //   return url;
-    // },
+      return url;
+    },
   };
 
   const filteredData = useMemo(() => {
@@ -302,6 +303,14 @@ export default function UserRequests({
                     const routeFn = REQUEST_ROUTE_MAP[work.type_name];
                     if (routeFn) {
                       if (work.type_name === "Shift") {
+                        const start = startDate
+                          ? format(startDate, "yyyy-MM-dd")
+                          : undefined;
+                        const end = endDate
+                          ? format(endDate, "yyyy-MM-dd")
+                          : undefined;
+                        router.push(routeFn(work.user_id, start, end));
+                      } else if (work.type_name === "Leave") {
                         const start = startDate
                           ? format(startDate, "yyyy-MM-dd")
                           : undefined;

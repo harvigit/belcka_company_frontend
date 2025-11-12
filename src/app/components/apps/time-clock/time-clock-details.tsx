@@ -73,6 +73,11 @@ const loadDateRangeFromStorage = () => {
 
 interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
     onDataChange?: () => void;
+    queryParams?: {
+        start_date?: string | null;
+        end_date?: string | null;
+        open?: string | null;
+    };
 }
 
 const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
@@ -85,6 +90,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                                                                        onClose,
                                                                        onUserChange,
                                                                        onDataChange,
+                                                                       queryParams
                                                                    }) => {
     const today = new Date();
     const defaultStart = new Date(today);
@@ -478,7 +484,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestSidebar(true);
     };
 
-    
+   useEffect(() => {
+        if (queryParams?.open) {
+            setLeaveRequestSidebar(true);
+        }
+    }, [queryParams]);
     const closeLeaveRequestSidebar = async () => {
         try {
             const defaultStartDate = startDate || defaultStart;

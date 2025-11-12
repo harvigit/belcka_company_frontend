@@ -1,22 +1,23 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import {
-    Typography,
-    Box,
-    Grid,
-    CardContent,
-    Button,
-    Tab,
-    Tabs,
-    Badge,
-    IconButton,
-    CircularProgress, Card,
-} from '@mui/material';
-import {
-  IconArrowLeft,
-  IconEdit,
-  IconMedal,
-} from "@tabler/icons-react";
+  Typography,
+  Box,
+  Grid,
+  CardContent,
+  Button,
+  Tab,
+  Tabs,
+  Badge,
+  IconButton,
+  CircularProgress,
+  Card,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
+import { IconArrowLeft, IconEdit, IconMedal, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -66,18 +67,18 @@ const TablePagination = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
   const searchParams = useSearchParams();
-   
-  const { data: session, update } = useSession();
-    const user = session?.user as User & {
-        company_id?: number | null;
-        company_name?: string | null;
-        user_image?: string | null;
-        id: number;
-        user_thumb_image?: string | null;
-        user_role_id?: number | null;
-    };
 
-    const userRole = user?.user_role_id;  
+  const { data: session, update } = useSession();
+  const user = session?.user as User & {
+    company_id?: number | null;
+    company_name?: string | null;
+    user_image?: string | null;
+    id: number;
+    user_thumb_image?: string | null;
+    user_role_id?: number | null;
+  };
+
+  const userRole = user?.user_role_id;
   const [phone, setPhone] = useState("");
 
   const [openIdCard, setOpenIdCard] = useState(false);
@@ -86,7 +87,9 @@ const TablePagination = () => {
   const param = useParams();
   const userId = param?.id;
   const [value, setValue] = useState<number>(0);
-
+  const [openImageDialog, setOpenImageDialog] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
@@ -166,69 +169,32 @@ const TablePagination = () => {
     }
   };
 
-    const handleRemoveAccount = async (userId: number) => {
-        if (!userId) {
-            toast.error("User ID is required");
-            return;
-        }
+  const handleRemoveAccount = async (userId: number) => {
+    if (!userId) {
+      toast.error("User ID is required");
+      return;
+    }
 
-        const confirmed = window.confirm(
-            "Are you sure you want to remove this account? This action cannot be undone."
-        );
+    const confirmed = window.confirm(
+      "Are you sure you want to remove this account? This action cannot be undone."
+    );
 
-        if (!confirmed) return;
-
-        try {
-            const res = await api.post("user/remove-company-account", { user_id: userId });
-
-            if (res.data.IsSuccess) {
-                toast.success(res.data.message || "Account removed successfully");
-
-                router.push("/apps/users/list");
-            } else {
-                toast.error(res.data.message || "Failed to remove account");
-            }
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to remove account");
-        }
-    };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length || !userId) return;
-
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append("user_image", file);
-    formData.append("user_id", String(userId));
+    if (!confirmed) return;
 
     try {
-      const res = await api.post("user/update-profile", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const res = await api.post("user/remove-company-account", {
+        user_id: userId,
       });
 
       if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        fetchData();
+        toast.success(res.data.message || "Account removed successfully");
 
-        if (Number(userId) === Number(user?.id)) {
-          const updatedUser = {
-            ...user,
-            user_image: res.data.info.user_image
-              ? res.data.info.user_image
-              : user?.user_image,
-            user_thumb_image: res.data.info.user_image
-              ? res.data.info.user_image
-              : user?.user_thumb_image,
-          };
-
-          await update({
-            ...session,
-            user: updatedUser,
-          });
-        }
+        router.push("/apps/users/list");
+      } else {
+        toast.error(res.data.message || "Failed to remove account");
       }
-    } catch (err) {
-      console.error("Image upload failed:", err);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to remove account");
     }
   };
 
@@ -242,8 +208,8 @@ const TablePagination = () => {
     handleFieldChange("phone", numberOnly);
   };
 
-   useEffect(() => {
-    const tabParam = searchParams ? searchParams.get("tab"): "";
+  useEffect(() => {
+    const tabParam = searchParams ? searchParams.get("tab") : "";
     if (tabParam) {
       switch (tabParam) {
         case "billing":
@@ -255,7 +221,7 @@ const TablePagination = () => {
         default:
           setValue(0);
       }
-      router.replace(`/apps/users/${userId}`)
+      router.replace(`/apps/users/${userId}`);
     }
   }, [searchParams]);
   if (loading) {
@@ -301,33 +267,19 @@ const TablePagination = () => {
                   },
                 }}
               >
-                <label htmlFor="upload-avatar">
-                  <Avatar
-                    src={
-                      data?.user_image
-                        ? data?.user_image
-                        : "/images/users/user.png"
-                    }
-                    alt={data?.first_name}
-                    sx={{ width: 60, height: 60, cursor: "pointer" }}
-                  />
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  id="upload-avatar"
-                  style={{ display: "none" }}
-                  onChange={handleImageUpload}
+                <Avatar
+                  src={
+                    data?.user_image
+                      ? data.user_image
+                      : "/images/users/user.png"
+                  }
+                  alt={data?.first_name}
+                  sx={{ width: 60, height: 60, cursor: "pointer" }}
+                  onClick={() => setOpenImageDialog(true)}
                 />
               </Badge>
+
               <Box display={"block"}>
-                <label htmlFor="upload-avatar">
-                  <IconEdit
-                    size={17}
-                    color={"#1e4db7"}
-                    style={{ cursor: "pointer" }}
-                  ></IconEdit>
-                </label>
                 <Typography
                   color="textSecondary"
                   fontWeight={600}
@@ -473,20 +425,20 @@ const TablePagination = () => {
             </Box>
           </BlankCard>
 
-            {userRole === 1 && (
-                <Card sx={{ mt: 3 }}>
-                    <Box sx={{ m: 3 }}>
-                        <Button
-                            variant="outlined"
-                            color="error"
-                            onClick={() => handleRemoveAccount(Number(data?.id))}
-                            fullWidth
-                        >
-                            Remove Account
-                        </Button>
-                    </Box>
-                </Card>
-            )}
+          {userRole === 1 && (
+            <Card sx={{ mt: 3 }}>
+              <Box sx={{ m: 3 }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => handleRemoveAccount(Number(data?.id))}
+                  fullWidth
+                >
+                  Remove Account
+                </Button>
+              </Box>
+            </Card>
+          )}
         </Grid>
 
         <Grid
@@ -562,6 +514,100 @@ const TablePagination = () => {
           user={selectedUser}
         />
       )}
+      <Dialog
+        open={openImageDialog}
+        onClose={() => setOpenImageDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <Box
+          display={"flex"}
+          justifyContent={"space-between"}
+          alignItems={"center"}
+          p={2}
+        >
+          <Typography>Change Profile Picture</Typography>
+          <IconButton onClick={() => setOpenImageDialog(false)}>
+            <IconX />
+          </IconButton>
+        </Box>
+        <DialogContent>
+          <Box
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={2}
+          >
+            <Avatar
+              src={previewImage || data?.user_image || "/images/users/user.jpg"}
+              alt="Preview"
+              sx={{ width: 100, height: 100, mb: 2 }}
+            />
+            <Button variant="contained" component="label">
+              Upload profile picture
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setSelectedFile(file);
+                    setPreviewImage(URL.createObjectURL(file));
+                  }
+                }}
+              />
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenImageDialog(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!selectedFile}
+            onClick={async () => {
+              if (selectedFile) {
+                const formData = new FormData();
+                formData.append("user_image", selectedFile);
+                formData.append("user_id", String(userId));
+                try {
+                  const res = await api.post("user/update-profile", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                  });
+                  if (res.data.IsSuccess) {
+                    toast.success(res.data.message);
+                    setOpenImageDialog(false);
+                    setSelectedFile(null);
+                    setPreviewImage(null);
+                    fetchData();
+                    if (Number(userId) === Number(user?.id)) {
+                      const updatedUser = {
+                        ...user,
+                        user_image: res.data.info.user_image
+                          ? res.data.info.user_image
+                          : user?.user_image,
+                        user_thumb_image: res.data.info.user_image
+                          ? res.data.info.user_image
+                          : user?.user_thumb_image,
+                      };
+                      await update({
+                        ...session,
+                        user: updatedUser,
+                      });
+                    }
+                  }
+                } catch (err) {
+                  console.error("Image upload failed:", err);
+                  toast.error("Failed to upload image");
+                }
+              }
+            }}
+          >
+            Upload
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

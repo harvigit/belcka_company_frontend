@@ -310,7 +310,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     };
 
     useEffect(() => {
+    if (!Number.isNaN(projectID) && projectID !== null) {
         fetchHistories();
+    }
     }, [openDrawer, projectID]);
 
     const handleChange = (

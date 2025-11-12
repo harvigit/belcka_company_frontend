@@ -377,6 +377,9 @@ input#project_id::placeholder {
     padding: 9.5px 0 !important;
     width: 100px !important;
 }
-.custom_font input{
+.custom_font input {
     font-size: 14px !important;
+}
+ .custom_color input, .custom_color label{
+    font-size: 15px !important;
 }
