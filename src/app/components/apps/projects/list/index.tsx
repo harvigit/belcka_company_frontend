@@ -367,12 +367,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     is_attchment: true,
                 });
             } else {
-                toast.error(result.data.message);
                 setLoading(false);
             }
         } catch (error) {
             console.error("Error creating task:", error);
-            toast.error("Failed to create task");
             setLoading(false);
         } finally {
             setIsSaving(false);
@@ -404,12 +402,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     name: "",
                 });
             } else {
-                toast.error(result.data.message);
                 setLoading(false);
             }
         } catch (error) {
             console.error("Error creating address:", error);
-            toast.error("Failed to create address");
             setLoading(false);
         } finally {
             setIsSaving(false);

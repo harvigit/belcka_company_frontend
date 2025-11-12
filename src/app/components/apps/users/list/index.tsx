@@ -888,13 +888,12 @@ const TablePagination = () => {
                                     user_ids: usersToDelete.join(','),
                                     company_id: user.company_id,
                                 };
-                                const response = await api.post('user/archive-account', payload);
+                                const response = await api.post('user/archive-user-account', payload);
                                 toast.success(response.data.message);
                                 setSelectedRowIds(new Set());
                                 await fetchUsers();
                             } catch (error) {
                                 console.error('Failed to archive users', error);
-                                toast.error('Failed to archive users');
                             } finally {
                                 setConfirmOpen(false);
                             }
