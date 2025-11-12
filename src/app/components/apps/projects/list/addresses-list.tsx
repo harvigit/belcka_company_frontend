@@ -119,7 +119,7 @@ const AddressesList = ({
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `trade/get-trades?company_id=${user.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {

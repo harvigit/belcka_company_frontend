@@ -163,7 +163,7 @@ const TablePagination = () => {
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `trade/get-trades?company_id=${id.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${id.company_id}`
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {

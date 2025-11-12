@@ -104,7 +104,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
   const fetchTrades = async () => {
     try {
-      const res = await api.get(`trade/get-trades?company_id=${comapny?.id}`);
+      const res = await api.get(`get-company-resources?flag=tradeList&company_id=${comapny?.id}`);
       if (res.data) setTrade(res.data.info);
     } catch (err) {
       console.error("Failed to fetch trades", err);
