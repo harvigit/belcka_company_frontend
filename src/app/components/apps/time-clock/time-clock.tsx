@@ -412,6 +412,7 @@ const TimeClock = () => {
                 console.error("Failed to load data from query params:", err);
             }
         })();
+        router.replace("/apps/timesheet/list", { scroll: false });
     }, [searchParams]);
 
     return (
