@@ -13,7 +13,8 @@ const api = axios.create({
 
       if ((session as any)?.accessToken) {
         config.headers = config.headers || {}; // ensure it exists
-        config.headers['Authorization'] = `Bearer ${(session as any).accessToken}`;
+        config.headers['authorization'] = `Bearer ${(session as any).accessToken}`;
+        config.headers['is_web'] = `true`;
       }
 
       return config;

@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
 
           const res = await fetch(`${api}app-login`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json","is_web" : 'true' },
             body: JSON.stringify(credentials),
           });
 
@@ -37,7 +37,8 @@ export const authOptions: NextAuthOptions = {
           const companyRes = await fetch(`${api}company/active-company`, {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
+              "is_web" : "true", 
+              authorization: `Bearer ${token}`,
             },
           });
 
@@ -50,17 +51,17 @@ export const authOptions: NextAuthOptions = {
           return {
             ...data.info,
             token,
-            user_image: companyData.info.user_image,
-            name: companyData.info.user_name,
-            first_name: companyData.info.first_name,
-            last_name: companyData.info.last_name,
-            email: companyData.info.email,
-            company_id: companyData.info.id,
-            company_name: companyData.info.name,
-            company_image: companyData.info.image,
-            trade_id: companyData.info.trade_id,
-            trade_name: companyData.info.trade_name,
-            currency_id: companyData.info.currency_id
+            user_image: companyData?.info?.user_image ?? null ,
+            name: companyData?.info?.user_name ?? null,
+            first_name: companyData?.info?.first_name ?? null,
+            last_name: companyData?.info?.last_name ?? null,
+            email: companyData?.info?.email ?? null,
+            company_id: companyData?.info?.id ?? null,
+            company_name: companyData?.info?.name ?? null,
+            company_image: companyData?.info?.image ?? null,
+            trade_id: companyData?.info?.trade_id ?? null,
+            trade_name: companyData?.info?.trade_name ?? null,
+            currency_id: companyData?.info?.currency_id ?? null
           };
           
         } catch (err) {
@@ -88,7 +89,8 @@ export const authOptions: NextAuthOptions = {
         const res = await fetch(`${api}company/active-company`, {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${user?.token}`,
+            "is_web" : "true", 
+            authorization: `Bearer ${user?.token}`,
           },
         });
 
@@ -96,17 +98,17 @@ export const authOptions: NextAuthOptions = {
         await getSession();
         if (res.ok && data?.info) {
           companyData = {
-            user_image: data.info.user_image,
-            name: data.info.user_name,
-            first_name: data.info.first_name,
-            last_name: data.info.last_name,
-            email: data.info.email,
-            company_id: data.info.id,
-            company_name: data.info.name,
-            company_image: data.info.image,
-            trade_id: data.info.trade_id,
-            trade_name: data.info.trade_name,
-            currency_id: data.info.currency_id
+            user_image: data?.info?.user_image ?? null,
+            name: data?.info?.user_name ?? null,
+            first_name: data?.info?.first_name ?? null,
+            last_name: data?.info?.last_name ?? null,
+            email: data?.info?.email ?? null,
+            company_id: data?.info?.id ?? null,
+            company_name: data?.info?.name ?? null,
+            company_image: data?.info?.image ?? null,
+            trade_id: data?.info?.trade_id ?? null,
+            trade_name: data?.info?.trade_name ?? null,
+            currency_id: data?.info?.currency_id ?? null
           };
         } else {
           console.error("Failed to fetch updated company data:", data);
