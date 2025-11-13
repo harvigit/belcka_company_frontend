@@ -6,11 +6,12 @@ import {Grid, Tabs, Tab, Box, Stack} from '@mui/material';
 import CreateWork from '@/app/components/apps/settings/tasks/list';
 import LocationList from '@/app/components/apps/settings/locations/list';
 import LeaveList from '@/app/components/apps/settings/leaves/list';
-import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock} from '@tabler/icons-react';
+import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconCategory} from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import CategoryList from '@/app/components/apps/settings/expense-categories/list';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -114,6 +115,13 @@ const AdminSetting = () => {
                                             label="Permissions"
                                             {...a11yProps(4)}
                                         />
+                                        <Tab
+                                            className="admin-settings"
+                                            iconPosition="start"
+                                            icon={<IconCategory size="20"/>}
+                                            label="Expense Category"
+                                            {...a11yProps(5)}
+                                        />
                                     </Tabs>
                                 </Stack>
                             </BlankCard>
@@ -140,6 +148,9 @@ const AdminSetting = () => {
                                 </TabPanel>
                                 <TabPanel value={value} index={4}>
                                     <PermissionSettings/>
+                                </TabPanel>
+                                <TabPanel value={value} index={5}>
+                                    <CategoryList />
                                 </TabPanel>
                             </BlankCard>
                         </Grid>
