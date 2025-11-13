@@ -179,7 +179,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         );
     };
 
-    const getTruncatedProjectName = (name: string) => {
+    const getTruncatedName = (name: string) => {
         if (!name) return '--';
         const firstWord = name.trim().split(' ')[0];
         return firstWord.length > 10 ? firstWord.slice(0, 7) + '...' : firstWord + '...';
@@ -516,7 +516,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         maxWidth: '100%',
                                                                         px: 1
                                                                     }}>
-                                                                        {getTruncatedProjectName(log.project_name)}
+                                                                        {getTruncatedName(log.project_name)}
                                                                     </Box>
                                                                 </Tooltip>
                                                             ) : (
@@ -563,7 +563,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     marginLeft: '4px',
                                                                     color: '#32bf90'
                                                                 }}>
-                                                                    {log.leave_name || '--'}
+                                                                    {getTruncatedName(log.leave_name)}
                                                                 </Box>
                                                             </Box>
                                                         ) : (
@@ -574,7 +574,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     justifyContent: 'center',
                                                                     opacity: isLogLocked ? 0.6 : 1
                                                                 }}>
-                                                                    {log.shift_name || '--'}
+                                                                    {getTruncatedName(log.shift_name)}
                                                                 </Box>
                                                             ) : (
                                                                 <EditableShiftCell

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, FormControl, Select, MenuItem } from '@mui/material';
+import {Box, FormControl, Select, MenuItem, Tooltip} from '@mui/material';
 import { Shift } from '@/app/components/apps/time-clock/types/timeClock';
 
 interface EditableShiftCellProps {
@@ -34,6 +34,12 @@ const EditableShiftCell: React.FC<EditableShiftCellProps> = ({
     const isSaving = savingWorklogs.has(worklogId);
     const isLocked = log?.status === 6 || log?.status === '6';
 
+    const getTruncatedName = (name: string) => {
+        if (!name) return '--';
+        const maxLength = 12;
+        return name.length > maxLength ? name.slice(0, maxLength - 3) + '...' : name;
+    };
+    
     if (isEditing && !isLocked) {
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '32px' }}>
@@ -71,30 +77,36 @@ const EditableShiftCell: React.FC<EditableShiftCellProps> = ({
     }
 
     return (
-        <Box
-            onClick={() => !isLocked && startEditingShift(worklogId, currentShiftId, log)}
-            sx={{
-                py: 0.5,
-                fontSize: '0.875rem',
-                cursor: isLocked ? 'not-allowed' : 'text',
-                minHeight: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: isLocked ? 0.6 : 1,
-                borderRadius: '4px', 
-                px: '8px',
-                '&:hover': !isLocked
-                    ? {
-                        borderColor: '#1976d2',
-                        boxShadow: '0 0 0 1px #1976d2',
-                    }
-                    : {},
-            }}
-            title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit shift'}
-        >
-            {currentShiftName || '--'}
-        </Box>
+        <Tooltip title={currentShiftName || ''} arrow placement="top">
+            <Box
+                onClick={() => !isLocked && startEditingShift(worklogId, currentShiftId, log)}
+                sx={{
+                    py: 0.5,
+                    fontSize: '0.875rem',
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    minHeight: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: isLocked ? 0.6 : 1,
+                    borderRadius: '4px',
+                    px: '8px',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'clip',
+                    maxWidth: '100%',
+                    '&:hover': !isLocked
+                        ? {
+                            borderColor: '#1976d2',
+                            boxShadow: '0 0 0 1px #1976d2',
+                        }
+                        : {},
+                }}
+                title={isLocked ? 'This worklog is locked and cannot be edited' : 'Click to edit shift'}
+            >
+                {getTruncatedName(currentShiftName)}
+            </Box>
+        </Tooltip>
     );
 };
 

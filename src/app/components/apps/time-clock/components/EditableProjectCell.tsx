@@ -34,10 +34,8 @@ const EditableProjectCell: React.FC<EditableProjectCellProps> = ({
     const isSaving = savingWorklogs.has(worklogId);
     const isLocked = log?.status === 6 || log?.status === '6';
 
-    // Truncate long project name for display (e.g., "test2 project" → "test2...")
     const getTruncatedName = (name: string) => {
         if (!name) return '--';
-        // You can adjust maxLength based on your column width
         const maxLength = 12;
         return name.length > maxLength ? name.slice(0, maxLength - 3) + '...' : name;
     };
