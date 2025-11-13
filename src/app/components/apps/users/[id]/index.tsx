@@ -617,11 +617,12 @@ const TablePagination = () => {
                     onClick={async () => {
                         try {
                             const payload = {
-                                user_id: userToDelete,
+                                user_ids: String(userToDelete),
                                 company_id: user.company_id,
                             };
                             const response = await api.post('user/archive-user-account', payload);
                             toast.success(response.data.message);
+                            router.push("/apps/users/list")
                         } catch (error) {
                             console.error('Failed to archive users', error);
                         } finally {
