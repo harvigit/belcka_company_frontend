@@ -90,7 +90,11 @@ const TablePagination = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const handleTabChange = (event: any, newValue: any) => {
+
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<number>();
+
+    const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
 
@@ -166,35 +170,6 @@ const TablePagination = () => {
       }
     } catch (err) {
       console.error("Update failed:", err);
-    }
-  };
-
-  const handleRemoveAccount = async (userId: number) => {
-    if (!userId) {
-      toast.error("User ID is required");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Are you sure you want to remove this account? This action cannot be undone."
-    );
-
-    if (!confirmed) return;
-
-    try {
-      const res = await api.post("user/remove-company-account", {
-        user_id: userId,
-      });
-
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message || "Account removed successfully");
-
-        router.push("/apps/users/list");
-      } else {
-        toast.error(res.data.message || "Failed to remove account");
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to remove account");
     }
   };
 
@@ -431,7 +406,10 @@ const TablePagination = () => {
                 <Button
                   variant="outlined"
                   color="error"
-                  onClick={() => handleRemoveAccount(Number(data?.id))}
+                  onClick={() => {
+                      setUserToDelete(Number(data?.id));
+                      setConfirmOpen(true);
+                  }}
                   fullWidth
                 >
                   Remove Account
@@ -608,6 +586,76 @@ const TablePagination = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>
+                Confirm Deletion
+                <IconButton
+                    aria-label="close"
+                    onClick={() => setConfirmOpen(false)}
+                    sx={{
+                        position: 'absolute',
+                        right: 8,
+                        top: 8,
+                        color: (theme) => theme.palette.grey[500],
+                    }}
+                >
+                    <IconX />
+                </IconButton>
+            </DialogTitle>
+
+            <DialogContent>
+                <Typography color="textSecondary" fontWeight={500}>
+                    This will permanently erase all actions, history, and activity associated with the user. Once deleted, the data cannot be recovered.
+                    <br /><br />
+                    To remove the user without losing their information, please select the Archive option instead.
+                </Typography>
+            </DialogContent>
+
+            <DialogActions>
+                <Button
+                    onClick={async () => {
+                        try {
+                            const payload = {
+                                user_id: userToDelete,
+                                company_id: user.company_id,
+                            };
+                            const response = await api.post('user/archive-user-account', payload);
+                            toast.success(response.data.message);
+                        } catch (error) {
+                            console.error('Failed to archive users', error);
+                        } finally {
+                            setConfirmOpen(false);
+                        }
+                    }}
+                    variant="outlined"
+                    color="primary"
+                >
+                    Archive
+                </Button>
+                <Button
+                    onClick={async () => {
+                        try {
+                            const payload = {
+                                user_id: userToDelete,
+                                company_id: user.company_id,
+                            };
+                            const response = await api.post('user/delete-account', payload);
+                            toast.success(response.data.message);
+                        } catch (error) {
+                            console.error('Failed to remove users', error);
+                            toast.error('Failed to remove users');
+                        } finally {
+                            setConfirmOpen(false);
+                        }
+                    }}
+                    variant="outlined"
+                    color="error"
+                >
+                    Delete
+                </Button>
+            </DialogActions>
+        </Dialog>
     </Box>
   );
 };
