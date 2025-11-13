@@ -28,6 +28,8 @@ import {
     Switch,
     FormControl,
     InputLabel,
+    Menu,
+    ListItemIcon,
 } from '@mui/material';
 import {
     flexRender,
@@ -50,6 +52,8 @@ import {
     IconX,
     IconChevronDown,
     IconChevronUp,
+    IconDotsVertical,
+    IconUsersMinus,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
@@ -129,12 +133,22 @@ const TablePagination = () => {
     const [extension, setExtension] = useState('+44');
     const [nationalPhone, setNationalPhone] = useState('');
     const [selectedUser, setSelectedUser] = useState<any>(null);
-
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+    const openMenu = Boolean(anchorEl);
     // Permissions drawer state
     const [permissionsDrawerOpen, setPermissionsDrawerOpen] = useState(false);
     const [selectedUserPermissions, setSelectedUserPermissions] = useState<UserList | null>(null);
     const [permissionSearch, setPermissionSearch] = useState('');
     const [tempPermissions, setTempPermissions] = useState<Set<number>>(new Set());
+
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+    
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+    
 
     const fetchUsers = async () => {
         try {
@@ -683,6 +697,16 @@ const TablePagination = () => {
                     </DialogActions>
                 </Dialog>
                 <Stack direction={'row-reverse'} mb={1} mr={1}>
+                    <IconButton
+                    sx={{ margin: "0px" }}
+                    id="basic-button"
+                    aria-controls={openMenu ? "basic-menu" : undefined}
+                    aria-haspopup="true"
+                    aria-expanded={openMenu ? "true" : undefined}
+                    onClick={handleClick}
+                    >
+                        <IconDotsVertical width={18} />
+                    </IconButton>
                     {selectedRowIds.size > 0 && (
                         <Button
                             variant="outlined"
@@ -706,6 +730,37 @@ const TablePagination = () => {
                     >
                         Invite User
                     </Button>
+                    <Menu
+                    id="basic-menu"
+                    anchorEl={anchorEl}
+                    open={openMenu}
+                    onClose={handleClose}
+                    slotProps={{
+                        list: {
+                        "aria-labelledby": "basic-button",
+                        },
+                    }}
+                    >
+                        <MenuItem onClick={handleClose}>
+                            <Link
+                            color="body1"
+                            href="/apps/users/archive"
+                            style={{
+                                width: "100%",
+                                color: "#11142D",
+                                textTransform: "none",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyItems: "center",
+                            }}
+                            >
+                            <ListItemIcon>
+                                <IconUsersMinus width={18} />
+                            </ListItemIcon>
+                            Archived Users
+                            </Link>
+                        </MenuItem>
+                    </Menu>
                 </Stack>
             </Stack>
             <Divider/>

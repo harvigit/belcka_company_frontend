@@ -6,16 +6,13 @@ import {
   Typography,
   Button,
   Autocomplete,
-  Box,
-  Divider,
+  Box
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
-import { width } from "@mui/system";
-import { IconSearch } from "@tabler/icons-react";
 
 interface Trade {
   id: string | number | null;

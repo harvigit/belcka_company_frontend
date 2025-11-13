@@ -10,7 +10,7 @@ export default function NotificationClient() {
   const userId = user?.id;
   const is_web = true;
 
-useEffect(() => {
+  useEffect(() => {
     if (!userId) return;
 
     let unsub: (() => void) | undefined;
@@ -28,7 +28,11 @@ useEffect(() => {
           `${process.env.NEXT_PUBLIC_API_URL}notifications/save-token`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              is_web: "true",
+              authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({ userId, token, is_web }),
           }
         );
