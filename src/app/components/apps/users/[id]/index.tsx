@@ -643,6 +643,7 @@ const TablePagination = () => {
                             };
                             const response = await api.post('user/delete-account', payload);
                             toast.success(response.data.message);
+                            router.push("/apps/users/list")
                         } catch (error) {
                             console.error('Failed to remove users', error);
                             toast.error('Failed to remove users');
