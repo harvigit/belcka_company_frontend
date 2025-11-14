@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Box, Button, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
-import Link from "next/link";
 
 const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
-  const router = useRouter();
-
   const [phone, setPhone] = useState("");
   const [extension, setExtension] = useState("+44");
   const [nationalPhone, setNationalPhone] = useState("");
@@ -21,6 +24,8 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const [countdown, setCountdown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [company, setCompany] = useState<any[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState("");
 
   useEffect(() => {
     if (countdown > 0) {
@@ -40,12 +45,16 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       };
 
       const response = await api.post("send-otp-login", payload);
+
       toast.success(response.data.message);
+
+      if (response.data.IsSuccess === true) {
+        setCompany(response.data.info || []);
+      }
+
       setCountdown(30);
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message || error?.message || "Unknown error";
-      toast.error(message);
+      toast.error(error?.response?.data?.message || "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -59,7 +68,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       return;
     }
 
-    const payload = {
+    const payload: any = {
       extension,
       phone: nationalPhone,
       otp,
@@ -71,7 +80,13 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
       if (!showVerification) {
         const response = await api.post("send-otp-login", payload);
+
         toast.success(response.data.message);
+
+        if (response.data.IsSuccess === true) {
+          setCompany(response.data.info || []);
+        }
+
         setShowVerification(true);
         setCountdown(30);
         return;
@@ -82,6 +97,14 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         return;
       }
 
+      if (company?.length >= 2) {
+        if (!selectedCompany) {
+          toast.error("Please select your company");
+          return;
+        }
+        payload.company_id = selectedCompany;
+      }
+
       const result = await signIn("credentials", {
         redirect: false,
         ...payload,
@@ -89,15 +112,12 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       });
 
       if (result?.ok) {
-        window.location.href = "/apps/users/list";
         toast.success("Logged in successfully!!");
+        window.location.href = "/apps/users/list";
       } else {
         toast.error(result?.error || "Login failed");
       }
-    } catch (error: any) {
-      // const message =
-      //   error?.response?.data?.message || error?.message || "Login failed";
-      // toast.error(message);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -129,8 +149,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                 const numberOnly = value.replace(country.dialCode, "");
                 setNationalPhone(numberOnly);
               }}
-              inputStyle={{ width: "100%"}}
-              // containerStyle={{ width: 300 }}
+              inputStyle={{ width: "100%" }}
               enableSearch
               inputProps={{ required: true }}
             />
@@ -142,16 +161,15 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             <CustomFormLabel htmlFor="code">
               Enter Verification Code
             </CustomFormLabel>
+
             <CustomTextField
               id="code"
               type="text"
               fullWidth
               value={otp}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              onChange={(e: any) => {
                 const value = e.target.value;
-                if (/^\d{0,6}$/.test(value)) {
-                  setOtp(value);
-                }
+                if (/^\d{0,6}$/.test(value)) setOtp(value);
               }}
               inputProps={{
                 maxLength: 6,
@@ -166,6 +184,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                   ? `Resend in 00:${countdown < 10 ? "0" : ""}${countdown}`
                   : "Didn’t get the code?"}
               </Typography>
+
               {countdown === 0 && (
                 <Typography
                   variant="body2"
@@ -180,6 +199,26 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                 </Typography>
               )}
             </Stack>
+          </Box>
+        )}
+
+        {showVerification && company?.length >= 2 && (
+          <Box mt={2}>
+            <CustomFormLabel>Select Company</CustomFormLabel>
+            <Select
+              name="supervisor_id"
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+              fullWidth
+              displayEmpty
+            >
+              <MenuItem value={0}>Select Supervisor</MenuItem>
+              {company.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.name}
+                </MenuItem>
+              ))}
+            </Select>
           </Box>
         )}
 

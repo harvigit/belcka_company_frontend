@@ -12,6 +12,7 @@ export const authOptions: NextAuthOptions = {
         extension: { label: "Code", type: "text" },
         phone: { label: "Phone", type: "number" },
         otp: { label: "Verification Code", type: "number" },
+        company_id: { label: "Company ID", type: "text" },
       },
       async authorize(credentials) {
         try {
