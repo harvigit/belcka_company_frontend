@@ -24,6 +24,7 @@ export type DailyBreakdown = {
     totalHours?: string;
     priceWorkAmount?: string;
     dailyTotal?: string;
+    expenseTotalAmount?: string;
     payableAmount?: string;
     regular?: string;
     employeeNotes?: string;

@@ -465,7 +465,7 @@ const TablePagination = () => {
                     <Chip
                         size="small"
                         onClick={() => handleOpenPermissionsDrawer(user)}
-                        label={permissionCount === 0 ? `Select` : `${permissionCount > 1 ? `${permissionCount - 1} Permissions` : ''}`}
+                        label={permissionCount === 0 ? `Select` : `${permissionCount > 0 ? `${permissionCount} Permissions` : ''}`}
                         sx={{
                             backgroundColor: (theme) => theme.palette.primary.light,
                             color: (theme) => theme.palette.primary.main,

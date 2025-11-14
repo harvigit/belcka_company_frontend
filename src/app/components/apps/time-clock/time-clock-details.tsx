@@ -1,22 +1,29 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Box, Drawer, IconButton } from '@mui/material';
-import { useReactTable, getCoreRowModel, getExpandedRowModel, ColumnDef, VisibilityState, ExpandedState } from '@tanstack/react-table';
-import { format, parse } from 'date-fns';
-import { DateTime } from 'luxon';
-import { AxiosResponse } from 'axios';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
+import {Box, Drawer, IconButton} from '@mui/material';
+import {
+    useReactTable,
+    getCoreRowModel,
+    getExpandedRowModel,
+    ColumnDef,
+    VisibilityState,
+    ExpandedState
+} from '@tanstack/react-table';
+import {format, parse} from 'date-fns';
+import {DateTime} from 'luxon';
+import {AxiosResponse} from 'axios';
 import api from '@/utils/axios';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import RequestDetails from './time-clock-details/request-details';
 import Conflicts from './time-clock-details/conflicts/conflicts';
-import { useTimeClockData } from './hooks/useTimeClockData';
-import { useEditingState } from './hooks/useEditingState';
-import { useNewRecords } from './hooks/useNewRecords';
+import {useTimeClockData} from './hooks/useTimeClockData';
+import {useEditingState} from './hooks/useEditingState';
+import {useNewRecords} from './hooks/useNewRecords';
 import TimeClockHeader from './components/TimeClockHeader';
 import TimeClockStats from './components/TimeClockStats';
 import TimeClockTable from './components/TimeClockTable';
 import ActionBar from './components/ActionBar';
-import { DailyBreakdown, TimeClockDetailsProps } from '@/app/components/apps/time-clock/types/timeClock';
-import { IconExclamationMark } from '@tabler/icons-react';
+import {DailyBreakdown, TimeClockDetailsProps} from '@/app/components/apps/time-clock/types/timeClock';
+import {IconExclamationMark} from '@tabler/icons-react';
 import Checklogs from './time-clock-details/checklogs/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
@@ -128,11 +135,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [startDate, setStartDate] = useState<Date | null>(initialData.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialData.endDate);
     const [filterValue, setFilterValue] = useState<string>('all');
-    const [conflictsByDate, setConflictsByDate] = useState<{[key: string]: number}>({});
+    const [conflictsByDate, setConflictsByDate] = useState<{ [key: string]: number }>({});
     const [checklogsSidebar, setChecklogsSidebar] = useState<boolean>(false);
     const [selectedWorkId, setSelectedWorkId] = useState<number>(0);
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
-    const [leaveRequestByDate, setLeaveRequestByDate] = useState<{[key: string]: number}>({});
+    const [leaveRequestByDate, setLeaveRequestByDate] = useState<{ [key: string]: number }>({});
     const [leaveRequestSidebar, setLeaveRequestSidebar] = useState<boolean>(false);
 
     // Save columnVisibility to localStorage whenever it changes
@@ -401,7 +408,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
                     if (Array.isArray(rowData.rowsData)) {
                         return rowData.rowsData
-                            .filter((worklog): worklog is { timesheet_light_id: string | number } => !!worklog.timesheet_light_id)
+                            .filter((worklog): worklog is {
+                                timesheet_light_id: string | number
+                            } => !!worklog.timesheet_light_id)
                             .map((worklog) => String(worklog.timesheet_light_id));
                     }
 
@@ -413,10 +422,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
 
             const ids = timesheetIds.join(',');
-            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', { ids, format: option });
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', {ids, format: option});
 
             if (response.data.IsSuccess) {
-                const { file, filename, contentType } = response.data.data;
+                const {file, filename, contentType} = response.data.data;
 
                 const binaryString = atob(file);
                 const binaryLen = binaryString.length;
@@ -425,7 +434,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                const blob = new Blob([bytes], { type: contentType });
+                const blob = new Blob([bytes], {type: contentType});
 
                 const url = window.URL.createObjectURL(blob);
 
@@ -465,7 +474,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const handleConflicts = async () => {
         setConflictSidebar(true);
     };
-    
+
     const closeConflictSidebar = async () => {
         setConflictSidebar(false);
         try {
@@ -484,7 +493,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestSidebar(true);
     };
 
-   useEffect(() => {
+    useEffect(() => {
         if (queryParams?.open) {
             setLeaveRequestSidebar(true);
         }
@@ -495,13 +504,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
             onDataChange?.();
-                
+
             setLeaveRequestSidebar(false);
         } catch (error) {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }
     };
-    
+
     const handleChecklogs = async (worklogId: number) => {
         setChecklogsSidebar(true);
         setSelectedWorkId(worklogId)
@@ -782,6 +791,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         return sum + (parseFloat(log.payable_amount) || 0);
                     }, 0);
 
+                    const totalExpenseAmount = filteredWorklogs.reduce((sum: number, log: any) => {
+                        return sum + (parseFloat(log.total_expense_amount) || 0);
+                    }, 0);
+
                     return [{
                         rowType: 'day' as const,
                         date: day.date ?? '--',
@@ -793,6 +806,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         priceWorkAmount: '--',
                         totalHours: '--',
                         dailyTotal: formatHour(day.daily_total),
+                        expenseTotalAmount: `${currency}${totalExpenseAmount.toFixed(2)}`,
                         payableAmount: `${currency}${totalPayableAmount.toFixed(2)}`,
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
@@ -826,6 +840,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     priceWorkAmount: '--',
                     totalHours: '--',
                     dailyTotal: '--',
+                    expenseTotalAmount: '--',
                     payableAmount: '--',
                     regular: '--',
                     employeeNotes: '--',
@@ -914,7 +929,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
         });
 
-        return { hasLockedRows, hasUnlockedRows };
+        return {hasLockedRows, hasUnlockedRows};
     };
 
     const toggleTimesheetStatus = useCallback(
@@ -922,7 +937,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             try {
                 const ids = timesheetIds.join(',');
                 const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
-                const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, { ids });
+                const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, {ids});
 
                 if (response.data.IsSuccess) {
                     const defaultStartDate = startDate || defaultStart;
@@ -1014,7 +1029,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
         });
 
-        return { hasWorklogs };
+        return {hasWorklogs};
     };
 
     const handleDeleteWorklogs = async () => {
@@ -1105,7 +1120,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         />
                     </Box>
                 ),
-                cell: ({ row }) => {
+                cell: ({row}) => {
                     if (row.original.rowType !== 'day') return null;
                     const rowId = `row-${row.index}`;
                     return (
@@ -1117,29 +1132,29 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 },
                 enableSorting: false,
                 size: 50,
-                meta: { align: 'center' },
+                meta: {align: 'center'},
             },
             {
                 id: 'date',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Date</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.date : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Date</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.date : null,
                 size: 150,
             },
             {
                 id: 'conflicts',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}></span>,
-                cell: ({ row }) => null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}></span>,
+                cell: ({row}) => null,
                 size: 50,
                 enableSorting: false,
-                meta: { align: 'center' },
+                meta: {align: 'center'},
             },
             {
                 id: 'exclamation',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}></span>,
-                meta: { label: 'Exclamation' },
+                header: () => <span style={{display: 'block', textAlign: 'center'}}></span>,
+                meta: {label: 'Exclamation'},
                 size: 36,
                 enableSorting: false,
-                cell: ({ row }) => {
+                cell: ({row}) => {
                     if (row.original.rowType !== 'day') return null;
                     const hasLogs = row.original.is_requested;
                     if (!hasLogs) return null;
@@ -1148,10 +1163,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                             size="small"
                             color="error"
                             aria-label="error"
-                            sx={{ '&:hover': { backgroundColor: 'transparent', color: '#fc4b6c' } }}
+                            sx={{'&:hover': {backgroundColor: 'transparent', color: '#fc4b6c'}}}
                             onClick={handlePendingRequest}
                         >
-                            <IconExclamationMark size={18} />
+                            <IconExclamationMark size={18}/>
                         </IconButton>
                     );
                 },
@@ -1159,43 +1174,43 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             {
                 id: 'project',
                 accessorKey: 'project',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Project</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.project : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Project</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.project : null,
                 size: 120,
             },
             {
                 id: 'shift',
                 accessorKey: 'shift',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Shift</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.shift : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Shift</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.shift : null,
                 size: 120,
             },
             {
                 id: 'start',
                 accessorKey: 'start',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Start</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.start : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Start</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.start : null,
                 size: 80,
             },
             {
                 id: 'end',
                 accessorKey: 'end',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>End</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.end : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>End</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.end : null,
                 size: 80,
             },
             {
                 id: 'totalHours',
                 accessorKey: 'totalHours',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Total hours</span>,
-                cell: ({ row }) => {
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Total hours</span>,
+                cell: ({row}) => {
                     if (row.original.rowType !== 'day') return null;
                     const totalHours = row.original.totalHours;
                     const isEdited = row.original.is_edited;
                     const isPricework = row.original.rowsData ?
                         row.original.rowsData.some((log: any) => log.is_pricework) : false;
                     return (
-                        <span style={{ color: isEdited ? '#ff0000' : 'inherit' }}>
+                        <span style={{color: isEdited ? '#ff0000' : 'inherit'}}>
                           {isPricework ? '--' : totalHours}
                         </span>
                     );
@@ -1205,40 +1220,47 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             {
                 id: 'priceWorkAmount',
                 accessorKey: 'priceWorkAmount',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Pricework Amount</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Pricework Amount</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
                 size: 150,
             },
             {
                 id: 'checkins',
                 accessorKey: 'checkins',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Check Ins</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Check Ins</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
                 size: 140,
             },
             {
                 id: 'dailyTotal',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Daily total</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.dailyTotal : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Daily total</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.dailyTotal : null,
                 size: 100,
+            },
+            {
+                id: 'expenseTotalAmount',
+                accessorKey: 'expenseTotalAmount',
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Expense Amount</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.expenseTotalAmount : null,
+                size: 140,
             },
             {
                 id: 'payableAmount',
                 accessorKey: 'payableAmount',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Payable Amount</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.payableAmount : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Payable Amount</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.payableAmount : null,
                 size: 140,
             },
             {
                 id: 'employeeNotes',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Employee notes</span>,
-                cell: ({ row }) => row.original.rowType === 'day' ? row.original.employeeNotes : null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Employee notes</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.employeeNotes : null,
                 size: 150,
             },
             {
                 id: 'action',
-                header: () => <span style={{ display: 'block', textAlign: 'center' }}>Action</span>,
-                cell: ({ row }) => null,
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Action</span>,
+                cell: ({row}) => null,
                 size: 100,
             },
         ],
@@ -1248,7 +1270,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const table = useReactTable({
         data: dailyData,
         columns: mainTableColumns,
-        state: { columnVisibility, expanded },
+        state: {columnVisibility, expanded},
         onColumnVisibilityChange: setColumnVisibility,
         getCoreRowModel: getCoreRowModel(),
         getExpandedRowModel: getExpandedRowModel(),
@@ -1266,7 +1288,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             start = new Date(initialData.startDate);
             end = new Date(initialData.endDate);
         } else {
-            if(timeClock?.start_date && timeClock?.end_date){
+            if (timeClock?.start_date && timeClock?.end_date) {
                 start = new Date(timeClock.start_date);
                 end = new Date(timeClock.end_date);
             }
@@ -1282,7 +1304,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     if (!timeClock) return null;
 
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', position: 'relative'}}>
             <TimeClockHeader
                 selectedRows={selectedRows}
                 timeClock={timeClock}
@@ -1396,7 +1418,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
                 />
             </Drawer>
-            
+
             <Drawer
                 anchor="right"
                 open={leaveRequestSidebar}

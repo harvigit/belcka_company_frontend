@@ -761,6 +761,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         {rowData.dailyTotal}
                                                     </TableCell>
                                                 )}
+                                                
+                                                {/* Expense Total Column */}
+                                                {isFirstRow && visibleColumnConfigs.expenseTotalAmount?.visible && (
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
+                                                        {rowData.expenseTotalAmount}
+                                                    </TableCell>
+                                                )}
 
                                                 {/* Payable Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.payableAmount?.visible && (

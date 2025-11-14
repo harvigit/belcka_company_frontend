@@ -97,6 +97,7 @@ export type TimeClock = {
     weekly_total_hours: string | number;
     daylog_payable_amount: number;
     pricework_total_amount: number;
+    total_expense_amount: number;
     total_payable_amount: number;
     user_id: any;
     user_name: string;
@@ -338,6 +339,14 @@ const TimeClock = () => {
             columnHelper.accessor('pricework_total_amount', {
                 id: 'pricework_total_amount',
                 header: 'Pricework Amount',
+                cell: (info: any) => {
+                    const value = info.getValue();
+                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+                },
+            }),
+            columnHelper.accessor('total_expense_amount', {
+                id: 'total_expense_amount',
+                header: 'Expense Amount',
                 cell: (info: any) => {
                     const value = info.getValue();
                     return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
