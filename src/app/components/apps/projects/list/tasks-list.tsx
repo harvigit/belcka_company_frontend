@@ -20,6 +20,10 @@ import {
   Autocomplete,
   Divider,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   flexRender,
@@ -31,7 +35,13 @@ import {
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
-import { IconArrowLeft, IconChevronRight, IconDownload, IconEdit } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconChevronRight,
+  IconDownload,
+  IconEdit,
+  IconTrash,
+} from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -70,7 +80,13 @@ interface TasksListProps {
   onUpdate: () => void;
 }
 
-const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: TasksListProps) => {
+const TasksList = ({
+  projectId,
+  searchTerm,
+  filters,
+  shouldRefresh,
+  onUpdate,
+}: TasksListProps) => {
   const [data, setData] = useState<TaskList[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSaving, seIsSaving] = useState(false);
@@ -85,6 +101,8 @@ const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: Ta
   const [taskSearch, setTaskSearch] = useState("");
   const [formData, setFormData] = useState<any>({});
   const [columnFilters, setColumnFilters] = useState<any>([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteIds, setDeleteIds] = useState<number[]>([]);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -104,12 +122,12 @@ const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: Ta
     fetchTasks();
   }, [projectId]);
 
-  useEffect(() =>{
-    if(shouldRefresh == false && projectId){
-      fetchTasks()
+  useEffect(() => {
+    if (shouldRefresh == false && projectId) {
+      fetchTasks();
       onUpdate?.();
     }
-  }, [shouldRefresh == false])
+  }, [shouldRefresh == false]);
 
   useEffect(() => {
     if (!user.company_id) return;
@@ -174,6 +192,22 @@ const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: Ta
       }
     })();
   }, [formData.trade_id]);
+
+  const handleConfirmDelete = async () => {
+    try {
+      const payload = {
+        task_ids: deleteIds.join(","),
+      };
+      const res = await api.post("company-tasks/delete", payload);
+      if (res.data.IsSuccess == true) {
+        toast.success(res.data.message);
+        setDeleteModalOpen(false);
+        fetchTasks();
+      }
+    } catch (error) {
+    }
+    setDeleteModalOpen(false);
+  };
 
   const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -445,6 +479,17 @@ const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: Ta
                       <IconEdit size={18} />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setDeleteIds([id]);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      <IconTrash size={18} />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               )}
             </>
@@ -704,7 +749,7 @@ const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: Ta
                   renderInput={(params) => (
                     <CustomTextField {...params} label="" />
                   )}
-                  sx={{ mt: 2 ,width: "100% !important"}}
+                  sx={{ mt: 2, width: "100% !important" }}
                 />
 
                 <Autocomplete
@@ -788,6 +833,24 @@ const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: Ta
           </Box>
         </Box>
       </Drawer>
+      
+      {/* Delete task */}
+      <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this task?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleConfirmDelete}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 };
