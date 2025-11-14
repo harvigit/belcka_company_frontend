@@ -18,6 +18,8 @@ import {
   Tooltip,
   Drawer,
   Autocomplete,
+  Divider,
+  MenuItem,
 } from "@mui/material";
 import {
   flexRender,
@@ -29,7 +31,7 @@ import {
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
-import { IconArrowLeft, IconDownload, IconEdit } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronRight, IconDownload, IconEdit } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -38,6 +40,8 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
+import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
+import { IconChevronLeft } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -62,9 +66,11 @@ interface TasksListProps {
     status: string;
     sortOrder: string;
   };
+  shouldRefresh: boolean;
+  onUpdate: () => void;
 }
 
-const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
+const TasksList = ({ projectId, searchTerm, filters,shouldRefresh,onUpdate }: TasksListProps) => {
   const [data, setData] = useState<TaskList[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSaving, seIsSaving] = useState(false);
@@ -82,22 +88,28 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`project/get-tasks?project_id=${projectId}`);
+      if (res.data) setData(res.data.info);
+    } catch (err) {
+      console.error("Failed to fetch tasks", err);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     if (!projectId) return;
-    const fetchTasks = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get(`project/get-tasks?project_id=${projectId}`);
-        if (res.data) setData(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch tasks", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTasks();
   }, [projectId]);
+
+  useEffect(() =>{
+    if(shouldRefresh == false && projectId){
+      fetchTasks()
+      onUpdate?.();
+    }
+  }, [shouldRefresh == false])
 
   useEffect(() => {
     if (!user.company_id) return;
@@ -559,6 +571,80 @@ const TasksList = ({ projectId, searchTerm, filters }: TasksListProps) => {
             </Table>
           </TableContainer>
         )}
+
+        <Divider />
+        <Stack
+          gap={1}
+          pr={3}
+          pt={1}
+          pl={3}
+          pb={3}
+          alignItems="center"
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography color="textSecondary">
+              {table.getPrePaginationRowModel().rows.length} Rows
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: {
+                xs: "block",
+                sm: "flex",
+              },
+            }}
+            alignItems="center"
+          >
+            <Stack direction="row" alignItems="center">
+              <Typography color="textSecondary">Page</Typography>
+              <Typography color="textSecondary" fontWeight={600} ml={1}>
+                {table.getState().pagination.pageIndex + 1} of{" "}
+                {Math.max(1, table.getPageCount())}
+              </Typography>
+              <Typography color="textSecondary" ml={"3px"}>
+                {" "}
+                | Entries :{" "}
+              </Typography>
+            </Stack>
+            <Stack
+              ml={"5px"}
+              direction="row"
+              alignItems="center"
+              color="textSecondary"
+            >
+              <CustomSelect
+                value={table.getState().pagination.pageSize}
+                onChange={(e: { target: { value: any } }) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+              >
+                {[50, 100, 250, 500].map((pageSize) => (
+                  <MenuItem key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </MenuItem>
+                ))}
+              </CustomSelect>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <IconChevronLeft />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <IconChevronRight />
+              </IconButton>
+            </Stack>
+          </Box>
+        </Stack>
       </Grid>
 
       {/* ✅ Drawer for Add/Edit */}

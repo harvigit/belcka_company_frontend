@@ -353,6 +353,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 setDrawerOpen(false);
                 setLoading(true);
                 onProjectUpdated?.();
+                triggerRefresh();
                 setTimeout(() => {
                     setLoading(false);
                 }, 100);
@@ -1147,6 +1148,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                         projectId={projectId}
                         searchTerm={searchTerm}
                         filters={filters}
+                        shouldRefresh={shouldRefresh}
+                        onUpdate={triggerRefresh}
                     />
                 )}
 
