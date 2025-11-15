@@ -25,7 +25,7 @@ const SidebarItems = () => {
   // States and Contexts
   const { isSidebarHover, isCollapse, isMobileSidebar, setIsMobileSidebar } =
     useContext(CustomizerContext);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [permissions, setPermissions] = useState<any[]>([]);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: string | null } & {
@@ -57,7 +57,7 @@ const SidebarItems = () => {
   
   const filteredMenuItems = MenuItems.filter((item) => {
     const permission = permissions.find(
-      (perm) => perm.name === item.title && perm.is_web === true
+      (perm) => perm.name === item.title && perm.is_web === true && perm.status == true
     );
     return permission !== undefined;
   });

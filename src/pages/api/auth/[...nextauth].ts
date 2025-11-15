@@ -13,6 +13,7 @@ export const authOptions: NextAuthOptions = {
         phone: { label: "Phone", type: "number" },
         otp: { label: "Verification Code", type: "number" },
         company_id: { label: "Company ID", type: "text" },
+        login: { label: "Login", type: "text" },
       },
       async authorize(credentials) {
         try {
@@ -45,6 +46,12 @@ export const authOptions: NextAuthOptions = {
 
           const companyData = await companyRes.json();
 
+          const companyId = companyData?.info?.id ?? null;
+          
+          if (companyId === null) {
+            throw new Error("NO_COMPANY"); 
+          }
+
           if (!companyRes.ok || !companyData?.info) {
             throw new Error("Failed to fetch active company data");
           }
@@ -73,7 +80,18 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user }) {
+      async jwt({ token, user, trigger, session }) {
+        console.log(typeof token.user,'yusdgfyusdfu',typeof session)
+      if (typeof token.user !== "object" || token.user === null) {
+        token.user = {};
+      }
+      if (trigger === "update" && session && typeof session === "object" && !Array.isArray(session)) {
+        token.user = {
+          ...(token.user as Record<string, any>),
+          ...(session as Record<string, any>),
+        };
+      }
+
       if (user) {
         token.user = user;
         token.accessToken = (user as any).token;
