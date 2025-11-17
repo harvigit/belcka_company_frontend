@@ -162,10 +162,10 @@ const EditProject: React.FC<EditProjectProps> = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 350,
+        width: 450,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: 350,
+          width: 450,
           padding: 2,
           backgroundColor: "#f9f9f9",
         },

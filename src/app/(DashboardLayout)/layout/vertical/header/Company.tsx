@@ -464,7 +464,7 @@ const Company = () => {
                             transition: "0.2s",
                             cursor: "pointer",
                             "&:hover": {
-                              boxShadow: "0 4px 17px rgba(0,0,0,0.08)",
+                              boxShadow: "0 4px 12px rgba(80, 78, 78, 0.08)",
                               transform: "translateY(-1px)",
                             },
                           }}
