@@ -456,91 +456,94 @@ const Company = () => {
                 {paginatedFeeds?.length > 0 ? (
                   <>
                     {paginatedFeeds.map((item, index) => (
-                      <Box
-                        sx={{
-                          p: 2,
-                          bgcolor: "white",
-                          transition: "0.2s",
-                          cursor: "pointer",
-                          "&:hover": {
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                            transform: "translateY(-1px)",
-                          },
-                        }}
-                        key={item.id}
-                        onClick={() => {
-                          const routeFn = REQUEST_ROUTE_MAP[item.request_name];
+                      <>
+                        <Box
+                          sx={{
+                            p: 2,
+                            bgcolor: "white",
+                            transition: "0.2s",
+                            cursor: "pointer",
+                            "&:hover": {
+                              boxShadow: "0 4px 17px rgba(0,0,0,0.08)",
+                              transform: "translateY(-1px)",
+                            },
+                          }}
+                          key={item.id}
+                          onClick={() => {
+                            const routeFn =
+                              REQUEST_ROUTE_MAP[item.request_name];
 
-                          if (
-                            (item.request_name === "Shift" ||
-                              item.request_name === "Timesheet") &&
-                            item.action === "stop"
-                          ) {
-                            return;
-                          }
-
-                          if (routeFn) {
                             if (
-                              item.request_name === "Shift" ||
-                              (item.request_name === "Timesheet" &&
-                                item.action !== "stop")
+                              (item.request_name === "Shift" ||
+                                item.request_name === "Timesheet") &&
+                              item.action === "stop"
                             ) {
-                              const start = startDate
-                                ? format(startDate, "yyyy-MM-dd")
-                                : undefined;
-                              const end = endDate
-                                ? format(endDate, "yyyy-MM-dd")
-                                : undefined;
-                              router.push(routeFn(item.user_id, start, end));
-                            } else if (item.request_name === "Team") {
-                              router.push(routeFn(item.team_id));
-                            } else if (item.request_name === "Project") {
-                              router.push(
-                                routeFn(item.project_id ?? item.record_id)
-                              );
-                            } else {
-                              router.push(routeFn(item.user_id));
+                              return;
                             }
 
-                            setOpenDrawer(false);
-                          }
-                        }}
-                      >
-                        <Box
-                          p={2}
-                          ml={1}
-                          display="flex"
-                          justifyContent="flex-start"
-                          alignItems="flex-start"
-                          gap={2}
+                            if (routeFn) {
+                              if (
+                                item.request_name === "Shift" ||
+                                (item.request_name === "Timesheet" &&
+                                  item.action !== "stop")
+                              ) {
+                                const start = startDate
+                                  ? format(startDate, "yyyy-MM-dd")
+                                  : undefined;
+                                const end = endDate
+                                  ? format(endDate, "yyyy-MM-dd")
+                                  : undefined;
+                                router.push(routeFn(item.user_id, start, end));
+                              } else if (item.request_name === "Team") {
+                                router.push(routeFn(item.team_id));
+                              } else if (item.request_name === "Project") {
+                                router.push(
+                                  routeFn(item.project_id ?? item.record_id)
+                                );
+                              } else {
+                                router.push(routeFn(item.user_id));
+                              }
+
+                              setOpenDrawer(false);
+                            }
+                          }}
                         >
-                          <Avatar
-                            src={item.user_image}
-                            alt={item.user_name || ""}
-                            sx={{ width: 40, height: 40 }}
-                          />
-                          <Box display={"block"}>
-                            <Typography
-                              variant="subtitle1"
-                              color="textSecondary"
-                              fontWeight={400}
-                              className="multi-ellipsis"
-                            >
-                              <b>{item.user_name}</b>: {item.message}
-                            </Typography>
-                            <Typography
-                              fontSize={"12px !important"}
-                              variant="caption"
-                              color="textSecondary"
-                              fontWeight={500}
-                              className="multi-ellipsis"
-                            >
-                              {item.date_added}
-                            </Typography>
+                          <Box
+                            p={2}
+                            ml={1}
+                            display="flex"
+                            justifyContent="flex-start"
+                            alignItems="flex-start"
+                            gap={2}
+                          >
+                            <Avatar
+                              src={item.user_image}
+                              alt={item.user_name || ""}
+                              sx={{ width: 40, height: 40 }}
+                            />
+                            <Box display={"block"}>
+                              <Typography
+                                variant="subtitle1"
+                                color="textSecondary"
+                                fontWeight={400}
+                                className="multi-ellipsis"
+                              >
+                                <b>{item.user_name}</b>: {item.message}
+                              </Typography>
+                              <Typography
+                                fontSize={"12px !important"}
+                                variant="caption"
+                                color="textSecondary"
+                                fontWeight={500}
+                                className="multi-ellipsis"
+                              >
+                                {item.date_added}
+                              </Typography>
+                            </Box>
                           </Box>
                         </Box>
                         <Divider />
-                      </Box>
+                      </>
                     ))}
 
                     {paginatedFeeds.length < filteredFeeds.length && (
