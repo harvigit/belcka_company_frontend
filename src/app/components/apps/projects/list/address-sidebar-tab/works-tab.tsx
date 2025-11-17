@@ -210,7 +210,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                 ) || null
               }
               onChange={(_, newValue) => {
-                console.log(newValue, "newValue");
                 setTempFilters({
                   ...tempFilters,
                   type: newValue ? newValue.id.toString() : "",

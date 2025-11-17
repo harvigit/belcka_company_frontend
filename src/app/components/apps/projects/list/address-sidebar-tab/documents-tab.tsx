@@ -133,7 +133,6 @@ export const DocumentsTab = ({
   };
 
   const handleSaveImage = async () => {
-    console.log(selectedDoc, "selectedFile");
     if (!selectedDoc) return;
     const key = String(selectedDoc.record_id);
     setSelectedTaskId(selectedDoc.id);

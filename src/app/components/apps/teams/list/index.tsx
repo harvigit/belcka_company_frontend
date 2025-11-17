@@ -360,7 +360,7 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row?.team_member_count, {
       id: "team_member_count",
-      header: () => "Users",
+      header: () => "Online",
       cell: (info) => {
         const row = info.row.original;
         const users = row.working_member_count;

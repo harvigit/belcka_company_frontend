@@ -234,7 +234,7 @@ const ArchiveUserList = () => {
                 setSelectedRowIds(newSelected);
               }}
             />
-            <Link href={`/apps/users/${user.id}`} passHref>
+            {/* <Link href={`/apps/users/${user.id}`} passHref> */}
               <Stack direction="row" alignItems="center" spacing={4}>
                 <Avatar
                   src={user.user_image || defaultImage}
@@ -245,7 +245,7 @@ const ArchiveUserList = () => {
                   <Typography
                     className="f-14"
                     color="textPrimary"
-                    sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                    // sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
                   >
                     {user.name ?? "-"}
                   </Typography>
@@ -254,7 +254,7 @@ const ArchiveUserList = () => {
                   </Typography>
                 </Box>
               </Stack>
-            </Link>
+            {/* </Link> */}
           </Stack>
         );
       },
