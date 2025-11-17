@@ -547,12 +547,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         verticalAlign: 'middle'
                                                     }}>
                                                         {log.is_leave ? (
-                                                            <Box
-                                                                sx={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                }}
-                                                            >
+                                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                                 <IconSun size={18} color='#32bf90' />
                                                                 <Box sx={{
                                                                     display: 'flex',
@@ -566,31 +561,54 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     {getTruncatedName(log.leave_name)}
                                                                 </Box>
                                                             </Box>
-                                                        ) : (
-                                                            log.is_pricework || isLogLocked ? (
+                                                        ) : log.is_pricework ? (
+                                                            <Tooltip
+                                                                title="Pricework type record cannot be edited"
+                                                                arrow
+                                                                placement="top"
+                                                            >
                                                                 <Box sx={{
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
-                                                                    opacity: isLogLocked ? 0.6 : 1
+                                                                    opacity: isLogLocked ? 0.6 : 1,
+                                                                    cursor: 'not-allowed',
+                                                                    minHeight: '32px',
+                                                                    py: 0.5,
+                                                                    fontSize: '0.875rem',
+                                                                    borderRadius: '4px',
+                                                                    px: '8px',
                                                                 }}>
                                                                     {getTruncatedName(log.shift_name)}
                                                                 </Box>
-                                                            ) : (
-                                                                <EditableShiftCell
-                                                                    worklogId={worklogId}
-                                                                    currentShiftId={log.shift_id}
-                                                                    currentShiftName={log.shift_name}
-                                                                    log={log}
-                                                                    shifts={shifts}
-                                                                    editingShifts={editingShifts}
-                                                                    savingWorklogs={savingWorklogs}
-                                                                    startEditingShift={startEditingShift}
-                                                                    updateEditingShift={updateEditingShift}
-                                                                    saveShiftChanges={saveShiftChanges}
-                                                                    cancelEditingShift={cancelEditingShift}
-                                                                />
-                                                            )
+                                                            </Tooltip>
+                                                        ) : isLogLocked ? (
+                                                            <Box sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                opacity: 0.6,
+                                                                cursor: 'not-allowed',
+                                                                minHeight: '32px',
+                                                                py: 0.5,
+                                                                fontSize: '0.875rem',
+                                                            }}>
+                                                                {getTruncatedName(log.shift_name)}
+                                                            </Box>
+                                                        ) : (
+                                                            <EditableShiftCell
+                                                                worklogId={worklogId}
+                                                                currentShiftId={log.shift_id}
+                                                                currentShiftName={log.shift_name}
+                                                                log={log}
+                                                                shifts={shifts}
+                                                                editingShifts={editingShifts}
+                                                                savingWorklogs={savingWorklogs}
+                                                                startEditingShift={startEditingShift}
+                                                                updateEditingShift={updateEditingShift}
+                                                                saveShiftChanges={saveShiftChanges}
+                                                                cancelEditingShift={cancelEditingShift}
+                                                            />
                                                         )}
                                                     </TableCell>
                                                 )}
@@ -726,7 +744,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
 
                                                 {/* Check ins Column */}
-                                                {visibleColumnConfigs.checkins?.visible && (
+                                                {visibleColumnConfigs.checkIns?.visible && (
                                                     <TableCell
                                                         align="center"
                                                         onClick={() => openChecklogsSidebar?.(log.worklog_id)}
@@ -763,14 +781,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
                                                 
                                                 {/* Expense Total Column */}
-                                                {isFirstRow && visibleColumnConfigs.expenseTotalAmount?.visible && (
+                                                {isFirstRow && visibleColumnConfigs.expenseAmount?.visible && (
                                                     <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {rowData.expenseTotalAmount}
+                                                        {rowData.expenseAmount}
                                                     </TableCell>
                                                 )}
 

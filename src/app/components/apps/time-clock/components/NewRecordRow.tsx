@@ -103,7 +103,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                         py: 0.5,
                         borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
                     }}
-                >--
+                >
                 </TableCell>
             )}
             {visibleColumnConfigs.expander?.visible && (
@@ -113,7 +113,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                         py: 0.5,
                         borderBottom: '1px solid rgba(224, 224, 224, 1) !important'
                     }}
-                >--
+                >
                 </TableCell>
             )}
             
@@ -241,7 +241,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
                 </TableCell>
             )}
 
-            {visibleColumnConfigs.checkins?.visible && (
+            {visibleColumnConfigs.checkIns?.visible && (
                 <TableCell
                     align="center"
                     sx={{

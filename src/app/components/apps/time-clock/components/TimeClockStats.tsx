@@ -27,11 +27,8 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                            handlePopoverClose,
                                                        }) => {
     const headerDetails = [
-        // { value: formatHour(headerDetail?.total_hours), label: 'Total Hours' },
-        // { value: formatHour(headerDetail?.total_break_hours), label: 'Total Break Hours' },
         { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
         { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
-        // { value: headerDetail?.worked_days ?? 0, label: 'Worked Days' },
     ];
 
     return (
@@ -72,7 +69,12 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                     <FormGroup>
                         {table
                             .getAllLeafColumns()
-                            .filter((col: any) => col.id.toLowerCase().includes(search.toLowerCase()))
+                            .filter((col: any) => {
+                                const excludedColumns = ['conflicts'];
+                                if (excludedColumns.includes(col.id)) return false;
+
+                                return col.id.toLowerCase().includes(search.toLowerCase());
+                            })
                             .map((col: any) => (
                                 <FormControlLabel
                                     key={col.id}
@@ -80,16 +82,19 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                         <Checkbox
                                             checked={col.getIsVisible()}
                                             onChange={col.getToggleVisibilityHandler()}
+                                            disabled={col.id === 'conflicts'}
                                         />
                                     }
-                                    sx={{
-                                        textTransform: 'capitalize'
-                                    }}
+                                    sx={{ textTransform: 'none' }}
                                     label={
                                         col.columnDef.meta?.label ||
                                         (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
-                                            ? col.columnDef.header
-                                            : col.id)
+                                                ? col.columnDef.header
+                                                : col.id
+                                                    .replace(/([A-Z])/g, ' $1')
+                                                    .replace(/^./, (str: string) => str.toUpperCase())
+                                                    .trim()
+                                        )
                                     }
                                 />
                             ))}
