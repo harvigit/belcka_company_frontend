@@ -81,7 +81,6 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
       async jwt({ token, user, trigger, session }) {
-        console.log(typeof token.user,'yusdgfyusdfu',typeof session)
       if (typeof token.user !== "object" || token.user === null) {
         token.user = {};
       }

@@ -329,6 +329,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       <Box display={"flex"} justifyContent={"space-between"} mb={2}>
         {user.user_role_id !== 1 &&
         comapny.is_pending_request &&
+        (payRate === "view" || payRate === "view_edit")&&
         ratePermisison ? (
           <Alert severity="error" variant="filled">
             Your rate request has been pending.
