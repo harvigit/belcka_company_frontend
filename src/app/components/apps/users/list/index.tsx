@@ -333,7 +333,9 @@ const TablePagination = () => {
                     });
                     return newData;
                 });
-
+                setTimeout(() => {
+                    window.location.reload();
+                }, 100);
                 setPermissionsDrawerOpen(false);
             } else {
                 throw new Error(response.data.message || 'Failed to update permissions');
