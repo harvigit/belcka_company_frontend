@@ -182,6 +182,10 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
         default_start_time: '08:00',
         default_end_time: '17:00',
     });
+
+    // Only added this state
+    const [priceworkEnabled, setPriceworkEnabled] = useState<boolean>(false);
+
     const [breaksEnabled, setBreaksEnabled] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [deletedBreakIds, setDeletedBreakIds] = useState<number[]>([]);
@@ -221,6 +225,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                 is_paid: b.is_paid ?? false,
                             }))
                             : [];
+
                         setShiftDetail({
                             id: data.id,
                             company_id: data.company_id,
@@ -236,6 +241,9 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             default_start_time: data.default_start_time || '08:00',
                             default_end_time: data.default_end_time || '17:00',
                         });
+
+                        // Sync the switch when editing
+                        setPriceworkEnabled(data.is_pricework || false);
                         setBreaksEnabled(shiftBreaks.length > 0);
                     } else {
                         setErrorMessage('Failed to load shift settings');
@@ -255,6 +263,12 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
     const updateShiftSettings = useCallback((updates: Partial<ShiftDetails>) => {
         setShiftDetail((prev) => ({ ...prev, ...updates }));
     }, []);
+
+    // Only added this handler
+    const handlePriceworkToggle = (checked: boolean) => {
+        setPriceworkEnabled(checked);
+        updateShiftSettings({ is_pricework: checked });
+    };
 
     const handleInputChange = (field: keyof ShiftDetails) => (value: string | boolean | number) => {
         updateShiftSettings({ [field]: value });
@@ -533,6 +547,25 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             mb: 2,
                         }}
                     >
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                            <Typography variant="body2">Done it have price work?</Typography>
+                            <IOSSwitch
+                                checked={priceworkEnabled}
+                                onChange={(e) => handlePriceworkToggle(e.target.checked)}
+                                color="primary"
+                            />
+                        </Box>
+                    </Box>
+
+                    <Box
+                        sx={{
+                            p: 2,
+                            bgcolor: '#fff',
+                            borderRadius: 2,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                            mb: 2,
+                        }}
+                    >
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
                             <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">Start Shift</Typography>
                             <TimePicker
@@ -593,6 +626,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                         </Box>
                     </Box>
 
+                    {/* Breaks section - unchanged */}
                     <Box
                         sx={{
                             p: 2,
@@ -705,7 +739,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                                                 mt: 2
                                             }}
                                             >
-                                                <Typography sx={{ width: '80px', flexShrink: 0 }} variant="body2">Is Paid</Typography>
+                                                <Typography sx={{ width: ' Kennedy', flexShrink: 0 }} variant="body2">Is Paid</Typography>
                                                 <IOSSwitch
                                                     checked={breakItem.is_paid}
                                                     onChange={(e) => handleBreakIsPaidChange(index, e.target.checked)}
