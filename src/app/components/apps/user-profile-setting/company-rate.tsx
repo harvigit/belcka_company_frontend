@@ -104,7 +104,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
   const fetchTrades = async () => {
     try {
-      const res = await api.get(`get-company-resources?flag=tradeList&company_id=${comapny?.id}`);
+      const res = await api.get(
+        `get-company-resources?flag=tradeList&company_id=${comapny?.id}`
+      );
       if (res.data) setTrade(res.data.info);
     } catch (err) {
       console.error("Failed to fetch trades", err);
@@ -206,11 +208,15 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       return;
     }
     try {
+      const net = Number(formData.rate);
+      const grossCalc = net * 1.2;
+      const ratePerHour = Number((grossCalc / 8).toFixed(2));
+
       const payload = {
         company_id: comapny.id,
         trade_id: Number(formData.trade_id),
         new_rate_perDay: Number(formData.rate),
-        new_rate_perHour: Number((gross / 8).toFixed(2)),
+        new_rate_perHour: ratePerHour,
         user_id: userId,
       };
       const res = await api.post("user-billing/change-company-rate", payload);

@@ -463,6 +463,22 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         }
     };
 
+    useEffect(() => {
+        if(projectOpen){
+            setFormData({
+                name: "",
+                address: "",
+                budget: "",
+                description: "",
+                code: "",
+                shift_ids: "",
+                team_ids: "",
+                company_id: user.company_id,
+                is_pricework: false,
+                repeatable_job: false,
+            });
+        }
+    })
     const handleEditProject = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
