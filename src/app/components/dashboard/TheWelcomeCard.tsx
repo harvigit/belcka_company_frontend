@@ -2,10 +2,13 @@ import React, { useContext } from "react";
 import Image from "next/image";
 import { Card, CardContent, Button, Typography, Box } from "@mui/material";
 import { CustomizerContext } from "@/app/context/customizerContext";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 const WelcomeCard = () => {
     const { activeDir } = useContext(CustomizerContext);
-
+  const session = useSession();
+  const user = session.data?.user as User & { first_name?: string | null } & { last_name?: string | null };
     return (
         <Card
             elevation={0}
@@ -41,7 +44,7 @@ const WelcomeCard = () => {
                     fontSize='20px'
                     gutterBottom
                 >
-                    Hey Johnathan,
+                    Hey {user.first_name} {user.last_name},
                 </Typography>
             </CardContent>
         </Card>
