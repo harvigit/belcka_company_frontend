@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Table,
     TableBody,
@@ -180,7 +180,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     };
 
     const getTruncatedName = (name: string) => {
-        if (!name) return '--';
+        if (!name || name == '--') return '--';
         const firstWord = name.trim().split(' ')[0];
         return firstWord.length > 10 ? firstWord.slice(0, 7) + '...' : firstWord + '...';
     };
@@ -248,7 +248,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             const rowId = `row-${row.index}`;
                             const isRowSelected = selectedRows.has(rowId);
                             const isRowLocked = isRecordLocked(rowData);
-                            
+
                             if (rowData.rowType === 'week') {
                                 const visibleColumnsCount = table.getVisibleLeafColumns().length;
                                 return (
@@ -271,7 +271,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         left: '50%',
                                                         transform: 'translateX(-50%)',
                                                     }}
-                                                >
+                                                        >
                                                     {rowData.weekLabel}
                                                 </Typography>
                                                 <Typography
@@ -458,7 +458,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
-                                                {/* Exclamation Column */}
                                                 {visibleColumnConfigs.exclamation?.visible && (
                                                     <TableCell align="center" sx={{
                                                         py: 0.5,
@@ -502,6 +501,22 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             }}>
                                                                 --
                                                             </Box>
+                                                        ) : log.is_expense ? (
+                                                            <Tooltip title={log.project_name || ''} arrow placement="top">
+                                                                <Box sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    opacity: 0.6,
+                                                                    whiteSpace: 'nowrap',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'clip',
+                                                                    maxWidth: '100%',
+                                                                    px: 1
+                                                                }}>
+                                                                    {getTruncatedName(log.project_name)}
+                                                                </Box>
+                                                            </Tooltip>
                                                         ) : (
                                                             isLogLocked ? (
                                                                 <Tooltip title={log.project_name || ''} arrow placement="top">
@@ -538,7 +553,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
-                                                {/* Shift Column */}
+                                                {/* Shift Column - ADDED is_expense check */}
                                                 {visibleColumnConfigs.shift?.visible && (
                                                     <TableCell align="center" sx={{
                                                         py: 0.5,
@@ -560,6 +575,15 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 }}>
                                                                     {getTruncatedName(log.leave_name)}
                                                                 </Box>
+                                                            </Box>
+                                                        ) : log.is_expense ? ( 
+                                                            <Box sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                opacity: 0.6,
+                                                            }}>
+                                                                {getTruncatedName(log.shift_name)}
                                                             </Box>
                                                         ) : log.is_pricework ? (
                                                             <Tooltip
@@ -621,7 +645,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_leave || log.is_pricework || isLogLocked ? (
+                                                        {log.is_leave || log.is_pricework || log.is_expense || isLogLocked ? ( 
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
@@ -664,7 +688,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_leave || log.is_pricework || isLogLocked ? (
+                                                        {log.is_leave || log.is_pricework || log.is_expense || isLogLocked ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
@@ -830,7 +854,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             position: 'relative',
                                                         }}
                                                     >
-                                                        { !log.is_leave && (
+                                                        { !log.is_leave && !log.is_working && (
                                                             <Button
                                                                 size="small"
                                                                 className="action-icon"
@@ -1232,7 +1256,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                 </Table>
             </TableContainer>
 
-            {/* Conflicts Popover */}
             <Popover
                 open={Boolean(conflictAnchorEl)}
                 anchorEl={conflictAnchorEl}
