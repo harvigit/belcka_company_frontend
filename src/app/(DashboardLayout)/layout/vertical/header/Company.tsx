@@ -140,7 +140,7 @@ const Company = () => {
   }, []);
 
   const fetchFeeds = async () => {
-    setLoading(true);
+    // setLoading(true);
 
     try {
       const res = await api.get(
@@ -158,13 +158,13 @@ const Company = () => {
             .map((feed: any) => feed.id)
             .join(",");
           setUnreedFeed(unreadIds);
-          setLoading(false);
+          // setLoading(false);
         }
       }
     } catch (err) {
       console.error("Failed to fetch feeds", err);
     }
-    setLoading(false);
+    // setLoading(false);
   };
   useEffect(() => {
     fetchFeeds();
