@@ -111,25 +111,25 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                                 <Stack direction="row" justifyContent="center" spacing={1}>
                                     <Box
                                         component="img"
-                                        src="/favicon.svg"
+                                        src="/belcka.svg"
                                         alt="Belcka Logo"
-                                        height={70}
+                                        height={35}
                                     />
                                 </Stack>
                             </Stack>
                             
                             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
                                 <Box textAlign="left">
-                                    <Typography color="#25384b" lineHeight={1} fontSize="25px" fontWeight={700}>
+                                    <Typography color="#25384b" lineHeight={1} fontSize="35px" fontWeight={700}>
                                         {cardData.first_name}
                                     </Typography>
-                                    <Typography color="#25384b" lineHeight={1} fontSize="25px" fontWeight={700}>
+                                    <Typography color="#25384b" lineHeight={1} fontSize="35px" fontWeight={700}>
                                         {cardData.last_name}
                                     </Typography>
-                                    <Typography  mt={1} fontSize="16px" color="#25384b" fontWeight={300}>
+                                    <Typography  my={1} fontSize="16px" color="#25384b" fontWeight={300}>
                                         USER ID: {String(cardData.user_id)}
                                     </Typography>
-                                    <Typography fontSize="20px" color="#25384b" fontWeight={600} mt={0.5}>
+                                    <Typography fontSize="22px" color="#25384b" fontWeight={600}>
                                         {cardData.trade_name}
                                     </Typography>
                                 </Box>
@@ -140,7 +140,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                                 />
                             </Stack>
                             
-                            <Stack direction="row" justifyContent="space-between" mt={2}>
+                            <Stack direction="row" justifyContent="space-between" my={1}>
                                 {/*<Box>*/}
                                 {/*    <Typography fontSize="11px" color="text.secondary">*/}
                                 {/*        VALID UNTIL*/}
@@ -157,7 +157,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                                 </Box>
                             </Stack>
                             
-                            <Typography mt={2} fontWeight={700} color="#25384b" fontSize="22px" textAlign="left">
+                            <Typography my={1} fontWeight={700} color="#25384b" fontSize="22px" textAlign="left">
                                 {cardData.company_name}
                             </Typography>
                             
@@ -174,14 +174,14 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                             <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" mt={2}>
                                 {!cardData.is_expired ? (
                                     <>
-                                        <CheckCircleIcon sx={{ color: 'green', fontSize: 20 }} />
+                                        <CheckCircleIcon sx={{ color: 'green', fontSize: 25 }} />
                                         <Typography fontWeight={500}>
                                             Active
                                         </Typography>
                                     </>
                                 ) : (
                                     <>
-                                        <CancelIcon sx={{ color: 'red', fontSize: 20 }} />
+                                        <CancelIcon sx={{ color: 'red', fontSize: 25 }} />
                                         <Typography color="red" fontWeight={500}>
                                             Inactive
                                         </Typography>
@@ -195,6 +195,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                                 textAlign="center"
                                 display="block"
                                 color="#25384b"
+                                fontSize="15px"
                             >
                                 TIME IS MONEY. CONTROL IT.
                             </Typography>

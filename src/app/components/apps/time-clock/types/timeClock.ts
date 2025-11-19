@@ -22,9 +22,11 @@ export type DailyBreakdown = {
     start?: string;
     end?: string;
     totalHours?: string;
-    priceWorkAmount?: string;
+    priceWork?: string;
+    expense?: string;
+    checkIns?: string;
     dailyTotal?: string;
-    expenseAmount?: string;
+    // expenseAmount?: string;
     payableAmount?: string;
     regular?: string;
     employeeNotes?: string;

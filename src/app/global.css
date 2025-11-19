@@ -208,9 +208,9 @@ input#project_id::placeholder {
     display: none;
 }
 
-.MuiTypography-root {
-    font-size: 0.875rem !important;
-}
+/*.MuiTypography-root {*/
+/*    font-size: 0.875rem !important;*/
+/*}*/
 
 .trade-selection{
     width: 90% !important;

@@ -755,8 +755,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
-                                                {/* Pricework Amount Column */}
-                                                {visibleColumnConfigs.priceWorkAmount?.visible && (
+                                                {/* Pricework Column */}
+                                                {visibleColumnConfigs.priceWork?.visible && (
                                                     <TableCell align="center" sx={{
                                                         py: 0.5,
                                                         fontSize: '0.875rem',
@@ -764,6 +764,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         verticalAlign: 'middle'
                                                     }}>
                                                         {`${currency}${log.pricework_amount || 0}`}
+                                                    </TableCell>
+                                                )}
+
+                                                {/* Expense Column */}
+                                                {visibleColumnConfigs.expense?.visible && (
+                                                    <TableCell align="center" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
+                                                        {`${currency}${log.payable_amount || 0}`}
                                                     </TableCell>
                                                 )}
 
@@ -805,16 +817,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 )}
                                                 
                                                 {/* Expense Total Column */}
-                                                {isFirstRow && visibleColumnConfigs.expenseAmount?.visible && (
-                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{
-                                                        py: 0.5,
-                                                        fontSize: '0.875rem',
-                                                        height: '45px',
-                                                        verticalAlign: 'middle'
-                                                    }}>
-                                                        {rowData.expenseAmount}
-                                                    </TableCell>
-                                                )}
+                                                {/*{isFirstRow && visibleColumnConfigs.expenseAmount?.visible && (*/}
+                                                {/*    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{*/}
+                                                {/*        py: 0.5,*/}
+                                                {/*        fontSize: '0.875rem',*/}
+                                                {/*        height: '45px',*/}
+                                                {/*        verticalAlign: 'middle'*/}
+                                                {/*    }}>*/}
+                                                {/*        {rowData.expenseAmount}*/}
+                                                {/*    </TableCell>*/}
+                                                {/*)}*/}
 
                                                 {/* Payable Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.payableAmount?.visible && (

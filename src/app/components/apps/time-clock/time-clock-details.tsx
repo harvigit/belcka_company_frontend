@@ -810,9 +810,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         return sum + (parseFloat(log.payable_amount) || 0);
                     }, 0);
 
-                    const totalExpenseAmount = filteredWorklogs.reduce((sum: number, log: any) => {
-                        return sum + (parseFloat(log.total_expense_amount) || 0);
-                    }, 0);
+                    // const totalExpenseAmount = filteredWorklogs.reduce((sum: number, log: any) => {
+                    //     return sum + (parseFloat(log.total_expense_amount) || 0);
+                    // }, 0);
 
                     return [{
                         rowType: 'day' as const,
@@ -822,10 +822,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         project: '--',
                         start: '--',
                         end: '--',
-                        priceWorkAmount: '--',
+                        priceWork: '--',
+                        expense: '--',
+                        checkIns: '--',
                         totalHours: '--',
                         dailyTotal: formatHour(day.daily_total),
-                        expenseAmount: `${currency}${totalExpenseAmount.toFixed(2)}`,
+                        // expenseAmount: `${currency}${totalExpenseAmount.toFixed(2)}`,
                         payableAmount: `${currency}${totalPayableAmount.toFixed(2)}`,
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
@@ -837,7 +839,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
                         parsedDate: parseDate(day.date),
                         address: '--',
-                        check_in: '--',
                         check_out: '--',
                         rowsData: filteredWorklogs,
                         rowSpan: 1,
@@ -856,10 +857,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     project: '--',
                     start: '--',
                     end: '--',
-                    priceWorkAmount: '--',
+                    priceWork: '--',
+                    expense: '--',
                     totalHours: '--',
                     dailyTotal: '--',
-                    expenseAmount: '--',
+                    // expenseAmount: '--',
                     payableAmount: '--',
                     regular: '--',
                     employeeNotes: '--',
@@ -1238,17 +1240,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 size: 150,
             },
             {
-                id: 'priceWorkAmount',
-                accessorKey: 'priceWorkAmount',
-                header: () => <span style={{display: 'block', textAlign: 'center'}}>Pricework Amount</span>,
-                cell: ({row}) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
+                id: 'priceWork',
+                accessorKey: 'priceWork',
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Pricework</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.priceWork : null,
+                size: 150,
+            },
+            {
+                id: 'expense',
+                accessorKey: 'expense',
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Expense</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.expense : null,
                 size: 150,
             },
             {
                 id: 'checkIns',
                 accessorKey: 'checkIns',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Check Ins</span>,
-                cell: ({row}) => row.original.rowType === 'day' ? row.original.priceWorkAmount : null,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.check_in : null,
                 size: 140,
             },
             {
@@ -1257,13 +1266,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.dailyTotal : null,
                 size: 100,
             },
-            {
-                id: 'expenseAmount',
-                accessorKey: 'expenseAmount',
-                header: () => <span style={{display: 'block', textAlign: 'center'}}>Expense Amount</span>,
-                cell: ({row}) => row.original.rowType === 'day' ? row.original.expenseAmount : null,
-                size: 140,
-            },
+            // {
+            //     id: 'expenseAmount',
+            //     accessorKey: 'expenseAmount',
+            //     header: () => <span style={{display: 'block', textAlign: 'center'}}>Expense Amount</span>,
+            //     cell: ({row}) => row.original.rowType === 'day' ? row.original.expenseAmount : null,
+            //     size: 140,
+            // },
             {
                 id: 'payableAmount',
                 accessorKey: 'payableAmount',
