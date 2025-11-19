@@ -39,11 +39,11 @@ export default function PenaltySettings() {
     try {
       const res = await api.get("/setting/get-company-settings");
       if (res.data?.data) {
-        setEnabled(res.data.data.is_penalty);
+        setEnabled(res.data.data.is_outside_boundary_penalty);
         setTimeZone(res.data.data.timezone_id);
         setValue(
-          res.data.data.penalty_time
-            ? dayjs(res.data.data.penalty_time, "HH:mm")
+          res.data.data.outside_boundary_penalty_minute
+            ? dayjs(res.data.data.outside_boundary_penalty_minute, "HH:mm")
             : null
         );
       }
@@ -106,7 +106,7 @@ export default function PenaltySettings() {
       const res = await api.post("setting/save-general-setting", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        setEnabled(res.data.info.is_penalty);
+        setEnabled(res.data.info.is_outside_boundary_penalty);
         setIsTeamsDirty(false);
         setIsUsersDirty(false);
         setSerachTeam("");
