@@ -27,6 +27,7 @@ import {IconExclamationMark} from '@tabler/icons-react';
 import Checklogs from './time-clock-details/checklogs/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
+import AddExpense from './time-clock-details/expenses/add-expense';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -141,6 +142,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
     const [leaveRequestByDate, setLeaveRequestByDate] = useState<{ [key: string]: number }>({});
     const [leaveRequestSidebar, setLeaveRequestSidebar] = useState<boolean>(false);
+
+    const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
 
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
@@ -531,9 +534,25 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const handleAddLeave = async () => {
         setAddLeaveSidebar(true);
     };
+    
+    const handleAddExpense = async () => {
+        setAddExpenseSidebar(true);
+    };
 
     const closeAddLeaveSidebar = async () => {
         setAddLeaveSidebar(false);
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error fetching time clock data after closing add leave sidebar:', error);
+        }
+    };
+    
+    const closeAddExpenseSidebar = async () => {
+        setAddExpenseSidebar(false);
         try {
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
@@ -1324,6 +1343,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onFilterChange={handleFilterChange}
                 onExportData={handleExportData}
                 onAddLeave={handleAddLeave}
+                onAddExpense={handleAddExpense}
             />
 
             <TimeClockStats
@@ -1480,6 +1500,28 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             >
                 <AddLeave
                     onClose={closeAddLeaveSidebar}
+                    userId={user_id}
+                    companyId={companyId}
+                />
+            </Drawer>
+            
+            <Drawer
+                anchor="right"
+                open={addExpenseSidebar}
+                onClose={closeAddExpenseSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <AddExpense
+                    onClose={closeAddExpenseSidebar}
                     userId={user_id}
                     companyId={companyId}
                 />

@@ -113,6 +113,7 @@ export default function PermissionSettings() {
                 toast.success(response.data.message || 'Permissions updated successfully');
                 setOriginalPermissions(permissions);
                 setHasChanges(false);
+                window.location.reload();
             } else {
                 toast.error(response.data.message || 'Update failed');
                 await fetchPermissions();

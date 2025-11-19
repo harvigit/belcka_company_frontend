@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
     Avatar,
     Box,
@@ -21,7 +21,7 @@ import {
     Snackbar,
     Alert,
 } from '@mui/material';
-import { IconSearch, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import {IconSearch, IconChevronLeft, IconChevronRight} from '@tabler/icons-react';
 import {
     useReactTable,
     getCoreRowModel,
@@ -31,8 +31,8 @@ import {
     createColumnHelper,
     flexRender,
 } from '@tanstack/react-table';
-import { format } from 'date-fns';
-import { AxiosResponse } from 'axios';
+import {format} from 'date-fns';
+import {AxiosResponse} from 'axios';
 
 import api from '@/utils/axios';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
@@ -42,7 +42,7 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css'
-import { useRouter, useSearchParams } from 'next/navigation';
+import {useRouter, useSearchParams} from 'next/navigation';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -69,11 +69,12 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
             endDate: endDate ? endDate.toDateString() : null,
             columnVisibility: {},
         };
-            localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
+        localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
     } catch (error) {
         console.log('Error saving date range to localStorage:', error);
     }
 };
+
 const loadDateRangeFromStorage = () => {
     try {
         const stored = localStorage.getItem(TIME_CLOCK_PAGE);
@@ -110,6 +111,11 @@ export type TimeClock = {
     payable_total_hours: string;
     total_hours?: string | number;
     total_break_hours?: string | number;
+
+    // Newly added fields from API
+    has_leave_request?: boolean;
+    has_expense_request?: boolean;
+    has_worklog_request?: boolean;
 };
 
 type TimeClockResponse = {
@@ -150,11 +156,11 @@ const TimeClock = () => {
                 startDate: stored.startDate,
                 endDate: stored.endDate
             };
-        }else{
+        } else {
             return {
                 startDate: defaultStart,
                 endDate: defaultEnd
-            };            
+            };
         }
     };
 
@@ -164,9 +170,9 @@ const TimeClock = () => {
     const [data, setData] = useState<TimeClock[]>([]);
     const [currency, setCurrency] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
-    const [filters, setFilters] = useState<FilterState>({ type: '' });
+    const [filters, setFilters] = useState<FilterState>({type: ''});
     const [sorting, setSorting] = useState<SortingState>([]);
-    const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 });
+    const [pagination, setPagination] = useState<PaginationState>({pageIndex: 0, pageSize: 50});
     const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
@@ -201,12 +207,12 @@ const TimeClock = () => {
                 if (response.data.currency !== null) {
                     setCurrency(response.data.currency);
                 }
-                return response.data.info; 
+                return response.data.info;
             }
         } catch (error) {
             setErrorMessage('Failed to fetch timesheet data. Please try again.');
         }
-        return []; 
+        return [];
     };
 
     useEffect(() => {
@@ -240,10 +246,10 @@ const TimeClock = () => {
         setSelectedTimeClock(null);
 
         const initialDates = getInitialDates();
-        
+
         if (initialDates) {
             try {
-                handleDateRangeChange({ from: initialDates.startDate, to: initialDates.endDate });
+                handleDateRangeChange({from: initialDates.startDate, to: initialDates.endDate});
                 await fetchData(initialDates.startDate, initialDates.endDate);
                 setHasDataChanged(false);
             } catch (error) {
@@ -298,9 +304,10 @@ const TimeClock = () => {
                 enableHiding: false,
                 size: 30,
             },
+
             columnHelper.accessor('user_name', {
                 id: 'user_name',
-                header: 'Name',
+                header: '...',
                 cell: (info: any) => {
                     const row = info.row.original;
                     return (
@@ -318,16 +325,38 @@ const TimeClock = () => {
                     );
                 },
             }),
+
             columnHelper.accessor('total_hours', {
                 id: 'total_hours',
                 header: 'Total Hours',
-                cell: (info: any) => formatHour(info.getValue()) || '-',
+                cell: (info: any) => {
+                    const row = info.row.original;
+                    const value = info.getValue();
+                    const formatted = formatHour(value) || '-';
+
+                    const hasPendingRequest =
+                        row.has_leave_request === true ||
+                        row.has_expense_request === true ||
+                        row.has_worklog_request === true;
+
+                    return (
+                        <Typography
+                            sx={{
+                                color: hasPendingRequest ? '#f97316' : 'inherit',
+                            }}
+                        >
+                            {formatted}
+                        </Typography>
+                    );
+                },
             }),
+
             columnHelper.accessor('payable_total_hours', {
                 id: 'payable_total_hours',
                 header: 'Payable Hours',
                 cell: (info: any) => formatHour(info.getValue()) || '-',
             }),
+
             columnHelper.accessor('daylog_payable_amount', {
                 id: 'daylog_payable_amount',
                 header: 'Payable Amount',
@@ -336,22 +365,57 @@ const TimeClock = () => {
                     return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
                 },
             }),
+
             columnHelper.accessor('pricework_total_amount', {
                 id: 'pricework_total_amount',
                 header: 'Pricework Amount',
                 cell: (info: any) => {
+                    const row = info.row.original;
                     const value = info.getValue();
-                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+                    const displayValue = value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+
+                    const hasPendingRequest =
+                        row.has_leave_request === true ||
+                        row.has_expense_request === true ||
+                        row.has_worklog_request === true;
+
+                    return (
+                        <Typography
+                            sx={{
+                                color: hasPendingRequest ? '#f97316' : 'inherit',
+                            }}
+                        >
+                            {displayValue}
+                        </Typography>
+                    );
                 },
             }),
+
             columnHelper.accessor('total_expense_amount', {
                 id: 'total_expense_amount',
                 header: 'Expense Amount',
                 cell: (info: any) => {
+                    const row = info.row.original;
                     const value = info.getValue();
-                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+                    const displayValue = value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+
+                    const hasPendingRequest =
+                        row.has_leave_request === true ||
+                        row.has_expense_request === true ||
+                        row.has_worklog_request === true;
+
+                    return (
+                        <Typography
+                            sx={{
+                                color: hasPendingRequest ? '#f97316' : 'inherit',
+                            }}
+                        >
+                            {displayValue}
+                        </Typography>
+                    );
                 },
             }),
+
             columnHelper.accessor('total_payable_amount', {
                 id: 'total_payable_amount',
                 header: 'Total Payable Amount',
@@ -387,9 +451,8 @@ const TimeClock = () => {
         },
     });
 
-
     useEffect(() => {
-        if (hasInitialized.current) return; 
+        if (hasInitialized.current) return;
         hasInitialized.current = true;
 
         if (!userIdParam || !startParam || !endParam) return;
@@ -411,22 +474,22 @@ const TimeClock = () => {
                     saveDateToStorage(startDateObj, endDateObj);
                     setSelectedTimeClock(foundUser);
                     setDetailsOpen(true);
-                    router.replace("/apps/timesheet/list", { scroll: false });
+                    router.replace('/apps/timesheet/list', {scroll: false});
                 }
 
                 setTimeout(() => {
-                    router.replace("/apps/timesheet/list", { scroll: false });
+                    router.replace('/apps/timesheet/list', {scroll: false});
                 }, 500);
             } catch (err) {
-                console.error("Failed to load data from query params:", err);
+                console.error('Failed to load data from query params:', err);
             }
-            router.replace("/apps/timesheet/list", { scroll: false });
+            router.replace('/apps/timesheet/list', {scroll: false});
         })();
     }, [searchParams]);
 
     return (
-        <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-            <Box sx={{ transition: 'height 0.3s ease-in-out' }}>
+        <Box sx={{position: 'relative', overflow: 'hidden'}}>
+            <Box sx={{transition: 'height 0.3s ease-in-out'}}>
                 <Stack
                     mx={2}
                     mb={3}

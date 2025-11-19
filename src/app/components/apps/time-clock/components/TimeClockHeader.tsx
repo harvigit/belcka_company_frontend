@@ -42,6 +42,7 @@ interface TimeClockHeaderProps {
     onFilterChange: (value: string) => void;
     onExportData: (option: string) => void;
     onAddLeave: () => void;
+    onAddExpense: () => void;
 }
 
 const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
@@ -62,6 +63,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                                              onFilterChange,
                                                              onExportData,
                                                              onAddLeave,
+                                                             onAddExpense,
                                                          }) => {
     const canGoToPrevious = currentUserIndex > 0;
     const canGoToNext = currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1;
@@ -94,6 +96,11 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
     const handleAddLeaveClick = () => {
         setAddDropDown(null);
         onAddLeave();
+    };
+    
+    const handleExpenseClick = () => {
+        setAddDropDown(null);
+        onAddExpense();
     };
 
     const handleExportClose = (option: string) => {
@@ -267,6 +274,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                         }}
                     >
                         <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
+                        <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
                     </Menu>
 
                     {selectedRows.size > 0 && (
