@@ -469,6 +469,7 @@ const TablePagination = () => {
               <Box hidden={value !== 1}>
                 <BillingInfo
                   companyId={Number(user.company_id)}
+                  onUpdate={fetchData}
                   active={value === 1}
                 />
               </Box>

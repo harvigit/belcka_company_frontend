@@ -31,6 +31,17 @@ export default function PenaltySettings() {
   const [searchTeam, setSerachTeam] = useState("");
   const [searchUser, setSerachUser] = useState("");
 
+  const [swEnabled, setSwEnabled] = useState<boolean>(false);
+  const [swValue, setSwValue] = useState<Dayjs | null>(dayjs());
+  const [swTeams, setSwTeams] = useState<any[]>([]);
+  const [swUsers, setSwUsers] = useState<any[]>([]);
+  const [showSwTeamsList, setShowSwTeamsList] = useState(false);
+  const [showSwUsersList, setShowSwUsersList] = useState(false);
+  const [swTeamsDirty, setSwTeamsDirty] = useState(false);
+  const [swUsersDirty, setSwUsersDirty] = useState(false);
+  const [searchSwTeam, setSearchSwTeam] = useState("");
+  const [searchSwUser, setSearchSwUser] = useState("");
+
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
 
@@ -44,6 +55,13 @@ export default function PenaltySettings() {
         setValue(
           res.data.data.outside_boundary_penalty_minute
             ? dayjs(res.data.data.outside_boundary_penalty_minute, "HH:mm")
+            : null
+        );
+
+        setSwEnabled(res.data.data.is_autostop_work_penalty);
+        setSwValue(
+          res.data.data.autostop_work_penalty_minute
+            ? dayjs(res.data.data.autostop_work_penalty_minute, "HH:mm")
             : null
         );
       }
@@ -61,21 +79,24 @@ export default function PenaltySettings() {
       );
       if (res.data?.info) {
         setTeams(res.data.info);
+        setSwTeams(JSON.parse(JSON.stringify(res.data.info)));
       }
     } catch (err) {
-      console.error("Failed to fetch general setting", err);
+      console.error(err);
     }
     setLoading(false);
   };
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const res = await api.get("user/get-user-lists");
       if (res.data?.info) {
         setUsers(res.data.info);
+        setSwUsers(JSON.parse(JSON.stringify(res.data.info)));
       }
     } catch (err) {
-      console.error("Failed to fetch general setting", err);
+      console.error(err);
     }
     setLoading(false);
   };
@@ -98,7 +119,7 @@ export default function PenaltySettings() {
     setEnabled(newStatus);
     setLoading(true);
     const payload = {
-      is_penalty: newStatus,
+      is_outside_boundary_penalty: newStatus,
       timeZone,
     };
 
@@ -106,13 +127,7 @@ export default function PenaltySettings() {
       const res = await api.post("setting/save-general-setting", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        setEnabled(res.data.info.is_outside_boundary_penalty);
-        setIsTeamsDirty(false);
-        setIsUsersDirty(false);
-        setSerachTeam("");
       }
-    } catch (error) {
-      console.error("Error updating status:", error);
     } finally {
       setLoading(false);
     }
@@ -127,19 +142,20 @@ export default function PenaltySettings() {
           .filter((u) => u.selected)
           .map((u) => ({
             id: u.id,
-            is_penalty: u.is_penalty,
+            is_outside_boundary_penalty: u.is_outside_boundary_penalty,
           })),
       };
-      const res = await api.post("user/change-bulk-penalty-status", payload);
-      if (res.data.IsSuccess == true) {
+
+      const res = await api.post(
+        "user/change-bulk-outside-penalty-status",
+        payload
+      );
+      if (res.data.IsSuccess) {
         toast.success(res.data.message);
         fetchUsers();
-        setIsUsersDirty(false);
-        setSerachUser("");
+        fetchTeams();
       }
-    } catch (error) {
-      console.error("api error when store user penalty", error);
-    }
+    } catch (err) {}
   };
 
   const handleUpdateSelectedTeams = async () => {
@@ -151,51 +167,129 @@ export default function PenaltySettings() {
           .filter((t) => t.selected)
           .map((t) => ({
             id: t.id,
-            is_penalty: t.is_penalty,
+            is_outside_boundary_penalty: t.is_outside_boundary_penalty,
           })),
       };
 
-      const res = await api.post("team/change-bulk-penalty-status", payload);
-      if (res.data.IsSuccess == true) {
+      const res = await api.post(
+        "team/change-bulk-outside-penalty-status",
+        payload
+      );
+      if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchTeams();
         fetchUsers();
-        setIsTeamsDirty(false);
+        fetchTeams();
       }
-    } catch (error) {
-      console.error("api error when store team penalty", error);
+    } catch (err) {}
+  };
+
+  const handleToggleStopWork = async () => {
+    const newStatus = !swEnabled;
+    if (!newStatus) {
+      setShowSwTeamsList(false);
+      setShowSwUsersList(false);
+    }
+
+    setSwEnabled(newStatus);
+    setLoading(true);
+
+    try {
+      const res = await api.post("setting/save-stop-work-setting", {
+        is_autostop_work_penalty_penalty: newStatus,
+      });
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchUsers();
+        fetchTeams();
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredData = useMemo(() => {
-    const search = searchTeam.trim().toLowerCase();
-    if (!search) return teams;
+  const handleUpdateStopWorkTeams = async () => {
+    try {
+      const payload = {
+        company_id: user.company_id,
+        stop_work_time: swValue ? swValue.format("HH:mm") : null,
+        teams: swTeams
+          .filter((t) => t.selected)
+          .map((t) => ({
+            id: t.id,
+            is_autostop_work_penalty: t.is_autostop_work_penalty,
+          })),
+      };
 
-    return teams.filter((item) => item.name?.toLowerCase().includes(search));
+      const res = await api.post(
+        "team/change-bulk-auto-stop-penalty-status",
+        payload
+      );
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchUsers();
+        fetchTeams();
+      }
+    } catch (err) {}
+  };
+
+  const handleUpdateStopWorkUsers = async () => {
+    try {
+      const payload = {
+        company_id: user.company_id,
+        stop_work_time: swValue ? swValue.format("HH:mm") : null,
+        users: swUsers
+          .filter((u) => u.selected)
+          .map((u) => ({
+            id: u.id,
+            is_autostop_work_penalty: u.is_autostop_work_penalty,
+          })),
+      };
+
+      const res = await api.post(
+        "user/change-bulk-auto-stop-penalty-status",
+        payload
+      );
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchUsers();
+        fetchTeams();
+      }
+    } catch (err) {}
+  };
+
+  const filteredData = useMemo(() => {
+    const s = searchTeam.toLowerCase();
+    if (!s) return teams;
+    return teams.filter((t) => t.name?.toLowerCase().includes(s));
   }, [teams, searchTeam]);
 
   const filteredUserData = useMemo(() => {
-    const search = searchUser.trim().toLowerCase();
-    if (!search) return users;
-
+    const s = searchUser.toLowerCase();
+    if (!s) return users;
     return users.filter(
-      (item) =>
-        item.name?.toLowerCase().includes(search) ||
-        item.team_name?.toLowerCase().includes(search)
+      (u) =>
+        u.name?.toLowerCase().includes(s) ||
+        u.team_name?.toLowerCase().includes(s)
     );
   }, [users, searchUser]);
 
-  useEffect(() => {
-    if (showTeamsList == false) {
-      setSerachTeam("");
-      setIsTeamsDirty(false);
-    }
-    if (showUsersList == false) {
-      setSerachUser("");
-      setIsUsersDirty(false);
-    }
-  });
-  if (loading) {
+  const filteredSwTeams = useMemo(() => {
+    const s = searchSwTeam.toLowerCase();
+    if (!s) return swTeams;
+    return swTeams.filter((t) => t.name?.toLowerCase().includes(s));
+  }, [swTeams, searchSwTeam]);
+
+  const filteredSwUsers = useMemo(() => {
+    const s = searchSwUser.toLowerCase();
+    if (!s) return swUsers;
+    return swUsers.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(s) ||
+        u.team_name?.toLowerCase().includes(s)
+    );
+  }, [swUsers, searchSwUser]);
+
+  if (loading)
     return (
       <Box
         display="flex"
@@ -206,360 +300,643 @@ export default function PenaltySettings() {
         <CircularProgress />
       </Box>
     );
-  }
 
   return (
     <Box display={"flex"} overflow="auto">
       <Box sx={{ p: 3 }} m="auto" width={"60%"}>
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={1}
-          justifyContent={"space-between"}
-          mb={3}
-        >
-          <Typography variant="h1" fontSize={"20px !important"}>
-            Enable outside working Penalty
-          </Typography>
-          {enabled !== null && (
-            <IOSSwitch
-              color="primary"
-              checked={enabled}
-              onChange={handleToggle}
-              disabled={loading}
-            />
-          )}
-        </Box>
-        <Divider sx={{ borderWidth: 1 }} />
-        {enabled && (
-          <Box sx={{ border: "1px solid #ebe9f1" }} mt={2}>
-            <Typography
-              p={1}
-              sx={{ backgroundColor: "#e3e3e3", fontSize: "15px !important" }}
-              fontWeight={500}
-            >
-              Stop work out side of working area penalty
-            </Typography>
-            <Grid
-              container
-              m={2}
-              gap={2}
-              display={"flex"}
-              justifyContent={"space-between"}
-              alignItems={"center"}
-            >
-              <Grid size={{ sm: 2 }}>
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                  <TimePicker
-                    format="HH:mm" 
-                    ampm={false}
-                    value={value}
-                    onChange={(newValue) => {
-                      setValue(newValue ? dayjs(newValue) : null);
-                    }}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-
-                        sx: {
-                          "& .MuiSvgIcon-root": {
-                            width: "18px",
-                            height: "18px",
-                          },
-                          "& .MuiFormHelperText-root": {
-                            display: "none",
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </LocalizationProvider>
-              </Grid>
-              <Box display={"flex"} gap={2}>
-                <Button
-                  startIcon={<IconUserPlus size={16} />}
-                  variant="outlined"
-                  onClick={() => {
-                    setShowTeamsList(!showTeamsList);
-                    setShowUsersList(false);
-                  }}
-                >
-                  Teams
-                </Button>
-                <Button
-                  startIcon={<IconUser size={16} />}
-                  variant="outlined"
-                  onClick={() => {
-                    setShowUsersList(!showUsersList);
-                    setShowTeamsList(false);
-                  }}
-                >
-                  Users
-                </Button>
-              </Box>
-            </Grid>
-          </Box>
-        )}
-        <Box display="flex" justifyContent="space-between" mt={2}>
-          {showTeamsList && (
-            <TextField
-              id="tb-search"
-              sx={{ width: "40%" }}
-              placeholder="Search"
-              onChange={(e) => setSerachTeam(e.target.value)}
-              slotProps={{
-                htmlInput: { "aria-label": "Search here" },
-              }}
-            />
-          )}
-          {(filteredData.some((t) => t.selected) || isTeamsDirty) &&
-            showTeamsList && (
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleUpdateSelectedTeams}
-              >
-                Update
-              </Button>
-            )}
-        </Box>
-        {showTeamsList && (
+        <Box>
           <Box
-            mt={2}
-            p={2}
-            sx={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              background: "#fafafa",
-            }}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
           >
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              mb={2}
-              mr={2}
-            >
-              {/* Select All */}
-              <Box display="flex" alignItems="center" gap={1} ml={2}>
-                <input
-                  type="checkbox"
-                  checked={
-                    filteredData.length > 0 &&
-                    filteredData.every((t) => t.selected)
-                  }
-                  onChange={(e) => {
-                    const checked = e.target.checked;
+            <Typography variant="h1" fontSize={"20px !important"}>
+              Enable outside working Penalty
+            </Typography>
+            <IOSSwitch checked={enabled} onChange={handleToggle} />
+          </Box>
 
-                    setTeams((prev) =>
-                      prev.map((t) => ({
-                        ...t,
-                        selected: checked,
-                      }))
-                    );
-                  }}
-                />
-                <Typography fontWeight={600} ml={2}>
-                  Select All Teams
-                </Typography>
-              </Box>
-              <IOSSwitch
-                onChange={(e) => {
-                  const value = e.target.checked;
-                  setIsTeamsDirty(true);
-                  setTeams((prev) =>
-                    prev.map((u) => ({
-                      ...u,
-                      selected: true,
-                      is_penalty: value,
-                    }))
-                  );
-                }}
-              />
-            </Box>
+          <Divider sx={{ my: 2 }} />
 
-            {filteredData.map((team) => (
-              <Box
-                key={team.id}
-                sx={{
-                  border: "1px solid #eee",
-                  p: 2,
-                  mb: 2,
-                  borderRadius: "8px",
-                }}
+          {enabled && (
+            <Box sx={{ border: "1px solid #ebe9f1" }} mt={2}>
+              <Typography
+                p={1}
+                sx={{ backgroundColor: "#e3e3e3", fontSize: "15px !important" }}
+                fontWeight={500}
               >
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <input
-                      type="checkbox"
-                      checked={team.selected}
-                      onChange={() => {
-                        setIsTeamsDirty(true);
-                        setTeams((prev) =>
-                          prev.map((t) =>
-                            t.id === team.id
-                              ? { ...t, selected: !t.selected }
-                              : t
-                          )
-                        );
+                Stop work out side of working area penalty
+              </Typography>
+              <Grid
+                container
+                alignItems="center"
+                mt={2}
+                justifyContent="space-between"
+                p={2}
+                pt={0}
+              >
+                <Grid size={{ sm: 2 }}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <TimePicker
+                      format="HH:mm"
+                      ampm={false}
+                      value={value}
+                      onChange={(newValue) => {
+                        setValue(newValue ? dayjs(newValue) : null);
                       }}
                     />
+                  </LocalizationProvider>
+                </Grid>
 
-                    <Typography fontWeight={600}>{team.name}</Typography>
+                <Box display={"flex"} gap={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<IconUserPlus size={16} />}
+                    onClick={() => {
+                      setShowTeamsList(!showTeamsList);
+                      setShowUsersList(false);
+                    }}
+                  >
+                    Teams
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    startIcon={<IconUser size={16} />}
+                    onClick={() => {
+                      setShowUsersList(!showUsersList);
+                      setShowTeamsList(false);
+                    }}
+                  >
+                    Users
+                  </Button>
+                </Box>
+              </Grid>
+
+              {/* === Team list */}
+              {showTeamsList && (
+                <>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    mt={2}
+                    ml={2}
+                  >
+                    <TextField
+                      placeholder="Search"
+                      value={searchTeam}
+                      onChange={(e) => setSerachTeam(e.target.value)}
+                      sx={{ width: "40%" }}
+                    />
+
+                    {(filteredData.some((t) => t.selected) || isTeamsDirty) && (
+                      <Button
+                        variant="contained"
+                        onClick={handleUpdateSelectedTeams}
+                      >
+                        Update
+                      </Button>
+                    )}
                   </Box>
-                  <IOSSwitch
-                    checked={team.is_penalty || false}
-                    onChange={(e) => {
-                      const value = e.target.checked;
-                      setIsTeamsDirty(true);
 
-                      setTeams((prev) =>
-                        prev.map((t) =>
-                          t.id === team.id
-                            ? { ...t, is_penalty: value, selected: true } // <-- FIXED
-                            : t
-                        )
-                      );
-                    }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
-        <Box display="flex" justifyContent="space-between" mt={2}>
-          {showUsersList && (
-            <TextField
-              id="tb-search"
-              sx={{ width: "40%" }}
-              placeholder="Search name or team name"
-              onChange={(e) => setSerachUser(e.target.value)}
-              slotProps={{
-                htmlInput: { "aria-label": "Search here" },
-              }}
-            />
-          )}
-          {(filteredUserData.some((u) => u.selected) || isUsersDirty) &&
-            showUsersList && (
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleUpdateSelectedUsers}
-              >
-                Update
-              </Button>
-            )}
-        </Box>
-        {showUsersList && (
-          <Box
-            mt={2}
-            p={2}
-            sx={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              background: "#fafafa",
-            }}
-          >
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              mb={2}
-              mr={2}
-            >
-              <Box display="flex" alignItems="center" gap={1} ml={2}>
-                <input
-                  type="checkbox"
-                  checked={
-                    filteredUserData.length > 0 &&
-                    filteredUserData.every((t) => t.selected)
-                  }
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setUsers((prev) =>
-                      prev.map((t) => ({
-                        ...t,
-                        selected: checked,
-                      }))
-                    );
-                  }}
-                />
-                <Typography fontWeight={600} ml={2}>
-                  Select All Users
-                </Typography>
-              </Box>
+                  <Box
+                    m={2}
+                    p={2}
+                    sx={{ border: "1px solid #ccc", background: "#fafafa" }}
+                  >
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      ml={2}
+                      mr={2}
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredData.length > 0 &&
+                            filteredData.every((t) => t.selected)
+                          }
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setTeams((prev) =>
+                              prev.map((t) => ({
+                                ...t,
+                                selected: checked,
+                              }))
+                            );
+                          }}
+                        />
+                        <Typography fontWeight={600} ml={1}>
+                          Select All Teams
+                        </Typography>
+                      </Box>
 
-              <IOSSwitch
-                onChange={(e) => {
-                  const value = e.target.checked;
-                  setIsUsersDirty(true);
+                      <IOSSwitch
+                        onChange={(e) => {
+                          const value = e.target.checked;
+                          setTeams((prev) =>
+                            prev.map((t) => ({
+                              ...t,
+                              selected: true,
+                              is_outside_boundary_penalty: value,
+                            }))
+                          );
+                          setIsTeamsDirty(true);
+                        }}
+                      />
+                    </Box>
 
-                  setUsers((prev) =>
-                    prev.map((u) => ({
-                      ...u,
-                      selected: true, // <-- add this so all come in payload
-                      is_penalty: value,
-                    }))
-                  );
-                }}
-              />
+                    {filteredData.map((team) => (
+                      <Box key={team.id} p={2} border="1px solid #eee" mt={2}>
+                        <Box display="flex" justifyContent="space-between">
+                          <Box display="flex" gap={2} alignItems="center">
+                            <input
+                              type="checkbox"
+                              checked={team.selected}
+                              onChange={() => {
+                                setTeams((prev) =>
+                                  prev.map((t) =>
+                                    t.id === team.id
+                                      ? { ...t, selected: !t.selected }
+                                      : t
+                                  )
+                                );
+                                setIsTeamsDirty(true);
+                              }}
+                            />
+
+                            <Typography>{team.name}</Typography>
+                          </Box>
+
+                          <IOSSwitch
+                            checked={team.is_outside_boundary_penalty || false}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setTeams((prev) =>
+                                prev.map((t) =>
+                                  t.id === team.id
+                                    ? {
+                                        ...t,
+                                        is_outside_boundary_penalty: checked,
+                                        selected: true,
+                                      }
+                                    : t
+                                )
+                              );
+                              setIsTeamsDirty(true);
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </>
+              )}
+
+              {/* === users list */}
+              {showUsersList && (
+                <>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    mt={2}
+                    ml={2}
+                  >
+                    <TextField
+                      placeholder="Search name or team name"
+                      value={searchUser}
+                      onChange={(e) => setSerachUser(e.target.value)}
+                      sx={{ width: "40%" }}
+                    />
+
+                    {(filteredUserData.some((t) => t.selected) ||
+                      isUsersDirty) && (
+                      <Button
+                        variant="contained"
+                        onClick={handleUpdateSelectedUsers}
+                      >
+                        Update
+                      </Button>
+                    )}
+                  </Box>
+
+                  <Box
+                    m={2}
+                    p={2}
+                    sx={{ border: "1px solid #ccc", background: "#fafafa" }}
+                  >
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      ml={2}
+                      mr={2}
+                    >
+                      <Box display="flex" gap={2} alignItems="center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredUserData.length > 0 &&
+                            filteredUserData.every((t) => t.selected)
+                          }
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setUsers((prev) =>
+                              prev.map((t) => ({
+                                ...t,
+                                selected: checked,
+                              }))
+                            );
+                          }}
+                        />
+
+                        <Typography fontWeight={600} ml={1}>
+                          Select All Users
+                        </Typography>
+                      </Box>
+
+                      <IOSSwitch
+                        onChange={(e) => {
+                          const value = e.target.checked;
+                          setUsers((prev) =>
+                            prev.map((u) => ({
+                              ...u,
+                              selected: true,
+                              is_outside_boundary_penalty: value,
+                            }))
+                          );
+                          setIsUsersDirty(true);
+                        }}
+                      />
+                    </Box>
+
+                    {filteredUserData.map((user) => (
+                      <Box key={user.id} p={2} mt={2} border="1px solid #eee">
+                        <Box display="flex" justifyContent="space-between">
+                          <Box display="flex" gap={2} alignItems="center">
+                            <input
+                              type="checkbox"
+                              checked={user.selected}
+                              onChange={() => {
+                                setUsers((prev) =>
+                                  prev.map((u) =>
+                                    u.id === user.id
+                                      ? { ...u, selected: !u.selected }
+                                      : u
+                                  )
+                                );
+                                setIsUsersDirty(true);
+                              }}
+                            />
+
+                            <Typography fontWeight={600}>
+                              {user.first_name} {user.last_name}
+                            </Typography>
+                          </Box>
+
+                          <IOSSwitch
+                            checked={user.is_outside_boundary_penalty || false}
+                            onChange={(e) => {
+                              const value = e.target.checked;
+                              setUsers((prev) =>
+                                prev.map((u) =>
+                                  u.id === user.id
+                                    ? {
+                                        ...u,
+                                        is_outside_boundary_penalty: value,
+                                        selected: true,
+                                      }
+                                    : u
+                                )
+                              );
+                              setIsUsersDirty(true);
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </>
+              )}
             </Box>
+          )}
+        </Box>
 
-            {filteredUserData.map((user) => (
-              <Box
-                key={user.id}
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{
-                  border: "1px solid #eee",
-                  borderRadius: "8px",
-                  p: 2,
-                  mb: 2,
-                }}
-              >
-                <Box display={"flex"} alignItems="center" gap={2}>
-                  <input
-                    type="checkbox"
-                    checked={user.selected}
-                    onChange={() => {
-                      setIsUsersDirty(true);
-                      setUsers((prev) =>
-                        prev.map((u) =>
-                          u.id === user.id ? { ...u, selected: !u.selected } : u
-                        )
-                      );
-                    }}
-                  />
-
-                  <Typography fontWeight={600}>
-                    {user.first_name} {user.last_name}
-                  </Typography>
-                </Box>
-
-                <IOSSwitch
-                  checked={user.is_penalty || false}
-                  onChange={(e) => {
-                    const value = e.target.checked;
-                    setIsUsersDirty(true);
-
-                    setUsers((prev) =>
-                      prev.map((u) =>
-                        u.id === user.id
-                          ? { ...u, is_penalty: value, selected: true } // <-- FIXED
-                          : u
-                      )
-                    );
-                  }}
-                />
-              </Box>
-            ))}
+        {/* stop work penalty*/}
+        <Box mt={6}>
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Typography variant="h1" fontSize={"20px !important"}>
+              Enable Stop Work Penalty
+            </Typography>
+            <IOSSwitch checked={swEnabled} onChange={handleToggleStopWork} />
           </Box>
-        )}
+
+          <Divider sx={{ my: 2 }} />
+
+          {swEnabled && (
+            <Box sx={{ border: "1px solid #ebe9f1" }} mt={2}>
+              <Typography
+                p={1}
+                sx={{ backgroundColor: "#e3e3e3", fontSize: "15px !important" }}
+                fontWeight={500}
+              >
+                Automatic stop work
+              </Typography>
+              <Grid
+                container
+                alignItems="center"
+                mt={2}
+                justifyContent="space-between"
+                p={2}
+                pt={0}
+              >
+                <Grid size={{ sm: 2 }}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <TimePicker
+                      format="HH:mm"
+                      ampm={false}
+                      value={swValue}
+                      onChange={(val) => setSwValue(val ? dayjs(val) : null)}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+
+                <Box display={"flex"} gap={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<IconUserPlus size={16} />}
+                    onClick={() => {
+                      setShowSwTeamsList(!showSwTeamsList);
+                      setShowSwUsersList(false);
+                    }}
+                  >
+                    Teams
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    startIcon={<IconUser size={16} />}
+                    onClick={() => {
+                      setShowSwUsersList(!showSwUsersList);
+                      setShowSwTeamsList(false);
+                    }}
+                  >
+                    Users
+                  </Button>
+                </Box>
+              </Grid>
+
+              {/* team list */}
+              {showSwTeamsList && (
+                <>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    mt={2}
+                    ml={2}
+                  >
+                    <TextField
+                      placeholder="Search"
+                      value={searchSwTeam}
+                      onChange={(e) => setSearchSwTeam(e.target.value)}
+                      sx={{ width: "40%" }}
+                    />
+
+                    {(filteredSwTeams.some((t) => t.selected) ||
+                      swTeamsDirty) && (
+                      <Button
+                        variant="contained"
+                        onClick={handleUpdateStopWorkTeams}
+                      >
+                        Update
+                      </Button>
+                    )}
+                  </Box>
+
+                  <Box
+                    m={2}
+                    p={2}
+                    sx={{ border: "1px solid #ccc", background: "#fafafa" }}
+                  >
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      ml={2}
+                      mr={2}
+                    >
+                      <Box display="flex" gap={2} alignItems="center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredSwTeams.length > 0 &&
+                            filteredSwTeams.every((t) => t.selected)
+                          }
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setSwTeams((prev) =>
+                              prev.map((t) => ({
+                                ...t,
+                                selected: checked,
+                              }))
+                            );
+                          }}
+                        />
+
+                        <Typography fontWeight={600} ml={1}>
+                          Select All Teams
+                        </Typography>
+                      </Box>
+
+                      <IOSSwitch
+                        onChange={(e) => {
+                          const chk = e.target.checked;
+                          setSwTeams((prev) =>
+                            prev.map((t) => ({
+                              ...t,
+                              selected: true,
+                              is_autostop_work_penalty: chk,
+                            }))
+                          );
+                          setSwTeamsDirty(true);
+                        }}
+                      />
+                    </Box>
+
+                    {filteredSwTeams.map((team) => (
+                      <Box key={team.id} p={2} mt={2} border="1px solid #eee">
+                        <Box display="flex" justifyContent="space-between">
+                          <Box display="flex" gap={2} alignItems="center">
+                            <input
+                              type="checkbox"
+                              checked={team.selected}
+                              onChange={() => {
+                                setSwTeams((prev) =>
+                                  prev.map((t) =>
+                                    t.id === team.id
+                                      ? { ...t, selected: !t.selected }
+                                      : t
+                                  )
+                                );
+                                setSwTeamsDirty(true);
+                              }}
+                            />
+
+                            <Typography>{team.name}</Typography>
+                          </Box>
+
+                          <IOSSwitch
+                            checked={team.is_autostop_work_penalty || false}
+                            onChange={(e) => {
+                              const ch = e.target.checked;
+                              setSwTeams((prev) =>
+                                prev.map((t) =>
+                                  t.id === team.id
+                                    ? { ...t, is_autostop_work_penalty: ch, selected: true }
+                                    : t
+                                )
+                              );
+                              setSwTeamsDirty(true);
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </>
+              )}
+
+              {/* user list */}
+              {showSwUsersList && (
+                <>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    mt={2}
+                    ml={2}
+                  >
+                    <TextField
+                      placeholder="Search"
+                      value={searchSwUser}
+                      onChange={(e) => setSearchSwUser(e.target.value)}
+                      sx={{ width: "40%" }}
+                    />
+
+                    {(filteredSwUsers.some((t) => t.selected) ||
+                      swUsersDirty) && (
+                      <Button
+                        variant="contained"
+                        onClick={handleUpdateStopWorkUsers}
+                      >
+                        Update
+                      </Button>
+                    )}
+                  </Box>
+
+                  <Box
+                    m={2}
+                    p={2}
+                    sx={{ border: "1px solid #ccc", background: "#fafafa" }}
+                  >
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      ml={2}
+                      mr={2}
+                    >
+                      <Box display="flex" gap={2} alignItems="center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredSwUsers.length > 0 &&
+                            filteredSwUsers.every((t) => t.selected)
+                          }
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setSwUsers((prev) =>
+                              prev.map((t) => ({
+                                ...t,
+                                selected: checked,
+                              }))
+                            );
+                          }}
+                        />
+
+                        <Typography fontWeight={600} ml={1}>
+                          Select All Users
+                        </Typography>
+                      </Box>
+
+                      <IOSSwitch
+                        onChange={(e) => {
+                          const value = e.target.checked;
+                          setSwUsers((prev) =>
+                            prev.map((u) => ({
+                              ...u,
+                              selected: true,
+                              is_autostop_work_penalty: value,
+                            }))
+                          );
+                          setSwUsersDirty(true);
+                        }}
+                      />
+                    </Box>
+
+                    {filteredSwUsers.map((user) => (
+                      <Box key={user.id} p={2} mt={2} border="1px solid #eee">
+                        <Box display="flex" justifyContent="space-between">
+                          <Box display="flex" gap={2} alignItems="center">
+                            <input
+                              type="checkbox"
+                              checked={user.selected}
+                              onChange={() => {
+                                setSwUsers((prev) =>
+                                  prev.map((u) =>
+                                    u.id === user.id
+                                      ? { ...u, selected: !u.selected }
+                                      : u
+                                  )
+                                );
+                                setSwUsersDirty(true);
+                              }}
+                            />
+
+                            <Typography fontWeight={600}>
+                              {user.first_name} {user.last_name}
+                            </Typography>
+                          </Box>
+
+                          <IOSSwitch
+                            checked={user.is_autostop_work_penalty || false}
+                            onChange={(e) => {
+                              const val = e.target.checked;
+                              setSwUsers((prev) =>
+                                prev.map((u) =>
+                                  u.id === user.id
+                                    ? {
+                                        ...u,
+                                        is_autostop_work_penalty: val,
+                                        selected: true,
+                                      }
+                                    : u
+                                )
+                              );
+                              setSwUsersDirty(true);
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </>
+              )}
+            </Box>
+          )}
+        </Box>
       </Box>
     </Box>
   );

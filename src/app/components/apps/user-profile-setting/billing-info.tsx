@@ -23,6 +23,7 @@ import { useParams } from "next/navigation";
 interface ProjectListingProps {
   companyId: number | null;
   active: boolean;
+  onUpdate: () => void;
 }
 
 interface BillingFormData {
@@ -76,7 +77,11 @@ const emptyBillingInfo: BillingFormData = {
   diff_data: {},
 };
 
-const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
+const BillingInfo: React.FC<ProjectListingProps> = ({
+  companyId,
+  active,
+  onUpdate,
+}) => {
   const [billingInfo, setBillingInfo] = useState<BillingFormData | null>(null);
   const [hasBillingInfo, setHasBillingInfo] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -200,6 +205,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
       if (res.data.IsSuccess == true) {
         toast.success(res.data.message);
         fetchBillingInfo();
+        onUpdate?.();
       }
     } catch (err) {
       console.error("Approval failed:", err);
@@ -220,6 +226,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({ companyId, active }) => {
       if (res.data.IsSuccess == true) {
         toast.success(res.data.message);
         fetchBillingInfo();
+        onUpdate?.();
       }
     } catch (err) {
       console.error("Rejection failed:", err);
