@@ -12,15 +12,11 @@ import {
     FormControl,
     Alert,
     InputAdornment,
-    Chip,
+    Popover,
 } from '@mui/material';
-import { IconX, IconUpload, IconFile, IconTrash } from '@tabler/icons-react';
-import {
-    LocalizationProvider,
-    DesktopDatePicker,
-} from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs from 'dayjs';
+import { IconX, IconUpload, IconFile, IconTrash, IconCalendar } from '@tabler/icons-react';
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 import api from '@/utils/axios';
 
 interface Project { id: number; name: string; }
@@ -48,9 +44,12 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
     const [selectedAddress, setSelectedAddress] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
-    const [date, setDate] = useState<dayjs.Dayjs | null>(dayjs());
+    const [date, setDate] = useState<Date | undefined>(new Date());
     const [notes, setNotes] = useState<string>('');
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+
+    // Date picker popover state
+    const [dateAnchorEl, setDateAnchorEl] = useState<HTMLElement | null>(null);
 
     // Fetch resources
     useEffect(() => {
@@ -123,6 +122,14 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         });
     };
 
+    const formatDate = (date: Date | undefined) => {
+        if (!date) return '';
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -140,7 +147,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         formData.append('address_id', selectedAddress);
         formData.append('expense_category_id', selectedCategory);
         formData.append('total_amount', amount);
-        formData.append('receipt_date', date.format('DD/MM/YYYY'));
+        formData.append('receipt_date', formatDate(date));
         formData.append('note', notes || '');
 
         // Append all files
@@ -174,376 +181,413 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
+    const handleDateClick = (event: React.MouseEvent<HTMLElement>) => {
+        setDateAnchorEl(event.currentTarget);
+    };
+
+    const handleDateClose = () => {
+        setDateAnchorEl(null);
+    };
+
+    const openDatePicker = Boolean(dateAnchorEl);
+
     return (
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <Box
+            sx={{
+                bgcolor: 'white',
+                borderRadius: '12px',
+                width: '100%',
+                maxWidth: '560px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+            }}
+        >
+            {/* Header */}
             <Box
-                sx={{
-                    bgcolor: 'white',
-                    borderRadius: '12px',
-                    width: '100%',
-                    maxWidth: '560px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                }}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                px={3}
+                py={2}
+                borderBottom="1px solid #f0f0f0"
             >
-                {/* Header */}
-                <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    px={3}
-                    py={2}
-                    borderBottom="1px solid #f0f0f0"
-                >
-                    <Box display="flex" alignItems="center" gap={1.5}>
-                        <IconButton onClick={onClose} size="small">
-                            <IconX size={20} />
-                        </IconButton>
-                        <Typography variant="h6" fontWeight={600} fontSize="18px">
-                            Add Expense
-                        </Typography>
-                    </Box>
-                </Box>
-
-                {/* Form */}
-                <Box component="form" onSubmit={handleSubmit} sx={{ flex: 1, overflowY: 'auto' }}>
-                    {error && (
-                        <Box px={3} pt={2}>
-                            <Alert severity="error" onClose={() => setError(null)}>
-                                {error}
-                            </Alert>
-                        </Box>
-                    )}
-
-                    <Box px={3} py={3} display="flex" flexDirection="column" gap={3}>
-                        {/* Project */}
-                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
-                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                                Project
-                            </Typography>
-                            <FormControl fullWidth size="small">
-                                <Select
-                                    value={selectedProject}
-                                    onChange={(e) => setSelectedProject(e.target.value)}
-                                    displayEmpty
-                                    sx={{
-                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
-                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
-                                    }}
-                                >
-                                    <MenuItem value="" disabled>
-                                        <span style={{ color: '#999' }}>Select Project</span>
-                                    </MenuItem>
-                                    {projects.map((proj) => (
-                                        <MenuItem key={proj.id} value={proj.id.toString()}>
-                                            {proj.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Box>
-
-                        {/* Address */}
-                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
-                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                                Address
-                            </Typography>
-                            <FormControl fullWidth size="small">
-                                <Select
-                                    value={selectedAddress}
-                                    onChange={(e) => setSelectedAddress(e.target.value)}
-                                    displayEmpty
-                                    sx={{
-                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
-                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
-                                    }}
-                                >
-                                    <MenuItem value="" disabled>
-                                        <span style={{ color: '#999' }}>Select Address</span>
-                                    </MenuItem>
-                                    {addresses.map((addr) => (
-                                        <MenuItem key={addr.id} value={addr.id.toString()}>
-                                            {addr.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Box>
-
-                        {/* Category */}
-                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
-                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                                Category
-                            </Typography>
-                            <FormControl fullWidth size="small">
-                                <Select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    displayEmpty
-                                    sx={{
-                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
-                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
-                                    }}
-                                >
-                                    <MenuItem value="" disabled>
-                                        <span style={{ color: '#999' }}>Select Category</span>
-                                    </MenuItem>
-                                    {categories.map((cat) => (
-                                        <MenuItem key={cat.id} value={cat.id.toString()}>
-                                            {cat.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Box>
-
-                        {/* Amount */}
-                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
-                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                                Sum of Total
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                value={amount}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
-                                        setAmount(val);
-                                    }
-                                }}
-                                placeholder="0.00"
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                }}
-                                inputProps={{
-                                    inputMode: 'decimal',
-                                    style: { textAlign: 'left' },
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        '& fieldset': { borderColor: '#e0e0e0' },
-                                        '&:hover fieldset': { borderColor: '#bbb' },
-                                        '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
-                                    },
-                                    '& .MuiInputBase-input': { textAlign: 'left' },
-                                }}
-                            />
-                        </Box>
-
-                        {/* Date of receipt */}
-                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
-                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                                Date of receipt
-                            </Typography>
-                            <DesktopDatePicker
-                                value={date}
-                                onChange={(newValue) => setDate(newValue)}
-                                slotProps={{
-                                    textField: {
-                                        fullWidth: true,
-                                        size: 'small',
-                                        placeholder: 'mm/dd/yyyy',
-                                        sx: {
-                                            '& .MuiOutlinedInput-root': {
-                                                '& fieldset': { borderColor: '#e0e0e0' },
-                                                '&:hover fieldset': { borderColor: '#bbb' },
-                                                '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
-                                            },
-                                            '& .MuiInputBase-input': { textAlign: 'left' },
-                                        },
-                                    },
-                                }}
-                            />
-                        </Box>
-
-                        {/* Notes */}
-                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="start" gap={2}>
-                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                                Notes
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                multiline
-                                rows={3}
-                                placeholder="Notes about the expense..."
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        '& fieldset': { borderColor: '#e0e0e0' },
-                                        '&:hover fieldset': { borderColor: '#bbb' },
-                                        '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
-                                    },
-                                }}
-                            />
-                        </Box>
-
-                        {/* File Upload */}
-                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="start" gap={2}>
-                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                                Attachments
-                            </Typography>
-                            <Box>
-                                <input
-                                    type="file"
-                                    id="file-upload"
-                                    multiple
-                                    accept="image/*,.pdf"
-                                    onChange={handleFileSelect}
-                                    style={{ display: 'none' }}
-                                />
-                                <label htmlFor="file-upload">
-                                    <Button
-                                        component="span"
-                                        variant="outlined"
-                                        startIcon={<IconUpload size={18} />}
-                                        sx={{
-                                            textTransform: 'none',
-                                            borderColor: '#e0e0e0',
-                                            color: '#666',
-                                            '&:hover': {
-                                                borderColor: '#bbb',
-                                                bgcolor: '#fafafa',
-                                            },
-                                        }}
-                                    >
-                                        Upload Files
-                                    </Button>
-                                </label>
-                                <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-                                    Images and PDFs only
-                                </Typography>
-
-                                {/* Uploaded Files Grid */}
-                                {uploadedFiles.length > 0 && (
-                                    <Box
-                                        mt={2}
-                                        display="grid"
-                                        gridTemplateColumns="repeat(3, 1fr)"
-                                        gap={1.5}
-                                    >
-                                        {uploadedFiles.map((item, index) => (
-                                            <Box
-                                                key={index}
-                                                position="relative"
-                                                border="1px solid #e0e0e0"
-                                                borderRadius="8px"
-                                                overflow="hidden"
-                                                bgcolor="#fafafa"
-                                                sx={{
-                                                    '&:hover .delete-button': {
-                                                        opacity: 1,
-                                                    }
-                                                }}
-                                            >
-                                                {/* File Preview/Icon */}
-                                                <Box
-                                                    display="flex"
-                                                    alignItems="center"
-                                                    justifyContent="center"
-                                                    height="100px"
-                                                    bgcolor={item.preview ? 'transparent' : '#e3f2fd'}
-                                                >
-                                                    {item.preview ? (
-                                                        <img
-                                                            src={item.preview}
-                                                            alt={item.file.name}
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'cover',
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <IconFile size={40} color="#1976d2" />
-                                                    )}
-                                                </Box>
-
-                                                {/* File Info */}
-                                                <Box p={1} bgcolor="white">
-                                                    <Typography
-                                                        variant="caption"
-                                                        fontWeight={500}
-                                                        display="block"
-                                                        noWrap
-                                                        title={item.file.name}
-                                                        sx={{ fontSize: '11px' }}
-                                                    >
-                                                        {item.file.name}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="caption"
-                                                        color="text.secondary"
-                                                        sx={{ fontSize: '10px' }}
-                                                    >
-                                                        {formatFileSize(item.file.size)}
-                                                    </Typography>
-                                                </Box>
-
-                                                {/* Delete Button */}
-                                                <IconButton
-                                                    className="delete-button"
-                                                    size="small"
-                                                    onClick={() => handleRemoveFile(index)}
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        top: 4,
-                                                        right: 4,
-                                                        bgcolor: 'rgba(255, 255, 255, 0.9)',
-                                                        color: '#d32f2f',
-                                                        opacity: 0,
-                                                        transition: 'opacity 0.2s',
-                                                        '&:hover': {
-                                                            bgcolor: 'white',
-                                                        },
-                                                    }}
-                                                >
-                                                    <IconTrash size={16} />
-                                                </IconButton>
-                                            </Box>
-                                        ))}
-                                    </Box>
-                                )}
-                            </Box>
-                        </Box>
-                    </Box>
-
-                    {/* Footer */}
-                    <Box
-                        display="flex"
-                        justifyContent="flex-end"
-                        gap={2}
-                        px={3}
-                        py={2.5}
-                        borderTop="1px solid #f0f0f0"
-                        bgcolor="#fafafa"
-                    >
-                        <Button variant="outlined" color="inherit" onClick={onClose} sx={{ textTransform: 'none' }}>
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
-                            sx={{
-                                textTransform: 'none',
-                                bgcolor: '#1e4db7',
-                                '&:hover': { bgcolor: '#173a8c' },
-                                '&:disabled': { bgcolor: '#e0e0e0' },
-                            }}
-                        >
-                            {loading ? 'Saving...' : 'Add Expense'}
-                        </Button>
-                    </Box>
+                <Box display="flex" alignItems="center" gap={1.5}>
+                    <IconButton onClick={onClose} size="small">
+                        <IconX size={20} />
+                    </IconButton>
+                    <Typography variant="h6" fontWeight={600} fontSize="18px">
+                        Add Expense
+                    </Typography>
                 </Box>
             </Box>
-        </LocalizationProvider>
+
+            {/* Form */}
+            <Box component="form" onSubmit={handleSubmit} sx={{ flex: 1, overflowY: 'auto' }}>
+                {error && (
+                    <Box px={3} pt={2}>
+                        <Alert severity="error" onClose={() => setError(null)}>
+                            {error}
+                        </Alert>
+                    </Box>
+                )}
+
+                <Box px={3} py={3} display="flex" flexDirection="column" gap={3}>
+                    {/* Project */}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                            Project
+                        </Typography>
+                        <FormControl fullWidth size="small">
+                            <Select
+                                value={selectedProject}
+                                onChange={(e) => setSelectedProject(e.target.value)}
+                                displayEmpty
+                                sx={{
+                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
+                                }}
+                            >
+                                <MenuItem value="" disabled>
+                                    <span style={{ color: '#999' }}>Select Project</span>
+                                </MenuItem>
+                                {projects.map((proj) => (
+                                    <MenuItem key={proj.id} value={proj.id.toString()}>
+                                        {proj.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {/* Address */}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                            Address
+                        </Typography>
+                        <FormControl fullWidth size="small">
+                            <Select
+                                value={selectedAddress}
+                                onChange={(e) => setSelectedAddress(e.target.value)}
+                                displayEmpty
+                                sx={{
+                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
+                                }}
+                            >
+                                <MenuItem value="" disabled>
+                                    <span style={{ color: '#999' }}>Select Address</span>
+                                </MenuItem>
+                                {addresses.map((addr) => (
+                                    <MenuItem key={addr.id} value={addr.id.toString()}>
+                                        {addr.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {/* Category */}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                            Category
+                        </Typography>
+                        <FormControl fullWidth size="small">
+                            <Select
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                displayEmpty
+                                sx={{
+                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
+                                }}
+                            >
+                                <MenuItem value="" disabled>
+                                    <span style={{ color: '#999' }}>Select Category</span>
+                                </MenuItem>
+                                {categories.map((cat) => (
+                                    <MenuItem key={cat.id} value={cat.id.toString()}>
+                                        {cat.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {/* Amount */}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                            Sum of Total
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            value={amount}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                                    setAmount(val);
+                                }
+                            }}
+                            placeholder="0.00"
+                            inputProps={{
+                                inputMode: 'decimal',
+                                style: { textAlign: 'left' },
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    '& fieldset': { borderColor: '#e0e0e0' },
+                                    '&:hover fieldset': { borderColor: '#bbb' },
+                                    '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
+                                },
+                                '& .MuiInputBase-input': { textAlign: 'left' },
+                            }}
+                        />
+                    </Box>
+
+                    {/* Date of receipt */}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                            Date of receipt
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            value={formatDate(date)}
+                            onClick={handleDateClick}
+                            placeholder="dd/mm/yyyy"
+                            InputProps={{
+                                readOnly: true,
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconCalendar size={18} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{
+                                cursor: 'pointer',
+                                '& .MuiOutlinedInput-root': {
+                                    '& fieldset': { borderColor: '#e0e0e0' },
+                                    '&:hover fieldset': { borderColor: '#bbb' },
+                                    '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
+                                },
+                                '& .MuiInputBase-input': {
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                },
+                            }}
+                        />
+                        <Popover
+                            open={openDatePicker}
+                            anchorEl={dateAnchorEl}
+                            onClose={handleDateClose}
+                            anchorOrigin={{
+                                vertical: 'bottom',
+                                horizontal: 'left',
+                            }}
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'left',
+                            }}
+                        >
+                            <Box p={2}>
+                                <DayPicker
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={(selectedDate) => {
+                                        setDate(selectedDate);
+                                        handleDateClose();
+                                    }}
+                                />
+                            </Box>
+                        </Popover>
+                    </Box>
+
+                    {/* Notes */}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="start" gap={2}>
+                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                            Notes
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={3}
+                            placeholder="Notes about the expense..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    '& fieldset': { borderColor: '#e0e0e0' },
+                                    '&:hover fieldset': { borderColor: '#bbb' },
+                                    '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
+                                },
+                            }}
+                        />
+                    </Box>
+
+                    {/* File Upload */}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="start" gap={2}>
+                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                            Attachments
+                        </Typography>
+                        <Box>
+                            <input
+                                type="file"
+                                id="file-upload"
+                                multiple
+                                accept="image/*,.pdf"
+                                onChange={handleFileSelect}
+                                style={{ display: 'none' }}
+                            />
+                            <label htmlFor="file-upload">
+                                <Button
+                                    component="span"
+                                    variant="outlined"
+                                    startIcon={<IconUpload size={18} />}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderColor: '#e0e0e0',
+                                        color: '#666',
+                                        '&:hover': {
+                                            borderColor: '#bbb',
+                                            bgcolor: '#fafafa',
+                                        },
+                                    }}
+                                >
+                                    Upload Files
+                                </Button>
+                            </label>
+                            <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                                Images and PDFs only
+                            </Typography>
+
+                            {/* Uploaded Files Grid */}
+                            {uploadedFiles.length > 0 && (
+                                <Box
+                                    mt={2}
+                                    display="grid"
+                                    gridTemplateColumns="repeat(3, 1fr)"
+                                    gap={1.5}
+                                >
+                                    {uploadedFiles.map((item, index) => (
+                                        <Box
+                                            key={index}
+                                            position="relative"
+                                            border="1px solid #e0e0e0"
+                                            borderRadius="8px"
+                                            overflow="hidden"
+                                            bgcolor="#fafafa"
+                                            sx={{
+                                                '&:hover .delete-button': {
+                                                    opacity: 1,
+                                                }
+                                            }}
+                                        >
+                                            {/* File Preview/Icon */}
+                                            <Box
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                                height="100px"
+                                                bgcolor={item.preview ? 'transparent' : '#e3f2fd'}
+                                            >
+                                                {item.preview ? (
+                                                    <img
+                                                        src={item.preview}
+                                                        alt={item.file.name}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <IconFile size={40} color="#1976d2" />
+                                                )}
+                                            </Box>
+
+                                            {/* File Info */}
+                                            <Box p={1} bgcolor="white">
+                                                <Typography
+                                                    variant="caption"
+                                                    fontWeight={500}
+                                                    display="block"
+                                                    noWrap
+                                                    title={item.file.name}
+                                                    sx={{ fontSize: '11px' }}
+                                                >
+                                                    {item.file.name}
+                                                </Typography>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    sx={{ fontSize: '10px' }}
+                                                >
+                                                    {formatFileSize(item.file.size)}
+                                                </Typography>
+                                            </Box>
+
+                                            {/* Delete Button */}
+                                            <IconButton
+                                                className="delete-button"
+                                                size="small"
+                                                onClick={() => handleRemoveFile(index)}
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 4,
+                                                    right: 4,
+                                                    bgcolor: 'rgba(255, 255, 255, 0.9)',
+                                                    color: '#d32f2f',
+                                                    opacity: 0,
+                                                    transition: 'opacity 0.2s',
+                                                    '&:hover': {
+                                                        bgcolor: 'white',
+                                                    },
+                                                }}
+                                            >
+                                                <IconTrash size={16} />
+                                            </IconButton>
+                                        </Box>
+                                    ))}
+                                </Box>
+                            )}
+                        </Box>
+                    </Box>
+                </Box>
+
+                {/* Footer */}
+                <Box
+                    display="flex"
+                    justifyContent="flex-end"
+                    gap={2}
+                    px={3}
+                    py={2.5}
+                    borderTop="1px solid #f0f0f0"
+                    bgcolor="#fafafa"
+                >
+                    <Button variant="outlined" color="inherit" onClick={onClose} sx={{ textTransform: 'none' }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
+                        sx={{
+                            textTransform: 'none',
+                            bgcolor: '#1e4db7',
+                            '&:hover': { bgcolor: '#173a8c' },
+                            '&:disabled': { bgcolor: '#e0e0e0' },
+                        }}
+                    >
+                        {loading ? 'Saving...' : 'Add Expense'}
+                    </Button>
+                </Box>
+            </Box>
+        </Box>
     );
 };
 

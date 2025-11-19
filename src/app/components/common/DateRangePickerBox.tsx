@@ -5,7 +5,6 @@ import {
     Box,
     Button,
     Popover,
-    Typography,
     Stack,
 } from "@mui/material";
 import { DayPicker, DateRange } from "react-day-picker";

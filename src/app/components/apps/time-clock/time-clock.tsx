@@ -357,15 +357,6 @@ const TimeClock = () => {
                 cell: (info: any) => formatHour(info.getValue()) || '-',
             }),
 
-            columnHelper.accessor('daylog_payable_amount', {
-                id: 'daylog_payable_amount',
-                header: 'Payable Amount',
-                cell: (info: any) => {
-                    const value = info.getValue();
-                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
-                },
-            }),
-
             columnHelper.accessor('pricework_total_amount', {
                 id: 'pricework_total_amount',
                 header: 'Pricework Amount',
@@ -388,6 +379,15 @@ const TimeClock = () => {
                             {displayValue}
                         </Typography>
                     );
+                },
+            }),
+
+            columnHelper.accessor('daylog_payable_amount', {
+                id: 'daylog_payable_amount',
+                header: 'Payable Amount',
+                cell: (info: any) => {
+                    const value = info.getValue();
+                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
                 },
             }),
 
