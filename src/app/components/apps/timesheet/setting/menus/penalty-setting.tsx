@@ -219,7 +219,7 @@ export default function PenaltySettings() {
           mb={3}
         >
           <Typography variant="h1" fontSize={"20px !important"}>
-            Enable Penalty
+            Enable outside working Penalty
           </Typography>
           {enabled !== null && (
             <IOSSwitch

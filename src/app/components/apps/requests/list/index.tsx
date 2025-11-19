@@ -19,6 +19,7 @@ import { IconArrowLeft, IconX } from "@tabler/icons-react";
 import { format } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
+import { capitalize } from "lodash";
 
 dayjs.extend(customParseFormat);
 
@@ -374,10 +375,10 @@ export default function UserRequests({
                     >
                       <Box>
                         <Typography variant="h1" fontSize={"16px !important"}>
-                          {work.user_name}
+                          {capitalize(work.user_name)}
                         </Typography>
                         <Typography variant="subtitle1">
-                          {work.message}
+                          {capitalize(work.message)}
                         </Typography>
                       </Box>
                       <Box justifyContent={"flex-end"}>
