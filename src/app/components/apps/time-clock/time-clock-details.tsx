@@ -1468,6 +1468,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     open
                     leaveRequestDetails={leaveRequestDetails}
                     onClose={closeLeaveRequestSidebar}
+                    companyId={companyId}
+                    userId={user_id}
                 />
             </Drawer>
 
