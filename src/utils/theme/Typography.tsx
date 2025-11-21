@@ -35,7 +35,7 @@ const typography: any = {
     lineHeight: "1.5",
   },
   h6: {
-    fontWeight: 500,
+    fontWeight: 400,
     fontSize: "0.875rem",
     lineHeight: "1.5",
   },

@@ -36,7 +36,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
             <Stack direction="row" spacing={6} alignItems="center">
                 {headerDetails.map((stat, index) => (
                     <Box key={index} textAlign="center">
-                        <Typography variant="h4" fontWeight={700} color="#8b939c">
+                        <Typography variant="h6" fontWeight={700} color="#8b939c">
                             {stat.value}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">

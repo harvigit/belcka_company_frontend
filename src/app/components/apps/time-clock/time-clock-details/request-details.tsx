@@ -114,6 +114,9 @@ const PENDING_STATUS = 3;
 const APPROVED_STATUS = 5;
 const REJECTED_STATUS = 12;
 
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Memoized components for better performance
 const RequestCard = React.memo<{
     request: RequestItem;
@@ -123,7 +126,7 @@ const RequestCard = React.memo<{
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
     formatDate: (val: string | number | null | undefined) => string;
 }>(({ request, isProcessing, onApprove, onReject, formatHour, formatDate }) => {
-    
+
     const formatPayableHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
         if (val === null || val === undefined) return isPricework ? '--' : '00:00';
 
@@ -314,7 +317,7 @@ const RequestCard = React.memo<{
                                     variant="outlined"
                                     sx={{ fontSize: '0.75rem' }}
                                 />
-    
+
                                 {request.reject_reason && (
                                     <Box sx={{ mt: 1 }}>
                                         <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -411,7 +414,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         }));
     }, []);
 
-    const fetchRequests = useCallback(async (start?: Date, end?: Date) => {
+    const fetchRequests = useCallback(async (start?: Date, end?: Date, retryCount = 0) => {
         try {
             setLoading(true);
 
@@ -422,11 +425,19 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 user_id: user_id?.toString() || '',
                 start_date: format(startDateToUse, 'dd/MM/yyyy'),
                 end_date: format(endDateToUse, 'dd/MM/yyyy'),
+                _t: Date.now().toString()
             };
 
             const response: AxiosResponse<RequestListResponse> = await api.get(
                 '/time-clock/request-details',
-                { params }
+                {
+                    params,
+                    // Prevent axios from caching
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                }
             );
 
             if (response.data.IsSuccess) {
@@ -437,6 +448,12 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
             }
         } catch (error) {
             console.error('Error fetching requests data:', error);
+
+            if (retryCount < 2) {
+                await delay(1000);
+                return fetchRequests(start, end, retryCount + 1);
+            }
+
             showAlert('Error fetching requests data', 'error');
             setRequestList([]);
         } finally {
@@ -467,6 +484,9 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
 
                 if (response.data.IsSuccess) {
                     showAlert(`Request ${action}d successfully`, 'success');
+
+                    await delay(1500);
+
                     if (timeClock?.start_date && timeClock?.end_date) {
                         await fetchRequests(
                             new Date(timeClock.start_date),
@@ -520,6 +540,9 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
 
             if (response.data.IsSuccess) {
                 showAlert(`All requests ${action}d successfully`, 'success');
+
+                await delay(2000);
+
                 if (timeClock?.start_date && timeClock?.end_date) {
                     await fetchRequests(
                         new Date(timeClock.start_date),

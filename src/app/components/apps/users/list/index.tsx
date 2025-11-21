@@ -255,7 +255,7 @@ const TablePagination = () => {
                 fetchUsers();
             }
         } catch (error: any) {
-            toast.error('Failed to invite user');
+            // toast.error('Failed to invite user');
         } finally {
             setLoading(false);
         }

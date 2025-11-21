@@ -23,11 +23,11 @@ import { styled } from '@mui/material/styles';
 import { IconX } from '@tabler/icons-react';
 import SearchIcon from '@mui/icons-material/Search';
 import { debounce } from 'lodash';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, parse } from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import api from '@/utils/axios';
-import {AxiosResponse} from 'axios';
+import { AxiosResponse } from 'axios';
 
 interface User {
     id: number;
@@ -51,10 +51,26 @@ interface FormData {
     isAllDay: boolean;
 }
 
+interface LeaveData {
+    user_leave_id?: number;
+    user_id: number;
+    leave_id?: number;
+    leave_type?: string;
+    start_date: string;
+    end_date: string;
+    start_time?: string | null;
+    end_time?: string | null;
+    is_allday_leave?: boolean;
+    manager_note?: string;
+    note?: string;
+    total_time_of_days?: string;
+}
+
 interface AddLeaveProps {
     onClose: () => void;
     userId: number;
     companyId: number;
+    leaveData?: LeaveData;
 }
 
 const IOSSwitch = styled(Switch)(({ theme }) => ({
@@ -127,7 +143,7 @@ const StyledDayPicker = styled(Box)(({ theme }) => ({
     },
 }));
 
-const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
+const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveData = null }) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [users, setUsers] = useState<User[]>([]);
@@ -148,13 +164,61 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
     });
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
+    const isEditMode = !!leaveData?.user_leave_id;
+
+    const parseDateString = (dateStr: string): Date => {
+        const formats = ['dd/MM/yyyy', 'd/M/yyyy', 'yyyy-MM-dd'];
+
+        for (const fmt of formats) {
+            try {
+                const parsed = parse(dateStr, fmt, new Date());
+                if (!isNaN(parsed.getTime())) {
+                    return parsed;
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+
+        return new Date();
+    };
+
+    useEffect(() => {
+        if (leaveData) {
+            setFormData({
+                userId: leaveData.user_id.toString(),
+                leaveId: leaveData.leave_id?.toString() || '',
+                managerNote: leaveData.manager_note || leaveData.note || '',
+                isAllDay: leaveData.is_allday_leave ?? true,
+            });
+
+            const startDate = parseDateString(leaveData.start_date);
+            const endDate = parseDateString(leaveData.end_date);
+
+            if (leaveData.is_allday_leave) {
+                setDateRange({
+                    from: startDate,
+                    to: endDate,
+                });
+            } else {
+                setSingleDate(startDate);
+                if (leaveData.start_time) {
+                    setStartTime(leaveData.start_time);
+                }
+                if (leaveData.end_time) {
+                    setEndTime(leaveData.end_time);
+                }
+            }
+        }
+    }, [leaveData]);
+
     const getUsers = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const res = await api.get(`user/list`);
             setUsers(res.data.info || []);
-            if (userId) {
+            if (userId && !leaveData) {
                 setFormData((prev) => ({ ...prev, userId: userId.toString() }));
             }
         } catch (error) {
@@ -162,7 +226,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
         } finally {
             setLoading(false);
         }
-    }, [userId]);
+    }, [userId, leaveData]);
 
     const getLeaves = useCallback(async () => {
         setLoading(true);
@@ -292,7 +356,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
             }
         }
 
-        const params = {
+        const params: any = {
             user_id: Number(formData.userId),
             leave_id: Number(formData.leaveId),
             is_allday_leave: formData.isAllDay,
@@ -308,20 +372,25 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
             manager_note: formData.managerNote,
         };
 
+        if (isEditMode) {
+            params.user_leave_id = leaveData.user_leave_id;
+        }
+
         setLoading(true);
         setError(null);
 
         try {
-            const response: AxiosResponse<any> = await api.post('/user-leaves/add-leave', params);
+            const endpoint = isEditMode ? '/user-leaves/update-leave' : '/user-leaves/add-leave';
+            const response: AxiosResponse<any> = await api.post(endpoint, params);
 
-            if (response.data.IsSuccess){
+            if (response.data.IsSuccess) {
                 onClose();
             } else {
-                setError('Failed to add leave. Please try again.');
+                setError(`Failed to ${isEditMode ? 'update' : 'add'} leave. Please try again.`);
             }
         } catch (error: any) {
             const errorMessage =
-                error.response?.data?.message || 'Failed to add leave. Please try again.';
+                error.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'add'} leave. Please try again.`;
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -339,7 +408,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
 
     const open = Boolean(anchorEl);
 
-    if (loading) {
+    if (loading && !users.length && !leaves.length) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
                 <CircularProgress />
@@ -377,7 +446,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
                     sx={{ fontSize: '18px', color: '#1a1a1a' }}
                     component="div"
                 >
-                    Add Leave
+                    {isEditMode ? 'Edit Leave' : 'Add Leave'}
                 </Typography>
             </Box>
 
@@ -422,6 +491,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
                                 onChange={handleChange('userId')}
                                 displayEmpty
                                 size="small"
+                                disabled={isEditMode}
                                 sx={{
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
                                     '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -833,7 +903,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
                 <Button
                     variant="contained"
                     onClick={handleSubmit}
-                    disabled={!formData.userId || !formData.leaveId}
+                    disabled={!formData.userId || !formData.leaveId || loading}
                     sx={{
                         textTransform: 'none',
                         fontWeight: 500,
@@ -851,12 +921,13 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId }) => {
                         },
                     }}
                 >
-                    Add Leave
+                    {loading ? <CircularProgress size={24} /> : isEditMode ? 'Update Leave' : 'Add Leave'}
                 </Button>
                 <Button
                     variant="outlined"
                     color="error"
                     onClick={onClose}
+                    disabled={loading}
                 >
                     Cancel
                 </Button>

@@ -391,7 +391,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             gap: 1,
                                                             height: '100%'
                                                         }}>
-                                                            <Typography variant="h4" sx={{ textAlign: 'center' }}>{rowData.date}</Typography>
+                                                            <Typography variant="h6" sx={{ textAlign: 'center' }}>{rowData.date}</Typography>
                                                             {!isLogLocked && !hasRecords && (
                                                                 <Box className="plus-icon" sx={{
                                                                     display: 'none',
@@ -775,7 +775,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {`${currency}${log.payable_amount || 0}`}
+                                                        {`${currency}${log.total_expense_amount || 0}`}
                                                     </TableCell>
                                                 )}
 
@@ -1006,7 +1006,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             gap: 1,
                                                             height: '100%'
                                                         }}>
-                                                            <Typography variant="h4" sx={{ textAlign: 'center' }}>{row.original.date}</Typography>
+                                                            <Typography variant="h6" sx={{ textAlign: 'center' }}>{row.original.date}</Typography>
                                                             {!isRowLocked && (
                                                                 <Box className="plus-icon" sx={{
                                                                     display: 'none',

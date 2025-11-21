@@ -278,7 +278,7 @@ const TimeClock = () => {
         if (isNaN(num)) return '-';
         const h = Math.floor(num);
         const m = Math.round((num - h) * 60);
-        return `${h}:${m.toString().padStart(2, '0')}`;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
     const columns: any = useMemo(
@@ -341,6 +341,7 @@ const TimeClock = () => {
 
                     return (
                         <Typography
+                            variant="h6"
                             sx={{
                                 color: hasPendingRequest ? '#f97316' : 'inherit',
                             }}
@@ -357,9 +358,18 @@ const TimeClock = () => {
                 cell: (info: any) => formatHour(info.getValue()) || '-',
             }),
 
+            columnHelper.accessor('daylog_payable_amount', {
+                id: 'daylog_payable_amount',
+                header: 'Payable',
+                cell: (info: any) => {
+                    const value = info.getValue();
+                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+                },
+            }),
+
             columnHelper.accessor('pricework_total_amount', {
                 id: 'pricework_total_amount',
-                header: 'Pricework Amount',
+                header: 'Pricework',
                 cell: (info: any) => {
                     const row = info.row.original;
                     const value = info.getValue();
@@ -372,6 +382,7 @@ const TimeClock = () => {
 
                     return (
                         <Typography
+                            variant="h6"
                             sx={{
                                 color: hasPendingRequest ? '#f97316' : 'inherit',
                             }}
@@ -382,18 +393,9 @@ const TimeClock = () => {
                 },
             }),
 
-            columnHelper.accessor('daylog_payable_amount', {
-                id: 'daylog_payable_amount',
-                header: 'Payable Amount',
-                cell: (info: any) => {
-                    const value = info.getValue();
-                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
-                },
-            }),
-
             columnHelper.accessor('total_expense_amount', {
                 id: 'total_expense_amount',
-                header: 'Expense Amount',
+                header: 'Expense',
                 cell: (info: any) => {
                     const row = info.row.original;
                     const value = info.getValue();
@@ -406,6 +408,7 @@ const TimeClock = () => {
 
                     return (
                         <Typography
+                            variant="h6"
                             sx={{
                                 color: hasPendingRequest ? '#f97316' : 'inherit',
                             }}

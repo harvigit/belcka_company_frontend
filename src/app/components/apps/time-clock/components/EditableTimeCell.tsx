@@ -1,7 +1,12 @@
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
 import { Box, TextField, Tooltip } from '@mui/material';
 import { IconPointFilled } from '@tabler/icons-react';
-import { EditingWorklog } from '@/app/components/apps/time-clock/types/timeClock';
+
+interface EditingWorklog {
+    editingField?: 'start' | 'end';
+    start?: string;
+    end?: string;
+}
 
 interface EditableTimeCellProps {
     worklogId: string;
@@ -41,7 +46,6 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     const editedByName = field === 'start' ? log?.start_time_edited_by_name : log?.end_time_edited_by_name;
     const editedAt = field === 'start' ? log?.start_time_edited_at : log?.end_time_edited_at;
 
-    // State to track icon hover
     const [isIconHovered, setIsIconHovered] = useState(false);
 
     const tooltipStyles = {
@@ -58,6 +62,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     width: 'fit-content',
                     minHeight: '32px',
                     px: '8px',
+                    position: 'relative',
                 }}
             >
                 {isEdited && (
@@ -70,15 +75,19 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                         <Box
                             component="span"
                             sx={{
+                                position: 'absolute',
+                                left: '-10px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
                                 display: 'flex',
                                 alignItems: 'center',
-                                mr: 1,
+                                zIndex: 1,
                                 '&:hover': {
                                     cursor: 'pointer',
                                 },
                             }}
-                            onMouseEnter={() => setIsIconHovered(true)} 
-                            onMouseLeave={() => setIsIconHovered(false)} 
+                            onMouseEnter={() => setIsIconHovered(true)}
+                            onMouseLeave={() => setIsIconHovered(false)}
                         >
                             <IconPointFilled size={18} style={{ color: '#ff9800' }} />
                         </Box>
@@ -158,6 +167,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                 opacity: isLocked ? 0.6 : 1,
                 borderRadius: '4px',
                 px: '8px',
+                position: 'relative',
                 '&:hover': !isLocked
                     ? {
                         borderColor: '#1976d2',
@@ -176,15 +186,19 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     <Box
                         component="span"
                         sx={{
+                            position: 'absolute',
+                            left: '-10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
                             display: 'flex',
                             alignItems: 'center',
-                            mr: 1,
+                            zIndex: 1,
                             '&:hover': {
                                 cursor: 'pointer',
                             },
                         }}
-                        onMouseEnter={() => setIsIconHovered(true)} 
-                        onMouseLeave={() => setIsIconHovered(false)} 
+                        onMouseEnter={() => setIsIconHovered(true)}
+                        onMouseLeave={() => setIsIconHovered(false)}
                     >
                         <IconPointFilled size={18} style={{ color: '#ff9800' }} />
                     </Box>
@@ -196,7 +210,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
 
     return isEdited && editedByName && editedAt ? (
         <Tooltip
-            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`} 
+            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`}
             arrow
             placement="top"
             sx={tooltipStyles}

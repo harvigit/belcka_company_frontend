@@ -12,6 +12,7 @@ import {
     Chip,
     Paper,
     CircularProgress,
+    Drawer,
 } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -19,10 +20,10 @@ import {
     Edit as EditIcon,
     Check as CheckIcon,
     Clear as ClearIcon,
-    Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { DateTime } from 'luxon';
 import api from '@/utils/axios';
+import AddLeave from '@/app/components/apps/time-clock/time-clock-details/leaves/add-leave';
 
 interface LeaveRequestDetails {
     user_leave_id: number;
@@ -33,6 +34,7 @@ interface LeaveRequestDetails {
     start_date: string;
     end_date: string;
     leave_type: string;
+    leave_id?: number;
     manager_note?: string;
     created_at?: string;
     display_date?: string;
@@ -48,18 +50,26 @@ interface LeaveRequestDetails {
 interface LeaveRequestProps {
     leaveRequestDetails: LeaveRequestDetails[];
     onClose: () => void;
+    onRefresh?: () => void;
     open: boolean;
+    userId: number;
+    companyId: number;
 }
 
 const LeaveRequest: React.FC<LeaveRequestProps> = ({
                                                        open,
                                                        leaveRequestDetails,
                                                        onClose,
+                                                       onRefresh,
+                                                       userId,
+                                                       companyId,
                                                    }) => {
     const [activeTab, setActiveTab] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const [responseNotes, setResponseNotes] = useState<{ [key: number]: string }>({});
     const [isLoading, setIsLoading] = useState(false);
+    const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
+    const [editLeaveRequest, setEditLeaveRequest] = useState<LeaveRequestDetails | undefined>();
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
@@ -73,10 +83,10 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
         setIsLoading(true);
         try {
             const response = await api.post(`/user-leaves/approve?user_leave_id=${user_leave_id}`);
-            // await api.post('/user-leaves/approve', null, { params: { user_leave_id: user_leave_id } });
-            
-            if(response.data.IsSuccess){
-             onClose()   
+
+            if (response.data.IsSuccess) {
+                onRefresh?.();
+                onClose();
             }
         } catch (error) {
             console.error('Failed to approve leave:', error);
@@ -85,14 +95,25 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
         }
     };
 
+    const handleEdit = (request: LeaveRequestDetails) => {
+        setEditLeaveRequest(request);
+        setAddLeaveSidebar(true);
+    };
+
+    const closeAddLeaveSidebar = () => {
+        setAddLeaveSidebar(false);
+        setEditLeaveRequest(undefined);
+        onRefresh?.();
+    };
+
     const handleReject = async (user_leave_id: number) => {
         setIsLoading(true);
         try {
             const response = await api.post(`/user-leaves/reject?user_leave_id=${user_leave_id}`);
-            // await api.post('/user-leaves/reject', null, { params: { user_leave_id: user_leave_id } });
-            
-            if(response.data.IsSuccess){
-             onClose()   
+
+            if (response.data.IsSuccess) {
+                onRefresh?.();
+                onClose();
             }
         } catch (error) {
             console.error('Failed to reject leave:', error);
@@ -111,15 +132,6 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
         return DateTime.now();
     };
 
-    const getInitials = (name: string): string => {
-        if (!name) return 'NA';
-        const parts = name.split(' ');
-        if (parts.length >= 2) {
-            return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-        }
-        return name.substring(0, 2).toUpperCase();
-    };
-
     const formatDateRange = (startStr: string, endStr: string) => {
         const start = parseDate(startStr);
         const end = parseDate(endStr);
@@ -135,9 +147,11 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
         let filtered = leaveRequestDetails;
 
         if (activeTab === 0) {
-            filtered = filtered.filter(req => req.request_status === '3'); // Assuming '3' is pending
+            filtered = filtered.filter(req => req.request_status === '3');
         } else {
-            filtered = filtered.filter(req => req.request_status === 'approved' || req.request_status === 'rejected');
+            filtered = filtered.filter(req =>
+                req.request_status === 'approved' || req.request_status === 'rejected'
+            );
         }
 
         if (searchQuery.trim()) {
@@ -182,7 +196,6 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
                 sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
             >
                 <Tab label="Pending Approvals" sx={{ textTransform: 'none' }} />
-                <Tab label="History" sx={{ textTransform: 'none' }} />
             </Tabs>
 
             <Box sx={{ p: 2 }}>
@@ -272,6 +285,8 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
                                 </Box>
                                 {activeTab === 0 && (
                                     <Button
+                                        onClick={() => handleEdit(request)}
+                                        disabled={isLoading}
                                         startIcon={<EditIcon fontSize="small" />}
                                         size="small"
                                         sx={{ textTransform: 'none' }}
@@ -361,20 +376,33 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
                                     </Box>
                                 </>
                             )}
-
-                            {activeTab === 1 && request.request_status && (
-                                <Chip
-                                    label={request.request_status === '3'
-                                        ? 'Pending'
-                                        : request.request_status.charAt(0).toUpperCase() + request.request_status.slice(1)}
-                                    size="small"
-                                    color={request.request_status === 'approved' ? 'success' : request.request_status === 'rejected' ? 'error' : 'default'}
-                                />
-                            )}
                         </Paper>
                     ))
                 )}
             </Box>
+
+            <Drawer
+                anchor="right"
+                open={addLeaveSidebar}
+                onClose={closeAddLeaveSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <AddLeave
+                    onClose={closeAddLeaveSidebar}
+                    leaveData={editLeaveRequest}
+                    userId={userId}
+                    companyId={companyId}
+                />
+            </Drawer>
         </Box>
     );
 };
