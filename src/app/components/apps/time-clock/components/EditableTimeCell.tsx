@@ -3,7 +3,7 @@ import { Box, TextField, Tooltip } from '@mui/material';
 import { IconPointFilled } from '@tabler/icons-react';
 
 interface EditingWorklog {
-    editingField?: 'start' | 'end';
+    editingField?: 'start' | 'end' | 'shift';
     start?: string;
     end?: string;
 }
