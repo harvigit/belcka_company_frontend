@@ -53,6 +53,7 @@ export const useTimeClockData = (user_id: any, currency: string) => {
 
     return {
         data,
+        setData,
         headerDetail,
         pendingRequestCount,
         setPendingRequestCount,

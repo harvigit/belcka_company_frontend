@@ -153,6 +153,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     // Custom hooks
     const {
         data,
+        setData,
         headerDetail,
         pendingRequestCount,
         setPendingRequestCount,
@@ -243,32 +244,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         cancelNewRecord,
         clearNewRecords,
     } = useNewRecords();
-
-    // Navigation logic
-    const currentUserIndex = useMemo(() => {
-        if (!timeClock || !allUsers.length) return -1;
-        return allUsers.findIndex((user) => user.user_id === timeClock.user_id);
-    }, [timeClock, allUsers]);
-
-    const handlePreviousUser = () => {
-        setTotalConflicts(0);
-        setLeaveRequestCount(0);
-        setPendingRequestCount(0);
-        clearNewRecords();
-        if (currentUserIndex > 0 && onUserChange) {
-            onUserChange(allUsers[currentUserIndex - 1]);
-        }
-    };
-
-    const handleNextUser = () => {
-        setTotalConflicts(0);
-        setLeaveRequestCount(0);
-        setPendingRequestCount(0);
-        clearNewRecords();
-        if (currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1 && onUserChange) {
-            onUserChange(allUsers[currentUserIndex + 1]);
-        }
-    };
 
     // Utility functions
     const formatHour = (val: string | number | null | undefined, isPricework: boolean = false): string => {
@@ -769,9 +744,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             });
         }
     };
-
+    
     const dailyData = useMemo<DailyBreakdown[]>(() => {
-        return (data || []).flatMap((week: any) => {
+        if (!data || data.length === 0) {
+            return [];
+        }
+
+        return data.flatMap((week: any) => {
             const weekRows: DailyBreakdown[] = [];
 
             weekRows.push({
@@ -792,7 +771,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const dayRows = (week.days || []).flatMap((day: any) => {
                 let filteredWorklogs = (day.worklogs || []);
 
-                console.log(day, 'daydaydaydaydaydaydaydaydaydaydaydaydaydaydaydaydayday')
                 if (filterValue === 'lock') {
                     filteredWorklogs = filteredWorklogs.filter(
                         (log: any) => log.status === '6' || log.status === 6
@@ -975,6 +953,44 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         },
         [startDate, endDate, fetchTimeClockData, onDataChange]
     );
+
+    // Navigation logic
+    const currentUserIndex = useMemo(() => {
+        if (!timeClock || !allUsers.length) return -1;
+        return allUsers.findIndex((user) => user.user_id === timeClock.user_id);
+    }, [timeClock, allUsers]);
+
+    const handlePreviousUser = () => {
+        clearNewRecords();
+        setSelectedRows(new Set());
+        setData([]);
+        setTotalConflicts(0);
+        setLeaveRequestCount(0);
+        setPendingRequestCount(0);
+        setConflictsByDate({});
+        setLeaveRequestByDate({});
+        setExpandedWorklogsIds([]);
+
+        if (currentUserIndex > 0 && onUserChange) {
+            onUserChange(allUsers[currentUserIndex - 1]);
+        }
+    };
+
+    const handleNextUser = () => {
+        clearNewRecords();
+        setSelectedRows(new Set());
+        setData([]);
+        setTotalConflicts(0);
+        setLeaveRequestCount(0);
+        setPendingRequestCount(0);
+        setConflictsByDate({});
+        setLeaveRequestByDate({});
+        setExpandedWorklogsIds([]);
+
+        if (currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1 && onUserChange) {
+            onUserChange(allUsers[currentUserIndex + 1]);
+        }
+    };
 
     const handleLockClick = () => {
         const timesheetIds: (string | number)[] = [];
@@ -1368,6 +1384,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             />
 
             <TimeClockTable
+                key={user_id}
                 table={table}
                 dailyData={dailyData}
                 currency={currency}

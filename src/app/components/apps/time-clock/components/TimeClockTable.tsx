@@ -294,7 +294,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                             const hasConflicts = conflictsByDate && conflictsByDate[rowData.date] > 0;
                             const hasLeaves = leaveRequestByDate && leaveRequestByDate[rowData.date] > 0;
-
+                            
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
                                 const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
