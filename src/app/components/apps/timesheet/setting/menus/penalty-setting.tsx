@@ -130,6 +130,8 @@ export default function PenaltySettings() {
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
                 fetchCompanySetting();
+                fetchTeams();
+                fetchUsers();
             }
         } finally {
             setLoading(false);
@@ -200,7 +202,7 @@ export default function PenaltySettings() {
 
         try {
             const payload = {
-                is_outside_boundary_penalty: newStatus,
+                is_autostop_work_penalty: newStatus,
                 timeZone,
             };
 
@@ -208,6 +210,8 @@ export default function PenaltySettings() {
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
                 fetchCompanySetting();
+                fetchTeams();
+                fetchUsers();
             }
         } finally {
             setLoading(false);
