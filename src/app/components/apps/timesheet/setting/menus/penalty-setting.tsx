@@ -12,14 +12,13 @@ import {User} from 'next-auth';
 import toast from 'react-hot-toast';
 import {Box, Grid} from '@mui/system';
 import dayjs, {Dayjs} from 'dayjs';
-import {LocalizationProvider, TimePicker} from '@mui/x-date-pickers';
-import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import {IconUser, IconUserPlus} from '@tabler/icons-react';
 
 export default function PenaltySettings() {
     const [loading, setLoading] = useState<boolean>(true);
     const [value, setValue] = React.useState<Dayjs | null>(dayjs());
+    const [temp, setTemp] = useState<string>(value?.format("HH:mm") ?? "");
     const [enabled, setEnabled] = useState<boolean>(true);
     const [timeZone, setTimeZone] = useState<any>(0);
     const [teams, setTeams] = useState<any[]>([]);
@@ -33,6 +32,7 @@ export default function PenaltySettings() {
 
     const [swEnabled, setSwEnabled] = useState<boolean>(false);
     const [swValue, setSwValue] = useState<Dayjs | null>(dayjs());
+    const [swTemp, setSwTemp] = useState<string>(swValue?.format("HH:mm") ?? "");
     const [swTeams, setSwTeams] = useState<any[]>([]);
     const [swUsers, setSwUsers] = useState<any[]>([]);
     const [showSwTeamsList, setShowSwTeamsList] = useState(false);
@@ -52,18 +52,20 @@ export default function PenaltySettings() {
             if (res.data?.data) {
                 setEnabled(res.data.data.is_outside_boundary_penalty);
                 setTimeZone(res.data.data.timezone_id);
-                setValue(
-                    res.data.data.outside_boundary_penalty_minute
-                        ? dayjs(res.data.data.outside_boundary_penalty_minute, 'HH:mm')
-                        : null
-                );
+                const dbTime = res.data.data.outside_boundary_penalty_minute
+                    ? dayjs(res.data.data.outside_boundary_penalty_minute, "HH:mm")
+                    : null;
+
+                setValue(dbTime);
+                setTemp(dbTime ? dbTime.format("HH:mm") : "");
 
                 setSwEnabled(res.data.data.is_autostop_work_penalty);
-                setSwValue(
-                    res.data.data.autostop_work_penalty_minute
-                        ? dayjs(res.data.data.autostop_work_penalty_minute, 'HH:mm')
-                        : null
-                );
+                const swDbTime = res.data.data.autostop_work_penalty_minute
+                    ? dayjs(res.data.data.autostop_work_penalty_minute, "HH:mm")
+                    : null;
+
+                setSwValue(swDbTime);
+                setSwTemp(swDbTime ? swDbTime.format("HH:mm") : "");
             }
         } catch (err) {
             console.error('Failed to fetch general setting', err);
@@ -127,6 +129,7 @@ export default function PenaltySettings() {
             const res = await api.post('setting/save-general-setting', payload);
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
+                fetchCompanySetting();
             }
         } finally {
             setLoading(false);
@@ -204,6 +207,7 @@ export default function PenaltySettings() {
             const res = await api.post('setting/save-general-setting', payload);
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
+                fetchCompanySetting();
             }
         } finally {
             setLoading(false);
@@ -294,6 +298,27 @@ export default function PenaltySettings() {
         );
     }, [swUsers, searchSwUser]);
 
+    const parseDigitsToTime = (digits: string): string | null => {
+        let formatted = "";
+
+        if (digits.length === 1) {
+            formatted = `0${digits}:00`;          
+        } else if (digits.length === 2) {
+            formatted = `${digits}:00`;           
+        } else if (digits.length === 3) {
+            formatted = `${digits.slice(0,2)}:${digits[2]}0`; 
+        } else if (digits.length === 4) {
+            formatted = `${digits.slice(0,2)}:${digits.slice(2,4)}`; 
+        } else {
+            return null;
+        }
+
+        const [h, m] = formatted.split(":").map(Number);
+        if (h > 23 || m > 59) return null;
+
+        return formatted;
+    };
+
     if (loading)
         return (
             <Box
@@ -341,16 +366,49 @@ export default function PenaltySettings() {
                                 pt={0}
                             >
                                 <Grid size={{sm: 2}}>
-                                    <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                        <TimePicker
-                                            format="HH:mm"
-                                            ampm={false}
-                                            value={value}
-                                            onChange={(newValue) => {
-                                                setValue(newValue ? dayjs(newValue) : null);
-                                            }}
-                                        />
-                                    </LocalizationProvider>
+                                    <TextField
+                                        type="text"
+                                        value={temp}
+                                        placeholder="HH:MM"
+                                        size="small"
+                                        onChange={(e) => {
+                                            const raw = e.target.value.replace(/[^0-9]/g, ""); 
+                                            setTemp(raw); 
+                                        }}
+                                        onBlur={() => {
+                                            const formatted = parseDigitsToTime(temp);
+
+                                            if (formatted) {
+                                                setTemp(formatted);
+                                                setValue(dayjs(formatted, "HH:mm"));
+                                            } else {
+                                                setTemp(value ? value.format("HH:mm") : "");
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                const formatted = parseDigitsToTime(temp);
+
+                                                if (formatted) {
+                                                    setTemp(formatted);
+                                                    setValue(dayjs(formatted, "HH:mm"));
+                                                } else {
+                                                    setTemp(value ? value.format("HH:mm") : "");
+                                                }
+                                            }
+
+                                            if (e.key === "Escape") {
+                                                e.preventDefault();
+                                                setTemp(value ? value.format("HH:mm") : "");
+                                            }
+                                        }}
+                                        sx={{
+                                            width: "80px",
+                                            textAlign: "center",
+                                            "& input": { textAlign: "center" }
+                                        }}
+                                    />
                                 </Grid>
 
                                 <Box display={'flex'} gap={2}>
@@ -661,14 +719,49 @@ export default function PenaltySettings() {
                                 pt={0}
                             >
                                 <Grid size={{sm: 2}}>
-                                    <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                        <TimePicker
-                                            format="HH:mm"
-                                            ampm={false}
-                                            value={swValue}
-                                            onChange={(val) => setSwValue(val ? dayjs(val) : null)}
-                                        />
-                                    </LocalizationProvider>
+                                    <TextField
+                                        type="text"
+                                        value={swTemp}
+                                        placeholder="HH:MM"
+                                        size="small"
+                                        onChange={(e) => {
+                                            const raw = e.target.value.replace(/[^0-9]/g, ""); 
+                                            setSwTemp(raw); 
+                                        }}
+                                        onBlur={() => {
+                                            const formatted = parseDigitsToTime(swTemp);
+
+                                            if (formatted) {
+                                                setSwTemp(formatted);
+                                                setSwValue(dayjs(formatted, "HH:mm"));
+                                            } else {
+                                                setSwTemp(swValue ? swValue.format("HH:mm") : "");
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                const formatted = parseDigitsToTime(swTemp);
+
+                                                if (formatted) {
+                                                    setSwTemp(formatted);
+                                                    setSwValue(dayjs(formatted, "HH:mm"));
+                                                } else {
+                                                    setSwTemp(swValue ? swValue.format("HH:mm") : "");
+                                                }
+                                            }
+
+                                            if (e.key === "Escape") {
+                                                e.preventDefault();
+                                                setSwTemp(swValue ? swValue.format("HH:mm") : "");
+                                            }
+                                        }}
+                                        sx={{
+                                            width: "80px",
+                                            textAlign: "center",
+                                            "& input": { textAlign: "center" }
+                                        }}
+                                    />
                                 </Grid>
 
                                 <Box display={'flex'} gap={2}>
