@@ -128,10 +128,9 @@ const Company = () => {
           body: payload?.notification?.body || "",
           icon: "/favicon.svg",
         });
+        fetchFeeds();
+        fetchList();
       }
-
-      fetchFeeds();
-      fetchList();
     });
 
     return () => {
