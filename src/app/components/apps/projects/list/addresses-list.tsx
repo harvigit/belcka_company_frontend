@@ -194,6 +194,7 @@ const AddressesList = ({
           duration: 0,
           rate: 0,
           is_attchment: true,
+          tasks: []
         });
       } else {
         toast.error(result.data.message);

@@ -211,23 +211,39 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
     if (!/^\d*$/.test(val)) return;
 
     const quantity = val === "" ? 0 : Math.max(0, Number(val));
+    const newRate = task.is_pricework
+      ? quantity === 0
+        ? task.rate
+        : task.rate * quantity
+      : task.rate;
+
+    const newDuration = task.is_pricework
+      ? quantity === 0
+        ? task.duration
+        : task.duration * quantity
+      : task.duration;
 
     setQuantities((prev) => ({
       ...prev,
       [task.id]: {
         quantity,
-        rate: task.is_pricework
-          ? quantity === 0
-            ? task.rate
-            : task.rate * quantity
-          : task.rate,
-        duration: task.is_pricework
-          ? quantity === 0
-            ? task.duration
-            : task.duration * quantity
-          : task.duration,
+        rate: newRate,
+        duration: newDuration,
       },
     }));
+
+    setSelectedTasks((prev) =>
+      prev.map((t) =>
+        t.taskId === task.id
+          ? {
+              ...t,
+              quantity,
+              rate: newRate,
+              duration: newDuration,
+            }
+          : t
+      )
+    );
   };
 
   const handleResetAndClose = () => {
