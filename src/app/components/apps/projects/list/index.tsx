@@ -56,7 +56,6 @@ import "react-day-picker/dist/style.css";
 import "../../../../global.css";
 import DynamicGantt from "@/app/components/DynamicGantt";
 import ArchiveAddress from "./archive-address-list";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import CreateProject from "../create";
 import {
     Circle,
@@ -68,6 +67,8 @@ import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRange
 import EditProject from "../edit";
 import ArchiveProject from "./archive-project-list";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import MapGantt from "@/app/components/MapGantt";
+import { IconMapPin } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -148,6 +149,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
+    const [mapOpen, setMapOpen] = useState<boolean>(false);
     const [projectId, setProjectId] = useState<number | null>(null);
     const [processedIds, setProcessedIds] = useState<number[]>([]);
     const [shouldRefresh, setShouldRefresh] = useState(false);
@@ -726,6 +728,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                         <IconButton onClick={() => handleRowClick()}>
                             <IconChartPie size={24}></IconChartPie>
                         </IconButton>
+                        <IconButton onClick={() => setMapOpen(true)}>
+                            <IconMapPin size={24} />
+                        </IconButton>
                     </Grid>
                     <Stack
                         width="15%"
@@ -1190,6 +1195,30 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                     <DynamicGantt
                         open={detailsOpen}
                         onClose={closeDetails}
+                        projectId={projectId}
+                        companyId={user.company_id ?? null}
+                    />
+                </Drawer>
+
+                {/* Location Drawer */}
+                <Drawer
+                    anchor="bottom"
+                    open={mapOpen}
+                    onClose={() => setMapOpen(false)}
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 0,
+                            height: "95vh",
+                            boxShadow: "none",
+                            borderTopLeftRadius: 12,
+                            borderTopRightRadius: 12,
+                            overflow: "hidden",
+                        },
+                    }}
+                >
+                    <MapGantt
+                        open={mapOpen}
+                        onClose={() => setMapOpen(false)}
                         projectId={projectId}
                         companyId={user.company_id ?? null}
                     />

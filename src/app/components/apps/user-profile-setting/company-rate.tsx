@@ -209,8 +209,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
     }
     try {
       const net = Number(formData.rate);
-      const grossCalc = net * 1.2;
-      const ratePerHour = Number((grossCalc / 8).toFixed(2));
+      const ratePerHour = Number((net / 8).toFixed(2));
 
       const payload = {
         company_id: comapny.id,
@@ -335,7 +334,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       <Box display={"flex"} justifyContent={"space-between"} mb={2}>
         {user.user_role_id !== 1 &&
         comapny.is_pending_request &&
-        (payRate === "view" || payRate === "view_edit")&&
+        (payRate === "view" || payRate === "view_edit") &&
         ratePermisison ? (
           <Alert severity="error" variant="filled">
             Your rate request has been pending.

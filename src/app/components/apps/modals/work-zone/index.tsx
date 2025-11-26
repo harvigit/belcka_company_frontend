@@ -373,7 +373,13 @@ export default function WorkZone({
 
           {/* Site list */}
           {sites.length > 0 && !activeSite && (
-            <Box sx={{ p: 2 }}>
+            <Box
+              sx={{
+                p: 2,
+                maxHeight: 600, 
+                overflowY: "auto", 
+              }}
+            >
               {sites.map((s) => (
                 <Paper
                   key={s.id}

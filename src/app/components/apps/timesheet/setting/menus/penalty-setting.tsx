@@ -556,7 +556,6 @@ export default function PenaltySettings() {
                         sx={{
                           border: "1px solid #eee",
                           borderRadius: 1.5,
-                          background: "#fff",
                           boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
                         }}
                       >
@@ -697,7 +696,6 @@ export default function PenaltySettings() {
                         sx={{
                           border: "1px solid #eee",
                           borderRadius: 1.5,
-                          background: "#fff",
                           boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
                         }}
                       >
@@ -966,7 +964,6 @@ export default function PenaltySettings() {
                         sx={{
                           border: "1px solid #eee",
                           borderRadius: 1.5,
-                          background: "#fff",
                           boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
                         }}
                       >
@@ -1105,7 +1102,6 @@ export default function PenaltySettings() {
                         sx={{
                           border: "1px solid #eee",
                           borderRadius: 1.5,
-                          background: "#fff",
                           boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
                         }}
                       >

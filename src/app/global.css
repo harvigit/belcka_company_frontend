@@ -380,6 +380,13 @@ input#project_id::placeholder {
 .custom_font input {
     font-size: 14px !important;
 }
- .custom_color input, .custom_color label{
+.custom_color input, .custom_color label{
     font-size: 15px !important;
+}
+
+.ellipsis{
+    /* max-width: 80px; */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: "nowrap";
 }
