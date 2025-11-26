@@ -124,6 +124,7 @@ export default function PenaltySettings() {
     const payload = {
       is_outside_boundary_penalty: newStatus,
       timeZone,
+      outside_penalty: value ? value.format("HH:mm") : null,
     };
 
     try {
@@ -203,6 +204,7 @@ export default function PenaltySettings() {
       const payload = {
         is_autostop_work_penalty: newStatus,
         timeZone,
+        penalty_time: swValue ? swValue.format("HH:mm") : null,
       };
 
       const res = await api.post("setting/save-general-setting", payload);
@@ -425,7 +427,7 @@ export default function PenaltySettings() {
                       }
                     }}
                     sx={{
-                      width: "80px",
+                      width: "90px",
                       "& input": {
                         textAlign: "center",
                         fontWeight: 400,
@@ -509,6 +511,8 @@ export default function PenaltySettings() {
                       alignItems="center"
                       justifyContent="space-between"
                       mb={1}
+                      ml={2}
+                      mr={2}
                     >
                       <Box display="flex" alignItems="center" gap={1}>
                         <CustomCheckbox
@@ -523,7 +527,7 @@ export default function PenaltySettings() {
                             );
                           }}
                         />
-                        <Typography fontWeight={600}>
+                        <Typography fontWeight={600} ml={1}>
                           Select All Teams
                         </Typography>
                       </Box>
@@ -648,6 +652,8 @@ export default function PenaltySettings() {
                       alignItems="center"
                       justifyContent="space-between"
                       mb={1}
+                      ml={2}
+                      mr={2}
                     >
                       <Box display="flex" gap={2} alignItems="center">
                         <CustomCheckbox
@@ -662,7 +668,7 @@ export default function PenaltySettings() {
                             );
                           }}
                         />
-                        <Typography fontWeight={600}>
+                        <Typography fontWeight={600} ml={1}>
                           Select All Users
                         </Typography>
                       </Box>
@@ -832,7 +838,7 @@ export default function PenaltySettings() {
                       }
                     }}
                     sx={{
-                      width: "80px",
+                      width: "90px",
                       "& input": {
                         textAlign: "center",
                         fontWeight: 400,
@@ -910,7 +916,13 @@ export default function PenaltySettings() {
                     }}
                   >
                     {/* SELECT ALL TEAMS */}
-                    <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      mb={1}
+                      ml={2}
+                      mr={2}
+                    >
                       <Box display="flex" gap={2} alignItems="center">
                         <CustomCheckbox
                           checked={
@@ -925,7 +937,7 @@ export default function PenaltySettings() {
                           }}
                         />
 
-                        <Typography fontWeight={600}>
+                        <Typography fontWeight={600} ml={1}>
                           Select All Teams
                         </Typography>
                       </Box>
@@ -1043,7 +1055,13 @@ export default function PenaltySettings() {
                     }}
                   >
                     {/* SELECT ALL USERS */}
-                    <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      mb={1}
+                      ml={2}
+                      mr={2}
+                    >
                       <Box display="flex" gap={2} alignItems="center">
                         <CustomCheckbox
                           checked={
@@ -1058,7 +1076,7 @@ export default function PenaltySettings() {
                           }}
                         />
 
-                        <Typography fontWeight={600}>
+                        <Typography fontWeight={600} ml={1}>
                           Select All Users
                         </Typography>
                       </Box>
