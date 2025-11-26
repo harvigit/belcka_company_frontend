@@ -103,6 +103,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({
     const closeAddLeaveSidebar = () => {
         setAddLeaveSidebar(false);
         setEditLeaveRequest(undefined);
+        onClose();
         onRefresh?.();
     };
 
