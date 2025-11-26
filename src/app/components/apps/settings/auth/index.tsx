@@ -127,6 +127,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
     } else {
       fallbackCopyCode(codeToCopy);
     }
+    onClose()
   };
 
   const fallbackCopyCode = (codeToCopy: string) => {
