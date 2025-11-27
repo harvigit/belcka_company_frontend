@@ -151,35 +151,38 @@ export default function MapGantt({
                           color="textSecondary"
                           variant="h5"
                           fontSize={"14px !important"}
+                          mb={0}
                         >
                           {z.address_name}{" "}
                         </Typography>
                       </Box>{" "}
                     </TableCell>
-                    <TableCell sx={{ display: "flex" }}>
-                      <IconButton
-                        color="success"
-                        onClick={() => setSelected({ ...z, mode: "view" })}
-                      >
-                        <IconEye size={20} />
-                      </IconButton>
+                    <TableCell>
+                      <Box display={"flex"}>
+                        <IconButton
+                          color="success"
+                          onClick={() => setSelected({ ...z, mode: "view" })}
+                        >
+                          <IconEye size={20} />
+                        </IconButton>
 
-                      <IconButton
-                        color="primary"
-                        onClick={() => setSelected({ ...z, mode: "edit" })}
-                      >
-                        <IconEdit size={20} />
-                      </IconButton>
+                        <IconButton
+                          color="primary"
+                          onClick={() => setSelected({ ...z, mode: "edit" })}
+                        >
+                          <IconEdit size={20} />
+                        </IconButton>
 
-                      <IconButton
-                        color="error"
-                        onClick={() => {
-                          setDeleteId(z.id);
-                          setDeleteConfirmOpen(true);
-                        }}
-                      >
-                        <IconTrash size={20} />
-                      </IconButton>
+                        <IconButton
+                          color="error"
+                          onClick={() => {
+                            setDeleteId(z.id);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        >
+                          <IconTrash size={20} />
+                        </IconButton>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
