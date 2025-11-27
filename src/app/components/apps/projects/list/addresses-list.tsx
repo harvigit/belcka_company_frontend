@@ -147,7 +147,9 @@ const AddressesList = ({
     if (!projectId) return;
     setLoading(true);
     try {
-      const res = await api.get(`address/get?project_id=${projectId}&company_id=${user.company_id}`);
+      const res = await api.get(
+        `address/get?project_id=${projectId}&company_id=${user.company_id}`
+      );
       if (res.data) {
         setData(res.data.info);
       }
@@ -194,7 +196,7 @@ const AddressesList = ({
           duration: 0,
           rate: 0,
           is_attchment: true,
-          tasks: []
+          tasks: [],
         });
       } else {
         toast.error(result.data.message);
@@ -353,7 +355,12 @@ const AddressesList = ({
           else if (statusInt === 3) color = "#FF7F00";
 
           return (
-            <Typography className="f-14" color={color} fontWeight={700} sx={{px: 1.5}}>
+            <Typography
+              className="f-14"
+              color={color}
+              fontWeight={700}
+              sx={{ px: 1.5 }}
+            >
               {info.getValue() ?? "-"}
             </Typography>
           );
@@ -363,7 +370,12 @@ const AddressesList = ({
         id: "check_ins",
         header: () => "Check-ins",
         cell: (info) => (
-          <Typography className="f-14" color={"#007AFF"} fontWeight={700} sx={{px: 1.5}}>
+          <Typography
+            className="f-14"
+            color={"#007AFF"}
+            fontWeight={700}
+            sx={{ px: 1.5 }}
+          >
             {info.getValue() ?? "-"}
           </Typography>
         ),
@@ -372,7 +384,7 @@ const AddressesList = ({
         id: "start_date",
         header: () => "Start date",
         cell: (info) => (
-          <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
             {formatDate(info.getValue())}
           </Typography>
         ),
@@ -382,7 +394,6 @@ const AddressesList = ({
         header: () => "End date",
         cell: (info) => {
           const rowIndex = info.row.index;
-          const isRowSelected = selectedRowIds.has(rowIndex);
 
           return (
             <Box
@@ -391,7 +402,7 @@ const AddressesList = ({
               gap={6}
               justifyContent={"space-between"}
             >
-              <Typography variant="h5" color="textPrimary">
+              <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
                 {formatDate(info.getValue())}
               </Typography>
               <Badge
@@ -400,9 +411,9 @@ const AddressesList = ({
                 overlap="circular"
               >
                 <Button
-                 variant="outlined"
-                 color="error"
-                 size="small"
+                  variant="outlined"
+                  color="error"
+                  size="small"
                   onClick={() => handleDownloadZip(info.row.original.id)}
                 >
                   <IconDownload size={24} />
@@ -474,7 +485,7 @@ const AddressesList = ({
                           >
                             <Box
                               onClick={header.column.getToggleSortingHandler()}
-                              p={0}                                                    
+                              p={0}
                               sx={{
                                 cursor: isSortable ? "pointer" : "default",
                                 border: "2px solid transparent",
@@ -485,9 +496,7 @@ const AddressesList = ({
                                 "&:hover .hoverIcon": { opacity: 1 },
                               }}
                             >
-                              <Typography
-                                variant="subtitle2"
-                              >
+                              <Typography variant="subtitle2">
                                 {flexRender(
                                   header.column.columnDef.header,
                                   header.getContext()
@@ -650,7 +659,7 @@ const AddressesList = ({
                   <IconButton onClick={() => setSidebarData(null)}>
                     <IconArrowLeft />
                   </IconButton>
-                  <Typography variant="h6" fontWeight={700} noWrap>
+                  <Typography variant="h6" fontWeight={700}>
                     {sidebarData.addressName}
                   </Typography>
                   <Menu

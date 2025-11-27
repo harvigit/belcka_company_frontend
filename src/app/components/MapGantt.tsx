@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Table,
@@ -34,7 +34,7 @@ import {
   Circle,
   Marker,
 } from "@react-google-maps/api";
-
+import { Circle as GCircle } from "@react-google-maps/api";
 import { IconEye, IconTrash, IconX, IconEdit } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
@@ -97,6 +97,7 @@ export default function MapGantt({
         setGeofences((prev) => prev.filter((z) => z.id !== deleteId));
         setDeleteConfirmOpen(false);
         setDeleteId(null);
+        fetchProjectDetail();
       }
     } catch (e) {
       console.error(e);
@@ -126,8 +127,8 @@ export default function MapGantt({
         </Box>
       </Box>
 
-      <Box display="flex" gap={2} mt={2}>
-        <Box width="35%">
+      <Box display="flex" gap={2} mt={2} height="calc(100vh - 100px)" mb={3}>
+        <Box width="35%" overflow="auto" maxHeight="100%" mb={5}>
           <Paper>
             <Table>
               <TableHead>
@@ -140,22 +141,21 @@ export default function MapGantt({
                   </TableCell>
                 </TableRow>
               </TableHead>
-
               <TableBody>
                 {geofences.map((z) => (
                   <TableRow key={z.id}>
                     <TableCell>
                       <Box>
-                        <Typography>{z.name} </Typography>
+                        <Typography>{z.name}</Typography>
                         <Typography
                           color="textSecondary"
                           variant="h5"
                           fontSize={"14px !important"}
                           mb={0}
                         >
-                          {z.address_name}{" "}
+                          {z.address_name}
                         </Typography>
-                      </Box>{" "}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <Box display={"flex"}>
@@ -165,14 +165,12 @@ export default function MapGantt({
                         >
                           <IconEye size={20} />
                         </IconButton>
-
                         <IconButton
                           color="primary"
                           onClick={() => setSelected({ ...z, mode: "edit" })}
                         >
                           <IconEdit size={20} />
                         </IconButton>
-
                         <IconButton
                           color="error"
                           onClick={() => {
@@ -203,9 +201,15 @@ export default function MapGantt({
           </Paper>
         </Box>
 
-        <Box width="65%">
+        <Box
+          width="65%"
+          display="flex"
+          flexDirection="column"
+          maxHeight="100%"
+          overflow="auto"
+        >
           {!selected && (
-            <Paper sx={{ p: 4, textAlign: "center" }}>
+            <Paper sx={{ p: 4, textAlign: "center", flexShrink: 0 }}>
               <Typography color="gray">
                 Select a zone to view or edit.
               </Typography>
@@ -300,7 +304,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
   };
 
   return (
-    <Paper sx={{ height: 600 }}>
+    <Paper sx={{ height: 500 }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
         zoom={17}
@@ -309,7 +313,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
         <Marker
           position={center}
           label={{
-            text: zone.name,
+            text: zone.name ? zone.name : " ",
             color: zone.color || "#1976d2",
             className: "map-site-label",
           }}
@@ -351,6 +355,9 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
 
   const [location, setLocation] = useState({ lat: 51.509865, lng: -0.118092 });
 
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const circleRef = useRef<google.maps.Circle | null>(null);
+
   const [typedAddress, setTypedAddress] = useState(false);
   const [predictions, setPredictions] = useState<
     google.maps.places.AutocompletePrediction[]
@@ -379,7 +386,6 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
 
     const addr = addresses.find((a) => a.id === id);
     if (addr) {
-      // setName(addr.name);
       setLocation({
         lat: Number(addr.latitude),
         lng: Number(addr.longitude),
@@ -402,6 +408,17 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
       { input, types: ["geocode"] },
       (preds) => setPredictions(preds || [])
     );
+  };
+
+  const onMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    const newLoc = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    setLocation(newLoc);
+    if (circleRef.current) circleRef.current.setCenter(newLoc);
+  };
+
+  const onRadiusChanged = () => {
+    if (circleRef.current) setRadius(circleRef.current.getRadius());
   };
 
   const selectPrediction = (placeId: string) => {
@@ -525,31 +542,25 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
         <GoogleMap
           zoom={17}
           center={location}
-          mapContainerStyle={{ width: "100%", height: "100%" }}
+          mapContainerStyle={{ width: "100%", height: "400px" }}
+          onLoad={(map) => {
+            mapRef.current = map;
+          }}
         >
-          <Marker
-            position={location}
-            draggable
-            onDragEnd={(e: any) =>
-              setLocation({
-                lat: e.latLng?.lat(),
-                lng: e.latLng?.lng(),
-              })
-            }
-            label={{
-              text: String(name),
-              color: "#1976d2",
-            }}
-            icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 0 }}
-          />
+          <Marker position={location} draggable onDragEnd={onMarkerDragEnd} />
 
-          <Circle
+          <GCircle
             center={location}
             radius={radius}
+            editable
+            draggable
             options={{
               strokeColor: "#1976d2",
               fillColor: "#1976d233",
             }}
+            onLoad={(circle) => (circleRef.current = circle)}
+            onRadiusChanged={onRadiusChanged}
+            onDragEnd={onMarkerDragEnd}
           />
         </GoogleMap>
       </Box>
@@ -588,12 +599,31 @@ const EditZone = ({
     lng: Number(zone.longitude),
   });
 
+  const circleRef = useRef<google.maps.Circle | null>(null);
+
   const [typedAddress, setTypedAddress] = useState(false);
   const [predictions, setPredictions] = useState<
     google.maps.places.AutocompletePrediction[]
   >([]);
 
-  const DRAG_SMOOTH = 0.2;
+  const onMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    const newLoc = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    setLocation(newLoc);
+    if (circleRef.current) circleRef.current.setCenter(newLoc);
+  };
+
+  const onRadiusChanged = () => {
+    if (circleRef.current) setRadius(circleRef.current.getRadius());
+  };
+
+  // const onCircleCenterChanged = () => {
+  //   const newCenter = circleRef?.current?.getCenter();
+
+  //   if (newCenter) {
+  //     setLocation({ lat: newCenter.lat(), lng: newCenter.lng() });
+  //   }
+  // };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
@@ -655,12 +685,11 @@ const EditZone = ({
       }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update zone");
     }
   };
 
   return (
-    <Box>
+    <Box width={"99%"} mb={5}>
       <Typography variant="h6" mb={2}>
         Edit Zone
       </Typography>
@@ -668,7 +697,7 @@ const EditZone = ({
       {/* Google-style searchable input */}
       <TextField
         fullWidth
-        label="Zone Name / Address"
+        label="Zone Name"
         value={name}
         onChange={handleInputChange}
         sx={{ mb: 2 }}
@@ -705,45 +734,25 @@ const EditZone = ({
         sx={{ mb: 2 }}
       />
 
-      <Box height={500} mt={2}>
+      <Box height={400} mt={2}>
         <GoogleMap
           zoom={17}
           center={location}
-          mapContainerStyle={{ width: "100%", height: "100%" }}
+          mapContainerStyle={{ width: "100%", height: "400px" }}
         >
-          <Marker
-            position={location}
-            draggable
-            onDrag={(e: any) => {
-              const newLat = e.latLng.lat();
-              const newLng = e.latLng.lng();
-              setLocation((prev) => ({
-                lat: prev.lat + (newLat - prev.lat) * DRAG_SMOOTH,
-                lng: prev.lng + (newLng - prev.lng) * DRAG_SMOOTH,
-              }));
-            }}
-            onDragEnd={(e: any) => {
-              setLocation({
-                lat: e.latLng.lat(),
-                lng: e.latLng.lng(),
-              });
-            }}
-            label={{
-              text: name,
-              color: "#1976d2",
-            }}
-            icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 0 }}
-          />
-
-          <Circle
+          <Marker position={location} draggable onDragEnd={onMarkerDragEnd} />
+          <GCircle
             center={location}
             radius={radius}
+            editable
+            draggable
             options={{
               strokeColor: "#1976d2",
               fillColor: "#1976d233",
-              clickable: true,
-              draggable: true,
             }}
+            onLoad={(circle) => (circleRef.current = circle)}
+            onRadiusChanged={onRadiusChanged}
+            onDragEnd={onMarkerDragEnd}
           />
         </GoogleMap>
       </Box>

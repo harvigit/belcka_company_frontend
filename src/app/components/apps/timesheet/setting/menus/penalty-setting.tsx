@@ -30,7 +30,6 @@ export default function PenaltySettings() {
   const [isUsersDirty, setIsUsersDirty] = useState(false);
   const [searchTeam, setSerachTeam] = useState("");
   const [searchUser, setSerachUser] = useState("");
-
   const [swEnabled, setSwEnabled] = useState<boolean>(false);
   const [swValue, setSwValue] = useState<Dayjs | null>(dayjs());
   const [swTemp, setSwTemp] = useState<string>(swValue?.format("HH:mm") ?? "");
@@ -47,7 +46,6 @@ export default function PenaltySettings() {
   const user = session.data?.user as User & { company_id?: number | null };
 
   const fetchCompanySetting = async () => {
-    setLoading(true);
     try {
       const res = await api.get("/setting/get-company-settings");
       if (res.data?.data) {
@@ -71,11 +69,9 @@ export default function PenaltySettings() {
     } catch (err) {
       console.error("Failed to fetch general setting", err);
     }
-    setLoading(false);
   };
 
   const fetchTeams = async () => {
-    setLoading(true);
     try {
       const res = await api.get(
         `get-company-resources?flag=teamList&company_id=${user.company_id}`
@@ -87,11 +83,9 @@ export default function PenaltySettings() {
     } catch (err) {
       console.error(err);
     }
-    setLoading(false);
   };
 
   const fetchUsers = async () => {
-    setLoading(true);
     try {
       const res = await api.get("user/get-user-lists");
       if (res.data?.info) {
@@ -101,7 +95,6 @@ export default function PenaltySettings() {
     } catch (err) {
       console.error(err);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -112,19 +105,26 @@ export default function PenaltySettings() {
     }
   }, [user?.company_id]);
 
-  const handleToggle = async () => {
-    const newStatus = !enabled;
+  const handleToggle = async (
+    overrideStatus?: boolean,
+    overrideTime?: string | null
+  ) => {
+    const newStatus = overrideStatus ?? !enabled;
+
+    setEnabled(newStatus);
+
     if (!newStatus) {
       setShowTeamsList(false);
       setShowUsersList(false);
     }
 
-    setEnabled(newStatus);
-    setLoading(true);
+    const finalTime =
+      overrideTime ?? (value?.isValid() ? value.format("HH:mm") : null);
+
     const payload = {
       is_outside_boundary_penalty: newStatus,
       timeZone,
-      outside_penalty: value ? value.format("HH:mm") : null,
+      outside_penalty: finalTime,
     };
 
     try {
@@ -136,8 +136,15 @@ export default function PenaltySettings() {
         fetchUsers();
       }
     } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSwitchToggle = () => {
+    handleToggle(!enabled);
+  };
+
+  const handleAutoSwitchToggle = () => {
+    handleToggleStopWork(!swEnabled);
   };
 
   const handleUpdateSelectedUsers = async () => {
@@ -190,21 +197,25 @@ export default function PenaltySettings() {
     } catch (err) {}
   };
 
-  const handleToggleStopWork = async () => {
-    const newStatus = !swEnabled;
+  const handleToggleStopWork = async (
+    overrideStatus?: boolean,
+    overrideTime?: string | null
+  ) => {
+    const newStatus = overrideStatus !== undefined ? overrideStatus : swEnabled;
+
     if (!newStatus) {
-      setShowSwTeamsList(false);
-      setShowSwUsersList(false);
+      setShowTeamsList(false);
+      setShowUsersList(false);
     }
 
-    setSwEnabled(newStatus);
-    setLoading(true);
+    const finalTime =
+      overrideTime ?? (swValue?.isValid() ? swValue.format("HH:mm") : null);
 
     try {
       const payload = {
         is_autostop_work_penalty: newStatus,
         timeZone,
-        penalty_time: swValue ? swValue.format("HH:mm") : null,
+        penalty_time: finalTime,
       };
 
       const res = await api.post("setting/save-general-setting", payload);
@@ -215,7 +226,6 @@ export default function PenaltySettings() {
         fetchUsers();
       }
     } finally {
-      setLoading(false);
     }
   };
 
@@ -322,17 +332,17 @@ export default function PenaltySettings() {
     return formatted;
   };
 
-  if (loading)
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
+  // if (loading)
+  //   return (
+  //     <Box
+  //       display="flex"
+  //       justifyContent="center"
+  //       alignItems="center"
+  //       minHeight="300px"
+  //     >
+  //       <CircularProgress />
+  //     </Box>
+  //   );
 
   return (
     <Box display="flex" overflow="auto">
@@ -356,7 +366,7 @@ export default function PenaltySettings() {
               Enable Outside Working Penalty
             </Typography>
 
-            <IOSSwitch checked={enabled} onChange={handleToggle} />
+            <IOSSwitch checked={enabled} onChange={handleSwitchToggle} />
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -398,29 +408,38 @@ export default function PenaltySettings() {
                     placeholder="HH:MM"
                     size="small"
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      const raw = e.target.value.replace(/[^0-9:]/g, "");
                       setTemp(raw);
                     }}
                     onBlur={() => {
                       const formatted = parseDigitsToTime(temp);
+
                       if (formatted) {
                         setTemp(formatted);
                         setValue(dayjs(formatted, "HH:mm"));
+                        handleToggle(enabled, formatted);
                       } else {
-                        setTemp(value ? value.format("HH:mm") : "");
+                        const fallback = value ? value.format("HH:mm") : "";
+                        setTemp(fallback);
+                        handleToggle(enabled, fallback || null);
                       }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const formatted = parseDigitsToTime(temp);
+
                         if (formatted) {
                           setTemp(formatted);
                           setValue(dayjs(formatted, "HH:mm"));
+                          handleToggle(enabled, formatted);
                         } else {
-                          setTemp(value ? value.format("HH:mm") : "");
+                          const fallback = value ? value.format("HH:mm") : "";
+                          setTemp(fallback);
+                          handleToggle(enabled, fallback || null);
                         }
                       }
+
                       if (e.key === "Escape") {
                         e.preventDefault();
                         setTemp(value ? value.format("HH:mm") : "");
@@ -765,7 +784,7 @@ export default function PenaltySettings() {
               Enable Stop Work Penalty
             </Typography>
 
-            <IOSSwitch checked={swEnabled} onChange={handleToggleStopWork} />
+            <IOSSwitch checked={swEnabled} onChange={handleAutoSwitchToggle} />
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -807,7 +826,7 @@ export default function PenaltySettings() {
                     placeholder="HH:MM"
                     size="small"
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      const raw = e.target.value.replace(/[^0-9:]/g, "");
                       setSwTemp(raw);
                     }}
                     onBlur={() => {
@@ -815,8 +834,11 @@ export default function PenaltySettings() {
                       if (formatted) {
                         setSwTemp(formatted);
                         setSwValue(dayjs(formatted, "HH:mm"));
+                        handleToggleStopWork(swEnabled, formatted);
                       } else {
-                        setSwTemp(swValue ? swValue.format("HH:mm") : "");
+                        const fallback = swValue ? swValue.format("HH:mm") : "";
+                        setSwTemp(fallback);
+                        handleToggleStopWork(swEnabled, fallback || null);
                       }
                     }}
                     onKeyDown={(e) => {
@@ -826,10 +848,16 @@ export default function PenaltySettings() {
                         if (formatted) {
                           setSwTemp(formatted);
                           setSwValue(dayjs(formatted, "HH:mm"));
+                          handleToggleStopWork(swEnabled, formatted);
                         } else {
-                          setSwTemp(swValue ? swValue.format("HH:mm") : "");
+                          const fallback = swValue
+                            ? swValue.format("HH:mm")
+                            : "";
+                          setSwTemp(fallback);
+                          handleToggleStopWork(swEnabled, fallback || null);
                         }
                       }
+
                       if (e.key === "Escape") {
                         e.preventDefault();
                         setSwTemp(swValue ? swValue.format("HH:mm") : "");
