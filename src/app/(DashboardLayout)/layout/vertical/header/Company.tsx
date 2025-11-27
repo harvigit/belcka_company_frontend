@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useEffect } from "react";
 import { Box, Grid } from "@mui/system";
 import {
@@ -115,44 +115,43 @@ const Company = () => {
     };
 
     fetchCompanies();
-  }, []);
+  }, [user.company_id]);
 
-  const fetchFeeds = async () => {
-    // setLoading(true);
+  const fetchFeeds = useCallback(async () => {
+    if (!user?.company_id || !user?.id) return;
 
     try {
       const res = await api.get(
         `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
       );
-      if (res.data) {
-        const feeds = res.data.info;
-        setFeed(feeds);
-        setCount(feeds?.[0]?.unread_feeds);
-        setRequestCount(feeds?.[0]?.request_count);
 
-        if (feeds) {
-          const unreadIds = feeds
-            .filter((feed: any) => feed.status === false)
-            .map((feed: any) => feed.id)
-            .join(",");
-          setUnreedFeed(unreadIds);
-          // setLoading(false);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch feeds", err);
+      const feeds = res.data?.info ?? [];
+      setFeed(feeds);
+      setCount(feeds?.[0]?.unread_feeds);
+      setRequestCount(feeds?.[0]?.request_count);
+
+      const unreadIds = feeds
+        .filter((f: any) => !f.status)
+        .map((f: any) => f.id)
+        .join(",");
+
+      setUnreedFeed(unreadIds);
+    } catch (e) {
+      console.error(e);
     }
-    // setLoading(false);
-  };
+  }, []);
 
-  const hasFetchedRef = React.useRef(false);
+  const fetchedOnce = useRef(false);
 
   useEffect(() => {
-    if (user?.company_id && user?.id && !hasFetchedRef.current) {
+    if (!user?.company_id || !user?.id) return;
+    console.log(fetchedOnce,!fetchedOnce)
+    if (!fetchedOnce.current) {
+      // fetchedOnce.current = true;
+      console.log(fetchedOnce.current)
       fetchFeeds();
-      hasFetchedRef.current = true;
     }
-  }, [user?.company_id, user?.id, fetchFeeds]);
+  }, [user?.company_id, user?.id]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -295,6 +294,8 @@ const Company = () => {
           body: payload?.notification?.body || "",
           icon: "/favicon.svg",
         });
+      }
+      if (payload) {
         fetchFeeds();
         fetchList();
       }
@@ -303,7 +304,7 @@ const Company = () => {
     return () => {
       unsubscribe();
     };
-  }, [user?.id, fetchFeeds, fetchList]);
+  }, [user?.id]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>

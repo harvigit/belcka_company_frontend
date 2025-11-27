@@ -217,11 +217,16 @@ export default function MapGantt({
           )}
 
           {selected?.mode === "view" && (
-            <ViewZoneMap zone={selected} isLoaded={isLoaded} />
+            <ViewZoneMap
+              key={selected.id}
+              zone={selected}
+              isLoaded={isLoaded}
+            />
           )}
 
           {selected?.mode === "edit" && (
             <EditZone
+              key={selected.id}
               zone={selected}
               onSaved={fetchProjectDetail}
               onCancel={() => setSelected(null)}
@@ -351,7 +356,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
 
   const [addressId, setAddressId] = useState<number | null>(null);
   const [name, setName] = useState("");
-  const [radius, setRadius] = useState(100);
+  const [radius, setRadius] = useState(50);
 
   const [location, setLocation] = useState({ lat: 51.509865, lng: -0.118092 });
 
@@ -418,7 +423,16 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
   };
 
   const onRadiusChanged = () => {
-    if (circleRef.current) setRadius(circleRef.current.getRadius());
+    if (circleRef.current) {
+      const newRadius = circleRef.current.getRadius();
+
+      if (newRadius > 100) {
+        circleRef.current.setRadius(100);
+        setRadius(100);
+      } else {
+        setRadius(newRadius);
+      }
+    }
   };
 
   const selectPrediction = (placeId: string) => {
@@ -614,7 +628,16 @@ const EditZone = ({
   };
 
   const onRadiusChanged = () => {
-    if (circleRef.current) setRadius(circleRef.current.getRadius());
+    if (circleRef.current) {
+      const newRadius = circleRef.current.getRadius();
+
+      if (newRadius > 100) {
+        circleRef.current.setRadius(100);
+        setRadius(100);
+      } else {
+        setRadius(newRadius);
+      }
+    }
   };
 
   // const onCircleCenterChanged = () => {
@@ -681,7 +704,7 @@ const EditZone = ({
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         onSaved();
-        onCancel();
+        // onCancel();
       }
     } catch (err) {
       console.error(err);

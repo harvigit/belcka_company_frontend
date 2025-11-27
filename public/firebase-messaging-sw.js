@@ -17,7 +17,7 @@ messaging.onBackgroundMessage(function(payload) {
   const title = payload.notification?.title || 'Notification';
   const options = {
     body: payload.notification?.body || '',
-    icon: '/images/logos/belcka_logo.png',
+    icon: "/favicon.svg",
     sound: "default", 
   };
   self.registration.showNotification(title, options);
