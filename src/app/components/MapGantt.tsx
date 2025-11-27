@@ -297,7 +297,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
   };
 
   return (
-    <Paper sx={{ height: 500 }}>
+    <Paper sx={{ height: 600 }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
         zoom={17}
@@ -422,6 +422,11 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
 
   const handleSave = async () => {
     try {
+      if (!addressId) {
+        toast.error("Please select address!");
+        return;
+      }
+
       const payload = {
         company_id: companyId,
         project_id: projectId,
@@ -452,10 +457,18 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
 
   return (
     <Box>
-      <Typography variant="h6" mb={2}>
-        Add Zone
-      </Typography>
-
+      <Box
+        display={"flex"}
+        justifyContent={"space-between"}
+        alignItems={"center"}
+      >
+        <Typography variant="h6" mb={2}>
+          Add Zone
+        </Typography>
+        <IconButton onClick={onCancel} sx={{ mb: 1 }}>
+          <IconX />
+        </IconButton>
+      </Box>
       {/* Address Dropdown */}
       <FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel>Select Address</InputLabel>
@@ -475,7 +488,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
       {/* Address Search Box */}
       <TextField
         fullWidth
-        label="Search Address (Google)"
+        label="Enter location"
         value={name}
         onChange={handleInputChange}
         placeholder="Search location..."
@@ -689,7 +702,7 @@ const EditZone = ({
         sx={{ mb: 2 }}
       />
 
-      <Box height={400} mt={2}>
+      <Box height={500} mt={2}>
         <GoogleMap
           zoom={17}
           center={location}
