@@ -117,28 +117,7 @@ const Company = () => {
     fetchCompanies();
   }, []);
 
-  useEffect(() => {
-    if (!user?.id) return;
-
-    getFcmToken();
-    const unsubscribe = onForegroundMessage((payload) => {
-      console.log("📩 New FCM message:", payload);
-      if (Notification.permission === "granted") {
-        new Notification(payload?.notification?.title || "Notification", {
-          body: payload?.notification?.body || "",
-          icon: "/favicon.svg",
-        });
-        fetchFeeds();
-        fetchList();
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  const fetchFeeds = async () => {
+  const fetchFeeds = useCallback(async () => {
     // setLoading(true);
 
     try {
@@ -164,10 +143,16 @@ const Company = () => {
       console.error("Failed to fetch feeds", err);
     }
     // setLoading(false);
-  };
+  }, [user?.company_id, user?.id]);
+
+  const hasFetchedRef = React.useRef(false);
+
   useEffect(() => {
-    fetchFeeds();
-  }, []);
+    if (user?.company_id && user?.id && !hasFetchedRef.current) {
+      fetchFeeds();
+      hasFetchedRef.current = true;
+    }
+  }, [user?.company_id, user?.id, fetchFeeds]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -198,29 +183,24 @@ const Company = () => {
     handleClose();
   };
 
-  const unreedFeeds = async () => {
+  const unreedFeeds = useCallback(async () => {
+    if (count === 0 || loading) return;
     setLoading(true);
-    if (count > 0) {
-      try {
-        const payload = {
-          feed_ids: unreedFeed,
-        };
-        const res = await api.post("feed/mark-as-read", payload);
-        if (res.data) {
-          fetchFeeds();
-          setLoading(true);
-        } else {
-          toast.error(res.data.message);
-        }
-      } catch (error) {
-        console.error("Failed to save data:", error);
+
+    try {
+      const payload = { feed_ids: unreedFeed };
+      const res = await api.post("feed/mark-as-read", payload);
+      if (res.data) {
+        await fetchFeeds();
       }
+    } catch (err) {
+      console.error(err);
+    } finally {
       setOpenDrawer(false);
+      setLoading(false);
+      setPage(1);
     }
-    setOpenDrawer(false);
-    setPage(1);
-    setLoading(false);
-  };
+  }, [count, unreedFeed, fetchFeeds, loading]);
 
   const fetchList = useCallback(async () => {
     try {
@@ -303,6 +283,27 @@ const Company = () => {
     //   return url;
     // },
   };
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    getFcmToken();
+    const unsubscribe = onForegroundMessage((payload) => {
+      console.log("📩 New FCM message:", payload);
+      if (Notification.permission === "granted") {
+        new Notification(payload?.notification?.title || "Notification", {
+          body: payload?.notification?.body || "",
+          icon: "/favicon.svg",
+        });
+        fetchFeeds();
+        fetchList();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user?.id, fetchFeeds, fetchList]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>

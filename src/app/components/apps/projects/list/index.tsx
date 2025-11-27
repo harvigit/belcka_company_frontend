@@ -862,25 +862,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
                 <Link
                   color="body1"
                   href="#"
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconNotes width={18} />
-                  </ListItemIcon>
-                  Project detail
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
                   onClick={(e) => {
                     e.preventDefault();
                     setArchiveProjectList(true);
@@ -1342,9 +1323,24 @@ const TablePagination: React.FC<ProjectListingProps> = ({
               open={deleteDialogOpen}
               onClose={() => setDeleteDialogOpen(false)}
             >
-              <DialogTitle>Archive Project</DialogTitle>
+              <DialogTitle>
+                <Typography>Archive Project</Typography>
+                <IconButton
+                  onClick={() => setDeleteDialogOpen(false)}
+                  sx={{
+                    position: "absolute",
+                    right: 12,
+                    top: 8,
+                  }}
+                >
+                  <IconX size={40} />
+                </IconButton>
+              </DialogTitle>
               <DialogContent>
-                Are you sure you want to archive <b>{projectToDelete?.name}</b>?
+                <Typography color="textSecondary">
+                  Are you sure you want to archive{" "}
+                  <b>{projectToDelete?.name}</b>?
+                </Typography>
               </DialogContent>
               <DialogActions>
                 <Button onClick={() => setDeleteDialogOpen(false)}>

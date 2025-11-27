@@ -374,6 +374,7 @@ export const DocumentsTab = ({
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
+                        cursor: "pointer"
                       }}
                       onMouseEnter={(e) => {
                         setHoveredImage(image.image_url);
