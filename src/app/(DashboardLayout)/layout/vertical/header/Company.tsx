@@ -117,7 +117,7 @@ const Company = () => {
     fetchCompanies();
   }, []);
 
-  const fetchFeeds = useCallback(async () => {
+  const fetchFeeds = async () => {
     // setLoading(true);
 
     try {
@@ -143,7 +143,7 @@ const Company = () => {
       console.error("Failed to fetch feeds", err);
     }
     // setLoading(false);
-  }, [user?.company_id, user?.id]);
+  };
 
   const hasFetchedRef = React.useRef(false);
 
