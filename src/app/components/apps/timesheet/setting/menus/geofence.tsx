@@ -299,7 +299,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
 
         {selectedOption !== "off" && (
           <>
-            <Box
+            {/* <Box
               flexWrap="wrap"
               mt={3}
               className={
@@ -326,7 +326,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                   disabled={selectedOption == "off" && !shareLocation}
                 />
               </Box>
-            </Box>
+            </Box> */}
 
             <Box
               sx={{ flex: 1, position: "relative" }}
