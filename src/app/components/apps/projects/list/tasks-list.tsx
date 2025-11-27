@@ -434,7 +434,7 @@ const TasksList = ({
               gap={6}
               justifyContent={"space-between"}
             >
-              <Typography variant="h5" color="textPrimary">
+              <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
                 {info.row.original.status_int == 4 ? info.getValue() : "-"}
               </Typography>
               <Badge
