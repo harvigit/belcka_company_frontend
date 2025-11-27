@@ -47,6 +47,7 @@ export default function PenaltySettings() {
 
   const fetchCompanySetting = async () => {
     try {
+      setLoading(true);
       const res = await api.get("/setting/get-company-settings");
       if (res.data?.data) {
         setEnabled(res.data.data.is_outside_boundary_penalty);
@@ -69,6 +70,7 @@ export default function PenaltySettings() {
     } catch (err) {
       console.error("Failed to fetch general setting", err);
     }
+    setLoading(false);
   };
 
   const fetchTeams = async () => {
@@ -312,6 +314,19 @@ export default function PenaltySettings() {
   }, [swUsers, searchSwUser]);
 
   const parseDigitsToTime = (digits: string): string | null => {
+    if (digits.includes(":")) {
+      const [hStr, mStr] = digits.split(":");
+      if (hStr === "" || mStr === "") return null;
+      const h = Number(hStr);
+      const m = Number(mStr);
+
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        return `${hStr.padStart(2, "0")}:${mStr.padStart(2, "0")}`;
+      } else {
+        return null;
+      }
+    }
+
     let formatted = "";
 
     if (digits.length === 1) {
@@ -319,7 +334,7 @@ export default function PenaltySettings() {
     } else if (digits.length === 2) {
       formatted = `${digits}:00`;
     } else if (digits.length === 3) {
-      formatted = `${digits.slice(0, 2)}:${digits[2]}0`;
+      formatted = `0${digits.slice(0, 1)}:${digits.slice(1)}`;
     } else if (digits.length === 4) {
       formatted = `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
     } else {
@@ -327,22 +342,22 @@ export default function PenaltySettings() {
     }
 
     const [h, m] = formatted.split(":").map(Number);
-    if (h > 23 || m > 59) return null;
+    if (h > 23 || m > 59 || h < 0 || m < 0) return null;
 
     return formatted;
   };
 
-  // if (loading)
-  //   return (
-  //     <Box
-  //       display="flex"
-  //       justifyContent="center"
-  //       alignItems="center"
-  //       minHeight="300px"
-  //     >
-  //       <CircularProgress />
-  //     </Box>
-  //   );
+  if (loading)
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="300px"
+      >
+        <CircularProgress />
+      </Box>
+    );
 
   return (
     <Box display="flex" overflow="auto">
@@ -409,19 +424,20 @@ export default function PenaltySettings() {
                     size="small"
                     onChange={(e) => {
                       const raw = e.target.value.replace(/[^0-9:]/g, "");
+                      console.log(raw, "raw");
                       setTemp(raw);
                     }}
                     onBlur={() => {
                       const formatted = parseDigitsToTime(temp);
-
+                      console.log(formatted, "asgdyusa", temp);
                       if (formatted) {
                         setTemp(formatted);
                         setValue(dayjs(formatted, "HH:mm"));
-                        handleToggle(enabled, formatted);
+                        handleToggle(true, formatted);
                       } else {
                         const fallback = value ? value.format("HH:mm") : "";
                         setTemp(fallback);
-                        handleToggle(enabled, fallback || null);
+                        handleToggle(true, fallback || null);
                       }
                     }}
                     onKeyDown={(e) => {
@@ -432,11 +448,11 @@ export default function PenaltySettings() {
                         if (formatted) {
                           setTemp(formatted);
                           setValue(dayjs(formatted, "HH:mm"));
-                          handleToggle(enabled, formatted);
+                          handleToggle(true, formatted);
                         } else {
                           const fallback = value ? value.format("HH:mm") : "";
                           setTemp(fallback);
-                          handleToggle(enabled, fallback || null);
+                          handleToggle(true, fallback || null);
                         }
                       }
 
