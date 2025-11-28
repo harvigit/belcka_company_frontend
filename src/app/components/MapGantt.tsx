@@ -56,6 +56,7 @@ export default function MapGantt({
 }: Props) {
   const [geofences, setGeofences] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
+  const [addresses, setAddresses] = useState<any[]>([]);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -71,6 +72,23 @@ export default function MapGantt({
       fetchProjectDetail();
     }
   }, [projectId]);
+
+  // Fetch Address List
+  useEffect(() => {
+    if (projectId) loadAddressList();
+  }, [projectId]);
+
+  const loadAddressList = async () => {
+    try {
+      const res = await api.get("address/get", {
+        params: { project_id: projectId },
+      });
+
+      setAddresses(res.data.info || []);
+    } catch (err) {
+      console.error("Error fetching address list:", err);
+    }
+  };
 
   const fetchProjectDetail = async () => {
     try {
@@ -232,6 +250,7 @@ export default function MapGantt({
               onCancel={() => setSelected(null)}
               projectId={projectId}
               companyId={companyId}
+              addresses={addresses}
             />
           )}
         </Box>
@@ -286,6 +305,7 @@ export default function MapGantt({
             <AddZone
               projectId={projectId}
               companyId={companyId}
+              addresses={addresses}
               onAdded={() => {
                 fetchProjectDetail();
                 setAddZoneOpen(false);
@@ -351,51 +371,39 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
 };
 
 // ADD ZONE COMPONENT
-const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
-  const [addresses, setAddresses] = useState<any[]>([]);
-
+const AddZone = ({
+  onAdded,
+  onCancel,
+  projectId,
+  companyId,
+  addresses,
+}: any) => {
   const [addressId, setAddressId] = useState<number | null>(null);
   const [name, setName] = useState("");
-  const [radius, setRadius] = useState(50);
+  const [radius, setRadius] = useState(10);
 
-  const [location, setLocation] = useState({ lat: 51.509865, lng: -0.118092 });
+  const [location, setLocation] = useState({ lat: 20.5937, lng: 78.9629 });
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const circleRef = useRef<google.maps.Circle | null>(null);
+  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [typedAddress, setTypedAddress] = useState(false);
   const [predictions, setPredictions] = useState<
     google.maps.places.AutocompletePrediction[]
   >([]);
 
-  // Fetch Address List
-  useEffect(() => {
-    if (projectId) loadAddressList();
-  }, [projectId]);
-
-  const loadAddressList = async () => {
-    try {
-      const res = await api.get("address/get", {
-        params: { project_id: projectId },
-      });
-
-      setAddresses(res.data.info || []);
-    } catch (err) {
-      console.error("Error fetching address list:", err);
-    }
-  };
-
   // When Address dropdown selected
   const handleAddressChange = (id: number) => {
     setAddressId(id);
 
-    const addr = addresses.find((a) => a.id === id);
+    const addr = addresses.find((a: any) => a.id === id);
     if (addr) {
       setLocation({
         lat: Number(addr.latitude),
         lng: Number(addr.longitude),
       });
-      setRadius(addr.radius || 50);
+      setRadius(addr.radius || 10);
     }
   };
 
@@ -410,7 +418,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
     if (!input) return setPredictions([]);
 
     new google.maps.places.AutocompleteService().getPlacePredictions(
-      { input, types: ["geocode"] },
+      { input },
       (preds) => setPredictions(preds || [])
     );
   };
@@ -511,7 +519,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
           label="Select Address"
           onChange={(e) => handleAddressChange(Number(e.target.value))}
         >
-          {addresses.map((a) => (
+          {addresses.map((a: any) => (
             <MenuItem key={a.id} value={a.id}>
               {a.name}
             </MenuItem>
@@ -522,7 +530,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
       {/* Address Search Box */}
       <TextField
         fullWidth
-        label="Enter location"
+        label="Zone Address"
         value={name}
         onChange={handleInputChange}
         placeholder="Search location..."
@@ -554,7 +562,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
 
       <Box height={400} mt={2}>
         <GoogleMap
-          zoom={17}
+          zoom={20}
           center={location}
           mapContainerStyle={{ width: "100%", height: "400px" }}
           onLoad={(map) => {
@@ -562,19 +570,46 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId }: any) => {
           }}
         >
           <Marker position={location} draggable onDragEnd={onMarkerDragEnd} />
-
           <GCircle
             center={location}
             radius={radius}
-            editable
-            draggable
             options={{
               strokeColor: "#1976d2",
               fillColor: "#1976d233",
+              editable: true,
+              draggable: true,
             }}
-            onLoad={(circle) => (circleRef.current = circle)}
             onRadiusChanged={onRadiusChanged}
-            onDragEnd={onMarkerDragEnd}
+            onLoad={(circle) => {
+              circleRef.current = circle;
+
+              circle.addListener("center_changed", () => {
+                const c = circle.getCenter();
+                if (!c) return;
+                if (circleRef.current) {
+                  const newRadius = circleRef.current.getRadius();
+
+                  if (newRadius > 100) {
+                    circleRef.current.setRadius(100);
+                    setRadius(100);
+                  } else {
+                    setRadius(newRadius);
+                  }
+                }
+                const newLoc = { lat: c.lat(), lng: c.lng() };
+
+                if (
+                  lastCenterRef.current &&
+                  lastCenterRef.current.lat === newLoc.lat &&
+                  lastCenterRef.current.lng === newLoc.lng
+                ) {
+                  return;
+                }
+
+                lastCenterRef.current = newLoc;
+                setLocation(newLoc);
+              });
+            }}
           />
         </GoogleMap>
       </Box>
@@ -597,6 +632,7 @@ type EditZoneProps = {
   onCancel: () => void;
   projectId: number | null;
   companyId: number | null;
+  addresses: any;
 };
 
 const EditZone = ({
@@ -605,6 +641,7 @@ const EditZone = ({
   onCancel,
   projectId,
   companyId,
+  addresses,
 }: EditZoneProps) => {
   const [name, setName] = useState(zone.name);
   const [radius, setRadius] = useState(Number(zone.radius));
@@ -612,13 +649,15 @@ const EditZone = ({
     lat: Number(zone.latitude),
     lng: Number(zone.longitude),
   });
-
-  const circleRef = useRef<google.maps.Circle | null>(null);
-
   const [typedAddress, setTypedAddress] = useState(false);
   const [predictions, setPredictions] = useState<
     google.maps.places.AutocompletePrediction[]
   >([]);
+  const [addressId, setAddressId] = useState<number | null>(
+    zone.address_id || null
+  );
+  const circleRef = useRef<google.maps.Circle | null>(null);
+  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const onMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
@@ -630,7 +669,6 @@ const EditZone = ({
   const onRadiusChanged = () => {
     if (circleRef.current) {
       const newRadius = circleRef.current.getRadius();
-
       if (newRadius > 100) {
         circleRef.current.setRadius(100);
         setRadius(100);
@@ -640,24 +678,20 @@ const EditZone = ({
     }
   };
 
-  // const onCircleCenterChanged = () => {
-  //   const newCenter = circleRef?.current?.getCenter();
-
-  //   if (newCenter) {
-  //     setLocation({ lat: newCenter.lat(), lng: newCenter.lng() });
-  //   }
-  // };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
     setTypedAddress(true);
     fetchPredictions(e.target.value);
   };
 
+  const handleAddressChange = (addressId: number) => {
+    setAddressId(addressId);
+  };
+
   const fetchPredictions = (input: string) => {
     if (!input) return setPredictions([]);
     const service = new google.maps.places.AutocompleteService();
-    service.getPlacePredictions({ input, types: ["geocode"] }, (preds) => {
+    service.getPlacePredictions({ input }, (preds) => {
       setPredictions(preds || []);
     });
   };
@@ -681,7 +715,6 @@ const EditZone = ({
     });
   };
 
-  // --- Save changes ---
   const handleSave = async () => {
     try {
       const payload = {
@@ -690,6 +723,7 @@ const EditZone = ({
         project_id: projectId,
         name,
         address: name,
+        address_id: addressId,
         lat: location.lat,
         lng: location.lng,
         type: "circle",
@@ -717,10 +751,10 @@ const EditZone = ({
         Edit Zone
       </Typography>
 
-      {/* Google-style searchable input */}
       <TextField
         fullWidth
-        label="Zone Name"
+        label="Zone Address"
+        name="zoneAddress"
         value={name}
         onChange={handleInputChange}
         sx={{ mb: 2 }}
@@ -748,6 +782,21 @@ const EditZone = ({
         </List>
       )}
 
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Select Address</InputLabel>
+        <Select
+          value={addressId || ""}
+          label="Select Address"
+          onChange={(e) => handleAddressChange(Number(e.target.value))}
+        >
+          {addresses.map((a: any) => (
+            <MenuItem key={a.id} value={a.id}>
+              {a.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
       <Typography fontWeight={600}>Area size [{radius} Meter]</Typography>
       <Slider
         min={0}
@@ -767,15 +816,41 @@ const EditZone = ({
           <GCircle
             center={location}
             radius={radius}
-            editable
-            draggable
             options={{
               strokeColor: "#1976d2",
               fillColor: "#1976d233",
+              editable: true,
+              draggable: true,
             }}
-            onLoad={(circle) => (circleRef.current = circle)}
             onRadiusChanged={onRadiusChanged}
-            onDragEnd={onMarkerDragEnd}
+            onLoad={(circle) => {
+              circleRef.current = circle;
+
+              circle.addListener("center_changed", () => {
+                const c = circle.getCenter();
+                if (!c) return;
+                if (circleRef.current) {
+                  const newLoc = { lat: c.lat(), lng: c.lng() };
+                  const newRadius = circleRef.current.getRadius();
+
+                  if (newRadius > 100) {
+                    circleRef.current.setRadius(100);
+                    setRadius(100);
+                  } else {
+                    setRadius(newRadius);
+                  }
+                  if (
+                    lastCenterRef.current &&
+                    lastCenterRef.current.lat === newLoc.lat &&
+                    lastCenterRef.current.lng === newLoc.lng
+                  ) {
+                    return;
+                  }
+                  lastCenterRef.current = newLoc;
+                  setLocation(newLoc);
+                }
+              });
+            }}
           />
         </GoogleMap>
       </Box>

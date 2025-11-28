@@ -171,7 +171,7 @@ const TasksList = ({
         console.error("Error fetching locations", err);
       }
     })();
-  }, [user.company_id]);
+  }, [drawerOpen]);
 
   useEffect(() => {
     if (!formData.trade_id) {
@@ -230,11 +230,7 @@ const TasksList = ({
         setDrawerOpen(false);
         setSelectedTask(null);
         setFormData({});
-        // Refresh list
-        const refresh = await api.get(
-          `project/get-tasks?project_id=${projectId}`
-        );
-        if (refresh.data) setData(refresh.data.info);
+        fetchTasks();
       } else {
       }
     } catch (error) {

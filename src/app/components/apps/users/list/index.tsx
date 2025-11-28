@@ -72,6 +72,7 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import { AxiosResponse } from 'axios';
 
 dayjs.extend(customParseFormat);
 
@@ -152,7 +153,7 @@ const TablePagination = () => {
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get('user/get-user-lists');
+            const res: AxiosResponse<any> = await api.get('user/get-user-lists');
             if (res.data) {
                 setData(res.data.info);
             }
@@ -163,7 +164,7 @@ const TablePagination = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, [projectId]);
+    }, [user.company_id,user.id]);
 
     useEffect(() => {
         const fetchTrades = async () => {

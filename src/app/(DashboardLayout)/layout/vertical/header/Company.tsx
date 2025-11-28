@@ -145,10 +145,8 @@ const Company = () => {
 
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
-    console.log(fetchedOnce,!fetchedOnce)
     if (!fetchedOnce.current) {
       // fetchedOnce.current = true;
-      console.log(fetchedOnce.current)
       fetchFeeds();
     }
   }, [user?.company_id, user?.id]);

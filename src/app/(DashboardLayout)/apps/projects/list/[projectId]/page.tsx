@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router"; 
 import ProjectList from "@/app/components/apps/projects/list";
-import { TeamProvider } from "@/app/context/TeamContext";
+import { UserProvider } from "@/app/context/UserContext";
 
 const ProjectListing = () => {
   const router = useRouter();
@@ -17,9 +17,9 @@ const ProjectListing = () => {
   }, [projectId]);
 
   return (
-    <TeamProvider>
+    <UserProvider>
       <ProjectList projectId={projectIdNumber} />  
-    </TeamProvider>
+    </UserProvider>
   );
 };
 

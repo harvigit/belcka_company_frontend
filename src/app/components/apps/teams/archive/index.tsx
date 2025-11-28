@@ -16,6 +16,7 @@ import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
 import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import { AxiosResponse } from "axios";
 
 interface ArchiveTeamProps {
   open: boolean;
@@ -49,7 +50,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
   const fetchTeams = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get(`team/archive-team-list`);
+      const res : AxiosResponse<any> = await api.get(`team/archive-team-list`);
 
       if (res.data) {
         setData(res.data.info);
@@ -63,7 +64,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
 
   useEffect(() => {
     fetchTeams();
-  }, [fetchTeams]);
+  }, [open]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;
@@ -94,12 +95,6 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
       toast.error("Something went wrong");
     }
   };
-
-  useEffect(() => {
-    if (open) {
-      fetchTeams();
-    }
-  }, [open, fetchTeams]);
 
   return (
     <Drawer

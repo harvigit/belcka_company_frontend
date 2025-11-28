@@ -127,7 +127,7 @@ const AddressesList = ({
       }
     };
     fetchTrades();
-  }, []);
+  }, [drawerOpen !== false]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({

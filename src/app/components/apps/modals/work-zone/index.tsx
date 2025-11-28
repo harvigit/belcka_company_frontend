@@ -112,7 +112,7 @@ export default function WorkZone({
     const service = new google.maps.places.AutocompleteService();
 
     const input = /^[0-9]{5,6}$/.test(addressInput.trim())
-      ? `India ${addressInput.trim()}`
+      ? `${addressInput.trim()}`
       : addressInput;
 
     service.getPlacePredictions({ input }, (results, status) => {

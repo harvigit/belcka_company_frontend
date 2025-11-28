@@ -92,7 +92,6 @@ export type ProjectList = {
 
 interface ProjectListingProps {
   projectId: number | null;
-  onProjectUpdated?: () => void;
 }
 
 export interface TradeList {
@@ -114,7 +113,6 @@ interface Boundary {
 }
 
 const TablePagination: React.FC<ProjectListingProps> = ({
-  onProjectUpdated,
 }) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
@@ -212,7 +210,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       }
     };
     fetchTrades();
-  }, [user.company_id]);
+    console.log(drawerOpen,'drawerOpen')
+  }, [drawerOpen == true]);
 
   useEffect(() => {
     if (projectId) {
@@ -249,7 +248,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     if (user.company_id) {
       fetchProjects();
     }
-  }, [user.company_id, user.id]);
+  }, [projectID]);
 
   useEffect(() => {
     if (projectId && user?.id) {
@@ -280,7 +279,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     if (projectID) {
       fetchAddresses();
     }
-  }, [projectID, user?.id]);
+  }, [value == 0]);
 
   const fetchArchiveAddress = async () => {
     if (!projectId) return;
@@ -298,7 +297,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     if (projectId) {
       fetchArchiveAddress();
     }
-  }, [projectId]);
+  }, [archiveList]);
 
   const fetchHistories = async () => {
     try {
@@ -317,7 +316,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     if (!Number.isNaN(projectID) && projectID !== null) {
       fetchHistories();
     }
-  }, [openDrawer, projectID]);
+  }, [openDrawer == true]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -357,7 +356,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         toast.success(result.data.message);
         setDrawerOpen(false);
         setLoading(true);
-        onProjectUpdated?.();
         triggerRefresh();
         setTimeout(() => {
           setLoading(false);
@@ -398,7 +396,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({
         toast.success(result.data.message);
         setSidebar(false);
         setLoading(true);
-        onProjectUpdated?.();
         triggerRefresh();
         setTimeout(() => {
           setLoading(false);

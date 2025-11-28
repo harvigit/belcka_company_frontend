@@ -141,61 +141,6 @@ const TablePagination = () => {
     fetchProjectData();
   }, [projectId, user.company_id]);
 
-  // Fetch addresses for selected project
-  const fetchAddresses = async () => {
-    try {
-      const res = await api.get(`project/get-history?project_id=${projectId}`);
-      if (res.data?.info) {
-        setAddress(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch address", err);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-        company_id: user.company_id,
-        budget: Number(formData.budget),
-      };
-
-      const result = await api.post("project/create", payload);
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          name: "",
-          address: "",
-          budget: "",
-          description: "",
-          code: 0,
-          shift_ids: "",
-          team_ids: "",
-          company_id: user.company_id,
-          is_pricework: false,
-          repeatable_job: false,
-        });
-        fetchProjects();
-        setProjectOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user.company_id && !Number.isNaN(projectId) && projectId !== null) {
-      fetchAddresses();
-    }
-  }, [user.company_id, projectId]);
-
   // if (loading == true) {
   //   return (
   //     <Box
@@ -221,7 +166,6 @@ const TablePagination = () => {
           <CardContent sx={{ flex: 1 }}>
             <ProjectListing
               projectId={projectId}
-              onProjectUpdated={fetchAddresses}
             />
           </CardContent>
         </BlankCard>
