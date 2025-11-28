@@ -17,6 +17,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import { AxiosResponse } from "axios";
 
 interface ArchiveClientProps {
   open: boolean;
@@ -55,7 +56,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
   const fetchArchiveAddress = async () => {
     try {
       setLoading(true);
-      const res = await api.get(
+      const res: AxiosResponse<any> = await api.get(
         `company-clients/archive-list?company_id=${user.company_id}`
       );
       if (res.data?.info) {

@@ -223,7 +223,7 @@ const TablePagination = () => {
     if (teamId == "null") {
       router.push("/apps/teams/list");
     }
-  }, []);
+  }, [teamId]);
 
   // fetch user list
   useEffect(() => {

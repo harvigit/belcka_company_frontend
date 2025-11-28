@@ -30,7 +30,6 @@ export default function PenaltySettings() {
   const [isUsersDirty, setIsUsersDirty] = useState(false);
   const [searchTeam, setSerachTeam] = useState("");
   const [searchUser, setSerachUser] = useState("");
-
   const [swEnabled, setSwEnabled] = useState<boolean>(false);
   const [swValue, setSwValue] = useState<Dayjs | null>(dayjs());
   const [swTemp, setSwTemp] = useState<string>(swValue?.format("HH:mm") ?? "");
@@ -47,8 +46,8 @@ export default function PenaltySettings() {
   const user = session.data?.user as User & { company_id?: number | null };
 
   const fetchCompanySetting = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const res = await api.get("/setting/get-company-settings");
       if (res.data?.data) {
         setEnabled(res.data.data.is_outside_boundary_penalty);
@@ -75,7 +74,6 @@ export default function PenaltySettings() {
   };
 
   const fetchTeams = async () => {
-    setLoading(true);
     try {
       const res = await api.get(
         `get-company-resources?flag=teamList&company_id=${user.company_id}`
@@ -87,11 +85,9 @@ export default function PenaltySettings() {
     } catch (err) {
       console.error(err);
     }
-    setLoading(false);
   };
 
   const fetchUsers = async () => {
-    setLoading(true);
     try {
       const res = await api.get("user/get-user-lists");
       if (res.data?.info) {
@@ -101,7 +97,6 @@ export default function PenaltySettings() {
     } catch (err) {
       console.error(err);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -112,19 +107,26 @@ export default function PenaltySettings() {
     }
   }, [user?.company_id]);
 
-  const handleToggle = async () => {
-    const newStatus = !enabled;
+  const handleToggle = async (
+    overrideStatus?: boolean,
+    overrideTime?: string | null
+  ) => {
+    const newStatus = overrideStatus ?? !enabled;
+
+    setEnabled(newStatus);
+
     if (!newStatus) {
       setShowTeamsList(false);
       setShowUsersList(false);
     }
 
-    setEnabled(newStatus);
-    setLoading(true);
+    const finalTime =
+      overrideTime ?? (value?.isValid() ? value.format("HH:mm") : null);
+
     const payload = {
       is_outside_boundary_penalty: newStatus,
       timeZone,
-      outside_penalty: value ? value.format("HH:mm") : null,
+      outside_penalty: finalTime,
     };
 
     try {
@@ -136,8 +138,15 @@ export default function PenaltySettings() {
         fetchUsers();
       }
     } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSwitchToggle = () => {
+    handleToggle(!enabled);
+  };
+
+  const handleAutoSwitchToggle = () => {
+    handleToggleStopWork(!swEnabled);
   };
 
   const handleUpdateSelectedUsers = async () => {
@@ -190,21 +199,25 @@ export default function PenaltySettings() {
     } catch (err) {}
   };
 
-  const handleToggleStopWork = async () => {
-    const newStatus = !swEnabled;
+  const handleToggleStopWork = async (
+    overrideStatus?: boolean,
+    overrideTime?: string | null
+  ) => {
+    const newStatus = overrideStatus !== undefined ? overrideStatus : swEnabled;
+
     if (!newStatus) {
-      setShowSwTeamsList(false);
-      setShowSwUsersList(false);
+      setShowTeamsList(false);
+      setShowUsersList(false);
     }
 
-    setSwEnabled(newStatus);
-    setLoading(true);
+    const finalTime =
+      overrideTime ?? (swValue?.isValid() ? swValue.format("HH:mm") : null);
 
     try {
       const payload = {
         is_autostop_work_penalty: newStatus,
         timeZone,
-        penalty_time: swValue ? swValue.format("HH:mm") : null,
+        penalty_time: finalTime,
       };
 
       const res = await api.post("setting/save-general-setting", payload);
@@ -215,7 +228,6 @@ export default function PenaltySettings() {
         fetchUsers();
       }
     } finally {
-      setLoading(false);
     }
   };
 
@@ -302,6 +314,19 @@ export default function PenaltySettings() {
   }, [swUsers, searchSwUser]);
 
   const parseDigitsToTime = (digits: string): string | null => {
+    if (digits.includes(":")) {
+      const [hStr, mStr] = digits.split(":");
+      if (hStr === "" || mStr === "") return null;
+      const h = Number(hStr);
+      const m = Number(mStr);
+
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        return `${hStr.padStart(2, "0")}:${mStr.padStart(2, "0")}`;
+      } else {
+        return null;
+      }
+    }
+
     let formatted = "";
 
     if (digits.length === 1) {
@@ -309,7 +334,7 @@ export default function PenaltySettings() {
     } else if (digits.length === 2) {
       formatted = `${digits}:00`;
     } else if (digits.length === 3) {
-      formatted = `${digits.slice(0, 2)}:${digits[2]}0`;
+      formatted = `0${digits.slice(0, 1)}:${digits.slice(1)}`;
     } else if (digits.length === 4) {
       formatted = `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
     } else {
@@ -317,7 +342,7 @@ export default function PenaltySettings() {
     }
 
     const [h, m] = formatted.split(":").map(Number);
-    if (h > 23 || m > 59) return null;
+    if (h > 23 || m > 59 || h < 0 || m < 0) return null;
 
     return formatted;
   };
@@ -356,7 +381,7 @@ export default function PenaltySettings() {
               Enable Outside Working Penalty
             </Typography>
 
-            <IOSSwitch checked={enabled} onChange={handleToggle} />
+            <IOSSwitch checked={enabled} onChange={handleSwitchToggle} />
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -398,29 +423,39 @@ export default function PenaltySettings() {
                     placeholder="HH:MM"
                     size="small"
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      const raw = e.target.value.replace(/[^0-9:]/g, "");
+                      console.log(raw, "raw");
                       setTemp(raw);
                     }}
                     onBlur={() => {
                       const formatted = parseDigitsToTime(temp);
+                      console.log(formatted, "asgdyusa", temp);
                       if (formatted) {
                         setTemp(formatted);
                         setValue(dayjs(formatted, "HH:mm"));
+                        handleToggle(true, formatted);
                       } else {
-                        setTemp(value ? value.format("HH:mm") : "");
+                        const fallback = value ? value.format("HH:mm") : "";
+                        setTemp(fallback);
+                        handleToggle(true, fallback || null);
                       }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const formatted = parseDigitsToTime(temp);
+
                         if (formatted) {
                           setTemp(formatted);
                           setValue(dayjs(formatted, "HH:mm"));
+                          handleToggle(true, formatted);
                         } else {
-                          setTemp(value ? value.format("HH:mm") : "");
+                          const fallback = value ? value.format("HH:mm") : "";
+                          setTemp(fallback);
+                          handleToggle(true, fallback || null);
                         }
                       }
+
                       if (e.key === "Escape") {
                         e.preventDefault();
                         setTemp(value ? value.format("HH:mm") : "");
@@ -765,7 +800,7 @@ export default function PenaltySettings() {
               Enable Stop Work Penalty
             </Typography>
 
-            <IOSSwitch checked={swEnabled} onChange={handleToggleStopWork} />
+            <IOSSwitch checked={swEnabled} onChange={handleAutoSwitchToggle} />
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -807,7 +842,7 @@ export default function PenaltySettings() {
                     placeholder="HH:MM"
                     size="small"
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      const raw = e.target.value.replace(/[^0-9:]/g, "");
                       setSwTemp(raw);
                     }}
                     onBlur={() => {
@@ -815,8 +850,11 @@ export default function PenaltySettings() {
                       if (formatted) {
                         setSwTemp(formatted);
                         setSwValue(dayjs(formatted, "HH:mm"));
+                        handleToggleStopWork(swEnabled, formatted);
                       } else {
-                        setSwTemp(swValue ? swValue.format("HH:mm") : "");
+                        const fallback = swValue ? swValue.format("HH:mm") : "";
+                        setSwTemp(fallback);
+                        handleToggleStopWork(swEnabled, fallback || null);
                       }
                     }}
                     onKeyDown={(e) => {
@@ -826,10 +864,16 @@ export default function PenaltySettings() {
                         if (formatted) {
                           setSwTemp(formatted);
                           setSwValue(dayjs(formatted, "HH:mm"));
+                          handleToggleStopWork(swEnabled, formatted);
                         } else {
-                          setSwTemp(swValue ? swValue.format("HH:mm") : "");
+                          const fallback = swValue
+                            ? swValue.format("HH:mm")
+                            : "";
+                          setSwTemp(fallback);
+                          handleToggleStopWork(swEnabled, fallback || null);
                         }
                       }
+
                       if (e.key === "Escape") {
                         e.preventDefault();
                         setSwTemp(swValue ? swValue.format("HH:mm") : "");

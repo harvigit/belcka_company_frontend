@@ -42,6 +42,11 @@ export const DocumentsTab = ({
   const [searchUser, setSearchUser] = useState<string>("");
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<number>();
+  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
   const [attachmentsPayload, setAttachmentsPayload] = useState<{
     add: Record<string, { before: File[]; after: File[] }>;
     delete: Record<string, string[]>;
@@ -369,7 +374,17 @@ export const DocumentsTab = ({
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
+                        cursor: "pointer"
                       }}
+                      onMouseEnter={(e) => {
+                        setHoveredImage(image.image_url);
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoverPosition({
+                          x: rect.right + 10,
+                          y: rect.top,
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredImage(null)}
                     />
                   </Card>
                   <IconButton
@@ -394,6 +409,31 @@ export const DocumentsTab = ({
                   </IconButton>
                 </Box>
               ))}
+              {/* Hover Preview */}
+              {hoveredImage && (
+                <Box
+                  sx={{
+                    position: "fixed",
+                    top: "20%",
+                    left: "35%",
+                    width: "25%",
+                    maxHeight: "80vh",
+                    zIndex: 2000,
+                    border: "1px solid #ccc",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    backgroundColor: "#fff",
+                    boxShadow: 3,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={hoveredImage}
+                    alt="Preview"
+                    sx={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  />
+                </Box>
+              )}
             </Box>
           </Box>
         ))

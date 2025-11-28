@@ -149,13 +149,20 @@ const ArchiveProject: React.FC<ArchiveProjectProps> = ({
                     alignItems="center"
                     width="100%"
                   >
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight={600}
-                      className="multi-ellipsis"
-                    >
-                      Name: {item.name}
-                    </Typography>
+                    <Box display={"flex"} alignItems={"center"} gap={1}>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        Name:
+                      </Typography>
+                      <Typography
+                        color="textSecondary"
+                        variant="body1"
+                        fontWeight={600}
+                        className="multi-ellipsis"
+                        fontSize={"14px !important"}
+                      >
+                        {item.name}
+                      </Typography>
+                    </Box>
                     <Box display={"flex"} fontSize="10px">
                       <IconButton
                         color="primary"

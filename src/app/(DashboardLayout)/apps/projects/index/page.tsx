@@ -1,15 +1,15 @@
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import ProjectList from "@/app/components/apps/projects/index";
-import { TeamProvider } from "@/app/context/TeamContext";
+import { UserProvider } from "@/app/context/UserContext";
 
 const ProjectListing = () => {
   return (
-    <TeamProvider>
+    <UserProvider>
       <PageContainer title="Project List" description="this is Project List">
         <ProjectList />
       </PageContainer>
-    </TeamProvider>
+    </UserProvider>
   );
 };
 export default ProjectListing;

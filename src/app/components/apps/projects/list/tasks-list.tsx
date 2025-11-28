@@ -171,7 +171,7 @@ const TasksList = ({
         console.error("Error fetching locations", err);
       }
     })();
-  }, [user.company_id]);
+  }, [drawerOpen]);
 
   useEffect(() => {
     if (!formData.trade_id) {
@@ -230,11 +230,7 @@ const TasksList = ({
         setDrawerOpen(false);
         setSelectedTask(null);
         setFormData({});
-        // Refresh list
-        const refresh = await api.get(
-          `project/get-tasks?project_id=${projectId}`
-        );
-        if (refresh.data) setData(refresh.data.info);
+        fetchTasks();
       } else {
       }
     } catch (error) {
@@ -434,7 +430,7 @@ const TasksList = ({
               gap={6}
               justifyContent={"space-between"}
             >
-              <Typography variant="h5" color="textPrimary">
+              <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
                 {info.row.original.status_int == 4 ? info.getValue() : "-"}
               </Typography>
               <Badge

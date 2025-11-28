@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useEffect } from "react";
 import { Box, Grid } from "@mui/system";
 import {
@@ -115,59 +115,41 @@ const Company = () => {
     };
 
     fetchCompanies();
-  }, []);
+  }, [user.company_id]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-
-    getFcmToken();
-    const unsubscribe = onForegroundMessage((payload) => {
-      console.log("📩 New FCM message:", payload);
-      if (Notification.permission === "granted") {
-        new Notification(payload?.notification?.title || "Notification", {
-          body: payload?.notification?.body || "",
-          icon: "/favicon.svg",
-        });
-        fetchFeeds();
-        fetchList();
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  const fetchFeeds = async () => {
-    // setLoading(true);
+  const fetchFeeds = useCallback(async () => {
+    if (!user?.company_id || !user?.id) return;
 
     try {
       const res = await api.get(
         `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
       );
-      if (res.data) {
-        const feeds = res.data.info;
-        setFeed(feeds);
-        setCount(feeds?.[0]?.unread_feeds);
-        setRequestCount(feeds?.[0]?.request_count);
 
-        if (feeds) {
-          const unreadIds = feeds
-            .filter((feed: any) => feed.status === false)
-            .map((feed: any) => feed.id)
-            .join(",");
-          setUnreedFeed(unreadIds);
-          // setLoading(false);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch feeds", err);
+      const feeds = res.data?.info ?? [];
+      setFeed(feeds);
+      setCount(feeds?.[0]?.unread_feeds);
+      setRequestCount(feeds?.[0]?.request_count);
+
+      const unreadIds = feeds
+        .filter((f: any) => !f.status)
+        .map((f: any) => f.id)
+        .join(",");
+
+      setUnreedFeed(unreadIds);
+    } catch (e) {
+      console.error(e);
     }
-    // setLoading(false);
-  };
-  useEffect(() => {
-    fetchFeeds();
   }, []);
+
+  const fetchedOnce = useRef(false);
+
+  useEffect(() => {
+    if (!user?.company_id || !user?.id) return;
+    if (!fetchedOnce.current) {
+      // fetchedOnce.current = true;
+      fetchFeeds();
+    }
+  }, [user?.company_id, user?.id]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -198,29 +180,24 @@ const Company = () => {
     handleClose();
   };
 
-  const unreedFeeds = async () => {
+  const unreedFeeds = useCallback(async () => {
+    if (count === 0 || loading) return;
     setLoading(true);
-    if (count > 0) {
-      try {
-        const payload = {
-          feed_ids: unreedFeed,
-        };
-        const res = await api.post("feed/mark-as-read", payload);
-        if (res.data) {
-          fetchFeeds();
-          setLoading(true);
-        } else {
-          toast.error(res.data.message);
-        }
-      } catch (error) {
-        console.error("Failed to save data:", error);
+
+    try {
+      const payload = { feed_ids: unreedFeed };
+      const res = await api.post("feed/mark-as-read", payload);
+      if (res.data) {
+        await fetchFeeds();
       }
+    } catch (err) {
+      console.error(err);
+    } finally {
       setOpenDrawer(false);
+      setLoading(false);
+      setPage(1);
     }
-    setOpenDrawer(false);
-    setPage(1);
-    setLoading(false);
-  };
+  }, [count, unreedFeed, fetchFeeds, loading]);
 
   const fetchList = useCallback(async () => {
     try {
@@ -303,6 +280,29 @@ const Company = () => {
     //   return url;
     // },
   };
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    getFcmToken();
+    const unsubscribe = onForegroundMessage((payload) => {
+      console.log("📩 New FCM message:", payload);
+      if (Notification.permission === "granted") {
+        new Notification(payload?.notification?.title || "Notification", {
+          body: payload?.notification?.body || "",
+          icon: "/favicon.svg",
+        });
+      }
+      if (payload) {
+        fetchFeeds();
+        fetchList();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user?.id]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
