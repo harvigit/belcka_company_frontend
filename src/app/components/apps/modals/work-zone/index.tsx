@@ -32,6 +32,7 @@ import { User } from "next-auth";
 import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import toast from "react-hot-toast";
+import { AxiosResponse } from "axios";
 
 const containerStyle = { width: "100%", height: "100%" };
 const defaultCenter = { lat: 20.5937, lng: 78.9629 };
@@ -81,7 +82,7 @@ export default function WorkZone({
     if (!user?.company_id) return;
     setLoading(true);
     try {
-      const res = await api.get(
+      const res : AxiosResponse<any>= await api.get(
         `work-zone/get?company_id=${user.company_id}&is_project=${true}`
       );
       setSites(res.data.info || []);
@@ -95,7 +96,7 @@ export default function WorkZone({
   const getJobList = async () => {
     if (!user?.company_id) return;
     try {
-      const res = await api.get(`project/get?company_id=${user.company_id}`);
+      const res : AxiosResponse<any>= await api.get(`project/get?company_id=${user.company_id}`);
       if (res.data.IsSuccess) setProject(res.data.info);
     } catch (err) {}
   };
@@ -254,7 +255,7 @@ export default function WorkZone({
         boundary: JSON.stringify(boundary),
       };
 
-      const response = activeSite.id
+      const response: AxiosResponse<any> = activeSite.id
         ? await api.put(`work-zone/update`, payload)
         : await api.post(`work-zone/create`, payload);
 
@@ -310,7 +311,7 @@ export default function WorkZone({
   const handleDeleteSite = async (id: number) => {
     try {
       setLoading(true);
-      const response = await api.delete(`work-zone/delete?id=${id}`);
+      const response : AxiosResponse<any>= await api.delete(`work-zone/delete?id=${id}`);
       toast.success(response.data.message);
       onSiteUpdate?.(response.data.info?.id || id);
       await getWorkzones();

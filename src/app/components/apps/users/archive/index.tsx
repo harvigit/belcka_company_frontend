@@ -153,7 +153,7 @@ const ArchiveUserList = () => {
   }, []);
 
   const uniqueTeams = useMemo(
-    () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],
+    () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
     [data]
   );
 

@@ -78,6 +78,7 @@ interface TasksListProps {
   };
   shouldRefresh: boolean;
   onUpdate: () => void;
+  onTableReady: any;
 }
 
 const TasksList = ({
@@ -86,6 +87,7 @@ const TasksList = ({
   filters,
   shouldRefresh,
   onUpdate,
+  onTableReady,
 }: TasksListProps) => {
   const [data, setData] = useState<TaskList[]>([]);
   const [loading, setLoading] = useState(false);
@@ -155,7 +157,7 @@ const TasksList = ({
         console.error("Error fetching addresses", err);
       }
     })();
-  }, [drawerOpen, projectId]);
+  }, [drawerOpen !== false, projectId]);
 
   useEffect(() => {
     if (!user.company_id) return;
@@ -204,8 +206,7 @@ const TasksList = ({
         setDeleteModalOpen(false);
         fetchTasks();
       }
-    } catch (error) {
-    }
+    } catch (error) {}
     setDeleteModalOpen(false);
   };
 
@@ -305,11 +306,14 @@ const TasksList = ({
   const columns = useMemo(() => {
     return [
       columnHelper.accessor("company_task_name", {
-        id: "company_task_name",
+        id: "companyTaskName",
         header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
               checked={selectedRowIds.size === data.length && data.length > 0}
+              indeterminate={
+                selectedRowIds.size > 0 && selectedRowIds.size < data.length
+              }
               onChange={(e) => {
                 if (e.target.checked) {
                   setSelectedRowIds(new Set(data.map((_, i) => i)));
@@ -327,21 +331,30 @@ const TasksList = ({
         cell: ({ row }) => {
           const item = row.original;
           const isChecked = selectedRowIds.has(row.index);
+          const [hovered, setHovered] = useState(false);
+
           return (
             <Stack
               direction="row"
               alignItems="center"
-              spacing={4}
+              spacing={2}
               sx={{ pl: 1 }}
+              onMouseEnter={() => setHovered(true)}
+              onMouseLeave={() => setHovered(false)}
             >
               <CustomCheckbox
                 checked={isChecked}
+                onClick={(e) => e.stopPropagation()}
                 onChange={() => {
                   const newSelected = new Set(selectedRowIds);
                   isChecked
                     ? newSelected.delete(row.index)
                     : newSelected.add(row.index);
                   setSelectedRowIds(newSelected);
+                }}
+                sx={{
+                  opacity: hovered || isChecked ? 1 : 0,
+                  transition: "opacity 0.2s ease",
                 }}
               />
               <Typography className="f-14">
@@ -353,7 +366,7 @@ const TasksList = ({
       }),
 
       columnHelper.accessor("address_name", {
-        id: "address_name",
+        id: "addressName",
         header: () => "Address",
         cell: (info) => (
           <Typography className="f-14" sx={{ px: 1.5 }}>
@@ -363,7 +376,7 @@ const TasksList = ({
       }),
 
       columnHelper.accessor("status_text", {
-        id: "status_text",
+        id: "statusText",
         header: () => "Status",
         cell: (info) => {
           const statusInt = info.row.original.status_int;
@@ -409,7 +422,7 @@ const TasksList = ({
       }),
 
       columnHelper.accessor("start_date", {
-        id: "start_date",
+        id: "startDate",
         header: () => "Start date",
         cell: (info) => (
           <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
@@ -419,7 +432,7 @@ const TasksList = ({
       }),
 
       columnHelper.accessor("end_date", {
-        id: "end_date",
+        id: "endDate",
         header: () => "End date",
         cell: (info) => {
           const rowIndex = info.row.index;
@@ -512,6 +525,10 @@ const TasksList = ({
   });
 
   useEffect(() => {
+    if (onTableReady) onTableReady(table); // table is your react-table instance
+  }, [table]);
+
+  useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
   return (
@@ -590,7 +607,7 @@ const TasksList = ({
               <TableBody>
                 {table.getRowModel().rows.length ? (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} sx={{ padding: "10px" }}>
                           {flexRender(
@@ -829,7 +846,7 @@ const TasksList = ({
           </Box>
         </Box>
       </Drawer>
-      
+
       {/* Delete task */}
       <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>

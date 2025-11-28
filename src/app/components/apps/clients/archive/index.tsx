@@ -71,7 +71,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
 
   useEffect(() => {
     fetchArchiveAddress();
-  }, [open]);
+  }, [open !== false]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;
@@ -81,13 +81,19 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
         id: selectedItem.id,
       };
       if (selectedItem.action === "restore") {
-        let response = await api.post("company-clients/unarchive", payload);
+        let response: AxiosResponse<any> = await api.post(
+          "company-clients/unarchive",
+          payload
+        );
         if (response.data.IsSuccess == true) {
           toast.success(response.data.message);
           onWorkUpdated?.();
         }
       } else if (selectedItem.action === "delete") {
-        let response = await api.post(`/company-locations/delete`, payload);
+        let response: AxiosResponse<any> = await api.post(
+          `/company-locations/delete`,
+          payload
+        );
         if (response.data.IsSuccess == true) {
           toast.success(response.data.message);
         }

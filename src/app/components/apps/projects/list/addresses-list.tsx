@@ -21,6 +21,11 @@ import {
   Menu,
   Badge,
   Button,
+  Popover,
+  TextField,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   flexRender,
@@ -37,6 +42,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconDotsVertical,
+  IconTableColumn,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -70,6 +76,7 @@ interface AddressesListProps {
   processedIds: number[];
   // onParentActionPerformed?: (fetchAddresses: Function) => void;
   shouldRefresh: boolean;
+  onTableReady: any
 }
 
 export interface TradeList {
@@ -83,6 +90,7 @@ const AddressesList = ({
   filters,
   onProjectUpdated,
   onSelectionChange,
+  onTableReady,
   processedIds,
   shouldRefresh,
 }: AddressesListProps) => {
@@ -285,6 +293,10 @@ const AddressesList = ({
                 selectedRowIds.size === currentFilteredData.length &&
                 currentFilteredData.length > 0
               }
+              indeterminate={
+                selectedRowIds.size > 0 &&
+                selectedRowIds.size < currentFilteredData.length
+              }
               onChange={(e) => {
                 if (e.target.checked) {
                   setSelectedRowIds(
@@ -305,22 +317,31 @@ const AddressesList = ({
           const item = row.original;
           const isChecked = selectedRowIds.has(item.id);
           const isProcessed = processedIds.includes(item.id);
+          const [hovered, setHovered] = useState(false);
+
           return (
             <Stack
               direction="row"
               alignItems="center"
               spacing={4}
               sx={{ pl: 1 }}
+              onMouseEnter={() => setHovered(true)}
+              onMouseLeave={() => setHovered(false)}
             >
               <CustomCheckbox
                 checked={isChecked}
+                disabled={isProcessed}
+                onClick={(e) => e.stopPropagation()}
                 onChange={() => {
                   if (isProcessed) return;
-
                   const newSelected = new Set(selectedRowIds);
                   if (isChecked) newSelected.delete(item.id);
                   else newSelected.add(item.id);
                   setSelectedRowIds(newSelected);
+                }}
+                sx={{
+                  opacity: hovered || isChecked ? 1 : 0,
+                  transition: "opacity 0.2s ease",
                 }}
               />
 
@@ -337,13 +358,13 @@ const AddressesList = ({
                 }}
                 sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
               >
-                {" "}
-                {item.name ?? "-"}{" "}
+                {item.name ?? "-"}
               </Typography>
             </Stack>
           );
         },
       }),
+
       columnHelper.accessor("progress", {
         id: "progress",
         header: () => "Progress",
@@ -367,7 +388,7 @@ const AddressesList = ({
         },
       }),
       columnHelper.accessor("check_ins", {
-        id: "check_ins",
+        id: "checkIns",
         header: () => "Check-ins",
         cell: (info) => (
           <Typography
@@ -381,7 +402,7 @@ const AddressesList = ({
         ),
       }),
       columnHelper.accessor("start_date", {
-        id: "start_date",
+        id: "startDate",
         header: () => "Start date",
         cell: (info) => (
           <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
@@ -390,7 +411,7 @@ const AddressesList = ({
         ),
       }),
       columnHelper.accessor("end_date", {
-        id: "end_date",
+        id: "endDate",
         header: () => "End date",
         cell: (info) => {
           const rowIndex = info.row.index;
@@ -439,6 +460,10 @@ const AddressesList = ({
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 50 } },
   });
+
+   useEffect(() => {
+  if (onTableReady) onTableReady(table); 
+}, [table]);
 
   useEffect(() => {
     table.setPageIndex(0);
@@ -531,7 +556,13 @@ const AddressesList = ({
                   {
                     // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
+                      <TableRow
+                        key={row.id}
+                        hover
+                        sx={{
+                          cursor: "pointer",
+                        }}
+                      >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id} sx={{ padding: "10px" }}>
                             {flexRender(

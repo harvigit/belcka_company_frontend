@@ -25,6 +25,10 @@ import {
   MenuItem,
   Menu,
   ListItemIcon,
+  Popover,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   IconChartPie,
@@ -69,6 +73,7 @@ import MapGantt from "@/app/components/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 import Link from "next/link";
 import { IconNotes } from "@tabler/icons-react";
+import { IconTableColumn } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -112,8 +117,7 @@ interface Boundary {
   radius: number;
 }
 
-const TablePagination: React.FC<ProjectListingProps> = ({
-}) => {
+const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const handleSelectedRows = (ids: number[]) => {
@@ -159,6 +163,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({
   const [sidebar, setSidebar] = useState(false);
   const COOKIE_PREFIX = "project_";
   const projectID = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
+  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+  const [search, setSearch] = useState("");
+  const [update, setUpdate] = useState(0);
+  const [currentTable, setCurrentTable] = useState<any>(null);
+
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
     lng: number;
@@ -198,6 +207,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     setAnchorEl(null);
   };
 
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl2(event.currentTarget);
+  };
+  const handlePopoverClose = () => setAnchorEl2(null);
+
   useEffect(() => {
     const fetchTrades = async () => {
       try {
@@ -210,8 +224,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
       }
     };
     fetchTrades();
-    console.log(drawerOpen,'drawerOpen')
-  }, [drawerOpen == true]);
+  }, [drawerOpen !== false]);
 
   useEffect(() => {
     if (projectId) {
@@ -279,7 +292,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({
     if (projectID) {
       fetchAddresses();
     }
-  }, [value == 0]);
+  }, [value]);
 
   const fetchArchiveAddress = async () => {
     if (!projectId) return;
@@ -761,20 +774,79 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             flexWrap="wrap"
             mt={{ xs: 2, sm: 0 }}
           >
-            {selectedIds.length > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<IconTrash width={18} />}
-                onClick={() => setOpenDialog(true)}
+            <Box display={"flex"}>
+              {selectedIds.length > 0 && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<IconTrash width={18} />}
+                  onClick={() => setOpenDialog(true)}
+                >
+                  Archive
+                </Button>
+              )}
+              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+                <IconTableColumn />
+              </IconButton>
+              <Popover
+                open={Boolean(anchorEl2)}
+                anchorEl={anchorEl2}
+                onClose={handlePopoverClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
               >
-                Archive
-              </Button>
-            )}
+                <TextField
+                  size="small"
+                  placeholder="Search"
+                  fullWidth
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  sx={{ mb: 1 }}
+                />
 
-            <IconButton onClick={handleClick} size="small">
-              <IconDotsVertical width={18} />
-            </IconButton>
+                <FormGroup>
+                  {currentTable
+                    .getAllLeafColumns()
+                    .filter((col: any) => !["conflicts"].includes(col.id))
+                    .filter((col: any) =>
+                      col.id.toLowerCase().includes(search.toLowerCase())
+                    )
+                    .map((col: any) => (
+                      <FormControlLabel
+                        key={col.id}
+                        control={
+                          <Checkbox
+                            checked={col.getIsVisible()}
+                            onChange={() => {
+                              col.setVisibility(!col.getIsVisible());
+                              setUpdate((u) => u + 1);
+                            }}
+                            disabled={col.id === "conflicts"}
+                          />
+                        }
+                        sx={{ textTransform: "none" }}
+                        label={
+                          col.columnDef.meta?.label ||
+                          (typeof col.columnDef.header === "string" &&
+                          col.columnDef.header.trim() !== ""
+                            ? col.columnDef.header
+                            : col.id
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (str: string) =>
+                                  str.toUpperCase()
+                                )
+                                .trim())
+                        }
+                      />
+                    ))}
+                </FormGroup>
+              </Popover>
+
+              <IconButton onClick={handleClick} size="small">
+                <IconDotsVertical width={18} />
+              </IconButton>
+            </Box>
 
             <Menu
               id="basic-menu"
@@ -1169,6 +1241,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             onSelectionChange={handleSelectedRows}
             processedIds={processedIds}
             shouldRefresh={shouldRefresh}
+            onTableReady={(tableInstance: any) =>
+              setCurrentTable(tableInstance)
+            }
           />
         )}
         {value === 1 && (
@@ -1178,6 +1253,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({
             filters={filters}
             shouldRefresh={shouldRefresh}
             onUpdate={triggerRefresh}
+            onTableReady={(tableInstance: any) =>
+              setCurrentTable(tableInstance)
+            }
           />
         )}
 

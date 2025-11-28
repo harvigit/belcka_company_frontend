@@ -32,6 +32,7 @@ import AnnouncementsList from "@/app/components/apps/settings/announcement";
 import UserRequests from "@/app/components/apps/requests/list";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { AxiosResponse } from "axios";
 
 const STORAGE_KEY = "feed-date-range";
 const loadDateRangeFromStorage = () => {
@@ -105,7 +106,7 @@ const Company = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await api.get(
+        const response: AxiosResponse<any> = await api.get(
           `user/switch-company-list?user_id=${user.id}`
         );
         setCompanies(response.data.info);
@@ -121,7 +122,7 @@ const Company = () => {
     if (!user?.company_id || !user?.id) return;
 
     try {
-      const res = await api.get(
+      const res : AxiosResponse<any> = await api.get(
         `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
       );
 
@@ -165,7 +166,7 @@ const Company = () => {
         company_id: companyId,
         user_id: user.id,
       };
-      const response = await api.post("company/switch-company", payload);
+      const response : AxiosResponse<any> = await api.post("company/switch-company", payload);
       if (response.data.IsSuccess == true) {
         toast.success(response.data.message);
         setTimeout(() => {
@@ -186,7 +187,7 @@ const Company = () => {
 
     try {
       const payload = { feed_ids: unreedFeed };
-      const res = await api.post("feed/mark-as-read", payload);
+      const res : AxiosResponse<any> = await api.post("feed/mark-as-read", payload);
       if (res.data) {
         await fetchFeeds();
       }
@@ -202,7 +203,7 @@ const Company = () => {
   const fetchList = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get(
+      const res : AxiosResponse<any> = await api.get(
         `announcements/get-announcements?company_id=${user.company_id}&user_id=${user.id}`
       );
       const data = res.data.info || [];

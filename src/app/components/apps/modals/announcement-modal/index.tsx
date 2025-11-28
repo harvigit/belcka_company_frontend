@@ -24,6 +24,7 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { useDropzone } from "react-dropzone";
+import { AxiosResponse } from "axios";
 
 type Props = {
   open: boolean;
@@ -155,7 +156,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   useEffect(() => {
     const getTeams = async () => {
       try {
-        const res = await api.get(
+        const res : AxiosResponse<any>= await api.get(
           `get-company-resources?flag=teamList&company_id=${user?.company_id}`
         );
         if (res.data?.info) setTeams(res.data.info);
@@ -170,7 +171,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await api.get("user/get-user-lists");
+        const res : AxiosResponse<any>= await api.get("user/get-user-lists");
         if (res.data?.info) setUsers(res.data.info);
       } catch (err) {
         console.error("Failed to fetch users", err);
@@ -202,7 +203,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
 
     try {
       setLoading(true);
-      const res = await api.post("announcements/create", fd, {
+      const res : AxiosResponse<any>= await api.post("announcements/create", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

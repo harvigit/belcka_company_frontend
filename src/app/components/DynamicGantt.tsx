@@ -16,6 +16,7 @@ import dayjs from "dayjs";
 import api from "@/utils/axios";
 import DateRangePickerBox from "./common/DateRangePickerBox";
 import { format } from "date-fns";
+import { AxiosResponse } from "axios";
 
 type Task = {
   id: string;
@@ -115,7 +116,7 @@ export default function DynamicGantt({
 
     setLoading(true);
     try {
-      const res = await api.get("address/get", {
+      const res : AxiosResponse<any> = await api.get("address/get", {
         params: {
           project_id: projectId,
           company_id: companyId,

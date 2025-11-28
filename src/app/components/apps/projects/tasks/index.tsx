@@ -130,7 +130,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
         console.error("Error fetching addresses", err);
       }
     })();
-  }, [open, projectId, address_id]);
+  }, [open !== false, projectId, address_id]);
 
   useEffect(() => {
     if (!userCompanyId) return;

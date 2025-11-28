@@ -14,6 +14,7 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { AxiosResponse } from "axios";
 
 interface FormData {
   name: string;
@@ -83,7 +84,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   useEffect(() => {
     const getShifts = async () => {
       try {
-        const res = await api.get(
+        const res : AxiosResponse<any>= await api.get(
           `get-company-resources?flag=shiftList&company_id=${user.company_id}`
         );
         if (res.data?.info) {
@@ -100,7 +101,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   useEffect(() => {
     const getTeams = async () => {
       try {
-        const res = await api.get(
+        const res : AxiosResponse<any>= await api.get(
           `get-company-resources?flag=teamList&company_id=${user.company_id}`
         );
         if (res.data?.info) {
@@ -117,7 +118,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   useEffect(() => {
     const getGeofence = async () => {
       try {
-        const res = await api.get(
+        const res: AxiosResponse<any> = await api.get(
           `work-zone/get?company_id=${user.company_id}`
         );
         if (res.data?.info) {

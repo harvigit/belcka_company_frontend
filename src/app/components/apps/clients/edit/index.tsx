@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import { User } from "next-auth";
+import { AxiosResponse } from "axios";
 
 export type ProjectList = {
   id: number;
@@ -66,7 +67,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   // Fetch all projects
   const fetchProjects = async () => {
     try {
-      const res = await api.get(`project/get?company_id=${user.company_id}`);
+      const res: AxiosResponse<any> = await api.get(`project/get?company_id=${user.company_id}`);
       if (res.data?.info) {
         setProjects(res.data.info);
       }
@@ -79,7 +80,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   const fetchClients = useCallback(async () => {
     if (!id) return;
     try {
-      const res = await api.get(
+      const res : AxiosResponse<any>= await api.get(
         `company-clients/get?company_id=${user.company_id}&client_id=${id}`
       );
       if (res.data?.info?.length > 0) {
@@ -140,7 +141,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
         expire_date: expireDate
       };
 
-      const response = await api.post("company-clients/edit", payload);
+      const response : AxiosResponse<any>= await api.post("company-clients/edit", payload);
 
       if (response.data.IsSuccess) {
         onWorkUpdated?.();

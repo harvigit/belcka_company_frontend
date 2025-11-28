@@ -59,6 +59,7 @@ import CreateTask from "../create";
 import ArchiveTask from "../archive";
 import { IconEdit } from "@tabler/icons-react";
 import EditTask from "../edit";
+import { AxiosResponse } from "axios";
 
 dayjs.extend(customParseFormat);
 
@@ -176,7 +177,7 @@ const TablePagination = () => {
   useEffect(() => {
     const fetchTrades = async () => {
       try {
-        const res = await api.get(
+        const res : AxiosResponse<any> = await api.get(
           `get-company-resources?flag=tradeList&company_id=${id.company_id}`
         );
         if (res.data) setTrade(res.data.info);
@@ -185,7 +186,7 @@ const TablePagination = () => {
       }
     };
     fetchTrades();
-  }, []);
+  }, [id.company_id]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({

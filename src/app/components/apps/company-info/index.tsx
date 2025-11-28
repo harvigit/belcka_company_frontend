@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { AxiosResponse } from "axios";
 
 dayjs.extend(customParseFormat);
 
@@ -36,7 +37,7 @@ const TablePagination = () => {
     const fetchCompany = async () => {
       try {
         setLoading(true);
-        const res = await api.get(
+        const res : AxiosResponse<any>= await api.get(
           `company/get-company?company_id=${user.company_id}`
         );
         if (res.data) {

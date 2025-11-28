@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Table,
@@ -25,6 +25,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  InputAdornment,
 } from "@mui/material";
 
 import {
@@ -33,11 +34,15 @@ import {
   Polygon,
   Circle,
   Marker,
+  OverlayView,
 } from "@react-google-maps/api";
 import { Circle as GCircle } from "@react-google-maps/api";
 import { IconEye, IconTrash, IconX, IconEdit } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { AxiosResponse } from "axios";
+import { width } from "@mui/system";
+import { IconSearch } from "@tabler/icons-react";
 
 type Props = {
   open: boolean;
@@ -57,6 +62,7 @@ export default function MapGantt({
   const [geofences, setGeofences] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [addresses, setAddresses] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -80,7 +86,7 @@ export default function MapGantt({
 
   const loadAddressList = async () => {
     try {
-      const res = await api.get("address/get", {
+      const res: AxiosResponse<any> = await api.get("address/get", {
         params: { project_id: projectId },
       });
 
@@ -92,7 +98,7 @@ export default function MapGantt({
 
   const fetchProjectDetail = async () => {
     try {
-      const res = await api.get("address/zones", {
+      const res: AxiosResponse<any> = await api.get("address/zones", {
         params: { project_id: projectId },
       });
 
@@ -108,7 +114,9 @@ export default function MapGantt({
     if (!deleteId) return;
 
     try {
-      const res = await api.delete(`work-zone/delete?id=${deleteId}`);
+      const res: AxiosResponse<any> = await api.delete(
+        `work-zone/delete?id=${deleteId}`
+      );
 
       if (res.data.IsSuccess) {
         toast.success("Zone deleted");
@@ -122,14 +130,47 @@ export default function MapGantt({
     }
   };
 
+  const filterData = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase();
+
+    if (!search) return geofences;
+
+    return geofences.filter(
+      (item) =>
+        item.address?.toLowerCase().includes(search) ||
+        item.address_name?.toLowerCase().includes(search) ||
+        item.name?.toLowerCase().includes(search)
+    );
+  }, [geofences, searchTerm]);
+
   return (
     <Box p={2}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5" fontWeight={700}>
-          Address Zones
-        </Typography>
-
-        <Box>
+        <Box display={"flex"} width={"80%"} gap={3} alignItems={"center"}>
+          <Typography variant="h5" fontWeight={700}>
+            Address Zones
+          </Typography>
+          <TextField
+            id="search"
+            fullWidth
+            type="text"
+            size="small"
+            variant="outlined"
+            placeholder="Search..."
+            className="project_search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconSearch size={16} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: { xs: "90%", sm: "50%", md: "30%", lg: "25%" } }}
+          />
+        </Box>
+        <Box display={"flex"} alignItems={"center"} justifyItems={"center"}>
           <Button
             variant="contained"
             color="primary"
@@ -160,7 +201,7 @@ export default function MapGantt({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {geofences.map((z) => (
+                {filterData.map((z) => (
                   <TableRow key={z.id}>
                     <TableCell>
                       <Box>
@@ -203,7 +244,7 @@ export default function MapGantt({
                   </TableRow>
                 ))}
 
-                {geofences.length === 0 && (
+                {filterData.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={3}
@@ -226,13 +267,7 @@ export default function MapGantt({
           maxHeight="100%"
           overflow="auto"
         >
-          {!selected && (
-            <Paper sx={{ p: 4, textAlign: "center", flexShrink: 0 }}>
-              <Typography color="gray">
-                Select a zone to view or edit.
-              </Typography>
-            </Paper>
-          )}
+          {!selected && <AllZonesMap zones={filterData} isLoaded={isLoaded} />}
 
           {selected?.mode === "view" && (
             <ViewZoneMap
@@ -319,6 +354,86 @@ export default function MapGantt({
   );
 }
 
+const AllZonesMap = ({ zones, isLoaded }: any) => {
+  if (!isLoaded) return <p>Loading map...</p>;
+
+  const defaultCenter = { lat: 20.5937, lng: 78.9629 };
+
+  const mapCenter = zones.length
+    ? { lat: Number(zones[0].latitude), lng: Number(zones[0].longitude) }
+    : defaultCenter;
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  const onZoneClick = (zone: any) => {
+    console.log(zone, mapRef);
+    if (!mapRef.current) return;
+
+    const newCenter = {
+      lat: Number(zone.latitude),
+      lng: Number(zone.longitude),
+    };
+
+    mapRef.current.panTo(newCenter);
+    mapRef.current.setZoom(18);
+  };
+
+  return (
+    <Paper sx={{ height: "90%", width: "100%" }}>
+      <GoogleMap
+        mapContainerStyle={{ width: "100%", height: "100%" }}
+        zoom={5}
+        center={mapCenter}
+        onLoad={(map) => {
+          mapRef.current = map;
+        }}
+      >
+        {zones.map((zone: any) => {
+          const center = {
+            lat: Number(zone.latitude),
+            lng: Number(zone.longitude),
+          };
+
+          return (
+            <React.Fragment key={zone.id}>
+              <OverlayView
+                position={center}
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <Box
+                  onClick={() => onZoneClick(zone)}
+                  sx={{
+                    cursor: "pointer",
+                    display: "flex",
+                    color: `${zone.color}`,
+                    width: "max-content",
+                  }}
+                  className="map-site-label"
+                >
+                  <Typography> {zone.name}</Typography>
+                </Box>
+              </OverlayView>
+
+              <Marker
+                position={center}
+                icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 0 }}
+              />
+
+              <Circle
+                center={center}
+                radius={Number(zone.radius)}
+                options={{
+                  strokeColor: zone.color || "#1976d2",
+                  fillColor: (zone.color || "#1976d2") + "33",
+                }}
+              />
+            </React.Fragment>
+          );
+        })}
+      </GoogleMap>
+    </Paper>
+  );
+};
+
 // VIEW ZONE MAP
 const ViewZoneMap = ({ zone, isLoaded }: any) => {
   if (!isLoaded) return <p>Loading map...</p>;
@@ -329,7 +444,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
   };
 
   return (
-    <Paper sx={{ height: 500 }}>
+    <Paper sx={{ height: "90%" }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
         zoom={17}
@@ -486,7 +601,10 @@ const AddZone = ({
         }),
       };
 
-      const res = await api.post("work-zone/create", payload);
+      const res: AxiosResponse<any> = await api.post(
+        "work-zone/create",
+        payload
+      );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         onAdded();
@@ -530,7 +648,7 @@ const AddZone = ({
       {/* Address Search Box */}
       <TextField
         fullWidth
-        label="Zone Address"
+        label="Search location"
         value={name}
         onChange={handleInputChange}
         placeholder="Search location..."
@@ -734,7 +852,10 @@ const EditZone = ({
         }),
       };
 
-      const res = await api.put("work-zone/update", payload);
+      const res: AxiosResponse<any> = await api.put(
+        "work-zone/update",
+        payload
+      );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         onSaved();
@@ -751,9 +872,24 @@ const EditZone = ({
         Edit Zone
       </Typography>
 
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Address title</InputLabel>
+        <Select
+          value={addressId || ""}
+          label="Select Address"
+          onChange={(e) => handleAddressChange(Number(e.target.value))}
+        >
+          {addresses.map((a: any) => (
+            <MenuItem key={a.id} value={a.id}>
+              {a.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
       <TextField
         fullWidth
-        label="Zone Address"
+        label="Search location"
         name="zoneAddress"
         value={name}
         onChange={handleInputChange}
@@ -781,21 +917,6 @@ const EditZone = ({
           ))}
         </List>
       )}
-
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Select Address</InputLabel>
-        <Select
-          value={addressId || ""}
-          label="Select Address"
-          onChange={(e) => handleAddressChange(Number(e.target.value))}
-        >
-          {addresses.map((a: any) => (
-            <MenuItem key={a.id} value={a.id}>
-              {a.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
 
       <Typography fontWeight={600}>Area size [{radius} Meter]</Typography>
       <Slider

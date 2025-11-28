@@ -340,7 +340,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     if (companyId) {
       fetchTrades();
     }
-  }, [companyId]);
+  }, [isCodeVerified]);
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
