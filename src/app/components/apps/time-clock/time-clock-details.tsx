@@ -590,11 +590,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 start_time: newStart,
                 end_time: newEnd,
             });
-
-            cancelEditingField(worklogId);
+            
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            
             onDataChange?.();
         } catch (error) {
             console.error('Error saving worklog:', error);
@@ -605,6 +605,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return newSet;
             });
         }
+
+        cancelEditingField(worklogId);
     };
 
     const saveShiftChanges = async (worklogId: string, originalLog: any) => {

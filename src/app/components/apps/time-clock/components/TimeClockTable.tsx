@@ -226,8 +226,13 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         color: '#fff',
                                                         backgroundColor: '#fc4b6c',
                                                         borderRadius: '50%',
-                                                        display: 'inline-block',
-                                                        padding: '2px 6px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        minWidth: '24px',
+                                                        minHeight: '24px',
+                                                        padding: '4px',
+                                                        aspectRatio: '1/1',
                                                     }}
                                                 >
                                                     {conflictDaysCount}
@@ -388,8 +393,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
-                                                            gap: 1,
-                                                            height: '100%'
+                                                            height: '100%',
+                                                            position: 'relative'
                                                         }}>
                                                             <Typography variant="h6" sx={{ textAlign: 'center' }}>{rowData.date}</Typography>
                                                             {!isLogLocked && !hasRecords && (
@@ -398,12 +403,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     height: '100%',
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
+                                                                    position: 'absolute',
+                                                                    right: '8px',
                                                                 }}>
                                                                     <IconButton
                                                                         onClick={() => startAddingNewRecord(rowData.date as string, projects as any, shifts as any)}
                                                                         size="small"
                                                                         sx={{
-                                                                            paddingY: 0,
+                                                                            padding: 0,
+                                                                            minWidth: 'auto',
+                                                                            minHeight: 'auto',
+                                                                            width: '24px',
+                                                                            height: '24px',
                                                                             '&:hover': { backgroundColor: 'transparent' }
                                                                         }}
                                                                         title="Add new record"
@@ -1003,8 +1014,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
-                                                            gap: 1,
-                                                            height: '100%'
+                                                            height: '100%',
+                                                            position: 'relative'
                                                         }}>
                                                             <Typography variant="h6" sx={{ textAlign: 'center' }}>{row.original.date}</Typography>
                                                             {!isRowLocked && (
@@ -1012,12 +1023,21 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     display: 'none',
                                                                     height: '100%',
                                                                     alignItems: 'center',
-                                                                    justifyContent: 'center'
+                                                                    justifyContent: 'center',
+                                                                    position: 'absolute',
+                                                                    right: '8px',
                                                                 }}>
                                                                     <IconButton
                                                                         onClick={() => startAddingNewRecord(row.original.date as string, projects as any, shifts as any)}
                                                                         size="small"
-                                                                        sx={{ '&:hover': { backgroundColor: 'transparent' } }}
+                                                                        sx={{
+                                                                            padding: 0,
+                                                                            minWidth: 'auto',
+                                                                            minHeight: 'auto',
+                                                                            width: '24px',
+                                                                            height: '24px',
+                                                                            '&:hover': { backgroundColor: 'transparent' }
+                                                                        }}
                                                                         title="Add new record"
                                                                     >
                                                                         <IconPlus size={16} color="#1976d2"/>

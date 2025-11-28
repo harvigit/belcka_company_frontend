@@ -210,17 +210,17 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
 
     return isEdited && editedByName && editedAt ? (
         <Tooltip
-            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`}
+            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : ``}
             arrow
             placement="top"
             sx={tooltipStyles}
         >
-            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`}>
+            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ``}>
                 {cellContent}
             </Box>
         </Tooltip>
     ) : (
-        <Box title={isLocked ? 'This worklog is locked and cannot be edited' : `Click to edit time`}>
+        <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ``}>
             {cellContent}
         </Box>
     );

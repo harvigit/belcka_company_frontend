@@ -32,74 +32,87 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
     ];
 
     return (
-        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Stack direction="row" spacing={6} alignItems="center">
-                {headerDetails.map((stat, index) => (
-                    <Box key={index} textAlign="center">
-                        <Typography variant="h6" fontWeight={700} color="#8b939c">
-                            {stat.value}
-                        </Typography>
-                        <Typography variant="caption" color="textSecondary">
-                            {stat.label}
-                        </Typography>
-                    </Box>
-                ))}
-            </Stack>
+        <Box
+            sx={{
+                p: 2,
+                borderBottom: '1px solid #e0e0e0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end', // everything pushed to the right
+            }}
+        >
+            {/* This wrapper keeps the stats and the button nicely grouped on the right */}
+            <Stack direction="row" spacing={4} alignItems="center">
+                {/* 1. Your header stats */}
+                <Stack direction="row" spacing={6} alignItems="center">
+                    {headerDetails.map((stat, index) => (
+                        <Box key={index} textAlign="center">
+                            <Typography variant="h6" fontWeight={700} color="#8b939c">
+                                {stat.value}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                                {stat.label}
+                            </Typography>
+                        </Box>
+                    ))}
+                </Stack>
 
-            <Stack>
-                <IconButton onClick={handlePopoverOpen}>
-                    <IconTableColumn />
-                </IconButton>
-                <Popover
-                    open={Boolean(anchorEl)}
-                    anchorEl={anchorEl}
-                    onClose={handlePopoverClose}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                    PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
-                >
-                    <TextField
-                        size="small"
-                        placeholder="Search"
-                        fullWidth
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        sx={{ mb: 1 }}
-                    />
-                    <FormGroup>
-                        {table
-                            .getAllLeafColumns()
-                            .filter((col: any) => {
-                                const excludedColumns = ['conflicts'];
-                                if (excludedColumns.includes(col.id)) return false;
+                {/* 2. Column visibility icon button + popover */}
+                <Box sx={{ position: 'relative' }}>
+                    <IconButton onClick={handlePopoverOpen}>
+                        <IconTableColumn />
+                    </IconButton>
 
-                                return col.id.toLowerCase().includes(search.toLowerCase());
-                            })
-                            .map((col: any) => (
-                                <FormControlLabel
-                                    key={col.id}
-                                    control={
-                                        <Checkbox
-                                            checked={col.getIsVisible()}
-                                            onChange={col.getToggleVisibilityHandler()}
-                                            disabled={col.id === 'conflicts'}
-                                        />
-                                    }
-                                    sx={{ textTransform: 'none' }}
-                                    label={
-                                        col.columnDef.meta?.label ||
-                                        (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
+                    <Popover
+                        open={Boolean(anchorEl)}
+                        anchorEl={anchorEl}
+                        onClose={handlePopoverClose}
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                        PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+                    >
+                        <TextField
+                            size="small"
+                            placeholder="Search columns..."
+                            fullWidth
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            sx={{ mb: 1 }}
+                        />
+
+                        <FormGroup>
+                            {table
+                                .getAllLeafColumns()
+                                .filter((col: any) => {
+                                    const excludedColumns = ['conflicts'];
+                                    if (excludedColumns.includes(col.id)) return false;
+                                    return col.id.toLowerCase().includes(search.toLowerCase());
+                                })
+                                .map((col: any) => (
+                                    <FormControlLabel
+                                        key={col.id}
+                                        control={
+                                            <Checkbox
+                                                checked={col.getIsVisible()}
+                                                onChange={col.getToggleVisibilityHandler()}
+                                                disabled={col.id === 'conflicts'}
+                                            />
+                                        }
+                                        label={
+                                            col.columnDef.meta?.label ||
+                                            (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
                                                 ? col.columnDef.header
                                                 : col.id
                                                     .replace(/([A-Z])/g, ' $1')
                                                     .replace(/^./, (str: string) => str.toUpperCase())
-                                                    .trim()
-                                        )
-                                    }
-                                />
-                            ))}
-                    </FormGroup>
-                </Popover>
+                                                    .trim())
+                                        }
+                                        sx={{ textTransform: 'none' }}
+                                    />
+                                ))}
+                        </FormGroup>
+                    </Popover>
+                </Box>
             </Stack>
         </Box>
     );
