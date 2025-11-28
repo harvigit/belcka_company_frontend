@@ -307,7 +307,7 @@ const TimeClock = () => {
 
             columnHelper.accessor('user_name', {
                 id: 'user_name',
-                header: '...',
+                header: 'Name',
                 cell: (info: any) => {
                     const row = info.row.original;
                     return (
