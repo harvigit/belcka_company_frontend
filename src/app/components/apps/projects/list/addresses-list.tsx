@@ -76,7 +76,7 @@ interface AddressesListProps {
   processedIds: number[];
   // onParentActionPerformed?: (fetchAddresses: Function) => void;
   shouldRefresh: boolean;
-  onTableReady: any
+  onTableReady: any;
 }
 
 export interface TradeList {
@@ -461,13 +461,10 @@ const AddressesList = ({
     initialState: { pagination: { pageSize: 50 } },
   });
 
-   useEffect(() => {
-  if (onTableReady) onTableReady(table); 
-}, [table]);
-
   useEffect(() => {
+    if (onTableReady) onTableReady(table);
     table.setPageIndex(0);
-  }, [searchTerm, table]);
+  }, [table]);
 
   // if (loading) {
   //   return (

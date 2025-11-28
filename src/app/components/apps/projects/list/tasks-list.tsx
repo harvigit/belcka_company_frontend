@@ -525,12 +525,9 @@ const TasksList = ({
   });
 
   useEffect(() => {
-    if (onTableReady) onTableReady(table); // table is your react-table instance
-  }, [table]);
-
-  useEffect(() => {
+    if (onTableReady) onTableReady(table);
     table.setPageIndex(0);
-  }, [searchTerm, table]);
+  }, [table]);
   return (
     <Grid container spacing={3}>
       <Grid size={{ xs: 12 }}>

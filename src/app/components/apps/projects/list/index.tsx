@@ -165,6 +165,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const projectID = Cookies.get(COOKIE_PREFIX + user.id + user.company_id);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
+  const [columnVisibility, setColumnVisibilityState] = useState<
+    Record<string, boolean>
+  >({});
   const [update, setUpdate] = useState(0);
   const [currentTable, setCurrentTable] = useState<any>(null);
 
@@ -807,29 +810,38 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
                 <FormGroup>
                   {currentTable
-                    .getAllLeafColumns()
-                    .filter((col: any) => !["conflicts"].includes(col.id))
-                    .filter((col: any) =>
-                      col.id.toLowerCase().includes(search.toLowerCase())
+                    ?.getAllLeafColumns()
+                    .filter((col: any) => !["conflicts"].includes(col.id)) // Exclude conflicts
+                    .filter(
+                      (col: any) =>
+                        col.id.toLowerCase().includes(search.toLowerCase()) // Filter by search term
                     )
                     .map((col: any) => (
                       <FormControlLabel
                         key={col.id}
                         control={
                           <Checkbox
-                            checked={col.getIsVisible()}
-                            onChange={() => {
-                              col.setVisibility(!col.getIsVisible());
-                              setUpdate((u) => u + 1);
+                            checked={
+                              columnVisibility[col.id] ?? col.getIsVisible()
+                            } // Bind checkbox state to local visibility state
+                            onChange={(e) => {
+                              if (!currentTable) return;
+
+                              const newVisibility = {
+                                ...columnVisibility,
+                                [col.id]: e.target.checked, // Update the visibility of this column
+                              };
+
+                              setColumnVisibilityState(newVisibility); // Update the local visibility state
+                              currentTable.setColumnVisibility(newVisibility); // Apply it to the table
+                              setUpdate((u) => u + 1); // Trigger re-render to update the UI
                             }}
-                            disabled={col.id === "conflicts"}
+                            disabled={col.id === "conflicts"} // Optionally disable some columns
                           />
                         }
-                        sx={{ textTransform: "none" }}
                         label={
                           col.columnDef.meta?.label ||
-                          (typeof col.columnDef.header === "string" &&
-                          col.columnDef.header.trim() !== ""
+                          (typeof col.columnDef.header === "string"
                             ? col.columnDef.header
                             : col.id
                                 .replace(/([A-Z])/g, " $1")
