@@ -24,6 +24,10 @@ import {
   Menu,
   ListItemIcon,
   Tooltip,
+  Popover,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   flexRender,
@@ -41,6 +45,7 @@ import {
   IconFilter,
   IconNotes,
   IconSearch,
+  IconTableColumn,
   IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -88,6 +93,10 @@ const TablePagination = () => {
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
+  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+  const [search, setSearch] = useState("");
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
   const [formData, setFormData] = useState<any>({
     id: 0,
     name: "",
@@ -213,12 +222,16 @@ const TablePagination = () => {
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
             }
-            // indeterminate={
-            //   selectedRowIds.size > 0 &&
-            //   selectedRowIds.size < filteredData.length
-            // }
+            indeterminate={
+              selectedRowIds.size > 0 &&
+              selectedRowIds.size < filteredData.length
+            }
             onChange={(e) => {
-              if (e.target.checked) {
+              e.stopPropagation();
+              e.preventDefault();
+              const isChecked = e.target.checked;
+
+              if (isChecked) {
                 setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
@@ -234,6 +247,7 @@ const TablePagination = () => {
       cell: ({ row }) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
+        const showCheckbox = isChecked || hoveredRow === item.id;
 
         return (
           <Stack
@@ -241,10 +255,15 @@ const TablePagination = () => {
             alignItems="center"
             spacing={4}
             sx={{ pl: 1 }}
+            onMouseEnter={() => setHoveredRow(item.id)}
+            onMouseLeave={() => setHoveredRow(null)}
           >
             <CustomCheckbox
               checked={isChecked}
-              onChange={() => {
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
                   newSelected.delete(item.id);
@@ -252,6 +271,11 @@ const TablePagination = () => {
                   newSelected.add(item.id);
                 }
                 setSelectedRowIds(newSelected);
+              }}
+              sx={{
+                opacity: showCheckbox ? 1 : 0,
+                pointerEvents: showCheckbox ? "auto" : "none",
+                transition: "opacity 0.2s ease",
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
@@ -279,6 +303,11 @@ const TablePagination = () => {
       },
     }),
   ];
+
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl2(event.currentTarget);
+  };
+  const handlePopoverClose = () => setAnchorEl2(null);
 
   const table = useReactTable({
     data: filteredData,
@@ -357,6 +386,59 @@ const TablePagination = () => {
               Archive
             </Button>
           )}
+          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+            <IconTableColumn />
+          </IconButton>
+          <Popover
+            open={Boolean(anchorEl2)}
+            anchorEl={anchorEl2}
+            onClose={handlePopoverClose}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+          >
+            <TextField
+              size="small"
+              placeholder="Search"
+              fullWidth
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              sx={{ mb: 1 }}
+            />
+            <FormGroup>
+              {table
+                .getAllLeafColumns()
+                .filter((col: any) => {
+                  const excludedColumns = ["conflicts"];
+                  if (excludedColumns.includes(col.id)) return false;
+
+                  return col.id.toLowerCase().includes(search.toLowerCase());
+                })
+                .map((col: any) => (
+                  <FormControlLabel
+                    key={col.id}
+                    control={
+                      <Checkbox
+                        checked={col.getIsVisible()}
+                        onChange={col.getToggleVisibilityHandler()}
+                        disabled={col.id === "conflicts"}
+                      />
+                    }
+                    sx={{ textTransform: "none" }}
+                    label={
+                      col.columnDef.meta?.label ||
+                      (typeof col.columnDef.header === "string" &&
+                      col.columnDef.header.trim() !== ""
+                        ? col.columnDef.header
+                        : col.id
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str: string) => str.toUpperCase())
+                            .trim())
+                    }
+                  />
+                ))}
+            </FormGroup>
+          </Popover>
           <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogContent>
@@ -538,9 +620,7 @@ const TablePagination = () => {
                                 "&:hover .hoverIcon": { opacity: 1 },
                               }}
                             >
-                              <Typography
-                                variant="subtitle2"
-                              >
+                              <Typography variant="subtitle2">
                                 {flexRender(
                                   header.column.columnDef.header,
                                   header.getContext()
@@ -573,7 +653,7 @@ const TablePagination = () => {
                 </TableHead>
                 <TableBody>
                   {
-                  // table.getRowModel().rows.length ? (
+                    // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
@@ -586,13 +666,13 @@ const TablePagination = () => {
                         ))}
                       </TableRow>
                     ))
-                  // ) : (
-                  //   <TableRow>
-                  //     <TableCell colSpan={columns.length} align="center">
-                  //       No records found
-                  //     </TableCell>
-                  //   </TableRow>
-                  // )
+                    // ) : (
+                    //   <TableRow>
+                    //     <TableCell colSpan={columns.length} align="center">
+                    //       No records found
+                    //     </TableCell>
+                    //   </TableRow>
+                    // )
                   }
                 </TableBody>
               </Table>

@@ -20,8 +20,12 @@ import {
     InputAdornment,
     Snackbar,
     Alert,
+    Popover,
+    FormGroup,
+    FormControlLabel,
+    Checkbox,
 } from '@mui/material';
-import {IconSearch, IconChevronLeft, IconChevronRight} from '@tabler/icons-react';
+import {IconSearch, IconChevronLeft, IconChevronRight, IconTableColumn} from '@tabler/icons-react';
 import {
     useReactTable,
     getCoreRowModel,
@@ -189,7 +193,8 @@ const TimeClock = () => {
     const endParam = searchParams?.get('end_date');
     const openParam = searchParams?.get('open');
     const hasInitialized = useRef(false);
-
+    const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+    const [search, setSearch] = useState("");
     const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
         try {
             const params: Record<string, string> = {
@@ -286,19 +291,28 @@ const TimeClock = () => {
             {
                 id: 'select',
                 header: ({ table }: { table: any }) => (
+                    <Stack direction="row" alignItems="center" spacing={4}>
                     <CustomCheckbox
                         checked={table.getIsAllPageRowsSelected()}
                         indeterminate={table.getIsSomePageRowsSelected()}
                         onChange={table.getToggleAllPageRowsSelectedHandler()}
                     />
+                    </Stack>
                 ),
                 cell: ({ row }: { row: any }) => (
+                    <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={4}
+                    sx={{ pl: 1 }}
+                    >
                     <CustomCheckbox
                         checked={row.getIsSelected()}
                         disabled={!row.getCanSelect()}
                         indeterminate={row.getIsSomeSelected()}
                         onChange={row.getToggleSelectedHandler()}
                     />
+                    </Stack>
                 ),
                 enableSorting: false,
                 enableHiding: false,
@@ -430,7 +444,10 @@ const TimeClock = () => {
         ],
         [currency]
     );
-
+    const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl2(event.currentTarget);
+    };
+    const handlePopoverClose = () => setAnchorEl2(null);
     const table = useReactTable({
         data: filteredData,
         columns,
@@ -493,7 +510,8 @@ const TimeClock = () => {
     return (
         <Box sx={{position: 'relative', overflow: 'hidden'}}>
             <Box sx={{transition: 'height 0.3s ease-in-out'}}>
-                <Stack
+               <Box display={"flex"} justifyContent={"space-between"}>
+                 <Stack
                     mx={2}
                     mb={3}
                     direction={{ xs: 'column', sm: 'row' }}
@@ -516,7 +534,62 @@ const TimeClock = () => {
                         }}
                     />
                 </Stack>
-
+                <Stack>
+                     <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+                    <IconTableColumn />
+                </IconButton>
+                <Popover
+                    open={Boolean(anchorEl2)}
+                    anchorEl={anchorEl2}
+                    onClose={handlePopoverClose}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    transformOrigin={{ vertical: "top", horizontal: "right" }}
+                    PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+                >
+                    <TextField
+                    size="small"
+                    placeholder="Search"
+                    fullWidth
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    sx={{ mb: 1 }}
+                    />
+                    <FormGroup>
+                    {table
+                        .getAllLeafColumns()
+                        .filter((col: any) => {
+                        const excludedColumns = ["conflicts","select"];
+                        if (excludedColumns.includes(col.id)) return false;
+    
+                        return col.id.toLowerCase().includes(search.toLowerCase());
+                        })
+                        .map((col: any) => (
+                        <FormControlLabel
+                            key={col.id}
+                            control={
+                            <Checkbox
+                                checked={col.getIsVisible()}
+                                onChange={col.getToggleVisibilityHandler()}
+                                disabled={col.id === "conflicts"}
+                            />
+                            }
+                            sx={{ textTransform: "none" }}
+                            label={
+                            col.columnDef.meta?.label ||
+                            (typeof col.columnDef.header === "string" &&
+                            col.columnDef.header.trim() !== ""
+                                ? col.columnDef.header
+                                : col.id
+                                    .replace(/([A-Z])/g, " $1")
+                                    .replace(/^./, (str: string) => str.toUpperCase())
+                                    .trim())
+                            }
+                        />
+                        ))}
+                    </FormGroup>
+                </Popover>
+                </Stack>
+               </Box>
                 <Divider />
 
                 <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
@@ -548,6 +621,7 @@ const TimeClock = () => {
                                                         borderRadius: '6px',
                                                         px: 1.5,
                                                         py: 0.75,
+                                                        ml: 0.5,
                                                         fontWeight: isActive ? 600 : 500,
                                                         color: '#000',
                                                         display: 'inline-flex',
