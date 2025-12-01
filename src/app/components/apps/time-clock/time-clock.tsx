@@ -180,7 +180,9 @@ const TimeClock = () => {
     const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
-    const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+   
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
     const [hasDataChanged, setHasDataChanged] = useState<boolean>(false);
@@ -285,167 +287,192 @@ const TimeClock = () => {
         const m = Math.round((num - h) * 60);
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
-
-    const columns: any = useMemo(
-        () => [
-            {
-                id: 'select',
-                header: ({ table }: { table: any }) => (
-                    <Stack direction="row" alignItems="center" spacing={4}>
+    const columnHelper = createColumnHelper<TimeClock>();
+    const columns = [
+        {
+            id: 'select',
+            header: ({ table }:any) => (
+                <Stack direction="row" alignItems="center">
                     <CustomCheckbox
-                        onClick={(e) => e.stopPropagation()}
-                        checked={table.getIsAllPageRowsSelected()}
-                        indeterminate={table.getIsSomePageRowsSelected()}
-                        onChange={table.getToggleAllPageRowsSelectedHandler()}
+                        checked={
+                        selectedRowIds.size === filteredData.length &&
+                        filteredData.length > 0
+                        }
+                        indeterminate={
+                        selectedRowIds.size > 0 &&
+                        selectedRowIds.size < filteredData.length
+                        }
+                        onChange={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const isChecked = e.target.checked;
+
+                        if (isChecked) {
+                            setSelectedRowIds(new Set(filteredData.map((row) => row.user_id)));
+                        } else {
+                            setSelectedRowIds(new Set());
+                        }
+                        }}
                     />
-                    </Stack>
-                ),
-                cell: ({ row }: { row: any }) => (
+                </Stack>
+            ),
+            cell: ({ row }: any) => {
+                const item = row.original;
+                const isChecked = selectedRowIds.has(item.user_id);
+                const isHovered = hoveredRow === item.user_id;
+                const showCheckbox = isChecked || isHovered;
+
+                return (
                     <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={4}
-                    sx={{ pl: 1 }}
+                        direction="row"
+                        alignItems="center"
+                        sx={{ pl: 1 }}
+                        onMouseEnter={() => setHoveredRow(item.user_id)}
+                        onMouseLeave={() => setHoveredRow(null)}
                     >
-                    <CustomCheckbox
-                        onClick={(e) => e.stopPropagation()}
-                        checked={row.getIsSelected()}
-                        disabled={!row.getCanSelect()}
-                        indeterminate={row.getIsSomeSelected()}
-                        onChange={row.getToggleSelectedHandler()}
-                    />
+                        <CustomCheckbox
+                            checked={isChecked}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => {
+                                const newSet = new Set(selectedRowIds);
+                                isChecked ? newSet.delete(item.user_id) : newSet.add(item.user_id);
+                                setSelectedRowIds(newSet);
+                            }}
+                            sx={{
+                                opacity: showCheckbox ? 1 : 0,
+                                pointerEvents: showCheckbox ? "auto" : "none",
+                                transition: "opacity 0.2s ease",
+                            }}
+                        />
                     </Stack>
-                ),
-                enableSorting: false,
-                enableHiding: false,
-                size: 30,
+                );
             },
+        },
 
-            columnHelper.accessor('user_name', {
-                id: 'user_name',
-                header: 'Name',
-                cell: (info: any) => {
-                    const row = info.row.original;
-                    return (
-                        <Stack direction="row" alignItems="center" spacing={2}>
-                            <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
-                            <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography className="f-14" noWrap>
-                                    {row.user_name}
-                                </Typography>
-                                <Typography variant="caption" color="textSecondary" noWrap>
-                                    {row.trade_name}
-                                </Typography>
-                            </Box>
-                        </Stack>
-                    );
-                },
-            }),
+        columnHelper.accessor('user_name', {
+            id: 'user_name',
+            header: 'Name',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
+                        <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography className="f-14" noWrap>
+                                {row.user_name}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary" noWrap>
+                                {row.trade_name}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
 
-            columnHelper.accessor('total_hours', {
-                id: 'total_hours',
-                header: 'Total Hours',
-                cell: (info: any) => {
-                    const row = info.row.original;
-                    const value = info.getValue();
-                    const formatted = formatHour(value) || '-';
+        columnHelper.accessor('total_hours', {
+            id: 'total_hours',
+            header: 'Total Hours',
+            cell: (info: any) => {
+                const row = info.row.original;
+                const value = info.getValue();
+                const formatted = formatHour(value) || '-';
 
-                    const hasPendingRequest =
-                        row.has_leave_request === true ||
-                        row.has_expense_request === true ||
-                        row.has_worklog_request === true;
+                const hasPendingRequest =
+                    row.has_leave_request === true ||
+                    row.has_expense_request === true ||
+                    row.has_worklog_request === true;
 
-                    return (
-                        <Typography
-                            variant="h6"
-                            sx={{
-                                color: hasPendingRequest ? '#f97316' : 'inherit',
-                            }}
-                        >
-                            {formatted}
-                        </Typography>
-                    );
-                },
-            }),
+                return (
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            color: hasPendingRequest ? '#f97316' : 'inherit',
+                        }}
+                    >
+                        {formatted}
+                    </Typography>
+                );
+            },
+        }),
 
-            columnHelper.accessor('payable_total_hours', {
-                id: 'payable_total_hours',
-                header: 'Payable Hours',
-                cell: (info: any) => formatHour(info.getValue()) || '-',
-            }),
+        columnHelper.accessor('payable_total_hours', {
+            id: 'payable_total_hours',
+            header: 'Payable Hours',
+            cell: (info: any) => formatHour(info.getValue()) || '-',
+        }),
 
-            columnHelper.accessor('daylog_payable_amount', {
-                id: 'daylog_payable_amount',
-                header: 'Payable',
-                cell: (info: any) => {
-                    const value = info.getValue();
-                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
-                },
-            }),
+        columnHelper.accessor('daylog_payable_amount', {
+            id: 'daylog_payable_amount',
+            header: 'Payable',
+            cell: (info: any) => {
+                const value = info.getValue();
+                return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+            },
+        }),
 
-            columnHelper.accessor('pricework_total_amount', {
-                id: 'pricework_total_amount',
-                header: 'Pricework',
-                cell: (info: any) => {
-                    const row = info.row.original;
-                    const value = info.getValue();
-                    const displayValue = value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+        columnHelper.accessor('pricework_total_amount', {
+            id: 'pricework_total_amount',
+            header: 'Pricework',
+            cell: (info: any) => {
+                const row = info.row.original;
+                const value = info.getValue();
+                const displayValue = value === 0 ? '0' : (value ? `${currency}${value}` : '-');
 
-                    const hasPendingRequest =
-                        row.has_leave_request === true ||
-                        row.has_expense_request === true ||
-                        row.has_worklog_request === true;
+                const hasPendingRequest =
+                    row.has_leave_request === true ||
+                    row.has_expense_request === true ||
+                    row.has_worklog_request === true;
 
-                    return (
-                        <Typography
-                            variant="h6"
-                            sx={{
-                                color: hasPendingRequest ? '#f97316' : 'inherit',
-                            }}
-                        >
-                            {displayValue}
-                        </Typography>
-                    );
-                },
-            }),
+                return (
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            color: hasPendingRequest ? '#f97316' : 'inherit',
+                        }}
+                    >
+                        {displayValue}
+                    </Typography>
+                );
+            },
+        }),
 
-            columnHelper.accessor('total_expense_amount', {
-                id: 'total_expense_amount',
-                header: 'Expense',
-                cell: (info: any) => {
-                    const row = info.row.original;
-                    const value = info.getValue();
-                    const displayValue = value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+        columnHelper.accessor('total_expense_amount', {
+            id: 'total_expense_amount',
+            header: 'Expense',
+            cell: (info: any) => {
+                const row = info.row.original;
+                const value = info.getValue();
+                const displayValue = value === 0 ? '0' : (value ? `${currency}${value}` : '-');
 
-                    const hasPendingRequest =
-                        row.has_leave_request === true ||
-                        row.has_expense_request === true ||
-                        row.has_worklog_request === true;
+                const hasPendingRequest =
+                    row.has_leave_request === true ||
+                    row.has_expense_request === true ||
+                    row.has_worklog_request === true;
 
-                    return (
-                        <Typography
-                            variant="h6"
-                            sx={{
-                                color: hasPendingRequest ? '#f97316' : 'inherit',
-                            }}
-                        >
-                            {displayValue}
-                        </Typography>
-                    );
-                },
-            }),
+                return (
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            color: hasPendingRequest ? '#f97316' : 'inherit',
+                        }}
+                    >
+                        {displayValue}
+                    </Typography>
+                );
+            },
+        }),
 
-            columnHelper.accessor('total_payable_amount', {
-                id: 'total_payable_amount',
-                header: 'Total Payable Amount',
-                cell: (info: any) => {
-                    const value = info.getValue();
-                    return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
-                },
-            }),
-        ],
-        [currency]
-    );
+        columnHelper.accessor('total_payable_amount', {
+            id: 'total_payable_amount',
+            header: 'Total Payable Amount',
+            cell: (info: any) => {
+                const value = info.getValue();
+                return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+            },
+        }),
+        // [currency]
+    ];
     const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl2(event.currentTarget);
     };
@@ -661,17 +688,16 @@ const TimeClock = () => {
                         <TableBody>
                             {table.getRowModel().rows.map((row) => (
                                 <TableRow
+                                    hover
                                     key={row.id}
-                                    onMouseEnter={() => setHoveredRow(row.id)}
+                                    onMouseEnter={() => {
+                                        setHoveredRow(Number(row.original.user_id));
+                                    }}
                                     onMouseLeave={() => setHoveredRow(null)}
                                     onClick={() => handleRowClick(row.original)}
                                     sx={{
                                         cursor: 'pointer',
-                                        backgroundColor: hoveredRow === row.id ? '#f5f5f5' : 'transparent',
                                         transition: 'background-color 0.2s ease',
-                                        '&:hover': {
-                                            backgroundColor: '#f5f5f5',
-                                        },
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
