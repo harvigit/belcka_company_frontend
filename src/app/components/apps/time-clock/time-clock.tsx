@@ -293,6 +293,7 @@ const TimeClock = () => {
                 header: ({ table }: { table: any }) => (
                     <Stack direction="row" alignItems="center" spacing={4}>
                     <CustomCheckbox
+                        onClick={(e) => e.stopPropagation()}
                         checked={table.getIsAllPageRowsSelected()}
                         indeterminate={table.getIsSomePageRowsSelected()}
                         onChange={table.getToggleAllPageRowsSelectedHandler()}
@@ -307,6 +308,7 @@ const TimeClock = () => {
                     sx={{ pl: 1 }}
                     >
                     <CustomCheckbox
+                        onClick={(e) => e.stopPropagation()}
                         checked={row.getIsSelected()}
                         disabled={!row.getCanSelect()}
                         indeterminate={row.getIsSomeSelected()}
