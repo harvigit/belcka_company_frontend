@@ -26,6 +26,7 @@ import {
   FormControl,
   InputLabel,
   InputAdornment,
+  Drawer,
 } from "@mui/material";
 
 import {
@@ -41,7 +42,7 @@ import { IconEye, IconTrash, IconX, IconEdit } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { AxiosResponse } from "axios";
-import { width } from "@mui/system";
+import { Grid, width } from "@mui/system";
 import { IconSearch } from "@tabler/icons-react";
 
 type Props = {
@@ -330,25 +331,16 @@ export default function MapGantt({
       </Dialog>
 
       {addZoneOpen && (
-        <Dialog
-          open={addZoneOpen}
-          onClose={() => setAddZoneOpen(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogContent>
-            <AddZone
-              projectId={projectId}
-              companyId={companyId}
-              addresses={addresses}
-              onAdded={() => {
-                fetchProjectDetail();
-                setAddZoneOpen(false);
-              }}
-              onCancel={() => setAddZoneOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <AddZone
+          projectId={projectId}
+          companyId={companyId}
+          addresses={addresses}
+          onAdded={() => {
+            fetchProjectDetail();
+            setAddZoneOpen(false);
+          }}
+          onCancel={() => setAddZoneOpen(false)}
+        />
       )}
     </Box>
   );
@@ -496,6 +488,7 @@ const AddZone = ({
   const [addressId, setAddressId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [radius, setRadius] = useState(10);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [location, setLocation] = useState({ lat: 20.5937, lng: 78.9629 });
 
@@ -583,6 +576,7 @@ const AddZone = ({
         toast.error("Please select address!");
         return;
       }
+      setIsSaving(true);
 
       const payload = {
         company_id: companyId,
@@ -613,134 +607,208 @@ const AddZone = ({
     } catch (err) {
       console.error(err);
     }
+    setIsSaving(false);
   };
 
   return (
-    <Box>
+    <Drawer
+      anchor="right"
+      open={onAdded}
+      onClose={onCancel}
+      sx={{
+        width: 500,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: 500,
+          padding: 2,
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "#f9f9f9",
+        },
+      }}
+    >
       <Box
         display={"flex"}
         justifyContent={"space-between"}
         alignItems={"center"}
       >
-        <Typography variant="h6" mb={2}>
+        <Typography variant="h6" fontWeight={600}>
           Add Zone
         </Typography>
-        <IconButton onClick={onCancel} sx={{ mb: 1 }}>
+        <IconButton onClick={onCancel}>
           <IconX />
         </IconButton>
       </Box>
-      {/* Address Dropdown */}
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Select Address</InputLabel>
-        <Select
-          value={addressId || ""}
-          label="Select Address"
-          onChange={(e) => handleAddressChange(Number(e.target.value))}
+      {/* <Box display="flex" flexDirection="column" height="100%"> */}
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          paddingRight: 1,
+        }}
+      >
+        <Box className="task-form">
+          <Grid container mt={3}>
+            <Grid size={{ lg: 12, xs: 12 }}>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Select Address</InputLabel>
+                <Select
+                  value={addressId || ""}
+                  label="Select Address"
+                  onChange={(e) => handleAddressChange(Number(e.target.value))}
+                >
+                  {addresses.map((a: any) => (
+                    <MenuItem key={a.id} value={a.id}>
+                      {a.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Address Search Box */}
+              <TextField
+                fullWidth
+                label="Search location"
+                value={name}
+                onChange={handleInputChange}
+                placeholder="Search location..."
+                sx={{ mb: 2 }}
+              />
+
+              {typedAddress && predictions.length > 0 && (
+                <List
+                  sx={{
+                    border: "1px solid #ccc",
+                    maxHeight: 200,
+                    overflow: "auto",
+                  }}
+                >
+                  {predictions.map((p) => (
+                    <ListItem key={p.place_id} disablePadding>
+                      <ListItemButton
+                        onClick={() => selectPrediction(p.place_id)}
+                      >
+                        {p.description}
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+
+              <Typography fontWeight={600}>
+                Area Radius [{radius} Meter]
+              </Typography>
+              <Slider
+                min={0}
+                max={100}
+                value={radius}
+                onChange={(e, v) => setRadius(v as number)}
+                sx={{ mb: 2 }}
+              />
+              <Box
+                sx={{
+                  height: 400,
+                  overflow: "auto",
+                  mb: 2,
+                  mt: 2,
+                }}
+              >
+                <GoogleMap
+                  zoom={20}
+                  center={location}
+                  mapContainerStyle={{ width: "100%", height: "400px" }}
+                  onLoad={(map) => {
+                    mapRef.current = map;
+                  }}
+                >
+                  <Marker
+                    position={location}
+                    draggable
+                    onDragEnd={onMarkerDragEnd}
+                  />
+                  <GCircle
+                    center={location}
+                    radius={radius}
+                    options={{
+                      strokeColor: "#1976d2",
+                      fillColor: "#1976d233",
+                      editable: true,
+                      draggable: true,
+                    }}
+                    onRadiusChanged={onRadiusChanged}
+                    onLoad={(circle) => {
+                      circleRef.current = circle;
+
+                      circle.addListener("center_changed", () => {
+                        const c = circle.getCenter();
+                        if (!c) return;
+                        if (circleRef.current) {
+                          const newRadius = circleRef.current.getRadius();
+
+                          if (newRadius > 100) {
+                            circleRef.current.setRadius(100);
+                            setRadius(100);
+                          } else {
+                            setRadius(newRadius);
+                          }
+                        }
+                        const newLoc = { lat: c.lat(), lng: c.lng() };
+
+                        if (
+                          lastCenterRef.current &&
+                          lastCenterRef.current.lat === newLoc.lat &&
+                          lastCenterRef.current.lng === newLoc.lng
+                        ) {
+                          return;
+                        }
+
+                        lastCenterRef.current = newLoc;
+                        setLocation(newLoc);
+                      });
+                    }}
+                  />
+                </GoogleMap>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "start",
+          gap: 2,
+          mt: 2,
+        }}
+      >
+        <Button
+          color="primary"
+          onClick={handleSave}
+          variant="contained"
+          size="large"
+          type="submit"
+          disabled={isSaving}
+          sx={{ borderRadius: 3 }}
+          className="drawer_buttons"
         >
-          {addresses.map((a: any) => (
-            <MenuItem key={a.id} value={a.id}>
-              {a.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* Address Search Box */}
-      <TextField
-        fullWidth
-        label="Search location"
-        value={name}
-        onChange={handleInputChange}
-        placeholder="Search location..."
-        sx={{ mb: 2 }}
-      />
-
-      {typedAddress && predictions.length > 0 && (
-        <List
-          sx={{ border: "1px solid #ccc", maxHeight: 200, overflow: "auto" }}
-        >
-          {predictions.map((p) => (
-            <ListItem key={p.place_id} disablePadding>
-              <ListItemButton onClick={() => selectPrediction(p.place_id)}>
-                {p.description}
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      )}
-
-      <Typography fontWeight={600}>Area Radius [{radius} Meter]</Typography>
-      <Slider
-        min={0}
-        max={100}
-        value={radius}
-        onChange={(e, v) => setRadius(v as number)}
-        sx={{ mb: 2 }}
-      />
-
-      <Box height={400} mt={2}>
-        <GoogleMap
-          zoom={20}
-          center={location}
-          mapContainerStyle={{ width: "100%", height: "400px" }}
-          onLoad={(map) => {
-            mapRef.current = map;
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+        <Button
+          color="inherit"
+          onClick={onCancel}
+          variant="contained"
+          size="large"
+          sx={{
+            backgroundColor: "transparent",
+            borderRadius: 3,
+            color: "GrayText",
           }}
         >
-          <Marker position={location} draggable onDragEnd={onMarkerDragEnd} />
-          <GCircle
-            center={location}
-            radius={radius}
-            options={{
-              strokeColor: "#1976d2",
-              fillColor: "#1976d233",
-              editable: true,
-              draggable: true,
-            }}
-            onRadiusChanged={onRadiusChanged}
-            onLoad={(circle) => {
-              circleRef.current = circle;
-
-              circle.addListener("center_changed", () => {
-                const c = circle.getCenter();
-                if (!c) return;
-                if (circleRef.current) {
-                  const newRadius = circleRef.current.getRadius();
-
-                  if (newRadius > 100) {
-                    circleRef.current.setRadius(100);
-                    setRadius(100);
-                  } else {
-                    setRadius(newRadius);
-                  }
-                }
-                const newLoc = { lat: c.lat(), lng: c.lng() };
-
-                if (
-                  lastCenterRef.current &&
-                  lastCenterRef.current.lat === newLoc.lat &&
-                  lastCenterRef.current.lng === newLoc.lng
-                ) {
-                  return;
-                }
-
-                lastCenterRef.current = newLoc;
-                setLocation(newLoc);
-              });
-            }}
-          />
-        </GoogleMap>
-      </Box>
-
-      <Box display="flex" gap={2} mt={2}>
-        <Button variant="contained" onClick={handleSave}>
-          Add
-        </Button>
-        <Button variant="outlined" onClick={onCancel}>
           Cancel
         </Button>
       </Box>
-    </Box>
+      {/* </Box> */}
+    </Drawer>
   );
 };
 

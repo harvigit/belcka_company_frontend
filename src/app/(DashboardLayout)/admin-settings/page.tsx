@@ -12,6 +12,9 @@ import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import CategoryList from '@/app/components/apps/settings/expense-categories/list';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
+import TradeList from '@/app/components/apps/settings/trades/list';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -48,7 +51,9 @@ const AdminSetting = () => {
     const handleChange = (_: React.SyntheticEvent, newValue: number) => {
         setValue(newValue);
     };
-
+    const session = useSession();
+    const user = session.data?.user as User & { company_id?: number | null } & { user_role_id: number };
+    
     return (
         <PermissionGuard permission="Settings">
             <PageContainer
@@ -122,6 +127,15 @@ const AdminSetting = () => {
                                             label="Expense Category"
                                             {...a11yProps(5)}
                                         />
+                                        { user.user_role_id == 1 && (
+                                         <Tab
+                                            className="admin-settings"
+                                            iconPosition="start"
+                                            icon={<IconCategory size="20"/>}
+                                            label="Comapny Trades"
+                                            {...a11yProps(6)}
+                                        />
+                                        )}
                                     </Tabs>
                                 </Stack>
                             </BlankCard>
@@ -152,6 +166,11 @@ const AdminSetting = () => {
                                 <TabPanel value={value} index={5}>
                                     <CategoryList />
                                 </TabPanel>
+                                { user.user_role_id == 1 && (
+                                 <TabPanel value={value} index={6}>
+                                    <TradeList />
+                                </TabPanel>
+                                )}
                             </BlankCard>
                         </Grid>
                     </Grid>

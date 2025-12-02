@@ -226,6 +226,7 @@ const TablePagination = () => {
               selectedRowIds.size > 0 &&
               selectedRowIds.size < filteredData.length
             }
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
               e.stopPropagation();
               e.preventDefault();

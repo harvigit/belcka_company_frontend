@@ -297,6 +297,7 @@ const AddressesList = ({
                 selectedRowIds.size > 0 &&
                 selectedRowIds.size < currentFilteredData.length
               }
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 if (e.target.checked) {
                   setSelectedRowIds(

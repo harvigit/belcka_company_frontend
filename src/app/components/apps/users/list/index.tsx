@@ -101,6 +101,7 @@ export interface UserList {
   logged_in_at: any;
   created_at: any;
   company_id: number | null;
+  user_role_id: number;
   permission_count: number;
 }
 
@@ -124,7 +125,9 @@ const TablePagination = () => {
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: string | null };
+  const user = session.data?.user as User & { company_id?: string | null } & {
+    user_role_id: number;
+  };
   const [inviteUser, setInviteUser] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -153,6 +156,7 @@ const TablePagination = () => {
   );
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
+  const [isPermission, setIsPermission] = useState(true);
   const [search, setSearch] = useState("");
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -280,11 +284,14 @@ const TablePagination = () => {
     }
   };
 
-  const handleOpenPermissionsDrawer = (user: UserList) => {
-    setSelectedUserPermissions(user);
+  const handleOpenPermissionsDrawer = (userPermission: UserList) => {
+    setSelectedUserPermissions(userPermission);
     const activePermissions = new Set(
-      user.permissions.filter((p) => p.status).map((p) => p.id)
+      userPermission.permissions.filter((p) => p.status).map((p) => p.id)
     );
+    const permssion =
+      userPermission.user_role_id == 1 && user.user_role_id == 2 ? false : true;
+    setIsPermission(permssion);
     setTempPermissions(activePermissions);
     setPermissionSearch("");
     setPermissionsDrawerOpen(true);
@@ -365,13 +372,13 @@ const TablePagination = () => {
         }, 100);
         setPermissionsDrawerOpen(false);
       } else {
-        throw new Error(
-          response.data.message || "Failed to update permissions"
-        );
+        // throw new Error(
+        //   response.data.message || "Failed to update permissions"
+        // );
       }
     } catch (error: any) {
       console.error("Failed to update permissions", error);
-      toast.error(error.message || "Failed to update permissions");
+      // toast.error(error.message || "Failed to update permissions");
     }
   };
 
@@ -433,6 +440,7 @@ const TablePagination = () => {
               selectedRowIds.size > 0 &&
               selectedRowIds.size < filteredData.length
             }
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
               const isChecked = e.target.checked;
 
@@ -463,7 +471,13 @@ const TablePagination = () => {
           showAllCheckboxes || hoveredRow === user.id || isChecked;
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 1 }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <Box sx={{ width: 34, display: "flex", justifyContent: "center" }}>
               <CustomCheckbox
                 checked={isChecked}
@@ -783,7 +797,7 @@ const TablePagination = () => {
               <IconDotsVertical width={18} />
             </IconButton>
 
-            <IconButton onClick={handlePopoverOpen} sx={{ ml:1}}>
+            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
               <IconTableColumn />
             </IconButton>
             <Popover
@@ -1007,10 +1021,14 @@ const TablePagination = () => {
                   >
                     <Typography>{permission.name}</Typography>
                     <IOSSwitch
-                      checked={tempPermissions.has(permission.id)}
+                      checked={
+                        isPermission
+                          ? tempPermissions.has(permission.id)
+                          : false
+                      }
                       onChange={() => handlePermissionToggle(permission.id)}
                       size="small"
-                      disabled={loading}
+                      disabled={loading || !isPermission}
                     />
                   </Box>
                 ))}

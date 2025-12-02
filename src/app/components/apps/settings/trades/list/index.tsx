@@ -28,6 +28,7 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
+  Chip,
 } from "@mui/material";
 import {
   flexRender,
@@ -43,7 +44,6 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconFilter,
-  IconNotes,
   IconSearch,
   IconTrash,
 } from "@tabler/icons-react";
@@ -59,40 +59,21 @@ import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import CreateTask from "../create";
-import ArchiveTask from "../archive";
 import { IconEdit } from "@tabler/icons-react";
-import EditTask from "../edit";
 import { AxiosResponse } from "axios";
 import { IconTableColumn } from "@tabler/icons-react";
+import CreateTrade from "../create";
+import EditTrade from "../edit";
 
 dayjs.extend(customParseFormat);
-
-export interface TradeList {
-  id: number;
-  name: string;
-  trade_id: number;
-}
-
-export type TaskList = {
-  id: number;
-  name: string;
-  trade_id?: number;
-  trade_name?: string;
-  duration: string;
-  repeatable_job: boolean;
-  is_pricework: boolean;
-  rate: string;
-  units: string;
-};
 
 export type UserList = {
   id: number;
   name: string;
 };
 
-const TablePagination = () => {
-  const [data, setData] = useState<TaskList[]>([]);
+const TradeList = () => {
+  const [data, setData] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,13 +93,12 @@ const TablePagination = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [trade, setTrade] = useState<TradeList[]>([]);
+  const [trade, setTrade] = useState<any[]>([]);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -126,13 +106,9 @@ const TablePagination = () => {
   const [formData, setFormData] = useState<any>({
     id: 0,
     name: "",
-    trade_id: "",
+    trade_category_id: "",
     company_id: id.company_id,
-    duration: 0,
-    rate: 0,
-    units: "",
-    is_pricework: false,
-    repeatable_job: false,
+    status: true
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -143,14 +119,13 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  const fetchTasks = async () => {
+  const fetchTrades = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`type-works/get?company_id=${id.company_id}`);
+      const res = await api.get(`trade/get-trades?company_id=${id.company_id}`);
       if (res.data) {
         setData(res.data.info);
         setLoading(false);
-        setarchiveDrawerOpen(false);
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);
@@ -159,29 +134,8 @@ const TablePagination = () => {
   };
 
   useEffect(() => {
-    fetchTasks();
+    fetchTrades();
   }, [api]);
-
-  // Fetch data
-  const fetchArchiveAddress = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get(
-        `type-works/archive-works-list?company_id=${id.company_id}`
-      );
-      // if (res.data?.info) {
-      //   setData(res.data.info);
-      // }
-    } catch (err) {
-      console.error("Failed to fetch archive addresses", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchArchiveAddress();
-  }, []);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -202,11 +156,6 @@ const TablePagination = () => {
       name: "",
       trade_id: null,
       company_id: id.company_id,
-      duration: 0,
-      rate: 0,
-      units: "",
-      is_pricework: false,
-      repeatable_job: false,
     });
     setDrawerOpen(true);
   };
@@ -217,24 +166,20 @@ const TablePagination = () => {
     try {
       const payload = {
         ...formData,
-        repeatable_job: formData.is_pricework ? false : true,
-        units: formData.is_pricework ? formData.units : null,
-        duration: Number(formData.duration),
-        rate: Number(formData.rate),
       };
 
-      const result = await api.post("type-works/create", payload);
+      const result: AxiosResponse<any> = await api.post(
+        "trade/create-trade",
+        payload
+      );
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
           id: 0,
           name: "",
-          trade_id: 0,
-          is_pricework: 0,
-          units: "",
-          repeatable_job: 0,
+          trade_category_id: 0,
         });
-        fetchTasks();
+        fetchTrades();
         setDrawerOpen(false);
       } else {
         toast.error(result.data.message);
@@ -246,31 +191,29 @@ const TablePagination = () => {
     }
   };
 
-  const editTask = async (e: React.FormEvent) => {
+  const editTrade = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
       const payload = {
         ...formData,
-        repeatable_job: formData.is_pricework ? false : true,
-        duration: Number(formData.duration),
-        rate: Number(formData.rate),
       };
 
-      const result = await api.put("type-works/update", payload);
+      const result: AxiosResponse<any> = await api.post(
+        "trade/edit-trade",
+        payload
+      );
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
+          id: 0,
           name: "",
           trade_id: 0,
-          is_pricework: false,
-          units: "",
-          repeatable_job: false,
+          trade_category_id: 0,
         });
-        fetchTasks();
+        fetchTrades();
         setEditDrawerOpen(false);
       } else {
-        toast.error(result.data.message);
       }
     } catch (error) {
       console.log(error, "error");
@@ -286,16 +229,13 @@ const TablePagination = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      const matchesTeam = filters.team
-        ? item.trade_name === filters.team
-        : true;
+      const matchesTeam = filters.team ? item.name === filters.team : true;
 
       const search = searchTerm.toLowerCase();
 
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
-        item.trade_name?.toLowerCase().includes(search) ||
-        item.duration?.toLowerCase().includes(search);
+        item.category_name?.toLowerCase().includes(search);
 
       return matchesTeam && matchesSearch;
     });
@@ -307,7 +247,7 @@ const TablePagination = () => {
     setEditDrawerOpen(true);
   }, []);
 
-  const columnHelper = createColumnHelper<TaskList>();
+  const columnHelper = createColumnHelper<any>();
   const columns = [
     columnHelper.accessor("name", {
       id: "name",
@@ -384,9 +324,9 @@ const TablePagination = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.trade_name, {
-      id: "tradeName",
-      header: () => "Trade",
+    columnHelper.accessor((row) => row?.category_name, {
+      id: "categoryName",
+      header: () => "Category",
       cell: (info) => {
         return (
           <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
@@ -396,59 +336,34 @@ const TablePagination = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.repeatable_job, {
-      id: "repeatableJob",
-      header: () => "Type",
+    columnHelper.accessor((row) => row?.status, {
+      id: "status",
+      header: () => "Status",
       cell: (info) => {
-        return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Box>
-              <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
-                {info.getValue() ?? "-"}
-              </Typography>
-            </Box>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.duration, {
-      id: "duration",
-      header: () => "Duration",
-      cell: (info) => {
-        return (
-          <Typography
-            className="f-14"
-            color="textPrimary"
-            fontWeight={500}
-            sx={{ px: 1.5 }}
-          >
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.rate, {
-      id: "rate",
-      header: () => "Rate",
-      cell: (info) => {
-        return (
-          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.units, {
-      id: "units",
-      header: () => "Units",
-      cell: (info) => {
-        return (
-          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
-            {info.getValue() ?? "-"}
-          </Typography>
+         return info.getValue() ? (
+          <Chip
+            size="small"
+            label="Active"
+            sx={{
+              backgroundColor: (theme) => theme.palette.success.light,
+              color: (theme) => theme.palette.success.main,
+              fontWeight: 500,
+              borderRadius: "6px",
+              px: 1.5,
+            }}
+          />
+        ) : (
+          <Chip
+            size="small"
+            label="Inactive"
+            sx={{
+              backgroundColor: (theme) => theme.palette.error.light,
+              color: (theme) => theme.palette.error.main,
+              fontWeight: 500,
+              borderRadius: "6px",
+              px: 1.5,
+            }}
+          />
         );
       },
     }),
@@ -512,7 +427,7 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            TEMPLATES ({table.getPrePaginationRowModel().rows.length}){" "}
+            TRADES ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
           <TextField
             id="search"
@@ -629,7 +544,7 @@ const TablePagination = () => {
                 setConfirmOpen(true);
               }}
             >
-              Archive
+              Remove
             </Button>
           )}
           <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
@@ -689,8 +604,8 @@ const TablePagination = () => {
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogContent>
               <Typography color="textSecondary">
-                Are you sure you want to archive {usersToDelete.length} template
-                {usersToDelete.length > 1 ? "s" : ""} from the templates?
+                Are you sure you want to delete {usersToDelete.length} trade
+                {usersToDelete.length > 1 ? "s" : ""} from the company trades?
               </Typography>
             </DialogContent>
             <DialogActions>
@@ -705,18 +620,17 @@ const TablePagination = () => {
                 onClick={async () => {
                   try {
                     const payload = {
-                      work_ids: usersToDelete.join(","),
+                      company_id: id.company_id,
+                      trade_ids: usersToDelete.join(","),
                     };
                     const response = await api.post(
-                      "type-works/archive-works",
+                      "trade/company/delete-bulk-trade-status",
                       payload
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
-                    await fetchTasks();
-                    await fetchArchiveAddress();
+                    await fetchTrades();
                   } catch (error) {
-                    toast.error("Failed to remove works");
                   } finally {
                     setConfirmOpen(false);
                   }
@@ -724,7 +638,7 @@ const TablePagination = () => {
                 variant="outlined"
                 color="error"
               >
-                Archive
+                Delete
               </Button>
             </DialogActions>
           </Dialog>
@@ -769,64 +683,34 @@ const TablePagination = () => {
                 <ListItemIcon>
                   <IconPlus width={18} />
                 </ListItemIcon>
-                Add Template
-              </Link>
-            </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setarchiveDrawerOpen(true);
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconNotes width={18} />
-                </ListItemIcon>
-                Archive List
+                Add Trade
               </Link>
             </MenuItem>
           </Menu>
         </Stack>
       </Stack>
       <Divider />
-      {/* Add task */}
-      <CreateTask
+
+      <CreateTrade
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         formData={formData}
         setFormData={setFormData}
         handleSubmit={handleSubmit}
-        trade={trade}
+        companyId={id.company_id ?? null}
         isSaving={isSaving}
       />
 
-      {/* Edit task */}
-      <EditTask
+      <EditTrade
         open={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         id={selectedTaskId}
+        data={data}
         formData={formData}
         setFormData={setFormData}
-        EditTask={editTask}
-        trade={trade}
+        EditTrade={editTrade}
+        companyId={id.company_id ?? null}
         isSaving={isSaving}
-      />
-
-      {/* Archive task list */}
-      <ArchiveTask
-        open={archiveDrawerOpen}
-        onClose={() => setarchiveDrawerOpen(false)}
-        onWorkUpdated={fetchTasks}
       />
 
       <Grid container spacing={3}>
@@ -840,7 +724,7 @@ const TablePagination = () => {
               <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
+                    <TableRow key={headerGroup.id} hover>
                       {headerGroup.headers.map((header) => {
                         const isActive = header.column.getIsSorted();
                         const isAsc = header.column.getIsSorted() === "asc";
@@ -1007,4 +891,4 @@ const TablePagination = () => {
   );
 };
 
-export default TablePagination;
+export default TradeList;

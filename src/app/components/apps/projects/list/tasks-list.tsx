@@ -314,6 +314,7 @@ const TasksList = ({
               indeterminate={
                 selectedRowIds.size > 0 && selectedRowIds.size < data.length
               }
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 if (e.target.checked) {
                   setSelectedRowIds(new Set(data.map((_, i) => i)));
