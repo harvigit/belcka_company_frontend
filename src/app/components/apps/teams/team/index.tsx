@@ -26,6 +26,10 @@ import {
   CardContent,
   Menu,
   ListItemIcon,
+  Popover,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   flexRender,
@@ -45,6 +49,7 @@ import {
   IconPlus,
   IconRotate,
   IconSearch,
+  IconTableColumn,
   IconTrash,
   IconUserPlus,
 } from "@tabler/icons-react";
@@ -124,7 +129,9 @@ const TablePagination = () => {
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
-  const [tradeValue, setTradeValue] = useState("");
+  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+  const [search, setSearch] = useState("");
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
   const [openGenerateDialog, setOpenGenerateDialog] = useState(false);
 
@@ -345,13 +352,17 @@ const TablePagination = () => {
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
             }
-            // indeterminate={
-            //   selectedRowIds.size > 0 &&
-            //   selectedRowIds.size < filteredData.length
-            // }
+            indeterminate={
+              selectedRowIds.size > 0 &&
+              selectedRowIds.size < filteredData.length
+            }
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
-              if (e.stopPropagation) e.stopPropagation();
-              if (e.target.checked) {
+              e.stopPropagation();
+              e.preventDefault();
+              const isChecked = e.target.checked;
+
+              if (isChecked) {
                 setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
               } else {
                 setSelectedRowIds(new Set());
@@ -366,6 +377,8 @@ const TablePagination = () => {
       cell: ({ row }) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
+
+        const showCheckbox = isChecked || hoveredRow === row.index;
         const shouldHighlight =
           item.is_subcontractor === true &&
           item.company_id !== item.subcontractor_company_id;
@@ -374,12 +387,17 @@ const TablePagination = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.2 }}
+            sx={{ pl: 1 }}
+            onMouseEnter={() => setHoveredRow(row.index)}
+            onMouseLeave={() => setHoveredRow(null)}
           >
             <CustomCheckbox
               checked={isChecked}
               disabled={shouldHighlight}
-              onChange={() => {
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
                   newSelected.delete(row.index);
@@ -387,6 +405,11 @@ const TablePagination = () => {
                   newSelected.add(row.index);
                 }
                 setSelectedRowIds(newSelected);
+              }}
+              sx={{
+                opacity: showCheckbox ? 1 : 0,
+                pointerEvents: showCheckbox ? "auto" : "none",
+                transition: "opacity 0.2s ease",
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
@@ -407,7 +430,7 @@ const TablePagination = () => {
     }),
 
     columnHelper.accessor((row) => row?.trade_name, {
-      id: "trade_name",
+      id: "tradeName",
       header: () => "Trade",
       cell: (info) => (
         <Typography className="f-14" color="body2" sx={{ px: 1.5 }}>
@@ -448,6 +471,11 @@ const TablePagination = () => {
       },
     }),
   ];
+
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl2(event.currentTarget);
+  };
+  const handlePopoverClose = () => setAnchorEl2(null);
 
   const table = useReactTable({
     data: filteredData,
@@ -707,7 +735,63 @@ const TablePagination = () => {
                   Generate Code
                 </MenuItem>
               </Menu>
+              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+                <IconTableColumn />
+              </IconButton>
+              <Popover
+                open={Boolean(anchorEl2)}
+                anchorEl={anchorEl2}
+                onClose={handlePopoverClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+              >
+                <TextField
+                  size="small"
+                  placeholder="Search"
+                  fullWidth
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  sx={{ mb: 1 }}
+                />
+                <FormGroup>
+                  {table
+                    .getAllLeafColumns()
+                    .filter((col: any) => {
+                      const excludedColumns = ["conflicts"];
+                      if (excludedColumns.includes(col.id)) return false;
 
+                      return col.id
+                        .toLowerCase()
+                        .includes(search.toLowerCase());
+                    })
+                    .map((col: any) => (
+                      <FormControlLabel
+                        key={col.id}
+                        control={
+                          <Checkbox
+                            checked={col.getIsVisible()}
+                            onChange={col.getToggleVisibilityHandler()}
+                            disabled={col.id === "conflicts"}
+                          />
+                        }
+                        sx={{ textTransform: "none" }}
+                        label={
+                          col.columnDef.meta?.label ||
+                          (typeof col.columnDef.header === "string" &&
+                          col.columnDef.header.trim() !== ""
+                            ? col.columnDef.header
+                            : col.id
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (str: string) =>
+                                  str.toUpperCase()
+                                )
+                                .trim())
+                        }
+                      />
+                    ))}
+                </FormGroup>
+              </Popover>
               <GenerateCodeDialog
                 open={openGenerateDialog}
                 onClose={() => setOpenGenerateDialog(false)}
@@ -866,9 +950,7 @@ const TablePagination = () => {
                                     "&:hover .hoverIcon": { opacity: 1 },
                                   }}
                                 >
-                                  <Typography
-                                    variant="subtitle2"
-                                  >
+                                  <Typography variant="subtitle2">
                                     {flexRender(
                                       header.column.columnDef.header,
                                       header.getContext()
@@ -902,7 +984,7 @@ const TablePagination = () => {
                     <TableBody>
                       {table.getRowModel().rows.length ? (
                         table.getRowModel().rows.map((row) => (
-                          <TableRow key={row.id}>
+                          <TableRow key={row.id} hover>
                             {row.getVisibleCells().map((cell) => (
                               <TableCell key={cell.id} sx={{ padding: "10px" }}>
                                 {flexRender(
