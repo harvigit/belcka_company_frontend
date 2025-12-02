@@ -1,5 +1,11 @@
 "use client";
-import React, { useEffect, useState, useMemo, SetStateAction } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  SetStateAction,
+  use,
+} from "react";
 import {
   TableContainer,
   Table,
@@ -125,7 +131,9 @@ const TablePagination = () => {
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: string | null } & {
+  const user = session.data?.user as User & { id: number } & {
+    company_id?: string | null;
+  } & {
     user_role_id: number;
   };
   const [inviteUser, setInviteUser] = useState(false);
@@ -290,7 +298,11 @@ const TablePagination = () => {
       userPermission.permissions.filter((p) => p.status).map((p) => p.id)
     );
     const permssion =
-      userPermission.user_role_id == 1 && user.user_role_id == 2 ? false : true;
+      user.user_role_id == 1
+        ? true
+        : false || userPermission.id == user.id
+        ? true
+        : false;
     setIsPermission(permssion);
     setTempPermissions(activePermissions);
     setPermissionSearch("");
@@ -991,6 +1003,7 @@ const TablePagination = () => {
                   borderRadius: 1,
                   "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
                   cursor: "pointer",
+                  pointerEvents: !isPermission ? "none" : "",
                 }}
                 onClick={handleSelectAll}
               >
@@ -999,7 +1012,7 @@ const TablePagination = () => {
                   checked={allFilteredSelected}
                   onChange={handleSelectAll}
                   size="small"
-                  disabled={loading}
+                  disabled={loading || !isPermission}
                 />
               </Box>
 
@@ -1016,16 +1029,13 @@ const TablePagination = () => {
                       borderRadius: 1,
                       "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
                       cursor: "pointer",
+                      pointerEvents: !isPermission ? "none" : "",
                     }}
                     onClick={() => handlePermissionToggle(permission.id)}
                   >
                     <Typography>{permission.name}</Typography>
                     <IOSSwitch
-                      checked={
-                        isPermission
-                          ? tempPermissions.has(permission.id)
-                          : false
-                      }
+                      checked={tempPermissions.has(permission.id)}
                       onChange={() => handlePermissionToggle(permission.id)}
                       size="small"
                       disabled={loading || !isPermission}
@@ -1035,24 +1045,26 @@ const TablePagination = () => {
               </Box>
 
               {/* Drawer Actions */}
-              <Box mt={2} display="flex" justifyContent="start" gap={2}>
-                <Button
-                  color="primary"
-                  variant="contained"
-                  size="large"
-                  onClick={handleSavePermissions}
-                >
-                  Save
-                </Button>
-                <Button
-                  color="error"
-                  onClick={() => setPermissionsDrawerOpen(false)}
-                  variant="outlined"
-                  size="large"
-                >
-                  Cancel
-                </Button>
-              </Box>
+              {isPermission && (
+                <Box mt={2} display="flex" justifyContent="start" gap={2}>
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    size="large"
+                    onClick={handleSavePermissions}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    color="error"
+                    onClick={() => setPermissionsDrawerOpen(false)}
+                    variant="outlined"
+                    size="large"
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Box>
         </Drawer>
