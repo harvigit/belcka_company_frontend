@@ -1,11 +1,5 @@
 "use client";
-import React, {
-  useEffect,
-  useState,
-  useMemo,
-  SetStateAction,
-  use,
-} from "react";
+import React, { useEffect, useState, useMemo, SetStateAction } from "react";
 import {
   TableContainer,
   Table,
@@ -30,10 +24,6 @@ import {
   Dialog,
   Drawer,
   Autocomplete,
-  Select,
-  Switch,
-  FormControl,
-  InputLabel,
   Menu,
   ListItemIcon,
   Popover,
@@ -60,8 +50,6 @@ import {
   IconTrash,
   IconUserCheck,
   IconX,
-  IconChevronDown,
-  IconChevronUp,
   IconDotsVertical,
   IconUsersMinus,
   IconTableColumn,
@@ -84,6 +72,7 @@ import "react-phone-input-2/lib/material.css";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
+import Cookies from "js-cookie";
 
 dayjs.extend(customParseFormat);
 
@@ -100,6 +89,8 @@ export interface UserList {
   supervisor_name: string;
   user_image: string;
   trade_name: string;
+  email: string;
+  phone: number;
   team_name: string;
   shifts: string;
   status: number;
@@ -109,6 +100,13 @@ export interface UserList {
   company_id: number | null;
   user_role_id: number;
   permission_count: number;
+  joining_date: string;
+  bank_name: string;
+  account_no: any;
+  short_code: string;
+  address: string;
+  nin_number: string;
+  utr_number: string;
 }
 
 export interface TradeList {
@@ -549,6 +547,26 @@ const TablePagination = () => {
       ),
     }),
 
+    columnHelper.accessor((row) => row.email, {
+      id: "email",
+      header: () => "Email",
+      cell: (info) => (
+        <Typography className="f-14" color="textPrimary">
+          {info.getValue() ?? "-"}
+        </Typography>
+      ),
+    }),
+
+    columnHelper.accessor((row) => row.phone, {
+      id: "phone",
+      header: () => "Phone",
+      cell: (info) => (
+        <Typography className="f-14" color="textPrimary">
+          {info.getValue() ?? "-"}
+        </Typography>
+      ),
+    }),
+
     columnHelper.accessor((row) => row.permissions, {
       id: "permissions",
       header: () => "Permissions",
@@ -589,6 +607,96 @@ const TablePagination = () => {
             {row.is_invited
               ? "Not logged in"
               : formatDate(row.logged_in_at) ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.joining_date, {
+      id: "joiningDate",
+      header: () => "Joining on",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {row.joining_date ? formatDate(row.joining_date) : "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.bank_name, {
+      id: "bankName",
+      header: () => "Bank Name",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {row.bank_name ? row.bank_name : "-"}
+          </Typography>
+        );
+      },
+    }),
+    columnHelper.accessor((row) => row.account_no, {
+      id: "accountNo",
+      header: () => "Account No",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {row.account_no ? row.account_no : "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.short_code, {
+      id: "shortCode",
+      header: () => "Short Code",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {row.short_code ? row.short_code : "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.address, {
+      id: "address",
+      header: () => "Address",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {row.address ? row.address : "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.nin_number, {
+      id: "ninNumber",
+      header: () => "Nin Number",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {row.nin_number ? row.nin_number : "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.utr_number, {
+      id: "utrNumber",
+      header: () => "Utr Number",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {row.utr_number ? row.utr_number : "-"}
           </Typography>
         );
       },
@@ -661,6 +769,44 @@ const TablePagination = () => {
       },
     },
   });
+
+  const handleColumnVisibilityChange = (colId: string, value: boolean) => {
+    const currentVisibility = Cookies.get("columnVisibility")
+      ? JSON.parse(Cookies.get("columnVisibility")!)
+      : {};
+
+    currentVisibility[colId] = value;
+
+    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
+      expires: 365,
+    });
+
+    table.setColumnVisibility((prev: any) => ({
+      ...prev,
+      [colId]: value,
+    }));
+  };
+
+  useEffect(() => {
+    const saved = Cookies.get("columnVisibility")
+      ? JSON.parse(Cookies.get("columnVisibility")!)
+      : {};
+
+    // defaults for role 2
+    if (user.user_role_id === 2) {
+      saved["email"] = false;
+      saved["phone"] = false;
+      saved["joiningDate"] = false;
+      saved["bankName"] = false;
+      saved["accountNo"] = false;
+      saved["shortCode"] = false;
+      saved["address"] = false;
+      saved["utr_number"] = false;
+      saved["nin_number"] = false;
+    }
+
+    table.setColumnVisibility(saved);
+  }, [user, table]);
 
   useEffect(() => {
     table.setPageIndex(0);
@@ -810,9 +956,11 @@ const TablePagination = () => {
               <IconDotsVertical width={18} />
             </IconButton>
 
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-              <IconTableColumn />
-            </IconButton>
+            {user.user_role_id == 1 && (
+              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+                <IconTableColumn />
+              </IconButton>
+            )}
             <Popover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}
@@ -835,7 +983,6 @@ const TablePagination = () => {
                   .filter((col: any) => {
                     const excludedColumns = ["conflicts"];
                     if (excludedColumns.includes(col.id)) return false;
-
                     return col.id.toLowerCase().includes(search.toLowerCase());
                   })
                   .map((col: any) => (
@@ -844,7 +991,12 @@ const TablePagination = () => {
                       control={
                         <Checkbox
                           checked={col.getIsVisible()}
-                          onChange={col.getToggleVisibilityHandler()}
+                          onChange={(e) =>
+                            handleColumnVisibilityChange(
+                              col.id,
+                              e.target.checked
+                            )
+                          }
                           disabled={col.id === "conflicts"}
                         />
                       }

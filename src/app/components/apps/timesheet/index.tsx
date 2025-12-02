@@ -28,7 +28,7 @@ const TimesheetPage = () => {
     };
 
     return (
-        <PermissionGuard permission="Timesheets">
+        <PermissionGuard permission="Time Tracking">
             <Box p={2}>
             <Box
                 display="flex"
@@ -80,7 +80,7 @@ const TimesheetPage = () => {
                         }}
                     />*/}
                     <Tab
-                        label="Time Clock"
+                        label="Time Tracking"
                         sx={{
                             textTransform: 'none',
                             borderRadius: '10px',

@@ -716,7 +716,7 @@ export default function DynamicGantt({
                               borderBottom: 1,
                               borderColor: "divider",
                               pl: 6,
-                              py: 0.75,
+                              py: 1,
                             }}
                           >
                             <Box sx={{ width: 510 }}>
@@ -758,6 +758,7 @@ export default function DynamicGantt({
                             borderColor: "divider",
                             display: "flex",
                             alignItems: "center",
+                                borderRadius: 0
                           }}
                         >
                           <BarWithDates
@@ -773,11 +774,13 @@ export default function DynamicGantt({
                               key={task.id}
                               sx={{
                                 position: "relative",
-                                height: 34,
+                                height: 41,
                                 borderBottom: 1,
                                 borderColor: "divider",
                                 display: "flex",
                                 alignItems: "center",
+                                borderRadius: 0
+
                               }}
                             >
                               <BarWithDates
