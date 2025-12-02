@@ -64,6 +64,7 @@ import { AxiosResponse } from "axios";
 import { IconTableColumn } from "@tabler/icons-react";
 import CreateTrade from "../create";
 import EditTrade from "../edit";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 dayjs.extend(customParseFormat);
 
@@ -108,7 +109,7 @@ const TradeList = () => {
     name: "",
     trade_category_id: "",
     company_id: id.company_id,
-    status: true
+    status: true,
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -339,30 +340,44 @@ const TradeList = () => {
     columnHelper.accessor((row) => row?.status, {
       id: "status",
       header: () => "Status",
-      cell: (info) => {
-         return info.getValue() ? (
-          <Chip
-            size="small"
-            label="Active"
-            sx={{
-              backgroundColor: (theme) => theme.palette.success.light,
-              color: (theme) => theme.palette.success.main,
-              fontWeight: 500,
-              borderRadius: "6px",
-              px: 1.5,
-            }}
-          />
-        ) : (
-          <Chip
-            size="small"
-            label="Inactive"
-            sx={{
-              backgroundColor: (theme) => theme.palette.error.light,
-              color: (theme) => theme.palette.error.main,
-              fontWeight: 500,
-              borderRadius: "6px",
-              px: 1.5,
-            }}
+      cell: ({ row }) => {
+        const item = row.original;
+        const [switchLoading, setSwitchLoading] = useState(false);
+
+        const handleToggle = async () => {
+          setSwitchLoading(true);
+          try {
+            const payload = {
+              id: item.id,
+              company_id: id.company_id,
+              name: item.name,
+              trade_category_id: item.category_id,
+              status: !item.status, 
+            };
+
+            const result = await api.post("trade/edit-trade", payload);
+
+            if (result.data.IsSuccess) {
+              toast.success(result.data.message);
+
+              const updatedData = data.map((d) =>
+                d.id === item.id ? { ...d, status: !item.status } : d
+              );
+              setData(updatedData);
+            }
+          } catch (error) {
+            console.error(error);
+          } finally {
+            setSwitchLoading(false);
+          }
+        };
+
+        return (
+          <IOSSwitch
+            checked={item.status}
+            onChange={handleToggle}
+            disabled={switchLoading}
+            color="success"
           />
         );
       },

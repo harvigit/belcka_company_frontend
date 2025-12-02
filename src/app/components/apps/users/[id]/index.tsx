@@ -119,8 +119,8 @@ const TablePagination = () => {
       if (res.data?.info) {
         const data = res.data.info[0];
         setData(res.data.info[0]);
-        const ext = data.extension || "";
-        const number = data.phone || "";
+        const ext = data?.extension || "";
+        const number = data?.phone || "";
         const userInfo = data;
         setFormData({
           first_name: userInfo.first_name || "",

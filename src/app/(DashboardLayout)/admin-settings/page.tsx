@@ -127,7 +127,6 @@ const AdminSetting = () => {
                                             label="Expense Category"
                                             {...a11yProps(5)}
                                         />
-                                        { user.user_role_id == 1 && (
                                          <Tab
                                             className="admin-settings"
                                             iconPosition="start"
@@ -135,7 +134,6 @@ const AdminSetting = () => {
                                             label="Comapny Trades"
                                             {...a11yProps(6)}
                                         />
-                                        )}
                                     </Tabs>
                                 </Stack>
                             </BlankCard>
@@ -166,11 +164,9 @@ const AdminSetting = () => {
                                 <TabPanel value={value} index={5}>
                                     <CategoryList />
                                 </TabPanel>
-                                { user.user_role_id == 1 && (
                                  <TabPanel value={value} index={6}>
                                     <TradeList />
                                 </TabPanel>
-                                )}
                             </BlankCard>
                         </Grid>
                     </Grid>

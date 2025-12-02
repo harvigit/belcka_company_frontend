@@ -281,16 +281,16 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   useEffect(() => {
     if (
       Object.keys(comapny?.diff_data || {}).includes("net_rate_perday") &&
-      comapny?.diff_data.net_rate_perday?.old
-        ? comapny?.diff_data.net_rate_perday?.old
-        : comapny?.diff_data.net_rate_perday?.new
+      comapny?.diff_data?.net_rate_perday?.old
+        ? comapny?.diff_data?.net_rate_perday?.old
+        : comapny?.diff_data?.net_rate_perday?.new
     ) {
       setFormData((prev) => ({
         ...prev,
         rate:
           comapny.is_pending_request == false && comapny?.status !== 12
-            ? comapny.diff_data.net_rate_perday.new
-            : comapny.diff_data.net_rate_perday.old,
+            ? comapny.diff_data?.net_rate_perday.new
+            : comapny.diff_data?.net_rate_perday.old,
       }));
     }
     if (
