@@ -383,7 +383,7 @@ const TablePagination = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Avatar
-              src={image || defaultImage}
+              src={image ? image : ""}
               alt={name}
               sx={{ width: 36, height: 36 }}
             />

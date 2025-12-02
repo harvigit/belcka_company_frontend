@@ -37,7 +37,7 @@ export interface UserList {
   name: string;
 }
 const EditTeamPage = () => {
-  const { teams, loading, updateTeam } = useContext(TeamContext);
+  const { teams, updateTeam } = useContext(TeamContext);
   const [formData, setFormData] = useState<TeamList | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -84,7 +84,7 @@ const EditTeamPage = () => {
 
   useEffect(() => {
     const fetchTeamData = async () => {
-      if (!loading && teams.length > 0 && teamId) {
+      if ( teams.length > 0 && teamId) {
         try {
           const res = await api.get(
             `team/get-team-member-list?team_id=${teamId}`
@@ -193,7 +193,7 @@ const EditTeamPage = () => {
     }
   };
 
-  if (loading || !formData) {
+  if (!formData) {
     return (
       <Box
         display="flex"

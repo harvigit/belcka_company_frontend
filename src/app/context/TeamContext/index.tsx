@@ -9,7 +9,7 @@ import { TeamList } from "@/app/components/apps/teams/list";
 
 interface TeamContextType {
   teams: TeamList[];
-  loading: boolean;
+  // loading: boolean;
   error: Error | null;
   addTeam: (newTeam: TeamList) => Promise<void>;
   updateTeam: (updateTeam: TeamList) => Promise<void>;
@@ -27,7 +27,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
   const {
     data: teamData,
     error: invoiceError,
-    isLoading,
+    // isLoading,
     mutate,
   } = useSWR(
     "team/get-team-member-list",
@@ -42,11 +42,11 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   );
 
-  const [loading, setLoading] = useState<boolean>(true);
+  // const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    setLoading(isLoading);
-  }, [isLoading]);
+  // useEffect(() => {
+  //   setLoading(isLoading);
+  // }, [isLoading]);
 
   //   // Add permission
   const addTeam = async (team: TeamList) => {
@@ -86,7 +86,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
     <TeamContext.Provider
       value={{
         teams: teamData || [],
-        loading,
+        // loading,
         error: invoiceError || null,
         addTeam,
         updateTeam,

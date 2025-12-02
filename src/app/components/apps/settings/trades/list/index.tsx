@@ -789,7 +789,7 @@ const TradeList = () => {
                   {
                     // table.getRowModel().rows.length ? (
                     table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
+                      <TableRow key={row.id} hover>
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id} sx={{ padding: "10px" }}>
                             {flexRender(

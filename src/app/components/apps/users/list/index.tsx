@@ -516,7 +516,8 @@ const TablePagination = () => {
                 sx={{ cursor: "pointer" }}
               >
                 <Avatar
-                  src={user.user_image || defaultImage}
+                  src={user.user_image ? user.user_image : ""}
+                  alt={user.name}
                   sx={{ width: 36, height: 36 }}
                 />
                 <Box>

@@ -356,7 +356,7 @@ const TimeClock = () => {
                 const row = info.row.original;
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
-                        <Avatar src={row.user_thumb_image} alt={row.user_name} sx={{ width: 36, height: 36 }} />
+                        <Avatar src={row.user_thumb_image ? row.user_thumb_image : ""} alt={row.user_name} sx={{ width: 36, height: 36 }} />
                         <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
                             <Typography className="f-14" noWrap>
                                 {row.user_name}
