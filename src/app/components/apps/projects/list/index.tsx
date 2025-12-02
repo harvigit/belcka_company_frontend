@@ -318,7 +318,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const fetchHistories = async () => {
     try {
       const res = await api.get(
-        `project/get-history?project_id=${Number(projectId)}`
+        `project/get-history?project_id=${Number(projectID)}`
       );
       if (res.data?.info) {
         setHistory(res.data.info);
@@ -332,7 +332,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (!Number.isNaN(projectID) && projectID !== null) {
       fetchHistories();
     }
-  }, [openDrawer == true]);
+  }, [openDrawer == true && !Number.isNaN(projectID)]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
