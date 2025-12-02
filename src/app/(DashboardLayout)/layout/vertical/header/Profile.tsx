@@ -129,6 +129,7 @@ const Profile = () => {
                 display="flex"
                 alignItems="center"
                 gap={1}
+                flexWrap={"wrap"}
               >
                 <IconMail width="18" height="18" />
                 {user?.email}

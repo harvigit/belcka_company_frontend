@@ -318,7 +318,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const fetchHistories = async () => {
     try {
       const res = await api.get(
-        `project/get-history?project_id=${Number(projectID)}`
+        `project/get-history?project_id=${Number(projectId)}`
       );
       if (res.data?.info) {
         setHistory(res.data.info);
