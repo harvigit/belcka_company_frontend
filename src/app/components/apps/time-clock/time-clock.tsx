@@ -24,8 +24,17 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox,
+    Button,
 } from '@mui/material';
-import {IconSearch, IconChevronLeft, IconChevronRight, IconTableColumn} from '@tabler/icons-react';
+import {
+    IconSearch,
+    IconChevronLeft,
+    IconChevronRight,
+    IconTableColumn,
+    IconLock,
+    IconLockOpen,
+    IconCurrencyDollar,
+} from '@tabler/icons-react';
 import {
     useReactTable,
     getCoreRowModel,
@@ -45,7 +54,7 @@ import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 
 import 'react-day-picker/dist/style.css';
-import '@/app/global.css'
+import '@/app/global.css';
 import {useRouter, useSearchParams} from 'next/navigation';
 
 const columnHelper = createColumnHelper<TimeClock>();
@@ -96,6 +105,7 @@ const loadDateRangeFromStorage = () => {
 };
 
 export type TimeClock = {
+    timesheet_light_ids: string;
     weekly_payable_amount: number;
     company_id: string;
     week_range: any;
@@ -129,20 +139,6 @@ type TimeClockResponse = {
     currency: string;
 };
 
-type FilterState = {
-    type: string;
-};
-
-type SortingState = Array<{
-    id: string;
-    desc: boolean;
-}>;
-
-type PaginationState = {
-    pageIndex: number;
-    pageSize: number;
-};
-
 const TimeClock = () => {
     // Initialize default date range (current week)
     const today = new Date();
@@ -174,20 +170,16 @@ const TimeClock = () => {
     const [data, setData] = useState<TimeClock[]>([]);
     const [currency, setCurrency] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
-    const [filters, setFilters] = useState<FilterState>({type: ''});
-    const [sorting, setSorting] = useState<SortingState>([]);
-    const [pagination, setPagination] = useState<PaginationState>({pageIndex: 0, pageSize: 50});
-    const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
     const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
-   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-   
+    const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+    const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
     const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
     const [hasDataChanged, setHasDataChanged] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [companyId, setCompanyId] = useState<number | null>(null)
+    const [companyId, setCompanyId] = useState<number | null>(null);
     const router = useRouter();
     const searchParams = useSearchParams();
     const userIdParam = searchParams?.get('user_id');
@@ -196,7 +188,8 @@ const TimeClock = () => {
     const openParam = searchParams?.get('open');
     const hasInitialized = useRef(false);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState('');
+
     const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
         try {
             const params: Record<string, string> = {
@@ -274,10 +267,9 @@ const TimeClock = () => {
             const matchesSearch =
                 item.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.trade_name?.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesType = filters.type ? item.type === filters.type : true;
-            return matchesSearch && matchesType;
+            return matchesSearch;
         });
-    }, [data, searchTerm, filters]);
+    }, [data, searchTerm]);
 
     const formatHour = (val: string | number | null | undefined): string => {
         if (val === null || val === undefined) return '-';
@@ -287,36 +279,36 @@ const TimeClock = () => {
         const m = Math.round((num - h) * 60);
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
-    const columnHelper = createColumnHelper<TimeClock>();
+
     const columns = [
         {
             id: 'select',
-            header: ({ table }:any) => (
+            header: ({table}: any) => (
                 <Stack direction="row" alignItems="center">
                     <CustomCheckbox
                         checked={
-                        selectedRowIds.size === filteredData.length &&
-                        filteredData.length > 0
+                            selectedRowIds.size === filteredData.length &&
+                            filteredData.length > 0
                         }
                         indeterminate={
-                        selectedRowIds.size > 0 &&
-                        selectedRowIds.size < filteredData.length
+                            selectedRowIds.size > 0 &&
+                            selectedRowIds.size < filteredData.length
                         }
                         onChange={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        const isChecked = e.target.checked;
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const isChecked = e.target.checked;
 
-                        if (isChecked) {
-                            setSelectedRowIds(new Set(filteredData.map((row) => row.user_id)));
-                        } else {
-                            setSelectedRowIds(new Set());
-                        }
+                            if (isChecked) {
+                                setSelectedRowIds(new Set(filteredData.map((row) => row.user_id)));
+                            } else {
+                                setSelectedRowIds(new Set());
+                            }
                         }}
                     />
                 </Stack>
             ),
-            cell: ({ row }: any) => {
+            cell: ({row}: any) => {
                 const item = row.original;
                 const isChecked = selectedRowIds.has(item.user_id);
                 const isHovered = hoveredRow === item.user_id;
@@ -326,7 +318,7 @@ const TimeClock = () => {
                     <Stack
                         direction="row"
                         alignItems="center"
-                        sx={{ pl: 1 }}
+                        sx={{pl: 1}}
                         onMouseEnter={() => setHoveredRow(item.user_id)}
                         onMouseLeave={() => setHoveredRow(null)}
                     >
@@ -340,8 +332,8 @@ const TimeClock = () => {
                             }}
                             sx={{
                                 opacity: showCheckbox ? 1 : 0,
-                                pointerEvents: showCheckbox ? "auto" : "none",
-                                transition: "opacity 0.2s ease",
+                                pointerEvents: showCheckbox ? 'auto' : 'none',
+                                transition: 'opacity 0.2s ease',
                             }}
                         />
                     </Stack>
@@ -356,8 +348,9 @@ const TimeClock = () => {
                 const row = info.row.original;
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
-                        <Avatar src={row.user_thumb_image ? row.user_thumb_image : ""} alt={row.user_name} sx={{ width: 36, height: 36 }} />
-                        <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
+                        <Avatar src={row.user_thumb_image ? row.user_thumb_image : ''} alt={row.user_name}
+                                sx={{width: 36, height: 36}}/>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
                             <Typography className="f-14" noWrap>
                                 {row.user_name}
                             </Typography>
@@ -471,24 +464,11 @@ const TimeClock = () => {
                 return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
             },
         }),
-        // [currency]
     ];
-    const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-        setAnchorEl2(event.currentTarget);
-    };
-    const handlePopoverClose = () => setAnchorEl2(null);
+
     const table = useReactTable({
         data: filteredData,
         columns,
-        state: {
-            sorting,
-            pagination,
-            rowSelection,
-        },
-        enableRowSelection: true,
-        onRowSelectionChange: setRowSelection,
-        onSortingChange: setSorting,
-        onPaginationChange: setPagination,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -536,92 +516,225 @@ const TimeClock = () => {
         })();
     }, [searchParams]);
 
+    const handleLock = async () => {
+        const timesheetIds: (number | string)[] = [];
+
+        // Only get timesheet IDs for SELECTED rows
+        filteredData.forEach((item) => {
+            if (selectedRowIds.has(item.user_id)) {
+                timesheetIds.push(item.timesheet_light_ids);
+            }
+        });
+
+        if (timesheetIds.length === 0) {
+            setErrorMessage('No valid timesheets selected for locking.');
+            return;
+        }
+
+        await toggleWeeklyTimesheetStatus(timesheetIds, 'approve');
+    };
+
+    const handleUnlock = async () => {
+        const timesheetIds: (number | string)[] = [];
+
+        // Only get timesheet IDs for SELECTED rows
+        filteredData.forEach((item) => {
+            if (selectedRowIds.has(item.user_id)) {
+                timesheetIds.push(item.timesheet_light_ids);
+            }
+        });
+
+        if (timesheetIds.length === 0) {
+            setErrorMessage('No valid timesheets selected for unlocking.');
+            return;
+        }
+
+        await toggleWeeklyTimesheetStatus(timesheetIds, 'unapprove');
+    };
+
+    const handleMarkAsPaid = async () => {
+        const timesheetIds: (number | string)[] = [];
+
+        // Only get timesheet IDs for SELECTED rows
+        filteredData.forEach((item) => {
+            if (selectedRowIds.has(item.user_id)) {
+                timesheetIds.push(item.timesheet_light_ids);
+            }
+        });
+
+        if (timesheetIds.length === 0) {
+            setErrorMessage('No valid timesheets selected for marking as paid.');
+            return;
+        }
+        
+        // try {
+        //     const ids = timesheetIds.join(',');
+        //     const response = await api.post('/time-clock/mark-as-paid', { ids });
+        //     if (response.data.IsSuccess) {
+        //         if (startDate && endDate) {
+        //             await fetchData(startDate, endDate);
+        //         }
+        //         setSelectedRowIds(new Set());
+        //         setHasDataChanged(true);
+        //     }
+        // } catch (error) {
+        //     setErrorMessage('Failed to mark timesheets as paid.');
+        // }
+
+        alert(`Marking ${selectedRowIds.size} record(s) as Paid with IDs: ${timesheetIds.join(', ')}`);
+    };
+
+    const toggleWeeklyTimesheetStatus = async (timesheetIds: (number | string)[], action: 'approve' | 'unapprove') => {
+        if (timesheetIds.length === 0) return;
+
+        try {
+            const ids = timesheetIds.join(',');
+            const endpoint = action === 'approve'
+                ? '/timesheet/approve'
+                : '/timesheet/unapprove';
+
+            const response = await api.post(endpoint, { ids });
+
+            if (response.data.IsSuccess) {
+                if (startDate && endDate) {
+                    await fetchData(startDate, endDate);
+                }
+                setSelectedRowIds(new Set());
+                setHasDataChanged(true);
+            } else {
+                setErrorMessage(`Failed to ${action} timesheet(s).`);
+            }
+        } catch (error: any) {
+            console.error(`Error ${action}ing weekly timesheets:`, error);
+            setErrorMessage(`An error occurred while ${action}ing timesheet(s).`);
+        }
+    };
+
+    const isAnyRowSelected = selectedRowIds.size > 0;
+
     return (
         <Box sx={{position: 'relative', overflow: 'hidden'}}>
             <Box sx={{transition: 'height 0.3s ease-in-out'}}>
-               <Box display={"flex"} justifyContent={"space-between"}>
-                 <Stack
-                    mx={2}
-                    mb={3}
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={{ xs: 1.5, sm: 2 }}
-                    alignItems="center"
-                    flexWrap="wrap"
-                >
-                    <DateRangePickerBox from={startDate} to={endDate} onChange={handleDateRangeChange} />
-                    <TextField
-                        placeholder="Search..."
-                        size="small"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconSearch size={16} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                </Stack>
-                <Stack>
-                     <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-                    <IconTableColumn />
-                </IconButton>
+                <Box display={'flex'} justifyContent={'space-between'} alignItems="center" mb={2}>
+                    <Stack
+                        mx={2}
+                        direction={{xs: 'column', sm: 'row'}}
+                        spacing={{xs: 1.5, sm: 2}}
+                        alignItems="center"
+                        flexWrap="wrap"
+                    >
+                        <DateRangePickerBox from={startDate} to={endDate} onChange={handleDateRangeChange}/>
+                        <TextField
+                            placeholder="Search..."
+                            size="small"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconSearch size={16}/>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Stack>
+
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        {/* Only show buttons when at least one row is selected */}
+                        {isAnyRowSelected && (
+                            <>
+                                <Button
+                                    startIcon={<IconLock size={16}/>}
+                                    variant="outlined"
+                                    color="success"
+                                    size="small"
+                                    onClick={handleLock}
+                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                >
+                                    Lock
+                                </Button>
+
+                                <Button
+                                    startIcon={<IconLockOpen size={16}/>}
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    onClick={handleUnlock}
+                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                >
+                                    Unlock
+                                </Button>
+
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="small"
+                                    onClick={handleMarkAsPaid}
+                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                >
+                                    Paid
+                                </Button>
+                            </>
+                        )}
+
+                        <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)}>
+                            <IconTableColumn/>
+                        </IconButton>
+                    </Stack>
+                </Box>
+
                 <Popover
                     open={Boolean(anchorEl2)}
                     anchorEl={anchorEl2}
-                    onClose={handlePopoverClose}
-                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                    transformOrigin={{ vertical: "top", horizontal: "right" }}
-                    PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+                    onClose={() => setAnchorEl2(null)}
+                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                    transformOrigin={{vertical: 'top', horizontal: 'right'}}
+                    PaperProps={{sx: {width: 220, p: 1, borderRadius: 2}}}
                 >
                     <TextField
-                    size="small"
-                    placeholder="Search"
-                    fullWidth
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    sx={{ mb: 1 }}
+                        size="small"
+                        placeholder="Search"
+                        fullWidth
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        sx={{mb: 1}}
                     />
                     <FormGroup>
-                    {table
-                        .getAllLeafColumns()
-                        .filter((col: any) => {
-                        const excludedColumns = ["conflicts","select"];
-                        if (excludedColumns.includes(col.id)) return false;
-    
-                        return col.id.toLowerCase().includes(search.toLowerCase());
-                        })
-                        .map((col: any) => (
-                        <FormControlLabel
-                            key={col.id}
-                            control={
-                            <Checkbox
-                                checked={col.getIsVisible()}
-                                onChange={col.getToggleVisibilityHandler()}
-                                disabled={col.id === "conflicts"}
-                            />
-                            }
-                            sx={{ textTransform: "none" }}
-                            label={
-                            col.columnDef.meta?.label ||
-                            (typeof col.columnDef.header === "string" &&
-                            col.columnDef.header.trim() !== ""
-                                ? col.columnDef.header
-                                : col.id
-                                    .replace(/([A-Z])/g, " $1")
-                                    .replace(/^./, (str: string) => str.toUpperCase())
-                                    .trim())
-                            }
-                        />
-                        ))}
+                        {table
+                            .getAllLeafColumns()
+                            .filter((col: any) => {
+                                const excludedColumns = ['select'];
+                                if (excludedColumns.includes(col.id)) return false;
+                                return col.id.toLowerCase().includes(search.toLowerCase());
+                            })
+                            .map((col: any) => (
+                                <FormControlLabel
+                                    key={col.id}
+                                    control={
+                                        <Checkbox
+                                            checked={col.getIsVisible()}
+                                            onChange={col.getToggleVisibilityHandler()}
+                                        />
+                                    }
+                                    sx={{textTransform: 'none'}}
+                                    label={
+                                        col.columnDef.meta?.label ||
+                                        (typeof col.columnDef.header === 'string' &&
+                                        col.columnDef.header.trim() !== ''
+                                            ? col.columnDef.header
+                                            : col.id
+                                                .replace(/([A-Z])/g, ' $1')
+                                                .replace(/^./, (str: string) => str.toUpperCase())
+                                                .trim())
+                                    }
+                                />
+                            ))}
                     </FormGroup>
                 </Popover>
-                </Stack>
-               </Box>
-                <Divider />
 
-                <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
+                <Divider/>
+
+                <TableContainer sx={{maxHeight: 600, overflowX: 'auto'}}>
                     <Table stickyHeader>
                         <TableHead>
                             {table.getHeaderGroups().map((headerGroup) => (
@@ -648,7 +761,6 @@ const TimeClock = () => {
                                                         cursor: isSortable ? 'pointer' : 'default',
                                                         border: '2px solid transparent',
                                                         borderRadius: '6px',
-                                                        px: 1.5,
                                                         py: 0.75,
                                                         ml: 0.5,
                                                         fontWeight: isActive ? 600 : 500,
@@ -656,8 +768,8 @@ const TimeClock = () => {
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        '&:hover': { color: '#888' },
-                                                        '&:hover .hoverIcon': { opacity: 1 },
+                                                        '&:hover': {color: '#888'},
+                                                        '&:hover .hoverIcon': {opacity: 1},
                                                     }}
                                                 >
                                                     <Typography variant="body2">
@@ -675,7 +787,7 @@ const TimeClock = () => {
                                                                 color: isActive ? '#000' : '#888',
                                                             }}
                                                         >
-                                                            {isActive ? (isAsc ? '↑' : '↓') : '↑'}
+                                                            {isActive ? (isAsc ? 'Up' : 'Down') : 'Up/Down'}
                                                         </Box>
                                                     )}
                                                 </Box>
@@ -701,7 +813,7 @@ const TimeClock = () => {
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} sx={{ padding: "10px" }} align="left">
+                                        <TableCell key={cell.id} sx={{padding: '10px'}} align="left">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
@@ -718,7 +830,7 @@ const TimeClock = () => {
                     pl={3}
                     pb={3}
                     alignItems="center"
-                    direction={{ xs: 'column', sm: 'row' }}
+                    direction={{xs: 'column', sm: 'row'}}
                     justifyContent="space-between"
                 >
                     <Box display="flex" alignItems="center" gap={1}>
@@ -760,19 +872,19 @@ const TimeClock = () => {
                             </CustomSelect>
                             <IconButton
                                 size="small"
-                                sx={{ width: '30px' }}
+                                sx={{width: '30px'}}
                                 onClick={() => table.previousPage()}
                                 disabled={!table.getCanPreviousPage()}
                             >
-                                <IconChevronLeft />
+                                <IconChevronLeft/>
                             </IconButton>
                             <IconButton
                                 size="small"
-                                sx={{ width: '30px' }}
+                                sx={{width: '30px'}}
                                 onClick={() => table.nextPage()}
                                 disabled={!table.getCanNextPage()}
                             >
-                                <IconChevronRight />
+                                <IconChevronRight/>
                             </IconButton>
                         </Stack>
                     </Box>
@@ -816,9 +928,9 @@ const TimeClock = () => {
                 open={!!errorMessage}
                 autoHideDuration={6000}
                 onClose={() => setErrorMessage(null)}
-                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                anchorOrigin={{vertical: 'top', horizontal: 'center'}}
             >
-                <Alert onClose={() => setErrorMessage(null)} severity="error" sx={{ width: '100%' }}>
+                <Alert onClose={() => setErrorMessage(null)} severity="error" sx={{width: '100%'}}>
                     {errorMessage}
                 </Alert>
             </Snackbar>
