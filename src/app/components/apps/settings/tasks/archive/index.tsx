@@ -75,7 +75,9 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
   };
 
   useEffect(() => {
-    fetchArchiveAddress();
+    if (open == true) {
+      fetchArchiveAddress();
+    }
   }, [open]);
 
   const handleConfirmAction = async () => {

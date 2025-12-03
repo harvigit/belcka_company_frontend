@@ -226,7 +226,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         console.error("Failed to fetch trades", err);
       }
     };
-    fetchTrades();
+    if (drawerOpen == true) {
+      fetchTrades();
+    }
   }, [drawerOpen !== false]);
 
   useEffect(() => {
@@ -261,7 +263,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   useEffect(() => {
-    if (user.company_id) {
+    if (user.company_id && projectID) {
       fetchProjects();
     }
   }, [projectID]);
@@ -297,23 +299,23 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   }, [value]);
 
-  const fetchArchiveAddress = async () => {
-    if (!projectId) return;
-    try {
-      const res = await api.get(`address/archive-list?project_id=${projectId}`);
-      if (res.data) {
-        setData(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch archive addresses", err);
-    }
-  };
+  // const fetchArchiveAddress = async () => {
+  //   if (!projectId) return;
+  //   try {
+  //     const res = await api.get(`address/archive-list?project_id=${projectId}`);
+  //     if (res.data) {
+  //       setData(res.data.info);
+  //     }
+  //   } catch (err) {
+  //     console.error("Failed to fetch archive addresses", err);
+  //   }
+  // };
 
-  useEffect(() => {
-    if (projectId) {
-      fetchArchiveAddress();
-    }
-  }, [archiveList]);
+  // useEffect(() => {
+  //   if (projectId) {
+  //     fetchArchiveAddress();
+  //   }
+  // }, [archiveList]);
 
   const fetchHistories = async () => {
     try {
@@ -329,7 +331,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   useEffect(() => {
-    if (!Number.isNaN(projectID) && projectID !== null) {
+    if (!Number.isNaN(projectID) && projectID !== null && openDrawer == true) {
       fetchHistories();
     }
   }, [openDrawer == true && !Number.isNaN(projectID)]);
@@ -1493,23 +1495,24 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     </Typography>
                     <IconChevronRight style={{ color: "GrayText" }} />
                   </Box>
-                  <IconButton color="primary" sx={{ ml: 2 }}>
-                    <IconPencil
-                      size={18}
-                      onClick={() => {
-                        setEditingProject(project);
-                        setProjectEditOpen(true);
-                      }}
-                    />
+                  <IconButton
+                    color="primary"
+                    sx={{ ml: 2 }}
+                    onClick={() => {
+                      setEditingProject(project);
+                      setProjectEditOpen(true);
+                    }}
+                  >
+                    <IconPencil size={18} />
                   </IconButton>
-                  <IconButton color="error">
-                    <IconTrash
-                      size={18}
-                      onClick={() => {
-                        setProjectToDelete(project);
-                        setDeleteDialogOpen(true);
-                      }}
-                    />
+                  <IconButton
+                    color="error"
+                    onClick={() => {
+                      setProjectToDelete(project);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <IconTrash size={18} />
                   </IconButton>
                 </Grid>
               ))}

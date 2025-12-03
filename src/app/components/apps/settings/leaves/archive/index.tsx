@@ -63,7 +63,9 @@ const ArchiveLeave: React.FC<ArchiveLeaveProps> = ({
     };
 
     useEffect(() => {
-        fetchArchiveAddress();
+        if(open == true){
+            fetchArchiveAddress();
+        }
     }, [open]);
 
     const handleConfirmAction = async () => {

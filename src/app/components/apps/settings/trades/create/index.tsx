@@ -64,8 +64,10 @@ const CreateTrade: React.FC<CreateTradeProps> = ({
   };
 
   useEffect(() => {
-    fetchCategories();
-  }, [open == true]);
+    if (open == true) {
+      fetchCategories();
+    }
+  }, [open]);
 
   return (
     <Drawer

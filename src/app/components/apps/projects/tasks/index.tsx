@@ -6,7 +6,7 @@ import {
   Typography,
   Button,
   Autocomplete,
-  Box
+  Box,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -133,8 +133,8 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
   }, [open !== false, projectId, address_id]);
 
   useEffect(() => {
-    if (!userCompanyId) return;
-    (async () => {
+    const fetchLocations = async () => {
+      if (!userCompanyId) return;
       try {
         const res = await api.get(
           `company-locations/get?company_id=${userCompanyId}`
@@ -145,8 +145,11 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
       } catch (err) {
         console.error("Error fetching locations", err);
       }
-    })();
-  }, [userCompanyId]);
+    };
+    if (open == true) {
+      fetchLocations();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!formData.trade_id) {
