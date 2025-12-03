@@ -122,7 +122,7 @@ const Company = () => {
     if (!user?.company_id || !user?.id) return;
 
     try {
-      const res : AxiosResponse<any> = await api.get(
+      const res: AxiosResponse<any> = await api.get(
         `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
       );
 
@@ -140,16 +140,11 @@ const Company = () => {
     } catch (e) {
       console.error(e);
     }
-  }, [user.company_id,user.id]);
-
-  const fetchedOnce = useRef(false);
+  }, [user.company_id, user.id]);
 
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
-    if (!fetchedOnce.current) {
-      // fetchedOnce.current = true;
-      fetchFeeds();
-    }
+    fetchFeeds();
   }, [user?.company_id, user?.id]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -166,7 +161,10 @@ const Company = () => {
         company_id: companyId,
         user_id: user.id,
       };
-      const response : AxiosResponse<any> = await api.post("company/switch-company", payload);
+      const response: AxiosResponse<any> = await api.post(
+        "company/switch-company",
+        payload
+      );
       if (response.data.IsSuccess == true) {
         toast.success(response.data.message);
         setTimeout(() => {
@@ -187,7 +185,10 @@ const Company = () => {
 
     try {
       const payload = { feed_ids: unreedFeed };
-      const res : AxiosResponse<any> = await api.post("feed/mark-as-read", payload);
+      const res: AxiosResponse<any> = await api.post(
+        "feed/mark-as-read",
+        payload
+      );
       if (res.data) {
         await fetchFeeds();
       }
@@ -203,7 +204,7 @@ const Company = () => {
   const fetchList = useCallback(async () => {
     try {
       setLoading(true);
-      const res : AxiosResponse<any> = await api.get(
+      const res: AxiosResponse<any> = await api.get(
         `announcements/get-announcements?company_id=${user.company_id}&user_id=${user.id}`
       );
       const data = res.data.info || [];
