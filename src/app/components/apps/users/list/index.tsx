@@ -30,6 +30,7 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
+  Tooltip,
 } from "@mui/material";
 import {
   flexRender,
@@ -522,13 +523,24 @@ const TablePagination = () => {
                   <Typography
                     className="f-14"
                     color="textPrimary"
-                    sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": { color: "#173f98" },
+                      width: 150,
+                    }}
                   >
                     {user.name ?? "-"}
                   </Typography>
-                  <Typography color="textSecondary" variant="subtitle1">
-                    {user.trade_name}
-                  </Typography>
+                  <Tooltip title={user.trade_name ?? "-"} placement="top" arrow>
+                    <Typography
+                      color="textSecondary"
+                      variant="subtitle1"
+                      width={130}
+                      noWrap
+                    >
+                      {user.trade_name}
+                    </Typography>
+                  </Tooltip>
                 </Box>
               </Stack>
             </Link>
@@ -539,9 +551,13 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.team_name, {
       id: "teamName",
-      header: () => "Team Name",
+      header: () => (
+        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+          Team Name
+        </Typography>
+      ),
       cell: (info) => (
-        <Typography className="f-14" color="textPrimary">
+        <Typography className="f-14" color="textPrimary" sx={{ width: 100 }}>
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -551,9 +567,16 @@ const TablePagination = () => {
       id: "email",
       header: () => "Email",
       cell: (info) => (
-        <Typography className="f-14" color="textPrimary">
-          {info.getValue() ?? "-"}
-        </Typography>
+        <Tooltip title={info.getValue() ?? "-"} placement="top" arrow>
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{ width: 100 }}
+            noWrap
+          >
+            {info.getValue() ?? "-"}
+          </Typography>
+        </Tooltip>
       ),
     }),
 
@@ -603,6 +626,7 @@ const TablePagination = () => {
             className="f-14"
             color="textPrimary"
             fontWeight={row.is_invited ? 500 : 400}
+            width={90}
           >
             {row.is_invited
               ? "Not logged in"
@@ -614,7 +638,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.joining_date, {
       id: "joiningDate",
-      header: () => "Joining on",
+      header: () => (
+        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+          Joining on
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -627,7 +655,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.bank_name, {
       id: "bankName",
-      header: () => "Bank Name",
+      header: () => (
+        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+          Bank Name
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -639,7 +671,11 @@ const TablePagination = () => {
     }),
     columnHelper.accessor((row) => row.account_no, {
       id: "accountNo",
-      header: () => "Account No",
+      header: () => (
+        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+          Account No
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -652,7 +688,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.short_code, {
       id: "shortCode",
-      header: () => "Short Code",
+      header: () => (
+        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+          Short Code
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -678,7 +718,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.nin_number, {
       id: "ninNumber",
-      header: () => "Nin Number",
+      header: () => (
+        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+          Nin Number
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -691,7 +735,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.utr_number, {
       id: "utrNumber",
-      header: () => "Utr Number",
+      header: () => (
+        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+          Utr Number
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -801,8 +849,8 @@ const TablePagination = () => {
       saved["accountNo"] = false;
       saved["shortCode"] = false;
       saved["address"] = false;
-      saved["utr_number"] = false;
-      saved["nin_number"] = false;
+      saved["utrNumber"] = false;
+      saved["ninNumber"] = false;
     }
 
     table.setColumnVisibility(saved);
