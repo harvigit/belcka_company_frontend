@@ -61,7 +61,9 @@ const ArchiveProject: React.FC<ArchiveProjectProps> = ({
   }, [companyId]);
 
   useEffect(() => {
-    fetchProjects();
+    if (open == true) {
+      fetchProjects();
+    }
   }, [open]);
 
   const handleConfirmAction = async () => {

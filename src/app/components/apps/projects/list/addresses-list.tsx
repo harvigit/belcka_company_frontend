@@ -134,8 +134,11 @@ const AddressesList = ({
         console.error("Failed to fetch trades", err);
       }
     };
-    fetchTrades();
-  }, [drawerOpen !== false]);
+
+    if (drawerOpen == true) {
+      fetchTrades();
+    }
+  }, [drawerOpen == drawerOpen]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -169,7 +172,9 @@ const AddressesList = ({
   };
 
   useEffect(() => {
-    fetchAddresses();
+    if(projectId){
+      fetchAddresses();
+    }
   }, [projectId, processedIds, shouldRefresh]);
 
   useEffect(() => {

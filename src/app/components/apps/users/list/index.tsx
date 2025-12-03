@@ -466,9 +466,7 @@ const TablePagination = () => {
             }}
           />
 
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
+          <Typography variant="subtitle2">Name</Typography>
         </Stack>
       ),
       enableSorting: true,
@@ -553,7 +551,7 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row.team_name, {
       id: "teamName",
       header: () => (
-        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+        <Typography variant="subtitle2" noWrap>
           Team Name
         </Typography>
       ),
@@ -566,7 +564,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.email, {
       id: "email",
-      header: () => "Email",
+      header: () => (
+        <Typography variant="subtitle2" noWrap>
+          Email
+        </Typography>
+      ),
       cell: (info) => (
         <Tooltip title={info.getValue() ?? "-"} placement="top" arrow>
           <Typography
@@ -583,7 +585,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.phone, {
       id: "phone",
-      header: () => "Phone",
+      header: () => (
+        <Typography variant="subtitle2" noWrap>
+          Phone
+        </Typography>
+      ),
       cell: (info) => (
         <Typography className="f-14" color="textPrimary">
           {info.getValue() ?? "-"}
@@ -593,7 +599,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.permissions, {
       id: "permissions",
-      header: () => "Permissions",
+      header: () => (
+        <Typography variant="subtitle2" noWrap>
+          Permissions
+        </Typography>
+      ),
       cell: (info) => {
         const user = info.row.original;
         return (
@@ -619,7 +629,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.is_invited, {
       id: "isInvited",
-      header: () => "Login",
+      header: () => (
+        <Typography variant="subtitle2" noWrap>
+          Login
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -640,7 +654,7 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row.joining_date, {
       id: "joiningDate",
       header: () => (
-        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+        <Typography variant="subtitle2" noWrap>
           Joining on
         </Typography>
       ),
@@ -657,7 +671,7 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row.bank_name, {
       id: "bankName",
       header: () => (
-        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+        <Typography variant="subtitle2" noWrap>
           Bank Name
         </Typography>
       ),
@@ -673,7 +687,7 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row.account_no, {
       id: "accountNo",
       header: () => (
-        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+        <Typography variant="subtitle2" noWrap>
           Account No
         </Typography>
       ),
@@ -690,7 +704,7 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row.short_code, {
       id: "shortCode",
       header: () => (
-        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+        <Typography variant="subtitle2" noWrap>
           Short Code
         </Typography>
       ),
@@ -706,7 +720,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.address, {
       id: "address",
-      header: () => "Address",
+      header: () => (
+        <Typography variant="subtitle2" noWrap>
+          Address
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
         return (
@@ -720,7 +738,7 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row.nin_number, {
       id: "ninNumber",
       header: () => (
-        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+        <Typography variant="subtitle2" noWrap>
           Nin Number
         </Typography>
       ),
@@ -737,7 +755,7 @@ const TablePagination = () => {
     columnHelper.accessor((row) => row.utr_number, {
       id: "utrNumber",
       header: () => (
-        <Typography variant="subtitle2" fontWeight="inherit" noWrap>
+        <Typography variant="subtitle2" noWrap>
           Utr Number
         </Typography>
       ),
@@ -753,7 +771,11 @@ const TablePagination = () => {
 
     columnHelper.accessor((row) => row.status, {
       id: "status",
-      header: () => "Status",
+      header: () => (
+        <Typography variant="subtitle2" noWrap>
+          Status
+        </Typography>
+      ),
       cell: (info) => {
         const row = info.row.original;
 
@@ -1434,12 +1456,12 @@ const TablePagination = () => {
                                   "&:hover .hoverIcon": { opacity: 1 },
                                 }}
                               >
-                                <Typography variant="subtitle2">
-                                  {flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                                </Typography>
+                                {/* <Typography variant="subtitle2"> */}
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                                {/* </Typography> */}
                                 {isSortable && (
                                   <Box
                                     component="span"

@@ -82,8 +82,10 @@ export default function MapGantt({
 
   // Fetch Address List
   useEffect(() => {
-    if (projectId) loadAddressList();
-  }, [projectId]);
+    if (addZoneOpen == true || selected?.mode === "edit") {
+      loadAddressList();
+    }
+  }, [addZoneOpen, selected]);
 
   const loadAddressList = async () => {
     try {

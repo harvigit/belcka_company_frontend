@@ -73,7 +73,9 @@ const ArchiveLocation: React.FC<ArchiveLocationProps> = ({
   };
 
   useEffect(() => {
-    fetchArchiveAddress();
+    if (open == true) {
+      fetchArchiveAddress();
+    }
   }, [open]);
 
   const handleConfirmAction = async () => {

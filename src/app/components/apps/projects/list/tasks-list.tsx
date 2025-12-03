@@ -52,6 +52,7 @@ import { User } from "next-auth";
 import toast from "react-hot-toast";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import { IconChevronLeft } from "@tabler/icons-react";
+import { AxiosResponse } from "axios";
 
 dayjs.extend(customParseFormat);
 
@@ -132,22 +133,25 @@ const TasksList = ({
   }, [shouldRefresh == false]);
 
   useEffect(() => {
-    if (!user.company_id) return;
-    (async () => {
+    const getTrades = async () => {
       try {
-        const res = await api.get(
+        const res: AxiosResponse<any> = await api.get(
           `get-company-resources?flag=tradeList&company_id=${user.company_id}`
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
         console.error("Failed to fetch trades", err);
       }
-    })();
-  }, [user.company_id]);
+    };
+    if (drawerOpen == true) {
+      getTrades();
+    }
+  }, [drawerOpen, user.company_id]);
 
   useEffect(() => {
-    if (!drawerOpen || !projectId) return;
-    (async () => {
+    const fetchAddress = async () => {
+      if (!drawerOpen || !projectId) return;
+
       try {
         const res = await api.get(`address/get?project_id=${projectId}`);
         if (res.data && Array.isArray(res.data.info)) {
@@ -156,12 +160,16 @@ const TasksList = ({
       } catch (err) {
         console.error("Error fetching addresses", err);
       }
-    })();
-  }, [drawerOpen !== false, projectId]);
+    };
+    if (drawerOpen == true) {
+      fetchAddress();
+    }
+  }, [drawerOpen]);
 
   useEffect(() => {
-    if (!user.company_id) return;
-    (async () => {
+    const fetchAddress = async () => {
+      if (!user.company_id) return;
+
       try {
         const res = await api.get(
           `company-locations/get?company_id=${user.company_id}`
@@ -172,7 +180,10 @@ const TasksList = ({
       } catch (err) {
         console.error("Error fetching locations", err);
       }
-    })();
+    };
+    if (drawerOpen == true) {
+      fetchAddress();
+    }
   }, [drawerOpen]);
 
   useEffect(() => {

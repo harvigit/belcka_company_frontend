@@ -126,7 +126,6 @@ const TablePagination = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [otp, setOtp] = useState("");
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [openConfirm, setOpenConfirm] = useState(false);

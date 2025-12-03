@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router"; 
 import ProjectList from "@/app/components/apps/projects/list";
-import { UserProvider } from "@/app/context/UserContext";
 
 const ProjectListing = () => {
   const router = useRouter();
@@ -17,9 +16,7 @@ const ProjectListing = () => {
   }, [projectId]);
 
   return (
-    <UserProvider>
       <ProjectList projectId={projectIdNumber} />  
-    </UserProvider>
   );
 };
 

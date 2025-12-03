@@ -114,9 +114,10 @@ const EditProject: React.FC<EditProjectProps> = ({
         console.error("Failed to refresh project data", err);
       }
     };
-
-    getShifts();
-  }, []);
+    if (open == true) {
+      getShifts();
+    }
+  }, [open]);
 
   useEffect(() => {
     const getTeams = async () => {
@@ -131,9 +132,10 @@ const EditProject: React.FC<EditProjectProps> = ({
         console.error("Failed to refresh project data", err);
       }
     };
-
-    getTeams();
-  }, []);
+    if (open == true) {
+      getTeams();
+    }
+  }, [open]);
 
   useEffect(() => {
     const getGeofence = async () => {
@@ -152,9 +154,10 @@ const EditProject: React.FC<EditProjectProps> = ({
         console.error("Failed to refresh project data", err);
       }
     };
-
-    getGeofence();
-  }, []);
+    if (open == true) {
+      getGeofence();
+    }
+  }, [open]);
 
   return (
     <Drawer
@@ -312,8 +315,8 @@ const EditProject: React.FC<EditProjectProps> = ({
                   value={formData.budget}
                   onChange={handleChange}
                   inputProps={{
-                    inputMode: "numeric",
-                    pattern: "[0-9]*",
+                    inputMode: "decimal",
+                    pattern: "^[0-9]+(\\.[0-9]{0,2})?$",
                   }}
                   variant="outlined"
                   fullWidth

@@ -84,7 +84,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
   useEffect(() => {
     const getShifts = async () => {
       try {
-        const res : AxiosResponse<any>= await api.get(
+        const res: AxiosResponse<any> = await api.get(
           `get-company-resources?flag=shiftList&company_id=${user.company_id}`
         );
         if (res.data?.info) {
@@ -95,13 +95,15 @@ const CreateProject: React.FC<CreateProjectProps> = ({
       }
     };
 
-    getShifts();
-  }, []);
+    if (open == true) {
+      getShifts();
+    }
+  }, [open]);
 
   useEffect(() => {
     const getTeams = async () => {
       try {
-        const res : AxiosResponse<any>= await api.get(
+        const res: AxiosResponse<any> = await api.get(
           `get-company-resources?flag=teamList&company_id=${user.company_id}`
         );
         if (res.data?.info) {
@@ -111,9 +113,10 @@ const CreateProject: React.FC<CreateProjectProps> = ({
         console.error("Failed to refresh project data", err);
       }
     };
-
-    getTeams();
-  }, []);
+    if (open == true) {
+      getTeams();
+    }
+  }, [open]);
 
   useEffect(() => {
     const getGeofence = async () => {
@@ -133,8 +136,10 @@ const CreateProject: React.FC<CreateProjectProps> = ({
       }
     };
 
-    getGeofence();
-  }, []);
+    if (open == true) {
+      getGeofence();
+    }
+  }, [open]);
 
   return (
     <Drawer
@@ -206,6 +211,11 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                     });
                   }}
                   getOptionLabel={(option) => option.name}
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      {option.name}
+                    </li>
+                  )}
                   isOptionEqualToValue={(option, value) =>
                     option.id === value.id
                   }
@@ -240,6 +250,11 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                   isOptionEqualToValue={(option, value) =>
                     option.id === value.id
                   }
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      {option.name}
+                    </li>
+                  )}
                   renderInput={(params) => (
                     <CustomTextField {...params} placeholder="Select Teams" />
                   )}
@@ -268,6 +283,11 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                     });
                   }}
                   getOptionLabel={(option) => option.name}
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      {option.name}
+                    </li>
+                  )}
                   isOptionEqualToValue={(option, value) =>
                     option.id === value.id
                   }

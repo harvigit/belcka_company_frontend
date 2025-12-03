@@ -74,7 +74,9 @@ const ArchiveExpenseCategory: React.FC<ArchiveExpenseCategoryProps> = ({
     };
 
     useEffect(() => {
-        fetchArchiveAddress();
+        if(open == true){
+            fetchArchiveAddress();
+        }
     }, [open]);
 
     const handleConfirmAction = async () => {

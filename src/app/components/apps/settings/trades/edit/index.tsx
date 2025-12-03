@@ -85,8 +85,10 @@ const EditTrade: React.FC<EditTradeProps> = ({
   };
 
   useEffect(() => {
-    fetchCategories();
-  }, [open == true]);
+    if (open == true) {
+      fetchCategories();
+    }
+  }, [open]);
 
   return (
     <Drawer
