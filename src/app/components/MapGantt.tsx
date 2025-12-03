@@ -404,7 +404,7 @@ const AllZonesMap = ({ zones, isLoaded }: any) => {
     <Paper sx={{ height: "90%", width: "100%" }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
-        zoom={5}
+        zoom={18}
         center={mapCenter}
         onLoad={(map) => {
           mapRef.current = map;
