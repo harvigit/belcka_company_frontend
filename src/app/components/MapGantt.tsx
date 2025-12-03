@@ -27,6 +27,7 @@ import {
   InputLabel,
   InputAdornment,
   Drawer,
+  Autocomplete,
 } from "@mui/material";
 
 import {
@@ -44,6 +45,7 @@ import api from "@/utils/axios";
 import { AxiosResponse } from "axios";
 import { Grid, width } from "@mui/system";
 import { IconSearch } from "@tabler/icons-react";
+import CustomTextField from "./forms/theme-elements/CustomTextField";
 
 type Props = {
   open: boolean;
@@ -68,74 +70,85 @@ export default function MapGantt({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [addZoneOpen, setAddZoneOpen] = useState(false);
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
     libraries: GOOGLE_MAP_LIBRARIES as any,
   });
 
-  useEffect(() => {
-    if (projectId) {
-      fetchProjectDetail();
-    }
-  }, [projectId]);
-
-  // Fetch Address List
-  useEffect(() => {
-    if (addZoneOpen == true || selected?.mode === "edit") {
-      loadAddressList();
-    }
-  }, [addZoneOpen, selected]);
-
-  const loadAddressList = async () => {
+  const fetchProjects = async () => {
     try {
-      const res: AxiosResponse<any> = await api.get("address/get", {
-        params: { project_id: projectId },
-      });
-
-      setAddresses(res.data.info || []);
+      const res = await api.get(`project/get?company_id=${companyId}`);
+      if (res.data?.info) {
+        setProjectList(res.data.info);
+      }
     } catch (err) {
-      console.error("Error fetching address list:", err);
+      console.error("Failed to fetch projects", err);
     }
   };
 
-  const fetchProjectDetail = async () => {
+  const fetchProjectDetail = async (pid: number | null) => {
+    if (!pid) return;
     try {
       const res: AxiosResponse<any> = await api.get("address/zones", {
-        params: { project_id: projectId },
+        params: { project_id: pid },
       });
 
-      const fences = res.data.info?.zones ?? [];
-      setGeofences(fences);
+      setGeofences(res.data.info?.zones ?? []);
     } catch (err) {
       console.error("Geofence fetch error:", err);
     }
   };
 
-  // Delete zone
+  const loadAddressList = async () => {
+    try {
+      const res = await api.get("address/get", {
+        params: { project_id: activeProjectId },
+      });
+      setAddresses(res.data.info || []);
+    } catch (err) {
+      console.error("Address list fetch error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (addZoneOpen || selected?.mode === "edit") {
+      loadAddressList();
+    }
+  }, [addZoneOpen, selected]);
+
+  useEffect(() => {
+    if (open) {
+      fetchProjects();
+      setActiveProjectId(projectId);
+      fetchProjectDetail(projectId);
+    }
+  }, [open]);
+
+  // Delete Zone
   const handleDeleteZone = async () => {
     if (!deleteId) return;
 
     try {
-      const res: AxiosResponse<any> = await api.delete(
-        `work-zone/delete?id=${deleteId}`
-      );
+      const res = await api.delete(`work-zone/delete?id=${deleteId}`);
 
       if (res.data.IsSuccess) {
         toast.success("Zone deleted");
+
         setGeofences((prev) => prev.filter((z) => z.id !== deleteId));
         setDeleteConfirmOpen(false);
         setDeleteId(null);
-        fetchProjectDetail();
+
+        fetchProjectDetail(activeProjectId!);
       }
     } catch (e) {
       console.error(e);
     }
   };
-
   const filterData = useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
-
     if (!search) return geofences;
 
     return geofences.filter(
@@ -155,10 +168,8 @@ export default function MapGantt({
           </Typography>
           <TextField
             id="search"
-            fullWidth
             type="text"
             size="small"
-            variant="outlined"
             placeholder="Search..."
             className="project_search"
             value={searchTerm}
@@ -172,8 +183,40 @@ export default function MapGantt({
             }}
             sx={{ width: { xs: "90%", sm: "50%", md: "30%", lg: "25%" } }}
           />
+
+          <Autocomplete
+            id="project_id"
+            className="zone-project-selection"
+            options={projectList}
+            value={projectList.find((p) => p.id === activeProjectId) ?? null}
+            onChange={(event, newValue) => {
+              const newId = newValue?.id ?? null;
+
+              setActiveProjectId(newId);
+
+              if (newId) {
+                fetchProjectDetail(newId);
+              }
+            }}
+            getOptionLabel={(option) => option.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            sx={{ minWidth: 200 ,minHeight: 20}}
+            renderInput={(params) => (
+              <CustomTextField
+                {...params}
+                InputProps={{
+                  ...params.InputProps,
+                  readOnly: true,
+                  style: { caretColor: "transparent" },
+                }}
+                placeholder="Projects"
+              />
+            )}
+          />
         </Box>
-        <Box display={"flex"} alignItems={"center"} justifyItems={"center"}>
+
+        {/* ADD BUTTON + CLOSE */}
+        <Box display="flex" alignItems="center">
           <Button
             variant="contained"
             color="primary"
@@ -189,8 +232,10 @@ export default function MapGantt({
         </Box>
       </Box>
 
-      <Box display="flex" gap={2} mt={2} height="calc(100vh - 100px)" mb={3}>
-        <Box width="35%" overflow="auto" maxHeight="100%" mb={5}>
+      {/* CONTENT */}
+      <Box display="flex" gap={2} mt={2} height="calc(100vh - 120px)">
+        {/* LEFT TABLE */}
+        <Box width="35%" overflow="auto">
           <Paper>
             <Table>
               <TableHead>
@@ -207,32 +252,27 @@ export default function MapGantt({
                 {filterData.map((z) => (
                   <TableRow key={z.id}>
                     <TableCell>
-                      <Box>
-                        <Typography>{z.name}</Typography>
-                        <Typography
-                          color="textSecondary"
-                          variant="h5"
-                          fontSize={"14px !important"}
-                          mb={0}
-                        >
-                          {z.address_name}
-                        </Typography>
-                      </Box>
+                      <Typography>{z.name}</Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {z.address_name}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      <Box display={"flex"}>
+                      <Box display="flex">
                         <IconButton
                           color="success"
                           onClick={() => setSelected({ ...z, mode: "view" })}
                         >
                           <IconEye size={20} />
                         </IconButton>
+
                         <IconButton
                           color="primary"
                           onClick={() => setSelected({ ...z, mode: "edit" })}
                         >
                           <IconEdit size={20} />
                         </IconButton>
+
                         <IconButton
                           color="error"
                           onClick={() => {
@@ -249,12 +289,8 @@ export default function MapGantt({
 
                 {filterData.length === 0 && (
                   <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      align="center"
-                      sx={{ py: 4, color: "gray" }}
-                    >
-                      No zones are found.
+                    <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                      No zones found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -263,13 +299,8 @@ export default function MapGantt({
           </Paper>
         </Box>
 
-        <Box
-          width="65%"
-          display="flex"
-          flexDirection="column"
-          maxHeight="100%"
-          overflow="auto"
-        >
+        {/* RIGHT MAP AREA */}
+        <Box width="65%" display="flex" flexDirection="column" overflow="auto">
           {!selected && <AllZonesMap zones={filterData} isLoaded={isLoaded} />}
 
           {selected?.mode === "view" && (
@@ -284,9 +315,9 @@ export default function MapGantt({
             <EditZone
               key={selected.id}
               zone={selected}
-              onSaved={fetchProjectDetail}
+              onSaved={() => fetchProjectDetail(activeProjectId!)}
               onCancel={() => setSelected(null)}
-              projectId={projectId}
+              projectId={activeProjectId}
               companyId={companyId}
               addresses={addresses}
             />
@@ -294,20 +325,16 @@ export default function MapGantt({
         </Box>
       </Box>
 
-      {/* delete zone */}
+      {/* DELETE CONFIRMATION */}
       <Dialog
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
       >
         <DialogTitle>
-          <Typography>Delete Zone</Typography>
+          Delete Zone
           <IconButton
             onClick={() => setDeleteConfirmOpen(false)}
-            sx={{
-              position: "absolute",
-              right: 12,
-              top: 8,
-            }}
+            sx={{ position: "absolute", right: 12, top: 8 }}
           >
             <IconX size={40} />
           </IconButton>
@@ -318,6 +345,7 @@ export default function MapGantt({
             Are you sure you want to delete this zone?
           </Typography>
         </DialogContent>
+
         <DialogActions>
           <Button
             variant="outlined"
@@ -332,13 +360,14 @@ export default function MapGantt({
         </DialogActions>
       </Dialog>
 
+      {/* ADD ZONE DRAWER */}
       {addZoneOpen && (
         <AddZone
-          projectId={projectId}
+          projectId={activeProjectId}
           companyId={companyId}
           addresses={addresses}
           onAdded={() => {
-            fetchProjectDetail();
+            fetchProjectDetail(activeProjectId!);
             setAddZoneOpen(false);
           }}
           onCancel={() => setAddZoneOpen(false)}
@@ -429,6 +458,8 @@ const AllZonesMap = ({ zones, isLoaded }: any) => {
 };
 
 // VIEW ZONE MAP
+const DEFAULT_ZOOM = 18;
+
 const ViewZoneMap = ({ zone, isLoaded }: any) => {
   if (!isLoaded) return <p>Loading map...</p>;
 
@@ -437,17 +468,52 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
     lng: Number(zone.longitude),
   };
 
+  const handleMapLoad = (map: google.maps.Map) => {
+    const bounds = new google.maps.LatLngBounds();
+
+    if (zone.type === "circle") {
+      const circleCenter = new google.maps.LatLng(center.lat, center.lng);
+      const radius = Number(zone.radius);
+
+      bounds.extend(
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 0)
+      );
+      bounds.extend(
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 90)
+      );
+      bounds.extend(
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 180)
+      );
+      bounds.extend(
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 270)
+      );
+
+      map.fitBounds(bounds);
+      map.setZoom(DEFAULT_ZOOM);
+    }
+
+    if (zone.type === "polygon" && zone.coordinates?.length > 0) {
+      zone.coordinates.forEach((point: any) =>
+        bounds.extend(new google.maps.LatLng(point.lat, point.lng))
+      );
+
+      map.fitBounds(bounds);
+      map.setZoom(DEFAULT_ZOOM);
+    }
+  };
+
   return (
     <Paper sx={{ height: "90%" }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
-        zoom={17}
+        zoom={DEFAULT_ZOOM}
         center={center}
+        onLoad={handleMapLoad}
       >
         <Marker
           position={center}
           label={{
-            text: zone.name ? zone.name : " ",
+            text: zone.name || "",
             color: zone.color || "#1976d2",
             className: "map-site-label",
           }}
@@ -460,7 +526,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
             radius={Number(zone.radius)}
             options={{
               strokeColor: zone.color || "#1976d2",
-              fillColor: (zone.color || "#1976d2") + "33",
+              fillColor: `${zone.color || "#1976d2"}33`,
             }}
           />
         )}
@@ -470,7 +536,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
             paths={zone.coordinates}
             options={{
               strokeColor: zone.color,
-              fillColor: zone.color + "33",
+              fillColor: `${zone.color}33`,
             }}
           />
         )}
