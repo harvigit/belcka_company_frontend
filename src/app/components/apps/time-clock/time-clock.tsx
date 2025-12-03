@@ -284,7 +284,7 @@ const TimeClock = () => {
         {
             id: 'select',
             header: ({table}: any) => (
-                <Stack direction="row" alignItems="center">
+                <Stack direction="row" alignItems="center" ml={0.5}>
                     <CustomCheckbox
                         checked={
                             selectedRowIds.size === filteredData.length &&
@@ -318,7 +318,6 @@ const TimeClock = () => {
                     <Stack
                         direction="row"
                         alignItems="center"
-                        sx={{pl: 1}}
                         onMouseEnter={() => setHoveredRow(item.user_id)}
                         onMouseLeave={() => setHoveredRow(null)}
                     >
@@ -751,7 +750,7 @@ const TimeClock = () => {
                                                     position: 'sticky',
                                                     top: 0,
                                                     zIndex: 11,
-                                                    backgroundColor: '#fff',
+                                                    // backgroundColor: '#fff',
                                                     p: 0,
                                                 }}
                                             >
@@ -761,10 +760,10 @@ const TimeClock = () => {
                                                         cursor: isSortable ? 'pointer' : 'default',
                                                         border: '2px solid transparent',
                                                         borderRadius: '6px',
-                                                        py: 0.75,
+                                                        py: 1.5,
                                                         ml: 0.5,
                                                         fontWeight: isActive ? 600 : 500,
-                                                        color: '#000',
+                                                        // color: '#000',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',

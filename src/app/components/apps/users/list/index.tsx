@@ -1437,8 +1437,8 @@ const TablePagination = () => {
                               key={header.id}
                               align="center"
                               sx={{
-                                paddingTop: "5px",
-                                paddingBottom: "5px",
+                                paddingTop: "10px",
+                                paddingBottom: "10px",
                                 width:
                                   header.column.id === "actions" ? 120 : "auto",
                               }}
