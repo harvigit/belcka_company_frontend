@@ -140,7 +140,7 @@ const Company = () => {
     } catch (e) {
       console.error(e);
     }
-  }, []);
+  }, [user.company_id,user.id]);
 
   const fetchedOnce = useRef(false);
 
