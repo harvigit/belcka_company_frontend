@@ -787,7 +787,7 @@ const TimeClock = () => {
                                                                 color: isActive ? '#000' : '#888',
                                                             }}
                                                         >
-                                                            {isActive ? (isAsc ? 'Up' : 'Down') : 'Up/Down'}
+                                                            {isActive ? (isAsc ? '↑' : '↓') : '↑'}
                                                         </Box>
                                                     )}
                                                 </Box>
