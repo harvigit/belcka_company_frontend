@@ -92,28 +92,27 @@ const CreateTeam = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     setIsSaving(true);
     try {
-      let result = await addTeam(formData);
-      setFormData({
-        id: 0,
-        name: "",
-        supervisor_id: 0,
-        team_member_ids: formData.team_member_ids?.join(","),
-      });
-      const message = (result as any).message;
-      toast.success(message);
-      router.push("/apps/teams/list");
+      const payload = {
+        ...formData,
+        team_member_ids: formData.team_member_ids.join(","),
+        company_id: user.company_id,
+      };
+      const response = await api.post(`team/add`, payload);
+      if (response.data.IsSuccess) {
+        toast.success(response.data.message);
+        router.push("/apps/teams/list");
+      }
+      return response.data;
     } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
+      console.log(error);
     }
+    setIsSaving(false);
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form>
       <Box>
         <Stack
           direction="row"
@@ -258,6 +257,7 @@ const CreateTeam = () => {
               variant="contained"
               size="medium"
               type="submit"
+              onClick={handleSubmit}
               disabled={isSaving}
             >
               {isSaving ? "Creating Team..." : "Save"}
