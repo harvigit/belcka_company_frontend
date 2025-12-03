@@ -165,6 +165,7 @@ const TablePagination = () => {
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [isPermission, setIsPermission] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectAll, setSelectAll] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -526,7 +527,7 @@ const TablePagination = () => {
                     sx={{
                       cursor: "pointer",
                       "&:hover": { color: "#173f98" },
-                      width: 150,
+                      width: 190,
                     }}
                   >
                     {user.name ?? "-"}
@@ -535,7 +536,7 @@ const TablePagination = () => {
                     <Typography
                       color="textSecondary"
                       variant="subtitle1"
-                      width={130}
+                      width={190}
                       noWrap
                     >
                       {user.trade_name}
@@ -818,6 +819,34 @@ const TablePagination = () => {
     },
   });
 
+  useEffect(() => {
+    const allSelected = table
+      .getAllLeafColumns()
+      .every((col) => col.getIsVisible());
+    setSelectAll(allSelected);
+  }, [table]);
+
+  const handleSelectAllChange = (e: any) => {
+    const checked = e.target.checked;
+    setSelectAll(checked);
+
+    const currentVisibility = Cookies.get("columnVisibility")
+      ? JSON.parse(Cookies.get("columnVisibility")!)
+      : {};
+
+    currentVisibility["selectAll"] = checked;
+
+    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
+      expires: 365,
+    });
+
+    table.getAllLeafColumns().forEach((col) => {
+      if (col.id !== "conflicts") {
+        handleColumnVisibilityChange(col.id, checked);
+      }
+    });
+  };
+
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
     const currentVisibility = Cookies.get("columnVisibility")
       ? JSON.parse(Cookies.get("columnVisibility")!)
@@ -839,6 +868,10 @@ const TablePagination = () => {
     const saved = Cookies.get("columnVisibility")
       ? JSON.parse(Cookies.get("columnVisibility")!)
       : {};
+
+    if (saved.selectAll !== undefined) {
+      setSelectAll(saved.selectAll);
+    }
 
     // defaults for role 2
     if (user.user_role_id === 2) {
@@ -1026,14 +1059,25 @@ const TablePagination = () => {
                 sx={{ mb: 1 }}
               />
               <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      id="select all"
+                      checked={selectAll}
+                      onChange={handleSelectAllChange}
+                      sx={{ textTransform: "none" }}
+                    />
+                  }
+                  label="Select All"
+                />
                 {table
                   .getAllLeafColumns()
-                  .filter((col: any) => {
+                  .filter((col) => {
                     const excludedColumns = ["conflicts"];
                     if (excludedColumns.includes(col.id)) return false;
                     return col.id.toLowerCase().includes(search.toLowerCase());
                   })
-                  .map((col: any) => (
+                  .map((col) => (
                     <FormControlLabel
                       key={col.id}
                       control={
@@ -1045,19 +1089,17 @@ const TablePagination = () => {
                               e.target.checked
                             )
                           }
-                          disabled={col.id === "conflicts"}
                         />
                       }
                       sx={{ textTransform: "none" }}
                       label={
-                        col.columnDef.meta?.label ||
-                        (typeof col.columnDef.header === "string" &&
+                        typeof col.columnDef.header === "string" &&
                         col.columnDef.header.trim() !== ""
                           ? col.columnDef.header
                           : col.id
                               .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str: string) => str.toUpperCase())
-                              .trim())
+                              .replace(/^./, (str) => str.toUpperCase())
+                              .trim()
                       }
                     />
                   ))}
