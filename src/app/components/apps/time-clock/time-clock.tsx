@@ -24,7 +24,7 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox,
-    Button,
+    Button, Chip,
 } from '@mui/material';
 import {
     IconSearch,
@@ -105,15 +105,8 @@ const loadDateRangeFromStorage = () => {
 };
 
 export type TimeClock = {
-    timesheet_light_ids: string;
-    weekly_payable_amount: number;
     company_id: string;
     week_range: any;
-    weekly_total_hours: string | number;
-    daylog_payable_amount: number;
-    pricework_total_amount: number;
-    total_expense_amount: number;
-    total_payable_amount: number;
     user_id: any;
     user_name: string;
     trade_name: string;
@@ -125,6 +118,16 @@ export type TimeClock = {
     payable_total_hours: string;
     total_hours?: string | number;
     total_break_hours?: string | number;
+    weekly_total_hours: string | number;
+    daylog_payable_amount: number;
+    pricework_total_amount: number;
+    total_expense_amount: number;
+    total_payable_amount: number;
+    status_text: string;
+    status_color?: string;
+
+    timesheet_light_ids: string;
+    weekly_payable_amount: number;
 
     // Newly added fields from API
     has_leave_request?: boolean;
@@ -461,6 +464,53 @@ const TimeClock = () => {
             cell: (info: any) => {
                 const value = info.getValue();
                 return value === 0 ? '0' : (value ? `${currency}${value}` : '-');
+            },
+        }),
+
+        columnHelper.accessor('status_text', {
+            id: 'status_text',
+            header: 'Status',
+            cell: (info) => {
+                const statusText = info.getValue() as string;
+                const statusColorFromApi = (info.row.original as TimeClock).status_color;
+
+                if (!statusText || !statusColorFromApi) {
+                    return <Typography color="textSecondary" variant="body2">-</Typography>;
+                }
+
+                const muiColors = ['success', 'error', 'warning', 'primary', 'info', 'secondary'] as const;
+
+                if (muiColors.includes(statusColorFromApi as any)) {
+                    return (
+                        <Chip
+                            label={statusText}
+                            color={statusColorFromApi as any}
+                            size="small"
+                            sx={{
+                                height: 28,
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                textTransform: 'capitalize',
+                            }}
+                        />
+                    );
+                }
+
+                return (
+                    <Chip
+                        label={statusColorFromApi}
+                        size="small"
+                        sx={{
+                            height: 28,
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            backgroundColor: '#f1f5f9',
+                            color: '#475569',
+                            border: '1px solid #cbd5e1',
+                            textTransform: 'capitalize',
+                        }}
+                    />
+                );
             },
         }),
     ];
