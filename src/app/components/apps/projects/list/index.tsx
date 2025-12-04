@@ -117,6 +117,30 @@ interface Boundary {
   radius: number;
 }
 
+interface ProjectFormData {
+  name: string;
+  address: string;
+  budget: string;
+  description?: string;
+  code: number;
+  shift_ids: string;
+  team_ids: string;
+  company_id: number;
+  workzone_ids?: string;
+}
+
+interface FormData {
+  name: string;
+  address: string;
+  budget: string;
+  description?: string;
+  code: number;
+  shift_ids: string;
+  team_ids: string;
+  company_id: number;
+  workzone_ids?: string;
+}
+
 const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
@@ -185,6 +209,29 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     company_id: user.company_id,
     name: "",
   });
+
+  // For create
+  const initialCreateState: ProjectFormData = {
+    name: "",
+    address: "",
+    budget: "",
+    description: "",
+    code: 0,
+    shift_ids: "",
+    team_ids: "",
+    company_id: user.company_id || 0,
+    workzone_ids: "",
+  };
+
+  // For edit
+  const initialEditState: ProjectFormData = {
+    ...initialCreateState,
+  };
+
+  const [createFormData, setCreateFormData] =
+    useState<ProjectFormData>(initialCreateState);
+  const [editFormData, setEditFormData] =
+    useState<ProjectFormData>(initialEditState);
 
   const triggerRefresh = () => {
     setShouldRefresh((prev) => !prev);
@@ -443,7 +490,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Failed to archive project");
     }
   }
 
@@ -452,33 +498,52 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setIsSaving(true);
     try {
       const payload = {
-        ...formData,
+        ...createFormData,
         company_id: user.company_id,
-        budget: Number(formData.budget),
+        budget: Number(createFormData.budget),
       };
+
       const result = await api.post("project/create", payload);
-      if (result.data.IsSuccess == true) {
+
+      if (result.data.IsSuccess) {
         toast.success(result.data.message);
-        setFormData({
-          name: "",
-          address: "",
-          budget: "",
-          description: "",
-          code: "",
-          shift_ids: "",
-          team_ids: "",
-          company_id: user.company_id,
-          is_pricework: false,
-          repeatable_job: false,
+        setCreateFormData({
+          ...initialCreateState,
+          company_id: user.company_id ?? 0,
         });
         fetchProjects();
         setProjectOpen(false);
-      } else {
-        toast.error(result.data.message);
       }
     } catch (error) {
-      console.log(error, "error");
-      toast.error("Failed to create project");
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...editFormData,
+        company_id: user.company_id,
+        budget: Number(editFormData.budget),
+      };
+
+      const result = await api.put("project/update", payload);
+
+      if (result.data.IsSuccess) {
+        toast.success(result.data.message);
+        setEditFormData({
+          ...initialEditState,
+          company_id: user.company_id ?? 0,
+        });
+        fetchProjects();
+        setProjectEditOpen(false);
+      }
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsSaving(false);
     }
@@ -500,42 +565,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       });
     }
   });
-  const handleEditProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-        company_id: user.company_id,
-        budget: Number(formData.budget),
-      };
-      const result = await api.put("project/update", payload);
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          name: "",
-          address: "",
-          budget: "",
-          description: "",
-          code: "",
-          shift_ids: "",
-          team_ids: "",
-          company_id: user.company_id,
-          is_pricework: false,
-          repeatable_job: false,
-        });
-        fetchProjects();
-        setProjectEditOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-      toast.error("Failed to update project");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -1352,7 +1381,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   setSelectedIds([]);
                   await fetchAddresses();
                 } catch (error) {
-                  toast.error("Failed to archive addresses");
                 } finally {
                   setOpenDialog(false);
                 }
@@ -1517,23 +1545,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 </Grid>
               ))}
             </Grid>
-
-            {/* Create Project Modal */}
             <CreateProject
               open={projectOpen}
               onClose={() => setProjectOpen(false)}
-              formData={formData}
-              setFormData={setFormData}
+              formData={createFormData}
+              setFormData={setCreateFormData}
               handleSubmit={handleProjectSubmit}
               isSaving={isSaving}
             />
 
-            {/* Edit Project Modal */}
             <EditProject
               open={projectEditOpen}
               onClose={() => setProjectEditOpen(false)}
-              formData={formData}
-              setFormData={setFormData}
+              formData={editFormData}
+              setFormData={setEditFormData}
               project={editingProject}
               handleSubmit={handleEditProject}
               isSaving={isSaving}
