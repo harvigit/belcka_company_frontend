@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TableContainer,
   Table,
@@ -17,17 +17,16 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
-  Menu,
-  ListItemIcon,
   Tooltip,
   Popover,
   FormGroup,
   FormControlLabel,
   Checkbox,
+  Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   flexRender,
@@ -43,84 +42,105 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconFilter,
-  IconNotes,
   IconSearch,
   IconTableColumn,
-  IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import Link from "next/link";
-import { IconDotsVertical } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { IconPlus } from "@tabler/icons-react";
-import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconEdit } from "@tabler/icons-react";
-import CreateLocation from "../create";
-import EditLocation from "../edit";
-import ArchiveLocation from "../archive";
+import { IconX } from "@tabler/icons-react";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 
 dayjs.extend(customParseFormat);
 
-export type LocationList = {
-  id: number;
-  name: string;
-  company_name?: string;
+const STORAGE_KEY = "history-date-range";
+const saveDateRangeToStorage = (startDate: Date, endDate: Date) => {
+  try {
+    const dateRange = {
+      startDate: startDate ? startDate.toDateString() : null,
+      endDate: endDate ? endDate.toDateString() : null,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
+  } catch (error) {
+    console.error("Error saving date range to localStorage:", error);
+  }
 };
 
-const TablePagination = () => {
-  const [data, setData] = useState<LocationList[]>([]);
+const loadDateRangeFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+      };
+    }
+  } catch (error) {
+    console.error("Error loading date range from localStorage:", error);
+  }
+  return null;
+};
+
+const HistoryList = () => {
+  const [data, setData] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
+  const [filters, setFilters] = useState({ type: "", user: "" });
+  const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
-
   const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null } & {
+    user_role_id?: number | null;
+  };
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
 
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+
+  const getInitialDates = () => {
+    const stored = loadDateRangeFromStorage();
+    if (stored && stored.startDate && stored.endDate) {
+      return {
+        startDate: stored.startDate,
+        endDate: stored.endDate,
+      };
+    }
+    return {
+      startDate: defaultStart,
+      endDate: defaultEnd,
+    };
+  };
+
+  const initialDates = getInitialDates();
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<Date | null>(
+    initialDates.startDate
+  );
+  const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
-  const [formData, setFormData] = useState<any>({
-    id: 0,
-    name: "",
-    company_id: id.company_id,
-  });
-
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  // Fetch data
-  const fetchLocations = async () => {
+  // Fetch histories
+  const fetchHistories = async (start?: string, end?: string) => {
     setLoading(true);
     try {
       const res = await api.get(
-        `company-locations/get?company_id=${id.company_id}`
+        `requests/get-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}`
       );
       if (res.data) {
         setData(res.data.info);
-        setLoading(false);
-        setarchiveDrawerOpen(false);
       }
     } catch (err) {
       console.error("Failed to fetch location", err);
@@ -128,93 +148,63 @@ const TablePagination = () => {
     setLoading(false);
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get("user/get-user-lists");
+      if (res.data) {
+        setUsers(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch location", err);
+    }
+  };
+
   useEffect(() => {
-    fetchLocations();
+    if (startDate && endDate) {
+      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
+      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
+      fetchHistories(formattedStart, formattedEnd);
+    }
+  }, [startDate, endDate]);
+
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+
+      saveDateRangeToStorage(range.from, range.to);
+    }
+  };
+  useEffect(() => {
+    fetchUsers();
   }, [api]);
 
-  const handleOpenCreateDrawer = () => {
-    setFormData({
-      name: "",
-      company_id: id.company_id,
-    });
-    setDrawerOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-      };
-
-      const result = await api.post("company-locations/create", payload);
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          name: "",
-        });
-        fetchLocations();
-        setDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const editLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-      };
-
-      const result = await api.put("company-locations/update", payload);
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          name: "",
-        });
-        fetchLocations();
-        setEditDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const uniqueSupervisors = useMemo(
+    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
+    [users]
+  );
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
-
+      const matchesType = filters.type ? item.type_name === filters.type : true;
+      const matchesUser = filters.user ? item.user_name === filters.user : true;
       const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search);
+        item.user_name?.toLowerCase().includes(search) ||
+        item.type_name?.toLowerCase().includes(search) ||
+        item.message?.toLowerCase().includes(search);
 
-      return matchesSearch;
+      return matchesSearch && matchesType && matchesUser;
     });
-  }, [data, searchTerm]);
+  }, [data, filters, searchTerm]);
 
-  // UseCallback to memoize these functions
-  const handleEdit = useCallback((id: number) => {
-    setSelectedTaskId(id);
-    setEditDrawerOpen(true);
-  }, []);
-
-  const columnHelper = createColumnHelper<LocationList>();
+  const columnHelper = createColumnHelper<any>();
   const columns = [
     columnHelper.accessor("name", {
-      id: "name",
+      id: "userName",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -228,27 +218,30 @@ const TablePagination = () => {
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
               const isChecked = e.target.checked;
 
+              setShowAllCheckboxes(isChecked);
+
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setSelectedRowIds(new Set(filteredData.map((r) => r.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
+
+          <Typography variant="subtitle2">User Name</Typography>
         </Stack>
       ),
       enableSorting: true,
+
       cell: ({ row }) => {
-        const item = row.original;
-        const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const user = row.original;
+
+        const isChecked = selectedRowIds.has(user.id);
+
+        const showCheckbox =
+          showAllCheckboxes || hoveredRow === user.id || isChecked;
 
         return (
           <Stack
@@ -256,50 +249,89 @@ const TablePagination = () => {
             alignItems="center"
             spacing={4}
             sx={{ pl: 1 }}
-            onMouseEnter={() => setHoveredRow(item.id)}
-            onMouseLeave={() => setHoveredRow(null)}
+            onClick={(e) => e.stopPropagation()}
           >
-            <CustomCheckbox
-              checked={isChecked}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const newSelected = new Set(selectedRowIds);
-                if (isChecked) {
-                  newSelected.delete(item.id);
-                } else {
-                  newSelected.add(item.id);
-                }
-                setSelectedRowIds(newSelected);
-              }}
-              sx={{
-                opacity: showCheckbox ? 1 : 0,
-                pointerEvents: showCheckbox ? "auto" : "none",
-                transition: "opacity 0.2s ease",
-              }}
-            />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-14">{item.name ?? "-"}</Typography>
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <CustomCheckbox
+                checked={isChecked}
+                onClick={(e) => e.stopPropagation()}
+                onChange={() => {
+                  const newSet = new Set(selectedRowIds);
+                  if (newSet.has(user.id)) newSet.delete(user.id);
+                  else newSet.add(user.id);
+                  setSelectedRowIds(newSet);
+                }}
+                sx={{
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
+                  transition: "opacity 0.2s ease",
+                }}
+              />
+            </Box>
+
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={4}
+              sx={{ cursor: "pointer" }}
+            >
+              <Avatar
+                src={user.user_image ? user.user_image : ""}
+                alt={user.user_name}
+                sx={{ width: 36, height: 36 }}
+              />
+              <Box>
+                <Typography
+                  className="f-14"
+                  color="textPrimary"
+                  sx={{
+                    cursor: "pointer",
+                    width: 150,
+                  }}
+                >
+                  {user.user_name ?? "-"}
+                </Typography>
+              </Box>
             </Stack>
           </Stack>
         );
       },
     }),
 
-    columnHelper.display({
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const item = row.original;
+    columnHelper.accessor((row) => row?.message, {
+      id: "details",
+      header: () => "Details",
+      cell: (info) => {
         return (
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Edit">
-              <IconButton onClick={() => handleEdit(item.id)} color="primary">
-                <IconEdit size={18} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+          <Typography className="f-14" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.type_name, {
+      id: "historyType",
+      header: () => "Type",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor("date", {
+      id: "date",
+      header: () => "Date",
+      cell: (info) => {
+        const row = info.row.original;
+
+        return (
+          <Typography className="f-14" color="textPrimary">
+            {info.getValue()} {row.time}
+          </Typography>
         );
       },
     }),
@@ -346,8 +378,13 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            LOCATIONS ({table.getPrePaginationRowModel().rows.length}){" "}
+            HISTORIES ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
+          <DateRangePickerBox
+            from={startDate}
+            to={endDate}
+            onChange={handleDateRangeChange}
+          />
           <TextField
             id="search"
             type="text"
@@ -366,27 +403,110 @@ const TablePagination = () => {
               },
             }}
           />
+          <Button variant="contained" onClick={() => setOpen(true)}>
+            <IconFilter width={18} />
+          </Button>
         </Grid>
+        <Dialog
+          open={open}
+          onClose={() => setOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
+            Filters
+            <IconButton
+              aria-label="close"
+              onClick={() => setOpen(false)}
+              size="large"
+              sx={{
+                position: "absolute",
+                right: 12,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <IconX size={40} style={{ width: 40, height: 40 }} />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent>
+            <Stack spacing={2} mt={1}>
+              <TextField
+                select
+                label="History Type"
+                value={tempFilters.type}
+                onChange={(e) =>
+                  setTempFilters({ ...tempFilters, type: e.target.value })
+                }
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="Team">Team</MenuItem>
+                <MenuItem value="Project">Project</MenuItem>
+                <MenuItem value="Company">Comapny</MenuItem>
+                <MenuItem value="Shift">Worklog</MenuItem>
+                <MenuItem value="User">User</MenuItem>
+                <MenuItem value="Zone">Zone</MenuItem>
+                <MenuItem value="Address">Address</MenuItem>
+              </TextField>
+
+              {uniqueSupervisors.length > 0 ? (
+                <TextField
+                  select
+                  label="User"
+                  value={tempFilters.user}
+                  onChange={(e) =>
+                    setTempFilters({
+                      ...tempFilters,
+                      user: e.target.value,
+                    })
+                  }
+                  fullWidth
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {uniqueSupervisors.map((supervisor, i) => (
+                    <MenuItem key={i} value={supervisor}>
+                      {supervisor}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              ) : (
+                <></>
+              )}
+            </Stack>
+          </DialogContent>
+
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setTempFilters({ type: "", user: "" });
+                setFilters({ type: "", user: "" });
+                setOpen(false);
+              }}
+              color="inherit"
+            >
+              Clear
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setFilters(tempFilters);
+                setOpen(false);
+              }}
+            >
+              Apply
+            </Button>
+          </DialogActions>
+        </Dialog>
         <Stack
           mb={2}
           justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
         >
-          {selectedRowIds.size > 0 && (
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<IconTrash width={18} />}
-              sx={{ marginRight: "5px" }}
-              onClick={() => {
-                const selectedIds = Array.from(selectedRowIds);
-                setUsersToDelete(selectedIds);
-                setConfirmOpen(true);
-              }}
-            >
-              Archive
-            </Button>
-          )}
           <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
             <IconTableColumn />
           </IconButton>
@@ -440,146 +560,10 @@ const TablePagination = () => {
                 ))}
             </FormGroup>
           </Popover>
-          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogContent>
-              <Typography color="textSecondary">
-                Are you sure you want to archive {usersToDelete.length} location
-                {usersToDelete.length > 1 ? "s" : ""} from the locations?
-              </Typography>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => setConfirmOpen(false)}
-                variant="outlined"
-                color="primary"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  try {
-                    const payload = {
-                      location_ids: usersToDelete.join(","),
-                    };
-                    const response = await api.post(
-                      "company-locations/archive",
-                      payload
-                    );
-                    toast.success(response.data.message);
-                    setSelectedRowIds(new Set());
-                    await fetchLocations();
-                  } catch (error) {
-                    toast.error("Failed to remove works");
-                  } finally {
-                    setConfirmOpen(false);
-                  }
-                }}
-                variant="outlined"
-                color="error"
-              >
-                Archive
-              </Button>
-            </DialogActions>
-          </Dialog>
-          <IconButton
-            sx={{ margin: "0px" }}
-            id="basic-button"
-            aria-controls={openMenu ? "basic-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={openMenu ? "true" : undefined}
-            onClick={handleClick}
-          >
-            <IconDotsVertical width={18} />
-          </IconButton>
-          <Menu
-            id="basic-menu"
-            anchorEl={anchorEl}
-            open={openMenu}
-            onClose={handleClose}
-            slotProps={{
-              list: {
-                "aria-labelledby": "basic-button",
-              },
-            }}
-          >
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleOpenCreateDrawer();
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconPlus width={18} />
-                </ListItemIcon>
-                Add Location
-              </Link>
-            </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setarchiveDrawerOpen(true);
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconNotes width={18} />
-                </ListItemIcon>
-                Archive List
-              </Link>
-            </MenuItem>
-          </Menu>
         </Stack>
       </Stack>
       <Divider />
-      {/* Add location */}
-      <CreateLocation
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        formData={formData}
-        setFormData={setFormData}
-        handleSubmit={handleSubmit}
-        isSaving={isSaving}
-      />
 
-      {/* Edit task */}
-      <EditLocation
-        open={editDrawerOpen}
-        onClose={() => setEditDrawerOpen(false)}
-        id={selectedTaskId}
-        formData={formData}
-        setFormData={setFormData}
-        EditLocation={editLocation}
-        isSaving={isSaving}
-      />
-
-      {/* Archive task list */}
-      <ArchiveLocation
-        open={archiveDrawerOpen}
-        onClose={() => setarchiveDrawerOpen(false)}
-        onWorkUpdated={fetchLocations}
-      />
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
@@ -653,28 +637,26 @@ const TablePagination = () => {
                   ))}
                 </TableHead>
                 <TableBody>
-                  {
-                    // table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                    // ) : (
-                    //   <TableRow>
-                    //     <TableCell colSpan={columns.length} align="center">
-                    //       No records found
-                    //     </TableCell>
-                    //   </TableRow>
-                    // )
-                  }
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      hover
+                      sx={{
+                        cursor: "pointer",
+                      }}
+                      key={row.id}
+                      onMouseEnter={() => setHoveredRow(row.original.id)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -758,4 +740,4 @@ const TablePagination = () => {
   );
 };
 
-export default TablePagination;
+export default HistoryList;

@@ -345,7 +345,7 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            Expense Categories ({table.getPrePaginationRowModel().rows.length}){" "}
+            EXPESNSE CATEGORIES ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
           <TextField
             id="search"

@@ -6,7 +6,7 @@ import {Grid, Tabs, Tab, Box, Stack} from '@mui/material';
 import CreateWork from '@/app/components/apps/settings/tasks/list';
 import LocationList from '@/app/components/apps/settings/locations/list';
 import LeaveList from '@/app/components/apps/settings/leaves/list';
-import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconCategory} from '@tabler/icons-react';
+import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconCategory, IconExclamationCircle} from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
@@ -15,6 +15,7 @@ import CategoryList from '@/app/components/apps/settings/expense-categories/list
 import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
 import TradeList from '@/app/components/apps/settings/trades/list';
+import HistoryList from '@/app/components/apps/settings/history';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -134,6 +135,13 @@ const AdminSetting = () => {
                                             label="Comapny Trades"
                                             {...a11yProps(6)}
                                         />
+                                         <Tab
+                                            className="admin-settings"
+                                            iconPosition="start"
+                                            icon={<IconExclamationCircle size="20"/>}
+                                            label="History"
+                                            {...a11yProps(7)}
+                                        />
                                     </Tabs>
                                 </Stack>
                             </BlankCard>
@@ -164,8 +172,11 @@ const AdminSetting = () => {
                                 <TabPanel value={value} index={5}>
                                     <CategoryList />
                                 </TabPanel>
-                                 <TabPanel value={value} index={6}>
+                                <TabPanel value={value} index={6}>
                                     <TradeList />
+                                </TabPanel>
+                                <TabPanel value={value} index={7}>
+                                    <HistoryList />
                                 </TabPanel>
                             </BlankCard>
                         </Grid>

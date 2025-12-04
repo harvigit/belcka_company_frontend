@@ -377,7 +377,7 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            Leaves ({table.getPrePaginationRowModel().rows.length}){" "}
+            LEAVES ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
           <TextField
             id="search"
