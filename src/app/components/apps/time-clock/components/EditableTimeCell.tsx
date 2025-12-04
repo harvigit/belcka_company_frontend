@@ -46,6 +46,9 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     const editedByName = field === 'start' ? log?.start_time_edited_by_name : log?.end_time_edited_by_name;
     const editedAt = field === 'start' ? log?.start_time_edited_at : log?.end_time_edited_at;
 
+    const isConflictResolved = log?.is_conflict_resolved;
+    const conflictResolvedBy = log?.conflict_resolved_by_name ?? null;
+
     const [isIconHovered, setIsIconHovered] = useState(false);
 
     const tooltipStyles = {
@@ -168,6 +171,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                 borderRadius: '4px',
                 px: '8px',
                 position: 'relative',
+                color: isConflictResolved ? '#d32f2f' : 'inherit',
                 '&:hover': !isLocked
                     ? {
                         borderColor: '#1976d2',
@@ -208,21 +212,36 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
         </Box>
     );
 
+    // Determine tooltip content
+    let tooltipTitle = '';
+    if (isConflictResolved && conflictResolvedBy) {
+        tooltipTitle = `Conflict resolved by ${conflictResolvedBy}`;
+    } else if (isLocked) {
+        tooltipTitle = 'This worklog is locked and cannot be edited';
+    }
+
     return isEdited && editedByName && editedAt ? (
         <Tooltip
-            title={isIconHovered ? '' : isLocked ? 'This worklog is locked and cannot be edited' : ``}
+            title={isIconHovered ? '' : tooltipTitle}
             arrow
             placement="top"
             sx={tooltipStyles}
         >
-            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ``}>
+            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ''}>
                 {cellContent}
             </Box>
         </Tooltip>
     ) : (
-        <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ``}>
-            {cellContent}
-        </Box>
+        <Tooltip
+            title={tooltipTitle}
+            arrow
+            placement="top"
+            sx={tooltipStyles}
+        >
+            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ''}>
+                {cellContent}
+            </Box>
+        </Tooltip>
     );
 };
 
