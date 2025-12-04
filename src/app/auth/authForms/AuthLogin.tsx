@@ -91,6 +91,10 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       toast.success(response.data.message);
 
       if (response.data.IsSuccess === true) {
+        if (!response.data.info || response.data.info.length === 0) {
+          openCompanyPopup();
+        }
+
         setCompany(response.data.info || []);
         setId(response.data.id);
         setToken(response.data.token);
@@ -128,6 +132,10 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         toast.success(response.data.message);
 
         if (response.data.IsSuccess === true) {
+          if (!response.data.info || response.data.info.length === 0) {
+            openCompanyPopup();
+          }
+
           setCompany(response.data.info || []);
           setId(response.data.id);
           setToken(response.data.token);
