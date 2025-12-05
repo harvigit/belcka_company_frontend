@@ -1,6 +1,6 @@
 import { uniqueId } from "lodash";
 
-import { IconFiles, IconUserPlus, IconUsers } from "@tabler/icons-react";
+import { IconFiles, IconInfoCircle, IconShieldCheck, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
@@ -48,13 +48,18 @@ const MenuItems: NavGroup[] = [
     icon: IconUsers,
     href: "/apps/clients/list",
   },
-  {
-    id: uniqueId(),
-    title: "Requests", 
-    slug: "requests",
-    icon: IconUsers,
-    href: "/apps/requests/list",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Privacy Policy",
+  //   icon: IconShieldCheck,
+  //   href: "/privacy-policy",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "App Info",
+  //   icon: IconInfoCircle,
+  //   href: "/app-info",
+  // },
   {
     id: uniqueId(),
     title: "Settings", 

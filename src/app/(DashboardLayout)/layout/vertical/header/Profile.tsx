@@ -24,9 +24,9 @@ const Profile = () => {
   } & { trade_name: string | null };
   const [loading] = useState(false);
 
-  const userLogout = () => {
+  const userLogout = async () => {
     toast.success("Logged out successfully!!");
-    signOut({ callbackUrl: "/auth" });
+    await signOut({ callbackUrl: "/auth" });
     return loading;
   };
 

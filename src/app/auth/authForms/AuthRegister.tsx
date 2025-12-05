@@ -332,16 +332,19 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     if (res.data.IsSuccess) {
       return res.data.otp;
     }
+    setToken("");
     return false;
   };
 
   const login = async () => {
+    setLoading(true);
     const newOtp = await sendLoginOtp();
 
     if (!newOtp) {
       toast.error("Failed to send login OTP");
       return;
     }
+    setLoading(false);
 
     const response = await signIn("credentials", {
       redirect: false,
@@ -353,6 +356,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     });
 
     if (response?.ok) {
+      setToken("");
       window.location.href = "/apps/users/list";
     } else {
       toast.error(response?.error || "Login failed after registration");
