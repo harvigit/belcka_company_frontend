@@ -48,6 +48,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [step, setStep] = useState(1);
   const [canCloseModal, setCanCloseModal] = useState(false);
+  const [otp, setOtp] = useState("0");
 
   const [registerData, setRegisterData] = useState({
     first_name: "",
@@ -250,7 +251,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       };
 
       const res = await api.post("company/join-company", payload, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, is_web: "true" },
       });
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -297,6 +298,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
+          is_web: "true",
         },
       });
       if (res.data.IsSuccess) {
@@ -320,15 +322,36 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     } catch (err) {}
   };
 
-  // login registered user
+  const sendLoginOtp = async () => {
+    const payload = {
+      extension: registerData.extension,
+      phone: registerData.nationalPhone,
+    };
+    const res = await api.post("send-otp-login", payload);
+
+    if (res.data.IsSuccess) {
+      return res.data.otp;
+    }
+    return false;
+  };
+
   const login = async () => {
+    const newOtp = await sendLoginOtp();
+
+    if (!newOtp) {
+      toast.error("Failed to send login OTP");
+      return;
+    }
+
     const response = await signIn("credentials", {
       redirect: false,
       extension: registerData.extension,
       phone: registerData.nationalPhone,
-      otp: registerData.otp,
+      otp: String(newOtp),
+      is_web: true,
       callbackUrl: "/apps/users/list",
     });
+
     if (response?.ok) {
       window.location.href = "/apps/users/list";
     } else {
