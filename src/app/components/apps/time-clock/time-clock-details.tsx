@@ -22,7 +22,7 @@ import TimeClockHeader from './components/TimeClockHeader';
 import TimeClockStats from './components/TimeClockStats';
 import TimeClockTable from './components/TimeClockTable';
 import ActionBar from './components/ActionBar';
-import {DailyBreakdown, TimeClockDetailsProps} from '@/app/components/apps/time-clock/types/timeClock';
+import {DailyBreakdown, TimeClockDetailsProps, RecordType} from '@/app/components/apps/time-clock/types/timeClock';
 import {IconExclamationMark} from '@tabler/icons-react';
 import Checklogs from './time-clock-details/checklogs/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
@@ -47,6 +47,11 @@ interface ExportResponse {
         contentType: string;
     };
 }
+
+const DELETE_ENDPOINTS: Record<RecordType, string> = {
+    worklog: '/time-clock/worklogs-bulk-delete',
+    expense: '/expense/bulk-delete',
+};
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
     try {
@@ -1112,33 +1117,36 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
         }
     };
-
-    const handleDeleteWorklog = async (worklogId: string) => {
-        const worklogIds: string[] = [];
-
-        if (worklogId) {
-            worklogIds.push(worklogId);
+    
+    const handleDeleteRecord = async (id: string, type: RecordType) => {
+        if (!id || !type) {
+            console.error('Invalid delete parameters');
+            return;
         }
 
-        if (worklogIds.length > 0) {
-            try {
-                const ids = worklogIds.join(',');
-                const response: AxiosResponse<{
-                    IsSuccess: boolean
-                }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
+        try {
+            const endpoint = DELETE_ENDPOINTS[type];
 
-                if (response.data.IsSuccess) {
-                    const defaultStartDate = startDate || defaultStart;
-                    const defaultEndDate = endDate || defaultEnd;
-                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                    setSelectedRows(new Set());
-                    onDataChange?.();
-                } else {
-                    console.error(`Error deleting timesheet`);
-                }
-            } catch (error) {
-                console.error(`Error deleting timesheet:`, error);
+            if (!endpoint) {
+                console.error(`Unknown record type: ${type}`);
+                return;
             }
+
+            const response: AxiosResponse<{
+                IsSuccess: boolean
+            }> = await api.post(endpoint, { ids: id });
+
+            if (response.data.IsSuccess) {
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                setSelectedRows(new Set());
+                onDataChange?.();
+            } else {
+                console.error(`Error deleting ${type}`);
+            }
+        } catch (error) {
+            console.error(`Error deleting ${type}:`, error);
         }
     };
 
@@ -1424,7 +1432,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 updateEditingProject={updateEditingProject}
                 cancelEditingProject={cancelEditingProject}
                 saveProjectChanges={saveProjectChanges}
-                onDeleteClick={handleDeleteWorklog}
+                onDeleteClick={handleDeleteRecord}
                 conflictsByDate={conflictsByDate}
                 leaveRequestByDate={leaveRequestByDate}
                 openConflictsSideBar={handleConflicts}

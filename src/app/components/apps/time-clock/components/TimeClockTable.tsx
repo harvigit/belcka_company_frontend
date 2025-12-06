@@ -36,7 +36,8 @@ import {
     EditingWorklog,
     NewRecord,
     Shift,
-    Project
+    Project,
+    RecordType
 } from '@/app/components/apps/time-clock/types/timeClock';
 
 interface TimeClockTableProps {
@@ -77,7 +78,7 @@ interface TimeClockTableProps {
     updateEditingProject: (worklogId: string, shiftId: number | string) => void;
     saveProjectChanges: (worklogId: string, originalLog: any) => void;
     cancelEditingProject: (worklogId: string) => void;
-    onDeleteClick: (worklogId: string) => void;
+    onDeleteClick: (id: string, type: RecordType) => void;
     conflictsByDate?: { [key: string]: number };
     openConflictsSideBar?: () => Promise<void>;
     openChecklogsSidebar?: (worklogId: number) => Promise<void>;
@@ -877,7 +878,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             position: 'relative',
                                                         }}
                                                     >
-                                                        { !log.is_leave && !log.is_working && (
+                                                        {!log.is_leave && !log.is_working && (
                                                             <Button
                                                                 size="small"
                                                                 className="action-icon"
@@ -893,8 +894,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         background: 'none',
                                                                     },
                                                                 }}
-                                                                onClick={() => onDeleteClick(log.worklog_id)}
-                                                                aria-label="Delete worklog"
+                                                                onClick={() => {
+                                                                    if (log.is_expense) {
+                                                                        onDeleteClick(log.expense_id, 'expense');
+                                                                    } else {
+                                                                        onDeleteClick(log.worklog_id, 'worklog');
+                                                                    }
+                                                                }}
+                                                                aria-label="Delete record"
                                                             >
                                                                 <IconTrash size={18}/>
                                                             </Button>

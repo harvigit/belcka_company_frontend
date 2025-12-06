@@ -156,3 +156,6 @@ export type NewRecord = {
     start: string;
     end: string;
 };
+
+export type RecordType = 'worklog' | 'expense';
+
