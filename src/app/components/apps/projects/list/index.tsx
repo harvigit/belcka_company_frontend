@@ -310,7 +310,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   useEffect(() => {
-    if (user.company_id && projectID) {
+    if (user.company_id) {
       fetchProjects();
     }
   }, [projectID]);

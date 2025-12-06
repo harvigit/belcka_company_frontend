@@ -32,7 +32,7 @@ const SidebarItems = () => {
     company_name?: string | null;
   } & {
     company_image?: number | null;
-  } & { id: number };
+  } & { id: number } & { user_role_id: number } ;
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -55,17 +55,17 @@ const SidebarItems = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
   
-  const filteredMenuItems = MenuItems.filter((item) => {
+  const filteredMenuItems = user.user_role_id == 2 ? MenuItems.filter((item) => {
     const permission = permissions.find(
       (perm) => perm.name === item.title && perm.is_web === true && perm.status == true
     );
     return permission !== undefined;
-  });
+  }) : MenuItems ;
 
   return (
     <Box sx={{ px: 3 }}>
       <List sx={{ pt: 0 }} className="sidebarNav">
-        {filteredMenuItems.map((item) => {
+        {filteredMenuItems.map((item: any) => {
           // {/********SubHeader**********/}
           if (item.subheader) {
             return (

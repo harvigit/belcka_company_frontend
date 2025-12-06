@@ -180,25 +180,33 @@ const Company = () => {
   };
 
   const unreedFeeds = useCallback(async () => {
-    if (count === 0 || loading) return;
-    setLoading(true);
-
-    try {
-      const payload = { feed_ids: unreedFeed };
-      const res: AxiosResponse<any> = await api.post(
-        "feed/mark-as-read",
-        payload
-      );
-      if (res.data) {
-        await fetchFeeds();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setOpenDrawer(false);
-      setLoading(false);
+    if (count === 0 || loading) {
       setPage(1);
+      setOpenDrawer(false);
+      return;
     }
+    setLoading(true);
+    if (unreedFeed) {
+      try {
+        const payload = { feed_ids: unreedFeed };
+        const res: AxiosResponse<any> = await api.post(
+          "feed/mark-as-read",
+          payload
+        );
+        if (res.data) {
+          await fetchFeeds();
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setOpenDrawer(false);
+        setLoading(false);
+        setPage(1);
+      }
+    }
+    setOpenDrawer(false);
+    setLoading(false);
+    setPage(1);
   }, [count, unreedFeed, fetchFeeds, loading]);
 
   const fetchList = useCallback(async () => {

@@ -89,7 +89,7 @@ const EditProject: React.FC<EditProjectProps> = ({
         company_id: project.company_id || 0,
         shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
-        workzone_ids: (project.geofences || []).map((g: any) => g.id).join(","),
+        workzone_ids: (project.project_address || []).map((g: any) => g.workzone_id).join(","),
       });
     }
   }, [project]);
@@ -262,7 +262,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                   )}
                 />
                 <Typography variant="h5" mt={2}>
-                  Add Geofence
+                  Select Geofence
                 </Typography>
                 <Autocomplete
                   fullWidth
