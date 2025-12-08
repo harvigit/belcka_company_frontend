@@ -73,7 +73,6 @@ import "react-phone-input-2/lib/material.css";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
-import Cookies from "js-cookie";
 
 dayjs.extend(customParseFormat);
 
@@ -850,18 +849,6 @@ const TablePagination = () => {
 
   const handleSelectAllChange = (e: any) => {
     const checked = e.target.checked;
-    setSelectAll(checked);
-
-    const currentVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
-
-    currentVisibility["selectAll"] = checked;
-
-    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
-      expires: 365,
-    });
-
     table.getAllLeafColumns().forEach((col) => {
       if (col.id !== "conflicts") {
         handleColumnVisibilityChange(col.id, checked);
@@ -870,46 +857,11 @@ const TablePagination = () => {
   };
 
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
-    const currentVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
-
-    currentVisibility[colId] = value;
-
-    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
-      expires: 365,
-    });
-
     table.setColumnVisibility((prev: any) => ({
       ...prev,
       [colId]: value,
     }));
   };
-
-  useEffect(() => {
-    const saved = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
-
-    if (saved.selectAll !== undefined) {
-      setSelectAll(saved.selectAll);
-    }
-
-    // defaults for role 2
-    if (user.user_role_id === 2) {
-      saved["email"] = false;
-      saved["phone"] = false;
-      saved["joiningDate"] = false;
-      saved["bankName"] = false;
-      saved["accountNo"] = false;
-      saved["shortCode"] = false;
-      saved["address"] = false;
-      saved["utrNumber"] = false;
-      saved["ninNumber"] = false;
-    }
-
-    table.setColumnVisibility(saved);
-  }, [user, table]);
 
   useEffect(() => {
     table.setPageIndex(0);
