@@ -76,7 +76,7 @@ const ArchiveLocation: React.FC<ArchiveLocationProps> = ({
     if (open == true) {
       fetchArchiveAddress();
     }
-  }, [open,fetchArchiveAddress]);
+  }, [open]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;

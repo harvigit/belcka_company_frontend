@@ -145,7 +145,7 @@ const Company = () => {
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
     fetchFeeds();
-  }, [user?.company_id, user?.id,fetchFeeds]);
+  }, [user?.company_id, user?.id]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -312,7 +312,7 @@ const Company = () => {
     return () => {
       unsubscribe();
     };
-  }, [user?.id,fetchFeeds]);
+  }, [user?.id]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>

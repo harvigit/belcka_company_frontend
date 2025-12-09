@@ -11,7 +11,6 @@ import {
   DialogContent,
   IconButton,
   Divider,
-  FormControlLabel,
   Drawer,
   Autocomplete,
 } from "@mui/material";
@@ -22,10 +21,7 @@ import { Grid } from "@mui/system";
 import { IconCheck, IconHistory, IconX } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
 import dayjs from "dayjs";
-import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 interface ProjectListingProps {
   active: boolean;
   name: string | null;
@@ -154,19 +150,19 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
   useEffect(() => {
     fetchRateHistory();
-  }, [fetchRateHistory]);
+  }, []);
 
   useEffect(() => {
     if (!userId || !active) return;
     getCompanyData();
     findPermission();
-  }, [userId, active,findPermission]);
+  }, [userId, active]);
 
   useEffect(() => {
     if (comapny?.id) {
       fetchTrades();
     }
-  }, [comapny,fetchTrades]);
+  }, [comapny]);
 
   const handleUpdate = async () => {
     if (comapny.user_role_id !== 1 && !formData.trade_id) {

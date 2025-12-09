@@ -111,7 +111,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
     if (user.company_id) {
       fetchProjects();
     }
-  }, [user.company_id, user.id,fetchProjects]);
+  }, [user.company_id, user.id]);
 
   const handleCopyCode = (invite_link: string | null) => {
     const codeToCopy = invite_link ?? "";

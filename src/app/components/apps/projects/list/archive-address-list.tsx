@@ -62,7 +62,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
 
   useEffect(() => {
     fetchTeams();
-  }, [open,fetchTeams]);
+  }, [open]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;

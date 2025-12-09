@@ -999,11 +999,9 @@ const TablePagination = () => {
               <IconDotsVertical width={18} />
             </IconButton>
 
-            {user.user_role_id == 1 && (
-              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-                <IconTableColumn />
-              </IconButton>
-            )}
+            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+              <IconTableColumn />
+            </IconButton>
             <Popover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}

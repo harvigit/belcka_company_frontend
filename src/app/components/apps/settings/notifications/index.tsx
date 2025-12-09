@@ -58,7 +58,7 @@ export default function NotificationSettings() {
     if (user?.company_id) {
       fetchNotifications();
     }
-  }, [user?.company_id,fetchNotifications]);
+  }, [user?.company_id]);
 
   const updateNotificationState = (
     categoryId: number,

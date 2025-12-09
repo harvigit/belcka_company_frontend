@@ -276,7 +276,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (drawerOpen == true) {
       fetchTrades();
     }
-  }, [drawerOpen,user?.company_id]);
+  }, [drawerOpen !== false]);
 
   useEffect(() => {
     if (projectId) {
@@ -313,7 +313,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (user.company_id) {
       fetchProjects();
     }
-  }, [projectID,fetchProjects]);
+  }, [projectID]);
 
   useEffect(() => {
     if (projectId && user?.id) {
@@ -344,7 +344,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (projectID) {
       fetchAddresses();
     }
-  }, [value,fetchAddresses]);
+  }, [value]);
 
   // const fetchArchiveAddress = async () => {
   //   if (!projectId) return;

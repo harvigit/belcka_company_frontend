@@ -64,7 +64,7 @@ const ArchiveProject: React.FC<ArchiveProjectProps> = ({
     if (open == true) {
       fetchProjects();
     }
-  }, [open,fetchProjects]);
+  }, [open]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;

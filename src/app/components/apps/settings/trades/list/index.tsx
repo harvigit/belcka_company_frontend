@@ -137,7 +137,7 @@ const TradeList = () => {
 
   useEffect(() => {
     fetchTrades();
-  }, [fetchTrades]);
+  }, [api]);
 
   useEffect(() => {
     const fetchTrades = async () => {
