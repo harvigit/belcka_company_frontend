@@ -93,7 +93,7 @@ export default function PermissionGuard({
                     Access Denied
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                    You don't have permission to access this page.
+                    You don&apos;t have permission to access this page.
                 </Typography>
                 <Button component={Link} href="/dashboard" variant="contained" size="large">
                     Go to Dashboard

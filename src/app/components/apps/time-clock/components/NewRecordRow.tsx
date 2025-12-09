@@ -43,14 +43,22 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         return null;
     }
 
-    useEffect(() => {
+   useEffect(() => {
         if (!newRecord.project_id && projects.length > 0) {
             updateNewRecord(recordKey, 'project_id', projects[0].id);
         }
         if (!newRecord.shift_id && shifts.length > 0) {
             updateNewRecord(recordKey, 'shift_id', shifts[0].id);
         }
-    }, [newRecord, projects, shifts, recordKey, updateNewRecord]);
+    }, [
+        newRecord.project_id,
+        newRecord.shift_id,
+        projects,
+        shifts,
+        recordKey,
+        updateNewRecord
+    ]);
+
 
     const handleBlur = (field: 'start' | 'end') => {
         const formattedTime = validateAndFormatTime((newRecord[field] as string) || '');
@@ -59,20 +67,26 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
     };
 
     useEffect(() => {
-        if (isSaving) return;
+    if (isSaving) return;
+        const { shift_id, start, end } = newRecord;
+        const allFilled =
+            shift_id &&
+            start &&
+            end &&
+            blurredFields.start &&
+            blurredFields.end;
 
-        const {shift_id, start, end} = newRecord;
-
-        if (shift_id && start && end && blurredFields.start && blurredFields.end) {
+        if (allFilled) {
             const formattedStart = validateAndFormatTime(start);
             const formattedEnd = validateAndFormatTime(end);
             const parsedDate = DateTime.fromFormat(newRecord.date, 'ccc d/M');
 
-            if (
+            const valid =
                 timeRegex.test(formattedStart) &&
                 timeRegex.test(formattedEnd) &&
-                parsedDate.isValid
-            ) {
+                parsedDate.isValid;
+
+            if (valid) {
                 saveNewRecord(recordKey);
             }
         }
@@ -86,7 +100,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         isSaving,
         recordKey,
         saveNewRecord,
-        validateAndFormatTime,
+        validateAndFormatTime
     ]);
 
     return (

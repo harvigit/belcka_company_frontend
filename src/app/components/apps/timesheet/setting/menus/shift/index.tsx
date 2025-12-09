@@ -396,7 +396,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
             <Typography
               sx={{ textAlign: "center", color: "text.secondary", py: 4 }}
             >
-              No shifts found matching "{searchQuery}"
+              No shifts found matching &quot;{searchQuery}&quot;
             </Typography>
           )}
 
@@ -404,7 +404,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
             <Typography
               sx={{ textAlign: "center", color: "text.secondary", py: 4 }}
             >
-              No shifts available. Click "Add Shift" to create one.
+              No shifts available. Click &quot;Add Shift&quot; to create one.
             </Typography>
           )}
         </Box>

@@ -1106,6 +1106,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 if (column.id === 'project') {
                                                     return (
                                                         <TableCell 
+                                                        key={cell.id}
+
                                                             align="center"
                                                             sx={{
                                                                 py: 0.5,
@@ -1152,6 +1154,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 if (column.id === 'shift') {
                                                     return (
                                                         <TableCell
+                                                        key={cell.id}
                                                             align="center"
                                                             sx={{
                                                                 py: 0.5,

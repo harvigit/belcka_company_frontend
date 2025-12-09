@@ -465,7 +465,7 @@ const Company = () => {
                 {paginatedFeeds?.length > 0 ? (
                   <>
                     {paginatedFeeds.map((item, index) => (
-                      <>
+                      <Box key={item.id}>
                         <Box
                           sx={{
                             p: 2,
@@ -552,7 +552,7 @@ const Company = () => {
                           </Box>
                         </Box>
                         <Divider />
-                      </>
+                      </Box>
                     ))}
 
                     {paginatedFeeds.length < filteredFeeds.length && (
