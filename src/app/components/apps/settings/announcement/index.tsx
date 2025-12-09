@@ -182,7 +182,7 @@ export default function AnnouncementsList({
     ) {
       markAsRead();
     }
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen,markAsRead,announcement]);
   const paginatedAnnouncement = announcement?.slice(0, page * limit) || [];
 
   return (

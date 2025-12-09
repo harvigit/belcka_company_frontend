@@ -61,7 +61,7 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
     if (open !== false) {
       fetchArchiveAddress();
     }
-  }, [open !== false]);
+  }, [open !== false,fetchArchiveAddress]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;

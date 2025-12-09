@@ -165,7 +165,7 @@ const HistoryList = () => {
       const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
       fetchHistories(formattedStart, formattedEnd);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate,fetchHistories]);
 
   const handleDateRangeChange = (range: {
     from: Date | null;

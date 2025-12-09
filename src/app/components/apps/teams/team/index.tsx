@@ -230,7 +230,7 @@ const TablePagination = () => {
     if (teamId == "null") {
       router.push("/apps/teams/list");
     }
-  }, [teamId,fetchUniqueUsers,fetchData]);
+  }, [teamId,fetchUniqueUsers,fetchData,router]);
 
   // fetch user list
   useEffect(() => {

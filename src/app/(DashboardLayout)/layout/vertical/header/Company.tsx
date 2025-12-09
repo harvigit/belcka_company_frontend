@@ -145,7 +145,7 @@ const Company = () => {
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
     fetchFeeds();
-  }, [user?.company_id, user?.id]);
+  }, [user?.company_id, user?.id,fetchFeeds]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -312,7 +312,7 @@ const Company = () => {
     return () => {
       unsubscribe();
     };
-  }, [user?.id]);
+  }, [user?.id,fetchFeeds]);
 
   return (
     <Box display={"flex"} alignItems={"center"} gap={1}>
@@ -381,6 +381,7 @@ const Company = () => {
       </Badge>
       <UserRequests
         open={requestDrawer}
+        onRequestCountChange={fetchFeeds}
         onClose={() => setRequestDrawer(false)}
       />
       <Drawer

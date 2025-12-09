@@ -165,7 +165,7 @@ const EditTeamPage = () => {
 
     fetchTeamData();
     fetchUniqueUsers();
-  }, [teams, teamId,fetchUniqueUsers]);
+  }, [teams, teamId,fetchUniqueUsers,router]);
 
   const handleSave = async () => {
     if (!formData) return;

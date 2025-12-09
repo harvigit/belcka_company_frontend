@@ -36,7 +36,7 @@ const TablePagination = () => {
       }
       router.push("/apps/projects/index");
     }
-  }, [searchParams, user?.id, user?.company_id]);
+  }, [searchParams, user?.id, user?.company_id,router]);
 
   useEffect(() => {
     if (projectId && user?.id) {

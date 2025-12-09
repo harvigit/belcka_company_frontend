@@ -47,9 +47,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   const [ratePermisison, setRatePermission] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
-  const [showAllDates, setShowAllDates] = useState(true);
-  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
-  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const { data: session, update } = useSession();
   const user = session?.user as User & { user_role_id?: number | null } & {
     id: number;
@@ -158,24 +155,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   useEffect(() => {
     fetchRateHistory();
   }, [fetchRateHistory]);
-
-  useEffect(() => {
-    if (!showAllDates && startDate && endDate) {
-      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
-      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
-      fetchRateHistory(formattedStart, formattedEnd);
-    }
-  }, [startDate, endDate,fetchRateHistory]);
-
-  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = event.target.checked;
-    setShowAllDates(checked);
-    if (checked) {
-      setStartDate(null);
-      setEndDate(null);
-      fetchRateHistory();
-    }
-  };
 
   useEffect(() => {
     if (!userId || !active) return;
