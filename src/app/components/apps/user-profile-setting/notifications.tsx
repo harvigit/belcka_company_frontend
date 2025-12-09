@@ -66,7 +66,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
     if (companyId) {
       fetchNotifications();
     }
-  }, [companyId, active]);
+  }, [companyId, active,fetchNotifications,userId]);
 
   const updateNotificationState = (
     categoryId: number,

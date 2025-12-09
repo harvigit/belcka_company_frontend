@@ -157,7 +157,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
 
   useEffect(() => {
     fetchRateHistory();
-  }, []);
+  }, [fetchRateHistory]);
 
   useEffect(() => {
     if (!showAllDates && startDate && endDate) {
@@ -165,7 +165,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
       fetchRateHistory(formattedStart, formattedEnd);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate,fetchRateHistory]);
 
   const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
@@ -181,13 +181,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
     if (!userId || !active) return;
     getCompanyData();
     findPermission();
-  }, [userId, active]);
+  }, [userId, active,findPermission]);
 
   useEffect(() => {
     if (comapny?.id) {
       fetchTrades();
     }
-  }, [comapny]);
+  }, [comapny,fetchTrades]);
 
   const handleUpdate = async () => {
     if (comapny.user_role_id !== 1 && !formData.trade_id) {

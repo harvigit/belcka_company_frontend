@@ -55,7 +55,7 @@ const CreateTeam = () => {
       setLoading(false);
     };
     fetchTrades();
-  }, []);
+  }, [user?.company_id]);
 
   useEffect(() => {
     const fetchTrades = async () => {

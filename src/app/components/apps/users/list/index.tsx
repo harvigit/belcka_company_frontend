@@ -201,7 +201,7 @@ const TablePagination = () => {
       }
     };
     fetchTrades();
-  }, []);
+  }, [user?.company_id]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -215,19 +215,7 @@ const TablePagination = () => {
       }
     };
     fetchTeams();
-  }, []);
-
-  const handleInviteUser = (user: any | null = null) => {
-    setUserId(user?.id || 0);
-    setfirstName(user?.first_name || "");
-    setlastName(user?.last_name || "");
-    setEmail(user?.email || "");
-    setExtension(user?.extension || "+44");
-    setPhone(user?.phone || "");
-    setNationalPhone(user?.phone || "");
-    setSelectedUser(user);
-    setInviteUser(true);
-  };
+  }, [user?.company_id]);
 
   const closeInviteDrawer = () => {
     setInviteUser(false);

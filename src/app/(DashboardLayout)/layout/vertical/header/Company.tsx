@@ -116,7 +116,7 @@ const Company = () => {
     };
 
     fetchCompanies();
-  }, [user.company_id]);
+  }, [user?.company_id,user?.id]);
 
   const fetchFeeds = useCallback(async () => {
     if (!user?.company_id || !user?.id) return;

@@ -49,7 +49,7 @@ const TablePagination = () => {
       }
     };
     fetchCompany();
-  }, [api]);
+  }, [api,user?.company_id]);
 
   if (loading) {
     return (

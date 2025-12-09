@@ -151,7 +151,7 @@ const TablePagination = () => {
       }
     };
     fetchTrades();
-  }, [api]);
+  }, [id?.company_id]);
 
   // fetch team member's
   const fetchData = async () => {
@@ -230,7 +230,7 @@ const TablePagination = () => {
     if (teamId == "null") {
       router.push("/apps/teams/list");
     }
-  }, [teamId]);
+  }, [teamId,fetchUniqueUsers,fetchData]);
 
   // fetch user list
   useEffect(() => {

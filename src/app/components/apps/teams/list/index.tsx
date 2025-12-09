@@ -164,7 +164,7 @@ const TablePagination = () => {
 
   useEffect(() => {
     fetchTeams();
-  }, [projectId]);
+  }, [projectId,fetchTeams]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -178,7 +178,7 @@ const TablePagination = () => {
       }
     };
     fetchTrades();
-  }, []);
+  }, [id?.company_id]);
 
   const handleGenerateCode = async (): Promise<string> => {
     try {

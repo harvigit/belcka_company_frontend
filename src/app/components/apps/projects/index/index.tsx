@@ -48,7 +48,7 @@ const TablePagination = () => {
         }
       );
     }
-  }, [projectId, user?.id]);
+  }, [projectId, user?.id,user?.company_id]);
 
   // if (loading == true) {
   //   return (

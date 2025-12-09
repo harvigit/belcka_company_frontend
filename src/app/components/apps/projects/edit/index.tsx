@@ -117,7 +117,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     if (open == true) {
       getShifts();
     }
-  }, [open]);
+  }, [open,user?.company_id]);
 
   useEffect(() => {
     const getTeams = async () => {
@@ -135,7 +135,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     if (open == true) {
       getTeams();
     }
-  }, [open]);
+  }, [open,user?.company_id]);
 
   useEffect(() => {
     const getGeofence = async () => {

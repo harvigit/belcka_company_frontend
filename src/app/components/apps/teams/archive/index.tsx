@@ -64,7 +64,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
 
   useEffect(() => {
     fetchTeams();
-  }, [open]);
+  }, [open,fetchTeams]);
 
   const handleConfirmAction = async () => {
     if (!selectedItem) return;

@@ -367,7 +367,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     if (companyId) {
       fetchTrades();
     }
-  }, [isCodeVerified]);
+  }, [isCodeVerified,companyId]);
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();

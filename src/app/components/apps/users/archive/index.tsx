@@ -122,7 +122,7 @@ const ArchiveUserList = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [projectId]);
+  }, [projectId,fetchUsers]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -136,7 +136,7 @@ const ArchiveUserList = () => {
       }
     };
     fetchTrades();
-  }, []);
+  }, [user?.company_id]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -150,11 +150,11 @@ const ArchiveUserList = () => {
       }
     };
     fetchTeams();
-  }, []);
+  }, [user?.company_id]);
 
   const uniqueTeams = useMemo(
     () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
-    [data]
+    [data,teams]
   );
 
   const uniqueSupervisors = useMemo(

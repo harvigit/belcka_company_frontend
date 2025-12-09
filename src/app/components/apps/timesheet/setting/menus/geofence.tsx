@@ -110,7 +110,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
 
   useEffect(() => {
     getWorkzones();
-  }, [user?.company_id, lastUpdatedSiteId]);
+  }, [user?.company_id, lastUpdatedSiteId,getWorkzones]);
 
   const options = [
     {

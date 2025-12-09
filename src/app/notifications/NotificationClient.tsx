@@ -8,7 +8,6 @@ export default function NotificationClient() {
   const { data: session } = useSession();
   const user = session?.user as User & { id: number };
   const userId = user?.id;
-  const is_web = true;
 
   useEffect(() => {
     if (!userId) return;
@@ -16,6 +15,8 @@ export default function NotificationClient() {
     let unsub: (() => void) | undefined;
 
     const init = async () => {
+      const is_web = true;
+
       try {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return;

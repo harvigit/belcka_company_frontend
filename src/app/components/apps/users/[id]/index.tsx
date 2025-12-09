@@ -145,7 +145,7 @@ const TablePagination = () => {
 
   useEffect(() => {
     fetchData();
-  }, [userId]);
+  }, [userId,fetchData]);
 
   const handleUpdatePersonalDetails = async () => {
     if (!userId) return;
