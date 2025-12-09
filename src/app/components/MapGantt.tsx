@@ -200,7 +200,7 @@ export default function MapGantt({
             }}
             getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(option, value) => option.id === value.id}
-            sx={{ minWidth: 200 ,minHeight: 20}}
+            sx={{ minWidth: 200, minHeight: 20 }}
             renderInput={(params) => (
               <CustomTextField
                 {...params}
@@ -378,6 +378,7 @@ export default function MapGantt({
 }
 
 const AllZonesMap = ({ zones, isLoaded }: any) => {
+  const mapRef = useRef<google.maps.Map | null>(null);
   if (!isLoaded) return <p>Loading map...</p>;
 
   const defaultCenter = { lat: 20.5937, lng: 78.9629 };
@@ -385,10 +386,8 @@ const AllZonesMap = ({ zones, isLoaded }: any) => {
   const mapCenter = zones.length
     ? { lat: Number(zones[0].latitude), lng: Number(zones[0].longitude) }
     : defaultCenter;
-  const mapRef = useRef<google.maps.Map | null>(null);
 
   const onZoneClick = (zone: any) => {
-    console.log(zone, mapRef);
     if (!mapRef.current) return;
 
     const newCenter = {

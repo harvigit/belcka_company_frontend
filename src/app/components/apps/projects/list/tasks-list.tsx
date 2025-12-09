@@ -106,6 +106,7 @@ const TasksList = ({
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteIds, setDeleteIds] = useState<number[]>([]);
+  const [hovered, setHovered] = useState(false);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -343,7 +344,6 @@ const TasksList = ({
         cell: ({ row }) => {
           const item = row.original;
           const isChecked = selectedRowIds.has(row.index);
-          const [hovered, setHovered] = useState(false);
 
           return (
             <Stack

@@ -480,7 +480,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     <Box>
                                         <Typography variant="body2">Daily limit</Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            You'll be notified when a limit is exceeded
+                                            You&apos;ll be notified when a limit is exceeded
                                         </Typography>
                                     </Box>
                                 </Box>

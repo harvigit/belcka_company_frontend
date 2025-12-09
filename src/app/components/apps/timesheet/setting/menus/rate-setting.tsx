@@ -346,7 +346,7 @@ const RateSetting = () => {
         {/* Displaying Pay Rate Users */}
         <List className={enabled ? "" : "disabled_location"}>
           {data.map((user: any) => (
-            <Box>
+            <Box key={user.id}>
               <ListItem
                 key={user.id}
                 sx={{

@@ -38,17 +38,12 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     const [blurredFields, setBlurredFields] = useState<{ start: boolean; end: boolean }>({start: false, end: false});
 
-    const isRowEmpty = !newRecord.shift_id && !newRecord.start && !newRecord.end;
-    if (isRowEmpty) {
-        return null;
-    }
-
-   useEffect(() => {
+    useEffect(() => {
         if (!newRecord.project_id && projects.length > 0) {
-            updateNewRecord(recordKey, 'project_id', projects[0].id);
+            updateNewRecord(recordKey, "project_id", projects[0].id);
         }
         if (!newRecord.shift_id && shifts.length > 0) {
-            updateNewRecord(recordKey, 'shift_id', shifts[0].id);
+            updateNewRecord(recordKey, "shift_id", shifts[0].id);
         }
     }, [
         newRecord.project_id,
@@ -56,7 +51,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         projects,
         shifts,
         recordKey,
-        updateNewRecord
+        updateNewRecord,
     ]);
 
 
@@ -66,8 +61,9 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         setBlurredFields((prev) => ({...prev, [field]: true}));
     };
 
-    useEffect(() => {
-    if (isSaving) return;
+     useEffect(() => {
+        if (isSaving) return;
+
         const { shift_id, start, end } = newRecord;
         const allFilled =
             shift_id &&
@@ -79,7 +75,7 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         if (allFilled) {
             const formattedStart = validateAndFormatTime(start);
             const formattedEnd = validateAndFormatTime(end);
-            const parsedDate = DateTime.fromFormat(newRecord.date, 'ccc d/M');
+            const parsedDate = DateTime.fromFormat(newRecord.date, "ccc d/M");
 
             const valid =
                 timeRegex.test(formattedStart) &&
@@ -100,8 +96,13 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         isSaving,
         recordKey,
         saveNewRecord,
-        validateAndFormatTime
+        validateAndFormatTime,
     ]);
+    const isRowEmpty = !newRecord.shift_id && !newRecord.start && !newRecord.end;
+
+    if (isRowEmpty) {
+        return null;
+    }
 
     return (
         <TableRow
