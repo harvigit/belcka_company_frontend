@@ -164,7 +164,7 @@ const TablePagination = () => {
 
   useEffect(() => {
     fetchTeams();
-  }, [projectId,fetchTeams]);
+  }, [projectId]);
 
   useEffect(() => {
     const fetchTrades = async () => {

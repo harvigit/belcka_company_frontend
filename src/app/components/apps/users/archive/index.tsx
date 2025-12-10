@@ -122,7 +122,7 @@ const ArchiveUserList = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [projectId,fetchUsers]);
+  }, [projectId]);
 
   useEffect(() => {
     const fetchTrades = async () => {

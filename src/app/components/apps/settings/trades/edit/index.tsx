@@ -88,7 +88,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
     if (open == true) {
       fetchCategories();
     }
-  }, [open,fetchCategories]);
+  }, [open]);
 
   return (
     <Drawer

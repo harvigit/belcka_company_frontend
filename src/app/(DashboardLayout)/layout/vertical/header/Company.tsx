@@ -229,7 +229,7 @@ const Company = () => {
     if (openannouncementDrawer) {
       fetchList();
     }
-  }, [openannouncementDrawer, fetchList]);
+  }, [openannouncementDrawer]);
 
   const filteredFeeds = feed?.filter((item) => {
     if (filterRequest === "all") return true;

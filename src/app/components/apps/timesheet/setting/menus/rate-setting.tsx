@@ -59,7 +59,7 @@ const RateSetting = () => {
 
   useEffect(() => {
     fetchCompanyUsers();
-  }, [user.company_id,fetchCompanyUsers]);
+  }, [user.company_id]);
 
   // Fetch users with pay rates
   const fetchUsers = async () => {
@@ -82,7 +82,7 @@ const RateSetting = () => {
     if (user?.company_id) {
       fetchUsers();
     }
-  }, [user?.company_id,fetchUsers]);
+  }, [user?.company_id]);
 
   useEffect(() => {
     if (openModal) {

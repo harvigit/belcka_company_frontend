@@ -105,7 +105,7 @@ export default function PenaltySettings() {
       fetchTeams();
       fetchUsers();
     }
-  }, [user?.company_id,fetchTeams]);
+  }, [user?.company_id]);
 
   const handleToggle = async (
     overrideStatus?: boolean,

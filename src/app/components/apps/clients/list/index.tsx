@@ -149,7 +149,7 @@ const TablePagination = () => {
 
   useEffect(() => {
     fetchClients();
-  }, [fetchClients]);
+  }, [id?.company_id]);
 
   const formatDate = (date: string | undefined) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
