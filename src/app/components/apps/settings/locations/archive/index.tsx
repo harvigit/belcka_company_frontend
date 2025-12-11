@@ -161,13 +161,20 @@ const ArchiveLocation: React.FC<ArchiveLocationProps> = ({
                     width="100%"
                     height="20px"
                   >
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight={600}
-                      className="archive-multi-ellipsis"
-                    >
-                      Name: {item.name}
-                    </Typography>
+                    <Box display={"flex"} alignItems={"center"} gap={1}>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        Name:
+                      </Typography>
+                      <Typography
+                        color="textSecondary"
+                        variant="body1"
+                        fontWeight={600}
+                        className="multi-ellipsis"
+                        fontSize={"14px !important"}
+                      >
+                        {item.name}
+                      </Typography>
+                    </Box>
                     <Box display={"flex"} fontSize="10px">
                       <IconButton
                         color="primary"

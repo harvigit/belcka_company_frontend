@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   Box,
   Typography,
@@ -116,7 +116,7 @@ export default function DynamicGantt({
 
     setLoading(true);
     try {
-      const res : AxiosResponse<any> = await api.get("address/get", {
+      const res: AxiosResponse<any> = await api.get("address/get", {
         params: {
           project_id: projectId,
           company_id: companyId,
@@ -348,6 +348,7 @@ export default function DynamicGantt({
     timelineStart: Date;
     timelineEnd: Date;
   }) {
+    const barRef = useRef<HTMLDivElement | null>(null);
     const position = calcPositionPx(task, timelineStart, timelineEnd, dayWidth);
     if (!position) return null;
 
@@ -357,7 +358,6 @@ export default function DynamicGantt({
       task.type === "project"
         ? "#3091f1ff"
         : STATUS_COLORS[task.status] || "#999999";
-
     return (
       <Tooltip
         title={
@@ -375,6 +375,7 @@ export default function DynamicGantt({
         }
       >
         <Box
+          ref={barRef} // attach the ref safely
           sx={{
             position: "absolute",
             left: `${leftPx}px`,
@@ -758,7 +759,7 @@ export default function DynamicGantt({
                             borderColor: "divider",
                             display: "flex",
                             alignItems: "center",
-                                borderRadius: 0
+                            borderRadius: 0,
                           }}
                         >
                           <BarWithDates
@@ -779,8 +780,7 @@ export default function DynamicGantt({
                                 borderColor: "divider",
                                 display: "flex",
                                 alignItems: "center",
-                                borderRadius: 0
-
+                                borderRadius: 0,
                               }}
                             >
                               <BarWithDates

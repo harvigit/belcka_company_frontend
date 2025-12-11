@@ -116,7 +116,7 @@ const Company = () => {
     };
 
     fetchCompanies();
-  }, [user.company_id]);
+  }, [user?.company_id,user?.id]);
 
   const fetchFeeds = useCallback(async () => {
     if (!user?.company_id || !user?.id) return;
@@ -207,7 +207,7 @@ const Company = () => {
     setOpenDrawer(false);
     setLoading(false);
     setPage(1);
-  }, [count, unreedFeed, fetchFeeds, loading]);
+  }, [count, unreedFeed, loading]);
 
   const fetchList = useCallback(async () => {
     try {
@@ -229,7 +229,7 @@ const Company = () => {
     if (openannouncementDrawer) {
       fetchList();
     }
-  }, [openannouncementDrawer, fetchList]);
+  }, [openannouncementDrawer]);
 
   const filteredFeeds = feed?.filter((item) => {
     if (filterRequest === "all") return true;
@@ -381,6 +381,7 @@ const Company = () => {
       </Badge>
       <UserRequests
         open={requestDrawer}
+        onRequestCountChange={fetchFeeds}
         onClose={() => setRequestDrawer(false)}
       />
       <Drawer
@@ -465,7 +466,7 @@ const Company = () => {
                 {paginatedFeeds?.length > 0 ? (
                   <>
                     {paginatedFeeds.map((item, index) => (
-                      <>
+                      <Box key={item.id}>
                         <Box
                           sx={{
                             p: 2,
@@ -552,7 +553,7 @@ const Company = () => {
                           </Box>
                         </Box>
                         <Divider />
-                      </>
+                      </Box>
                     ))}
 
                     {paginatedFeeds.length < filteredFeeds.length && (

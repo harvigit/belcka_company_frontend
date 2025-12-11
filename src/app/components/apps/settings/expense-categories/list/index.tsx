@@ -158,7 +158,7 @@ const TablePagination = () => {
         fetchExpenseCategories();
         setDrawerOpen(false);
       } else {
-        toast.error(result.data.message);
+        // toast.error(result.data.message);
       }
     } catch (error) {
       console.log(error, "error");

@@ -38,19 +38,22 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     const [blurredFields, setBlurredFields] = useState<{ start: boolean; end: boolean }>({start: false, end: false});
 
-    const isRowEmpty = !newRecord.shift_id && !newRecord.start && !newRecord.end;
-    if (isRowEmpty) {
-        return null;
-    }
-
     useEffect(() => {
         if (!newRecord.project_id && projects.length > 0) {
-            updateNewRecord(recordKey, 'project_id', projects[0].id);
+            updateNewRecord(recordKey, "project_id", projects[0].id);
         }
         if (!newRecord.shift_id && shifts.length > 0) {
-            updateNewRecord(recordKey, 'shift_id', shifts[0].id);
+            updateNewRecord(recordKey, "shift_id", shifts[0].id);
         }
-    }, [newRecord, projects, shifts, recordKey, updateNewRecord]);
+    }, [
+        newRecord.project_id,
+        newRecord.shift_id,
+        projects,
+        shifts,
+        recordKey,
+        updateNewRecord,
+    ]);
+
 
     const handleBlur = (field: 'start' | 'end') => {
         const formattedTime = validateAndFormatTime((newRecord[field] as string) || '');
@@ -58,21 +61,28 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         setBlurredFields((prev) => ({...prev, [field]: true}));
     };
 
-    useEffect(() => {
+     useEffect(() => {
         if (isSaving) return;
 
-        const {shift_id, start, end} = newRecord;
+        const { shift_id, start, end } = newRecord;
+        const allFilled =
+            shift_id &&
+            start &&
+            end &&
+            blurredFields.start &&
+            blurredFields.end;
 
-        if (shift_id && start && end && blurredFields.start && blurredFields.end) {
+        if (allFilled) {
             const formattedStart = validateAndFormatTime(start);
             const formattedEnd = validateAndFormatTime(end);
-            const parsedDate = DateTime.fromFormat(newRecord.date, 'ccc d/M');
+            const parsedDate = DateTime.fromFormat(newRecord.date, "ccc d/M");
 
-            if (
+            const valid =
                 timeRegex.test(formattedStart) &&
                 timeRegex.test(formattedEnd) &&
-                parsedDate.isValid
-            ) {
+                parsedDate.isValid;
+
+            if (valid) {
                 saveNewRecord(recordKey);
             }
         }
@@ -88,6 +98,11 @@ const NewRecordRow: React.FC<NewRecordRowProps> = ({
         saveNewRecord,
         validateAndFormatTime,
     ]);
+    const isRowEmpty = !newRecord.shift_id && !newRecord.start && !newRecord.end;
+
+    if (isRowEmpty) {
+        return null;
+    }
 
     return (
         <TableRow

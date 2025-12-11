@@ -102,6 +102,7 @@ const AddressesList = ({
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     onSelectionChange(Array.from(selectedRowIds));
@@ -323,7 +324,6 @@ const AddressesList = ({
           const item = row.original;
           const isChecked = selectedRowIds.has(item.id);
           const isProcessed = processedIds.includes(item.id);
-          const [hovered, setHovered] = useState(false);
 
           return (
             <Stack

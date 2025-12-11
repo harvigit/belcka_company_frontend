@@ -68,7 +68,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
         status: record.status,
       });
     }
-  }, [id, open, data]);
+  }, [id, open, data,companyId,setFormData]);
 
   // Fetch data
   const fetchCategories = async () => {

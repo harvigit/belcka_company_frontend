@@ -694,7 +694,7 @@ const TablePagination = () => {
                     setSelectedRowIds(new Set());
                     await fetchTasks();
                   } catch (error) {
-                    toast.error("Failed to remove works");
+                    // toast.error("Failed to remove works");
                   } finally {
                     setConfirmOpen(false);
                   }

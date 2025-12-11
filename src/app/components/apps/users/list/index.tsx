@@ -73,7 +73,6 @@ import "react-phone-input-2/lib/material.css";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
-import Cookies from "js-cookie";
 
 dayjs.extend(customParseFormat);
 
@@ -202,7 +201,7 @@ const TablePagination = () => {
       }
     };
     fetchTrades();
-  }, []);
+  }, [user?.company_id]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -216,19 +215,7 @@ const TablePagination = () => {
       }
     };
     fetchTeams();
-  }, []);
-
-  const handleInviteUser = (user: any | null = null) => {
-    setUserId(user?.id || 0);
-    setfirstName(user?.first_name || "");
-    setlastName(user?.last_name || "");
-    setEmail(user?.email || "");
-    setExtension(user?.extension || "+44");
-    setPhone(user?.phone || "");
-    setNationalPhone(user?.phone || "");
-    setSelectedUser(user);
-    setInviteUser(true);
-  };
+  }, [user?.company_id]);
 
   const closeInviteDrawer = () => {
     setInviteUser(false);
@@ -850,18 +837,6 @@ const TablePagination = () => {
 
   const handleSelectAllChange = (e: any) => {
     const checked = e.target.checked;
-    setSelectAll(checked);
-
-    const currentVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
-
-    currentVisibility["selectAll"] = checked;
-
-    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
-      expires: 365,
-    });
-
     table.getAllLeafColumns().forEach((col) => {
       if (col.id !== "conflicts") {
         handleColumnVisibilityChange(col.id, checked);
@@ -870,46 +845,11 @@ const TablePagination = () => {
   };
 
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
-    const currentVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
-
-    currentVisibility[colId] = value;
-
-    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
-      expires: 365,
-    });
-
     table.setColumnVisibility((prev: any) => ({
       ...prev,
       [colId]: value,
     }));
   };
-
-  useEffect(() => {
-    const saved = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
-
-    if (saved.selectAll !== undefined) {
-      setSelectAll(saved.selectAll);
-    }
-
-    // defaults for role 2
-    if (user.user_role_id === 2) {
-      saved["email"] = false;
-      saved["phone"] = false;
-      saved["joiningDate"] = false;
-      saved["bankName"] = false;
-      saved["accountNo"] = false;
-      saved["shortCode"] = false;
-      saved["address"] = false;
-      saved["utrNumber"] = false;
-      saved["ninNumber"] = false;
-    }
-
-    table.setColumnVisibility(saved);
-  }, [user, table]);
 
   useEffect(() => {
     table.setPageIndex(0);
@@ -1059,11 +999,9 @@ const TablePagination = () => {
               <IconDotsVertical width={18} />
             </IconButton>
 
-            {user.user_role_id == 1 && (
-              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-                <IconTableColumn />
-              </IconButton>
-            )}
+            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+              <IconTableColumn />
+            </IconButton>
             <Popover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}
@@ -1406,7 +1344,7 @@ const TablePagination = () => {
                   await fetchUsers();
                 } catch (error) {
                   console.error("Failed to remove users", error);
-                  toast.error("Failed to remove users");
+                  // toast.error("Failed to remove users");
                 } finally {
                   setConfirmOpen(false);
                 }

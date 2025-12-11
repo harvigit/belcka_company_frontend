@@ -158,7 +158,7 @@ const EditTeamPage = () => {
           }
         } catch (error) {
           console.error("Error fetching team data:", error);
-          toast.error("Failed to fetch team data.");
+          // toast.error("Failed to fetch team data.");
         }
       }
     };

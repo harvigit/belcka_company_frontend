@@ -317,7 +317,7 @@ const TablePagination = () => {
       toast.success(response.data.message);
       return response.data.info.company_otp;
     } catch (error) {
-      toast.error("Failed to generate code.");
+      // toast.error("Failed to generate code.");
       return null;
     }
   };

@@ -80,6 +80,7 @@ const TradeList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [switchLoading, setSwitchLoading] = useState(false);
 
   const [filters, setFilters] = useState({
     team: "",
@@ -342,7 +343,6 @@ const TradeList = () => {
       header: () => "Status",
       cell: ({ row }) => {
         const item = row.original;
-        const [switchLoading, setSwitchLoading] = useState(false);
 
         const handleToggle = async () => {
           setSwitchLoading(true);

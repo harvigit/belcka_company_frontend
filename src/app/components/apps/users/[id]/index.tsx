@@ -91,13 +91,12 @@ const TablePagination = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [userToDelete, setUserToDelete] = useState<number>();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<number>();
 
-    const handleTabChange = (event: any, newValue: any) => {
+  const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
-
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -407,8 +406,8 @@ const TablePagination = () => {
                   variant="outlined"
                   color="error"
                   onClick={() => {
-                      setUserToDelete(Number(data?.id));
-                      setConfirmOpen(true);
+                    setUserToDelete(Number(data?.id));
+                    setConfirmOpen(true);
                   }}
                   fullWidth
                 >
@@ -470,16 +469,18 @@ const TablePagination = () => {
                 <BillingInfo
                   companyId={Number(user.company_id)}
                   onUpdate={fetchData}
+                  userId={Number(userId)}
                   active={value === 1}
                 />
               </Box>
               <Box hidden={value !== 2}>
-                <ComapnyRate active={value === 2} name={formData.first_name} />
+                <ComapnyRate active={value === 2} name={formData.first_name} userId={Number(userId)}/>
               </Box>
               <Box hidden={value !== 3}>
                 <Notifications
                   companyId={Number(user.company_id)}
                   active={value === 3}
+                  userId={Number(userId)}
                 />
               </Box>
             </Box>
@@ -578,7 +579,7 @@ const TablePagination = () => {
                   }
                 } catch (err) {
                   console.error("Image upload failed:", err);
-                  toast.error("Failed to upload image");
+                  // toast.error("Failed to upload image");
                 }
               }
             }}
@@ -588,77 +589,84 @@ const TablePagination = () => {
         </DialogActions>
       </Dialog>
 
-        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-            <DialogTitle>
-                Confirm Deletion
-                <IconButton
-                    aria-label="close"
-                    onClick={() => setConfirmOpen(false)}
-                    sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: 8,
-                        color: (theme) => theme.palette.grey[500],
-                    }}
-                >
-                    <IconX />
-                </IconButton>
-            </DialogTitle>
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>
+          Confirm Deletion
+          <IconButton
+            aria-label="close"
+            onClick={() => setConfirmOpen(false)}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <IconX />
+          </IconButton>
+        </DialogTitle>
 
-            <DialogContent>
-                <Typography color="textSecondary" fontWeight={500}>
-                    This will permanently erase all actions, history, and activity associated with the user. Once deleted, the data cannot be recovered.
-                    <br /><br />
-                    To remove the user without losing their information, please select the Archive option instead.
-                </Typography>
-            </DialogContent>
+        <DialogContent>
+          <Typography color="textSecondary" fontWeight={500}>
+            This will permanently erase all actions, history, and activity
+            associated with the user. Once deleted, the data cannot be
+            recovered.
+            <br />
+            <br />
+            To remove the user without losing their information, please select
+            the Archive option instead.
+          </Typography>
+        </DialogContent>
 
-            <DialogActions>
-                <Button
-                    onClick={async () => {
-                        try {
-                            const payload = {
-                                user_ids: String(userToDelete),
-                                company_id: user.company_id,
-                            };
-                            const response = await api.post('user/archive-user-account', payload);
-                            toast.success(response.data.message);
-                            router.push("/apps/users/list")
-                        } catch (error) {
-                            console.error('Failed to archive users', error);
-                        } finally {
-                            setConfirmOpen(false);
-                        }
-                    }}
-                    variant="outlined"
-                    color="primary"
-                >
-                    Archive
-                </Button>
-                <Button
-                    onClick={async () => {
-                        try {
-                            const payload = {
-                                user_id: userToDelete,
-                                company_id: user.company_id,
-                            };
-                            const response = await api.post('user/delete-account', payload);
-                            toast.success(response.data.message);
-                            router.push("/apps/users/list")
-                        } catch (error) {
-                            console.error('Failed to remove users', error);
-                            toast.error('Failed to remove users');
-                        } finally {
-                            setConfirmOpen(false);
-                        }
-                    }}
-                    variant="outlined"
-                    color="error"
-                >
-                    Delete
-                </Button>
-            </DialogActions>
-        </Dialog>
+        <DialogActions>
+          <Button
+            onClick={async () => {
+              try {
+                const payload = {
+                  user_ids: String(userToDelete),
+                  company_id: user.company_id,
+                };
+                const response = await api.post(
+                  "user/archive-user-account",
+                  payload
+                );
+                toast.success(response.data.message);
+                router.push("/apps/users/list");
+              } catch (error) {
+                console.error("Failed to archive users", error);
+              } finally {
+                setConfirmOpen(false);
+              }
+            }}
+            variant="outlined"
+            color="primary"
+          >
+            Archive
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const payload = {
+                  user_id: userToDelete,
+                  company_id: user.company_id,
+                };
+                const response = await api.post("user/delete-account", payload);
+                toast.success(response.data.message);
+                router.push("/apps/users/list");
+              } catch (error) {
+                console.error("Failed to remove users", error);
+                // toast.error('Failed to remove users');
+              } finally {
+                setConfirmOpen(false);
+              }
+            }}
+            variant="outlined"
+            color="error"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

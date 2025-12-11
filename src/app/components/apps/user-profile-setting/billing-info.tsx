@@ -9,7 +9,6 @@ import {
   Button,
   CircularProgress,
   Divider,
-  Paper,
   Alert,
 } from "@mui/material";
 import api from "@/utils/axios";
@@ -18,12 +17,12 @@ import PhoneInput from "react-phone-input-2";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { IconCheck, IconX } from "@tabler/icons-react";
-import { useParams } from "next/navigation";
 
 interface ProjectListingProps {
   companyId: number | null;
   active: boolean;
   onUpdate: () => void;
+  userId: any;
 }
 
 interface BillingFormData {
@@ -81,6 +80,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   companyId,
   active,
   onUpdate,
+  userId
 }) => {
   const [billingInfo, setBillingInfo] = useState<BillingFormData | null>(null);
   const [hasBillingInfo, setHasBillingInfo] = useState(false);
@@ -90,8 +90,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   const user = session.data?.user as User & { user_role_id?: number | null } & {
     id: number;
   };
-  const params = useParams();
-  const userId = Number(params?.id);
   /*  Fetch billing info */
   const fetchBillingInfo = async () => {
     if (!userId || !companyId) return;

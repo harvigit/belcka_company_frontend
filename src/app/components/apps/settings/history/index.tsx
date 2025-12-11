@@ -452,6 +452,8 @@ const HistoryList = () => {
                 <MenuItem value="User">User</MenuItem>
                 <MenuItem value="Zone">Zone</MenuItem>
                 <MenuItem value="Address">Address</MenuItem>
+                <MenuItem value="Expense">Expense</MenuItem>
+                <MenuItem value="Leave">Leave</MenuItem>
               </TextField>
 
               {uniqueSupervisors.length > 0 ? (

@@ -105,7 +105,7 @@ export default function NotificationSettings() {
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
       } else {
-        toast.error("Update failed");
+        // toast.error("Update failed");
         fetchNotifications();
       }
     } catch (err) {

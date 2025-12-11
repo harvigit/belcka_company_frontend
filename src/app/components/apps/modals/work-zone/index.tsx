@@ -556,7 +556,7 @@ export default function WorkZone({
               </>
             ) : (
               <Typography color="text.secondary" textAlign="center" mt={4}>
-                Select a site to edit or click "Add site"
+                Select a site to edit or click &quot;Add site&quot;
               </Typography>
             )}
           </Box>

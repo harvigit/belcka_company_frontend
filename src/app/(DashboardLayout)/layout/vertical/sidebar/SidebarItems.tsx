@@ -50,7 +50,7 @@ const SidebarItems = () => {
     };
 
     fetchPermissions();
-  }, []);
+  }, [user?.company_id,user?.id]);
 
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";

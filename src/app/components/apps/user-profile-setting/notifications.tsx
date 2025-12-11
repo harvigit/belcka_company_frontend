@@ -13,16 +13,15 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  Switch,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
-import { useParams } from "next/navigation";
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 interface ProjectListingProps {
   companyId: number | null;
   active: boolean;
+  userId: any;
 }
 
 interface NotificationItem {
@@ -42,11 +41,10 @@ interface NotificationCategory {
 const Notifications: React.FC<ProjectListingProps> = ({
   companyId,
   active,
+  userId
 }) => {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const params = useParams();
-  const userId = Number(params?.id);
   const fetchNotifications = async () => {
     setLoading(true);
     try {
@@ -66,7 +64,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
     if (companyId) {
       fetchNotifications();
     }
-  }, [companyId, active]);
+  }, [companyId, active,userId]);
 
   const updateNotificationState = (
     categoryId: number,
