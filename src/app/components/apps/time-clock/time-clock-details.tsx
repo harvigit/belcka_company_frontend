@@ -405,7 +405,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
 
             const ids = timesheetIds.join(',');
-            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', {ids, format: option});
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export-details', {ids, format: option});
 
             if (response.data.IsSuccess) {
                 const {file, filename, contentType} = response.data.data;
@@ -423,7 +423,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = filename || `timeclock_export_${new Date().toISOString()}.${option}`;
+                link.download = filename || `timeclock_details_export_${new Date().toISOString()}.${option}`;
                 document.body.appendChild(link);
                 link.click();
 

@@ -24,7 +24,7 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox,
-    Button, Chip,
+    Button, Chip, Menu,
 } from '@mui/material';
 import {
     IconSearch,
@@ -33,7 +33,7 @@ import {
     IconTableColumn,
     IconLock,
     IconLockOpen,
-    IconCurrencyDollar,
+    IconCurrencyDollar, IconChevronUp, IconChevronDown,
 } from '@tabler/icons-react';
 import {
     useReactTable,
@@ -61,6 +61,16 @@ const columnHelper = createColumnHelper<TimeClock>();
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
+
+interface ExportResponse {
+    IsSuccess: boolean;
+    message: string;
+    data: {
+        file: string;
+        filename: string;
+        contentType: string;
+    };
+}
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null) => {
     try {
@@ -192,7 +202,10 @@ const TimeClock = () => {
     const hasInitialized = useRef(false);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
+    const open = Boolean(anchorEl);
+    
     const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
         try {
             const params: Record<string, string> = {
@@ -583,6 +596,73 @@ const TimeClock = () => {
         await toggleWeeklyTimesheetStatus(timesheetIds, 'approve');
     };
 
+    const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleExportClose = (option: string) => {
+        if (option) {
+            handleExport(option);
+        }
+        setAnchorEl(null);
+    };
+
+    const handleExport = async (option: string) => {
+        try {
+
+            const timesheetIds: (number | string)[] = [];
+
+            filteredData.forEach((item) => {
+                if (selectedRowIds.has(item.user_id)) {
+                    timesheetIds.push(item.timesheet_light_ids);
+                }
+            });
+
+            if (timesheetIds.length === 0) {
+                setErrorMessage('No valid timesheets selected for exporting.');
+                return;
+            }
+
+            const ids = timesheetIds.join(',');
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', {ids, format: option});
+
+            if (response.data.IsSuccess) {
+                const {file, filename, contentType} = response.data.data;
+
+                const binaryString = atob(file);
+                const binaryLen = binaryString.length;
+                const bytes = new Uint8Array(binaryLen);
+                for (let i = 0; i < binaryLen; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                const blob = new Blob([bytes], {type: contentType});
+
+                const url = window.URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename || `timeclock_export_${new Date().toISOString()}.${option}`;
+                document.body.appendChild(link);
+                link.click();
+
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                setSelectedRowIds(new Set());
+                
+                if (startDate && endDate) {
+                    await fetchData(startDate, endDate);
+                }
+            } else {
+                throw new Error(response.data.message || 'Export request failed');
+            }
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            throw error;
+        }
+    };
+
     const handleUnlock = async () => {
         const timesheetIds: (number | string)[] = [];
 
@@ -689,9 +769,35 @@ const TimeClock = () => {
                     </Stack>
 
                     <Stack direction="row" spacing={1} alignItems="center">
-                        {/* Only show buttons when at least one row is selected */}
                         {isAnyRowSelected && (
                             <>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                    onClick={handleExportClick}
+                                    endIcon={open ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}
+                                >
+                                    Export
+                                </Button>
+                                <Menu
+                                    anchorEl={anchorEl}
+                                    open={open}
+                                    onClose={() => handleExportClose('')}
+                                    anchorOrigin={{
+                                        vertical: 'bottom',
+                                        horizontal: 'right',
+                                    }}
+                                    transformOrigin={{
+                                        vertical: 'top',
+                                        horizontal: 'right',
+                                    }}
+                                >
+                                    <MenuItem onClick={() => handleExportClose('summary')}>Export Summary</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details</MenuItem>
+                                </Menu>
+                                
                                 <Button
                                     startIcon={<IconLock size={16}/>}
                                     variant="outlined"
