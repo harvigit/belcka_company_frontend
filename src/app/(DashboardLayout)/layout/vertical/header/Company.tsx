@@ -207,7 +207,7 @@ const Company = () => {
     setOpenDrawer(false);
     setLoading(false);
     setPage(1);
-  }, [count, unreedFeed, fetchFeeds, loading]);
+  }, [count, unreedFeed, loading]);
 
   const fetchList = useCallback(async () => {
     try {
