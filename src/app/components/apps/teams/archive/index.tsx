@@ -92,7 +92,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
       }
     } catch (err) {
       console.error("Action failed", err);
-      toast.error("Something went wrong");
+      // toast.error("Something went wrong");
     }
   };
 

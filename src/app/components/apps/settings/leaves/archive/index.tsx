@@ -151,22 +151,34 @@ const ArchiveLeave: React.FC<ArchiveLeaveProps> = ({
                                         width="100%"
                                         height="20px"
                                     >
-                                        <Typography
-                                            variant="subtitle1"
+                                       <Box display={"flex"} alignItems={"center"} gap={1}>
+                                            <Typography variant="subtitle1" fontWeight={600}>
+                                            Name:
+                                            </Typography>
+                                            <Typography
+                                            color="textSecondary"
+                                            variant="body1"
                                             fontWeight={600}
-                                            className="archive-multi-ellipsis"
-                                            textTransform="capitalize"
-                                        >
-                                            Name: {item.name}
-                                        </Typography>
-                                        <Typography
-                                            variant="subtitle1"
+                                            className="multi-ellipsis"
+                                            fontSize={"14px !important"}
+                                            >
+                                            {item.name}
+                                            </Typography>
+                                        </Box>
+                                        <Box display={"flex"} alignItems={"center"} gap={1}>
+                                            <Typography variant="subtitle1" fontWeight={600}>
+                                            Type:
+                                            </Typography>
+                                            <Typography
+                                            color="textSecondary"
+                                            variant="body1"
                                             fontWeight={600}
-                                            className="archive-multi-ellipsis"
-                                            textTransform="capitalize"
-                                        >
-                                            Type: {item.type}
-                                        </Typography>
+                                            className="multi-ellipsis"
+                                            fontSize={"14px !important"}
+                                            >
+                                            {item.type}
+                                            </Typography>
+                                        </Box>
                                         <Box display={'flex'} fontSize="10px">
                                             <IconButton
                                                 color="primary"

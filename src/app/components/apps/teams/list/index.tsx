@@ -188,7 +188,7 @@ const TablePagination = () => {
       toast.success(response.data.message);
       return response.data.info.company_otp;
     } catch (error) {
-      toast.error("Failed to generate code.");
+      // toast.error("Failed to generate code.");
       throw error;
     }
   };
@@ -721,7 +721,7 @@ const TablePagination = () => {
                       setSelectedRowIds(new Set());
                       await fetchTeams();
                     } catch (error) {
-                      toast.error("Failed to archive teams");
+                      // toast.error("Failed to archive teams");
                     } finally {
                       setConfirmOpen(false);
                     }

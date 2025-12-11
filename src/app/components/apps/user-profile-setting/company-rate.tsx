@@ -25,16 +25,16 @@ import dayjs from "dayjs";
 interface ProjectListingProps {
   active: boolean;
   name: string | null;
+  userId: any;
 }
 export interface TradeList {
   id: number;
   name: string;
 }
 
-const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
+const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name ,userId}) => {
   const [loading, setLoading] = useState<boolean>(true);
   const params = useParams();
-  const userId = Number(params?.id);
   const [comapny, setCompany] = useState<any>();
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [gross, setGross] = useState<any>();
@@ -58,7 +58,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   };
   const [formData, setFormData] = useState<{
     trade_id: number | null;
-    rate: string;
+    rate: any;
   }>({
     trade_id: null,
     rate: "",
@@ -82,11 +82,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
           trade_id: companyData.trade_id ?? null,
           rate: netRate,
         });
-
-        const cisAmount = netRate * 0.2;
-        const grossAmount = netRate + cisAmount;
-        setCis(cisAmount.toFixed(2));
-        setGross(grossAmount);
       }
     } catch (error) {
       console.error(error);
@@ -94,7 +89,6 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       setLoading(false);
     }
   };
-
   const fetchTrades = async () => {
     try {
       const res = await api.get(
@@ -165,55 +159,80 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
   }, [comapny]);
 
   const handleUpdate = async () => {
-    if (comapny.user_role_id !== 1 && !formData.trade_id) {
-      toast.error("Please select trade");
-      return;
-    }
     const currentTradeId = comapny?.trade_id ?? null;
-    const currentNetRate = Object.keys(comapny?.diff_data || {}).includes(
-      "net_rate_perday"
-    )
-      ? comapny?.diff_data?.net_rate_perday?.old ?? 0
-      : comapny?.net_rate_perDay ?? 0;
 
-    if (
-      currentTradeId === formData.trade_id &&
-      Number(currentNetRate) === Number(formData.rate)
-    ) {
+    const isTradeChanged = currentTradeId !== formData.trade_id;
+    const isRateChanged =
+      Number(comapny.net_rate_perDay) !== Number(formData.rate);
+    if (!isTradeChanged && !isRateChanged) {
       return;
     }
-    try {
-      const net = Number(formData.rate);
-      const ratePerHour = Number((net / 8).toFixed(2));
 
-      const payload = {
-        company_id: comapny.id,
-        trade_id: Number(formData.trade_id),
-        new_rate_perDay: Number(formData.rate),
-        new_rate_perHour: ratePerHour,
-        user_id: userId,
-      };
-      const res = await api.post("user-billing/change-company-rate", payload);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        if (Number(userId) === Number(user?.id)) {
-          await update({
-            ...session,
-            user: {
-              ...session?.user,
-              trade_id: res.data.info.trade_id,
-              trade_name: res.data.info.trade_name,
-            },
-          });
+    try {
+      if (isTradeChanged) {
+        if (comapny.user_role_id !== 1 && !formData.trade_id) {
+          toast.error("Please select trade");
+          return;
         }
-        getCompanyData();
-      } else {
-        toast.error(res.data.message || "Update failed");
+        const payload = {
+          company_id: comapny.id,
+          user_id: userId,
+          trade_id: Number(formData.trade_id),
+        };
+
+        const response = await api.post("/user-billing/change-trade", payload);
+
+        if (response.data.IsSuccess) {
+          toast.success(response.data.message);
+        } else {
+          return;
+        }
       }
+
+      if (isRateChanged) {
+        const net = Number(formData.rate);
+        const ratePerHour = Number((net / 8).toFixed(2));
+        const cisAmount = net * 0.2;
+        const grossAmount = net + cisAmount;
+        const cis = cisAmount.toFixed(2);
+        const payload = {
+          company_id: comapny.id,
+          user_id: userId,
+          new_rate_perDay: net,
+          new_rate_perHour: ratePerHour,
+          cis: cis,
+          gross_per_day: grossAmount,
+        };
+
+        const response = await api.post(
+          "user-billing/change-company-rate",
+          payload
+        );
+
+        if (response.data.IsSuccess) {
+          toast.success(response.data.message);
+        } else {
+          return;
+        }
+      }
+
+      if (Number(userId) === Number(user?.id)) {
+        await update({
+          ...session,
+          user: {
+            ...session?.user,
+            trade_id: comapny?.trade_id,
+            trade_name: comapny?.trade_name,
+          },
+        });
+      }
+
+      getCompanyData();
     } catch (err) {
       console.error("Update failed:", err);
     }
   };
+
   const handleApprove = async (requestLogId?: number | null) => {
     const payload = {
       log_id: requestLogId,
@@ -267,6 +286,10 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
             ? comapny.diff_data?.net_rate_perday.new
             : comapny.diff_data?.net_rate_perday.old,
       }));
+      const cisAmount = parseFloat(formData.rate || 0) * 0.2;
+      const grossAmount = formData.rate + cisAmount;
+      setCis(cisAmount.toFixed(2));
+      setGross(grossAmount);
     }
     if (
       Object.keys(comapny?.diff_data || {}).includes("trade_id") &&
@@ -309,10 +332,12 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
       <Box display={"flex"} justifyContent={"space-between"} mb={2}>
         {user.user_role_id !== 1 &&
         comapny.is_pending_request &&
-        (payRate === "view" || payRate === "view_edit") &&
+        (payRate
+          ? payRate === "view" || payRate === "view_edit"
+          : ratePermisison) &&
         ratePermisison ? (
           <Alert severity="error" variant="filled">
-            Your rate request has been pending.
+            Your request has been pending.
           </Alert>
         ) : (
           <Box></Box>
@@ -487,7 +512,22 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name }) => {
             <>
               {payRate || user.id === comapny?.user_id ? (
                 <>
-                  <Grid container spacing={2} mb={2}>
+                  {user.id === comapny?.user_id && (
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      mb={1}
+                    >
+                      <Typography
+                        color="#487bb3ff"
+                        fontSize="16px !important"
+                        sx={{ mb: 1 }}
+                      >
+                        Edit rate
+                      </Typography>
+                    </Box>
+                  )}
+                  <Grid container spacing={2} mb={2} mt={1}>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Autocomplete
                         className="custom_color"

@@ -1344,7 +1344,7 @@ const TablePagination = () => {
                   await fetchUsers();
                 } catch (error) {
                   console.error("Failed to remove users", error);
-                  toast.error("Failed to remove users");
+                  // toast.error("Failed to remove users");
                 } finally {
                   setConfirmOpen(false);
                 }
