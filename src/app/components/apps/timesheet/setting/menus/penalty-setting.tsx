@@ -21,7 +21,7 @@ export default function PenaltySettings() {
   const [value, setValue] = React.useState<Dayjs | null>(dayjs());
   const [temp, setTemp] = useState<string>(value?.format("HH:mm") ?? "");
   const [enabled, setEnabled] = useState<boolean>(true);
-  const [timeZone, setTimeZone] = useState<any>(0);
+  const [timeZone, setTimeZone] = useState<any>(39);
   const [teams, setTeams] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [showTeamsList, setShowTeamsList] = useState(false);

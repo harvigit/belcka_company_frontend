@@ -73,6 +73,7 @@ import "react-phone-input-2/lib/material.css";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
+import Cookies from "js-cookie";
 
 dayjs.extend(customParseFormat);
 
@@ -845,11 +846,33 @@ const TablePagination = () => {
   };
 
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
+    const currentVisibility = Cookies.get("columnVisibility")
+      ? JSON.parse(Cookies.get("columnVisibility")!)
+      : {};
+
+    currentVisibility[colId] = value;
+
+    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
+      expires: 365,
+    });
+
     table.setColumnVisibility((prev: any) => ({
       ...prev,
       [colId]: value,
     }));
   };
+
+  useEffect(() => {
+    const saved = Cookies.get("columnVisibility")
+      ? JSON.parse(Cookies.get("columnVisibility")!)
+      : {};
+
+    if (saved.selectAll !== undefined) {
+      setSelectAll(saved.selectAll);
+    }
+
+    table.setColumnVisibility(saved);
+  }, [user, table]);
 
   useEffect(() => {
     table.setPageIndex(0);
