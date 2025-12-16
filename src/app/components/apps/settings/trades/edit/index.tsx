@@ -74,10 +74,10 @@ const EditTrade: React.FC<EditTradeProps> = ({
   const fetchCategories = async () => {
     try {
       const res = await api.get(
-        `trade/get-company-trades?company_id=${companyId}`
+        `trade/trade-categories?company_id=${companyId}`
       );
       if (res.data) {
-        setTrade(res.data.company_trades);
+        setTrade(res.data.info);
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);

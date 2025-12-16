@@ -830,21 +830,55 @@ const TablePagination = () => {
   });
 
   useEffect(() => {
-    const allSelected = table
-      .getAllLeafColumns()
-      .every((col) => col.getIsVisible());
-    setSelectAll(allSelected);
-  }, [table]);
+    const savedVisibility = Cookies.get("columnVisibility")
+      ? JSON.parse(Cookies.get("columnVisibility")!)
+      : {};
 
+    table.setColumnVisibility(savedVisibility);
+  }, [table]);
+  useEffect(() => {
+    const visibleColumns = table
+      .getAllLeafColumns()
+      .filter((col) => col.id !== "conflicts");
+
+    const allSelected = visibleColumns.every((col) => col.getIsVisible());
+    setSelectAll(allSelected);
+  }, [table.getState().columnVisibility]);
+  useEffect(() => {
+    const visibleColumns = table
+      .getAllLeafColumns()
+      .filter((col) => col.id !== "conflicts");
+
+    const allSelected = visibleColumns.every((col) => col.getIsVisible());
+    setSelectAll(allSelected);
+  }, [table.getState().columnVisibility]);
   const handleSelectAllChange = (e: any) => {
     const checked = e.target.checked;
+    setSelectAll(checked);
+
+    const currentVisibility = Cookies.get("columnVisibility")
+      ? JSON.parse(Cookies.get("columnVisibility")!)
+      : {};
+
+    currentVisibility["selectAll"] = checked;
+
+    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
+      expires: 365,
+    });
+    const newVisibility: Record<string, boolean> = {};
+
     table.getAllLeafColumns().forEach((col) => {
       if (col.id !== "conflicts") {
-        handleColumnVisibilityChange(col.id, checked);
+        newVisibility[col.id] = checked;
       }
     });
-  };
 
+    Cookies.set("columnVisibility", JSON.stringify(newVisibility), {
+      expires: 365,
+    });
+
+    table.setColumnVisibility(newVisibility);
+  };
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
     const currentVisibility = Cookies.get("columnVisibility")
       ? JSON.parse(Cookies.get("columnVisibility")!)
@@ -873,7 +907,6 @@ const TablePagination = () => {
 
     table.setColumnVisibility(saved);
   }, [user, table]);
-
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
