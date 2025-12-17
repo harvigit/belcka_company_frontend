@@ -18,14 +18,7 @@ import {
   InputAdornment,
   MenuItem,
   Chip,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
   Drawer,
-  Autocomplete,
-  Menu,
-  ListItemIcon,
   Popover,
   FormGroup,
   FormControlLabel,
@@ -46,13 +39,8 @@ import {
   IconArrowLeft,
   IconChevronLeft,
   IconChevronRight,
-  IconFilter,
   IconSearch,
-  IconTrash,
-  IconUserCheck,
   IconX,
-  IconDotsVertical,
-  IconUsersMinus,
   IconTableColumn,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -62,13 +50,11 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { format } from "date-fns";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
-import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
@@ -115,43 +101,23 @@ export interface TradeList {
   name: string;
 }
 
-const TablePagination = () => {
+const UserIndex = () => {
   const [data, setData] = useState<UserList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [filters, setFilters] = useState({ team: "", supervisor: "" });
-  const [tempFilters, setTempFilters] = useState(filters);
-  const [open, setOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const searchParams = useSearchParams();
-  const projectId = searchParams ? searchParams.get("project_id") : "";
-  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const isUser = searchParams ? searchParams.get("is_user") : "";
   const session = useSession();
   const user = session.data?.user as User & { id: number } & {
     company_id?: string | null;
   } & {
     user_role_id: number;
   };
-  const [inviteUser, setInviteUser] = useState(false);
-  const [trade, setTrade] = useState<TradeList[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [firstName, setfirstName] = useState("");
-  const [lastName, setlastName] = useState("");
-  const [selectedTeam, setSelectedTeam] = useState<any>(0);
-  const [selectedTrade, setSelectedTrade] = useState<any>(0);
-  const [phone, setPhone] = useState("");
-  const [extension, setExtension] = useState("+44");
-  const [nationalPhone, setNationalPhone] = useState("");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
 
-  const openMenu = Boolean(anchorEl);
   // Permissions drawer state
   const [permissionsDrawerOpen, setPermissionsDrawerOpen] = useState(false);
   const [selectedUserPermissions, setSelectedUserPermissions] =
@@ -166,17 +132,11 @@ const TablePagination = () => {
   const [search, setSearch] = useState("");
   const [selectAll, setSelectAll] = useState(false);
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
   const fetchUsers = async () => {
     try {
-      const res: AxiosResponse<any> = await api.get("user/get-user-lists");
+      const res: AxiosResponse<any> = await api.get(
+        `user/get-user-lists?user_id=${user.id}`
+      );
       if (res.data) {
         setData(res.data.info);
       }
@@ -187,52 +147,7 @@ const TablePagination = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [user.company_id, user.id]);
-
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`
-        );
-        if (res.data) setTrade(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
-      }
-    };
-    fetchTrades();
-  }, [user?.company_id]);
-
-  useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`
-        );
-        if (res.data) setTeams(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch teams", err);
-      }
-    };
-    fetchTeams();
-  }, [user?.company_id]);
-
-  const closeInviteDrawer = () => {
-    setInviteUser(false);
-    setSelectedUser(null);
-  };
-
-  const uniqueTeams = useMemo(
-    () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],
-    [data]
-  );
-
-  const uniqueSupervisors = useMemo(
-    () => [
-      ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
-    ],
-    [data]
-  );
+  }, [user.company_id, user.id, isUser]);
 
   const formatDate = (date?: Date | string | null) => {
     if (!date) return "-";
@@ -240,42 +155,6 @@ const TablePagination = () => {
       return format(new Date(date), "dd/MM/yyyy");
     } catch {
       return "-";
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    setLoading(true);
-    e.preventDefault();
-    try {
-      const payload = {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        company_id: user.company_id,
-        team_id: selectedTeam.id,
-        trade_id: selectedTrade.id,
-        phone: nationalPhone,
-        extension: extension,
-      };
-
-      const response = await api.post("invite-user", payload);
-
-      if (response.data.IsSuccess === true) {
-        toast.success(response.data.message);
-        setfirstName("");
-        setlastName("");
-        setEmail("");
-        setPhone("");
-        setNationalPhone("");
-        setSelectedTeam([]);
-        setSelectedTrade([]);
-        setInviteUser(false);
-        fetchUsers();
-      }
-    } catch (error: any) {
-      // toast.error('Failed to invite user');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -388,19 +267,15 @@ const TablePagination = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      const matchesTeam = filters.team ? item.team_name === filters.team : true;
-      const matchesSupervisor = filters.supervisor
-        ? item.supervisor_name === filters.supervisor
-        : true;
       const search = searchTerm.toLowerCase();
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.trade_name?.toLowerCase().includes(search) ||
         item.supervisor_name?.toLowerCase().includes(search) ||
         item.team_name?.toLowerCase().includes(search);
-      return matchesTeam && matchesSupervisor && matchesSearch;
+      return matchesSearch;
     });
-  }, [data, filters, searchTerm]);
+  }, [data, searchTerm]);
 
   const filteredPermissions = useMemo(() => {
     if (!selectedUserPermissions) return [];
@@ -422,12 +297,6 @@ const TablePagination = () => {
       filteredPermissions.every((p) => tempPermissions.has(p.id))
     );
   }, [filteredPermissions, tempPermissions]);
-
-  const userId = user.id;
-  const getColumnVisibilityKey = (userId?: number | string) =>
-    userId ? `columnVisibility_${userId}` : "columnVisibility";
-
-  const columnVisibilityKey = getColumnVisibilityKey(userId);
 
   const columnHelper = createColumnHelper<UserList>();
 
@@ -466,7 +335,6 @@ const TablePagination = () => {
 
       cell: ({ row }) => {
         const user = row.original;
-        const defaultImage = "/default-avatar.png";
 
         const isChecked = selectedRowIds.has(user.id);
 
@@ -842,23 +710,12 @@ const TablePagination = () => {
   });
 
   useEffect(() => {
-    const savedVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
+    const savedVisibility = Cookies.get("visibility")
+      ? JSON.parse(Cookies.get("visibility")!)
       : {};
 
     table.setColumnVisibility(savedVisibility);
   }, [table]);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const savedVisibility = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
-      : {};
-
-    table.setColumnVisibility(savedVisibility);
-  }, [table, userId]);
-
   useEffect(() => {
     const visibleColumns = table
       .getAllLeafColumns()
@@ -867,11 +724,27 @@ const TablePagination = () => {
     const allSelected = visibleColumns.every((col) => col.getIsVisible());
     setSelectAll(allSelected);
   }, [table.getState().columnVisibility]);
+  useEffect(() => {
+    const visibleColumns = table
+      .getAllLeafColumns()
+      .filter((col) => col.id !== "conflicts");
 
+    const allSelected = visibleColumns.every((col) => col.getIsVisible());
+    setSelectAll(allSelected);
+  }, [table.getState().columnVisibility]);
   const handleSelectAllChange = (e: any) => {
     const checked = e.target.checked;
     setSelectAll(checked);
 
+    const currentVisibility = Cookies.get("visibility")
+      ? JSON.parse(Cookies.get("visibility")!)
+      : {};
+
+    currentVisibility["selectAll"] = checked;
+
+    Cookies.set("visibility", JSON.stringify(currentVisibility), {
+      expires: 365,
+    });
     const newVisibility: Record<string, boolean> = {};
 
     table.getAllLeafColumns().forEach((col) => {
@@ -880,31 +753,20 @@ const TablePagination = () => {
       }
     });
 
-    Cookies.set(
-      columnVisibilityKey,
-      JSON.stringify({
-        ...newVisibility,
-        selectAll: checked,
-      }),
-      {
-        expires: 365,
-      }
-    );
+    Cookies.set("visibility", JSON.stringify(newVisibility), {
+      expires: 365,
+    });
 
     table.setColumnVisibility(newVisibility);
   };
-
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
-    const currentVisibility = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
+    const currentVisibility = Cookies.get("visibility")
+      ? JSON.parse(Cookies.get("visibility")!)
       : {};
 
-    const updatedVisibility = {
-      ...currentVisibility,
-      [colId]: value,
-    };
+    currentVisibility[colId] = value;
 
-    Cookies.set(columnVisibilityKey, JSON.stringify(updatedVisibility), {
+    Cookies.set("visibility", JSON.stringify(currentVisibility), {
       expires: 365,
     });
 
@@ -915,10 +777,8 @@ const TablePagination = () => {
   };
 
   useEffect(() => {
-    if (!userId) return;
-
-    const saved = Cookies.get(columnVisibilityKey)
-      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
+    const saved = Cookies.get("visibility")
+      ? JSON.parse(Cookies.get("visibility")!)
       : {};
 
     if (saved.selectAll !== undefined) {
@@ -926,14 +786,13 @@ const TablePagination = () => {
     }
 
     table.setColumnVisibility(saved);
-  }, [userId, table]);
-
+  }, [user, table]);
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
   return (
-    <PermissionGuard permission="Users">
+    <PermissionGuard permission="User">
       <Box>
         <Stack
           mt={3}
@@ -946,7 +805,7 @@ const TablePagination = () => {
         >
           <Grid display="flex" gap={1} alignItems={"center"}>
             <Button variant="contained" color="primary">
-              USERS ({filteredData.length})
+              USER ({filteredData.length})
             </Button>
             <TextField
               id="search"
@@ -966,116 +825,9 @@ const TablePagination = () => {
                 },
               }}
             />
-            <Button variant="contained" onClick={() => setOpen(true)}>
-              <IconFilter width={18} />
-            </Button>
           </Grid>
-          <Dialog
-            open={open}
-            onClose={() => setOpen(false)}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle
-              sx={{ m: 0, position: "relative", overflow: "visible" }}
-            >
-              Filters
-              <IconButton
-                aria-label="close"
-                onClick={() => setOpen(false)}
-                size="large"
-                sx={{
-                  position: "absolute",
-                  right: 12,
-                  top: 8,
-                  color: (theme) => theme.palette.grey[900],
-                  backgroundColor: "transparent",
-                  zIndex: 10,
-                  width: 50,
-                  height: 50,
-                }}
-              >
-                <IconX size={40} style={{ width: 40, height: 40 }} />
-              </IconButton>
-            </DialogTitle>
 
-            <DialogContent>
-              <Stack spacing={2} mt={1}>
-                <TextField
-                  select
-                  label="Team"
-                  value={tempFilters.team}
-                  onChange={(e) =>
-                    setTempFilters({ ...tempFilters, team: e.target.value })
-                  }
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {uniqueTeams.map((team) => (
-                    <MenuItem key={team} value={team}>
-                      {team}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                {uniqueSupervisors.length > 0 ? (
-                  <TextField
-                    select
-                    label="Supervisor"
-                    value={tempFilters.supervisor}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        supervisor: e.target.value,
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="">All</MenuItem>
-                    {uniqueSupervisors.map((supervisor, i) => (
-                      <MenuItem key={i} value={supervisor}>
-                        {supervisor}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                ) : (
-                  <></>
-                )}
-              </Stack>
-            </DialogContent>
-
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setTempFilters({ team: "", supervisor: "" });
-                  setFilters({ team: "", supervisor: "" });
-                  setOpen(false);
-                }}
-                color="inherit"
-              >
-                Clear
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => {
-                  setFilters(tempFilters);
-                  setOpen(false);
-                }}
-              >
-                Apply
-              </Button>
-            </DialogActions>
-          </Dialog>
           <Stack direction={"row-reverse"} mb={1} mr={1}>
-            <IconButton
-              sx={{ margin: "0px" }}
-              id="basic-button"
-              aria-controls={openMenu ? "basic-menu" : undefined}
-              aria-haspopup="true"
-              aria-expanded={openMenu ? "true" : undefined}
-              onClick={handleClick}
-            >
-              <IconDotsVertical width={18} />
-            </IconButton>
-
             <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
               <IconTableColumn />
             </IconButton>
@@ -1142,61 +894,6 @@ const TablePagination = () => {
                   ))}
               </FormGroup>
             </Popover>
-            {selectedRowIds.size > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                sx={{ ml: 2 }}
-                startIcon={<IconTrash width={18} />}
-                onClick={() => {
-                  const selectedIds = Array.from(selectedRowIds);
-                  setUsersToDelete(selectedIds.filter(Boolean));
-                  setConfirmOpen(true);
-                }}
-              >
-                Remove
-              </Button>
-            )}
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={() => setInviteUser(true)}
-              startIcon={<IconUserCheck size={18} />}
-            >
-              Invite User
-            </Button>
-
-            <Menu
-              id="basic-menu"
-              anchorEl={anchorEl}
-              open={openMenu}
-              onClose={handleClose}
-              slotProps={{
-                list: {
-                  "aria-labelledby": "basic-button",
-                },
-              }}
-            >
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="/apps/users/archive"
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconUsersMinus width={18} />
-                  </ListItemIcon>
-                  Archived Users
-                </Link>
-              </MenuItem>
-            </Menu>
           </Stack>
         </Stack>
         <Divider />
@@ -1348,91 +1045,6 @@ const TablePagination = () => {
             </Box>
           </Box>
         </Drawer>
-
-        {/* Remove user dialog */}
-        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-          <DialogTitle>
-            Confirm Deletion
-            <IconButton
-              aria-label="close"
-              onClick={() => setConfirmOpen(false)}
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: 8,
-                color: (theme) => theme.palette.grey[500],
-              }}
-            >
-              <IconX />
-            </IconButton>
-          </DialogTitle>
-
-          <DialogContent>
-            <Typography color="textSecondary" fontWeight={500}>
-              This will permanently erase all actions, history, and activity
-              associated with the user. Once deleted, the data cannot be
-              recovered.
-              <br />
-              <br />
-              To remove the user without losing their information, please select
-              the Archive option instead.
-            </Typography>
-          </DialogContent>
-
-          <DialogActions>
-            <Button
-              onClick={async () => {
-                try {
-                  const payload = {
-                    user_ids: usersToDelete.join(","),
-                    company_id: user.company_id,
-                  };
-                  const response = await api.post(
-                    "user/archive-user-account",
-                    payload
-                  );
-                  toast.success(response.data.message);
-                  setSelectedRowIds(new Set());
-                  await fetchUsers();
-                } catch (error) {
-                  console.error("Failed to archive users", error);
-                } finally {
-                  setConfirmOpen(false);
-                }
-              }}
-              variant="outlined"
-              color="primary"
-            >
-              Archive
-            </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  const payload = {
-                    user_ids: usersToDelete.join(","),
-                    company_id: user.company_id,
-                  };
-                  const response = await api.post(
-                    "user/remove-account",
-                    payload
-                  );
-                  toast.success(response.data.message);
-                  setSelectedRowIds(new Set());
-                  await fetchUsers();
-                } catch (error) {
-                  console.error("Failed to remove users", error);
-                  // toast.error("Failed to remove users");
-                } finally {
-                  setConfirmOpen(false);
-                }
-              }}
-              variant="outlined"
-              color="error"
-            >
-              Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         <Grid container spacing={3}>
           <Grid size={12}>
@@ -1600,199 +1212,9 @@ const TablePagination = () => {
             </Stack>
           </Box>
         </Stack>
-
-        <Drawer
-          anchor="right"
-          open={inviteUser}
-          onClose={() => setInviteUser(false)}
-          sx={{
-            width: 500,
-            flexShrink: 0,
-            "& .MuiDrawer-paper": {
-              width: 500,
-              padding: 2,
-              backgroundColor: "#f9f9f9",
-            },
-          }}
-        >
-          <Box display="flex" flexDirection="column" height="100%">
-            <Box
-              display={"flex"}
-              alignContent={"center"}
-              alignItems={"center"}
-              flexWrap={"wrap"}
-            >
-              <IconButton onClick={closeInviteDrawer} sx={{ p: 0 }}>
-                <IconArrowLeft />
-              </IconButton>
-              <Typography variant="h5" fontWeight={700}>
-                Invite User
-              </Typography>
-              <IconButton
-                aria-label="close"
-                onClick={closeInviteDrawer}
-                size="small"
-                sx={{
-                  position: "absolute",
-                  right: 0,
-                  top: 8,
-                  color: (theme) => theme.palette.grey[900],
-                  backgroundColor: "transparent",
-                  zIndex: 10,
-                  width: 50,
-                  height: 50,
-                }}
-              >
-                <IconX size={18} />
-              </IconButton>
-            </Box>
-            <Box height={"100%"}>
-              <form onSubmit={handleRegister} className="address-form">
-                <Grid container spacing={2} mt={1}>
-                  <Grid size={{ lg: 12, xs: 12 }}>
-                    <Typography variant="caption" mt={2}>
-                      First Name
-                    </Typography>
-                    <CustomTextField
-                      id="first_name"
-                      variant="outlined"
-                      fullWidth
-                      value={firstName}
-                      sx={{ mb: 1 }}
-                      onChange={(e: {
-                        target: { value: SetStateAction<string> };
-                      }) => setfirstName(e.target.value)}
-                    />
-                    <Typography variant="caption" mt={2}>
-                      Last Name
-                    </Typography>
-                    <CustomTextField
-                      id="last_name"
-                      variant="outlined"
-                      fullWidth
-                      value={lastName}
-                      sx={{ mb: 1 }}
-                      onChange={(e: {
-                        target: { value: SetStateAction<string> };
-                      }) => setlastName(e.target.value)}
-                    />
-                    <Typography variant="caption" mt={2}>
-                      Email Address
-                    </Typography>
-                    <CustomTextField
-                      id="email"
-                      variant="outlined"
-                      fullWidth
-                      value={email}
-                      sx={{ mb: 2 }}
-                      onChange={(e: {
-                        target: { value: SetStateAction<string> };
-                      }) => setEmail(e.target.value)}
-                    />
-                    <PhoneInput
-                      country={"gb"}
-                      value={phone}
-                      inputClass="form_inputs"
-                      onChange={(value, country: any) => {
-                        setPhone(value);
-                        setExtension("+" + country.dialCode);
-                        const numberOnly = value.replace(country.dialCode, "");
-                        setNationalPhone(numberOnly);
-                      }}
-                      inputStyle={{ width: "100%", marginBottom: 4 }}
-                      enableSearch
-                      inputProps={{ required: true }}
-                    />
-                    <Typography variant="caption" mt={6}>
-                      Select Teams
-                    </Typography>
-                    <Autocomplete
-                      fullWidth
-                      id="team_id"
-                      sx={{ mb: 2 }}
-                      options={teams}
-                      value={
-                        teams.find((p: any) => p.id === selectedTeam.id) || null
-                      }
-                      onChange={(event, newValue) => {
-                        setSelectedTeam(newValue);
-                      }}
-                      getOptionLabel={(option) => option?.name || ""}
-                      isOptionEqualToValue={(option, value) =>
-                        option.id === value.id
-                      }
-                      renderInput={(params) => (
-                        <CustomTextField
-                          {...params}
-                          placeholder="Select Team"
-                          onClick={() => setDialogOpen(true)}
-                        />
-                      )}
-                    />
-                    <Typography variant="caption" mt={2}>
-                      Select Trades
-                    </Typography>
-                    <Autocomplete
-                      fullWidth
-                      id="trade_id"
-                      sx={{ mb: 2 }}
-                      options={trade}
-                      value={
-                        trade.find((p: any) => p.id === selectedTrade.id) ||
-                        null
-                      }
-                      onChange={(event, newValue) => {
-                        setSelectedTrade(newValue);
-                      }}
-                      getOptionLabel={(option) => option?.name || ""}
-                      isOptionEqualToValue={(option, value) =>
-                        option.id === value.id
-                      }
-                      renderInput={(params) => (
-                        <CustomTextField
-                          {...params}
-                          placeholder="Select Trade"
-                          onClick={() => setDialogOpen(true)}
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-                <Box>
-                  <Box mt={2} display="flex" justifyContent="start" gap={2}>
-                    <Button
-                      color="primary"
-                      variant="contained"
-                      size="large"
-                      type="submit"
-                      sx={{ borderRadius: 3 }}
-                      className="drawer_buttons"
-                      disabled={loading}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      color="inherit"
-                      onClick={() => setInviteUser(false)}
-                      variant="contained"
-                      size="large"
-                      sx={{
-                        backgroundColor: "transparent",
-                        borderRadius: 3,
-                        color: "GrayText",
-                      }}
-                    >
-                      Close
-                    </Button>
-                  </Box>
-                </Box>
-              </form>
-            </Box>
-          </Box>
-        </Drawer>
       </Box>
     </PermissionGuard>
   );
 };
 
-export default TablePagination;
+export default UserIndex;
