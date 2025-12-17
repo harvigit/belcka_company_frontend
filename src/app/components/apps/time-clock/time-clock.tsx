@@ -199,7 +199,6 @@ const TimeClock = () => {
     const startParam = searchParams?.get('start_date');
     const endParam = searchParams?.get('end_date');
     const openParam = searchParams?.get('open');
-    const hasInitialized = useRef(false);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -543,11 +542,7 @@ const TimeClock = () => {
     });
 
     useEffect(() => {
-        if (hasInitialized.current) return;
-        hasInitialized.current = true;
-
         if (!userIdParam || !startParam || !endParam) return;
-
         const startDateObj = new Date(startParam);
         const endDateObj = new Date(endParam);
 
@@ -560,7 +555,6 @@ const TimeClock = () => {
                 const foundUser = fetchedData.find(
                     (item) => Number(item.user_id) === Number(userIdParam)
                 );
-
                 if (foundUser) {
                     saveDateToStorage(startDateObj, endDateObj);
                     setSelectedTimeClock(foundUser);
