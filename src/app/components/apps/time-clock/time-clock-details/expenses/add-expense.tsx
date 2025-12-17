@@ -402,6 +402,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                         setDate(selectedDate);
                                         handleDateClose();
                                     }}
+                                    disabled={{ after: new Date() }}
                                 />
                             </Box>
                         </Popover>
