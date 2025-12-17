@@ -78,6 +78,11 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name ,userId}) => 
           ? companyData?.diff_data?.net_rate_perday?.old ?? 0
           : companyData?.net_rate_perDay ?? 0;
 
+        const cisAmount = netRate * 0.2;
+        const grossAmount = netRate + cisAmount;
+
+        setCis(cisAmount.toFixed(2));
+        setGross(grossAmount.toFixed(2));
         setFormData({
           trade_id: companyData.trade_id ?? null,
           rate: netRate,
@@ -164,16 +169,46 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name ,userId}) => 
     const isTradeChanged = currentTradeId !== formData.trade_id;
     const isRateChanged =
       Number(comapny.net_rate_perDay) !== Number(formData.rate);
+
     if (!isTradeChanged && !isRateChanged) {
       return;
     }
 
     try {
+      if (isTradeChanged && isRateChanged) {
+        if (comapny.user_role_id !== 1 && !formData.trade_id) {
+          toast.error("Please select trade");
+          return;
+        }
+
+        const net = Number(formData.rate);
+
+        const payload = {
+          company_id: comapny.id,
+          user_id: userId,
+          trade_id: Number(formData.trade_id),
+          new_rate_perDay: net,
+        };
+
+        const response = await api.post(
+          "/user-billing/change-trade-and-rate",
+          payload
+        );
+
+        if (response.data.IsSuccess) {
+          toast.success(response.data.message);
+          getCompanyData();
+        }
+
+        return;
+      }
+
       if (isTradeChanged) {
         if (comapny.user_role_id !== 1 && !formData.trade_id) {
           toast.error("Please select trade");
           return;
         }
+
         const payload = {
           company_id: comapny.id,
           user_id: userId,
@@ -191,17 +226,11 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name ,userId}) => 
 
       if (isRateChanged) {
         const net = Number(formData.rate);
-        const ratePerHour = Number((net / 8).toFixed(2));
-        const cisAmount = net * 0.2;
-        const grossAmount = net + cisAmount;
-        const cis = cisAmount.toFixed(2);
+
         const payload = {
           company_id: comapny.id,
           user_id: userId,
           new_rate_perDay: net,
-          new_rate_perHour: ratePerHour,
-          cis: cis,
-          gross_per_day: grossAmount,
         };
 
         const response = await api.post(
@@ -273,39 +302,47 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name ,userId}) => 
   };
 
   useEffect(() => {
+    if (!comapny?.diff_data) return;
+
     if (
-      Object.keys(comapny?.diff_data || {}).includes("net_rate_perday") &&
-      comapny?.diff_data?.net_rate_perday?.old
-        ? comapny?.diff_data?.net_rate_perday?.old
-        : comapny?.diff_data?.net_rate_perday?.new
+      Object.prototype.hasOwnProperty.call(comapny.diff_data, "net_rate_perday")
     ) {
-      setFormData((prev) => ({
-        ...prev,
-        rate:
-          comapny.is_pending_request == false && comapny?.status !== 12
-            ? comapny.diff_data?.net_rate_perday.new
-            : comapny.diff_data?.net_rate_perday.old,
-      }));
-      const cisAmount = parseFloat(formData.rate || 0) * 0.2;
-      const grossAmount = formData.rate + cisAmount;
-      setCis(cisAmount.toFixed(2));
-      setGross(grossAmount);
+      const rateValue =
+        comapny.is_pending_request === false && comapny?.status !== 12
+          ? comapny.diff_data.net_rate_perday?.new
+          : comapny.diff_data.net_rate_perday?.old;
+
+      if (rateValue !== undefined && rateValue !== null) {
+        const netRate = Number(rateValue);
+
+        setFormData((prev) => ({
+          ...prev,
+          rate: netRate,
+        }));
+
+        const cisAmount = netRate * 0.2;
+        const grossAmount = netRate + cisAmount;
+
+        setCis(cisAmount.toFixed(2));
+        setGross(grossAmount.toFixed(2));
+      }
     }
-    if (
-      Object.keys(comapny?.diff_data || {}).includes("trade_id") &&
-      comapny?.diff_data.trade_id?.old
-        ? comapny?.diff_data.trade_id?.old
-        : comapny?.diff_data.trade_id?.new
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        trade_id:
-          comapny.is_pending_request == false && comapny?.status !== 12
-            ? comapny.diff_data.trade_id.new
-            : comapny.diff_data.trade_id.old,
-      }));
+
+    if (Object.prototype.hasOwnProperty.call(comapny.diff_data, "trade_id")) {
+      const tradeValue =
+        comapny.is_pending_request === false && comapny?.status !== 12
+          ? comapny.diff_data.trade_id?.new
+          : comapny.diff_data.trade_id?.old;
+
+      if (tradeValue !== undefined && tradeValue !== null) {
+        setFormData((prev) => ({
+          ...prev,
+          trade_id: tradeValue,
+        }));
+      }
     }
   }, [comapny]);
+
   if (loading) {
     return (
       <Box

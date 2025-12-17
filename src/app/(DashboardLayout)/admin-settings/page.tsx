@@ -56,147 +56,151 @@ const AdminSetting = () => {
     };
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null } & { user_role_id: number };
-    
-    return (
-        <PermissionGuard permission="Settings">
-            <PageContainer
-                title="Account Setting"
-                description="This is Account Setting"
-            >
-                <Grid container spacing={1}>
+    const content = (
+        <PageContainer
+            title="Account Setting"
+            description="This is Account Setting"
+        >
+            <Grid container spacing={1}>
+                <Grid
+                    container
+                    display={'flex'}
+                    size={{
+                        xs: 12,
+                        lg: 12,
+                    }}
+                >
                     <Grid
-                        container
+                        size={{
+                            xs: 12,
+                            lg: 2,
+                        }}
+                    >
+                        <BlankCard className="tab-balnkcard">
+                            <Stack direction="row" mt={3} ml={2} mb={3} mr={2}>
+                                <Tabs
+                                    className="admin-settings-tabs"
+                                    orientation="vertical"
+                                    variant="scrollable"
+                                    value={value}
+                                    onChange={handleChange}
+                                >
+                                    <Tab
+                                        className="admin-settings"
+                                        color="textSecondary"
+                                        iconPosition="start"
+                                        icon={<IconNotebook size="20"/>}
+                                        label="Templates"
+                                        {...a11yProps(0)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconMap size="20"/>}
+                                        label="Locations"
+                                        {...a11yProps(1)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconDoorExit size="20"/>}
+                                        label="Leaves"
+                                        {...a11yProps(2)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconBell size="20"/>}
+                                        label="Notification Setting"
+                                        {...a11yProps(3)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconLock size="20"/>}
+                                        label="Permissions"
+                                        {...a11yProps(4)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconCategoryPlus size="20"/>}
+                                        label="Expense Category"
+                                        {...a11yProps(5)}
+                                    />
+                                        <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconCategory2 size="20"/>}
+                                        label="Company Trades"
+                                        {...a11yProps(6)}
+                                    />
+                                        <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconCategoryPlus size="20"/>}
+                                        label="Trade Categories"
+                                        {...a11yProps(7)}
+                                    />
+                                        <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconExclamationCircle size="20"/>}
+                                        label="History"
+                                        {...a11yProps(8)}
+                                    />
+                                </Tabs>
+                            </Stack>
+                        </BlankCard>
+                    </Grid>
+                    <Grid
                         display={'flex'}
                         size={{
                             xs: 12,
-                            lg: 12,
+                            lg: 10,
                         }}
                     >
-                        <Grid
-                            size={{
-                                xs: 12,
-                                lg: 2,
-                            }}
-                        >
-                            <BlankCard className="tab-balnkcard">
-                                <Stack direction="row" mt={3} ml={2} mb={3} mr={2}>
-                                    <Tabs
-                                        className="admin-settings-tabs"
-                                        orientation="vertical"
-                                        variant="scrollable"
-                                        value={value}
-                                        onChange={handleChange}
-                                    >
-                                        <Tab
-                                            className="admin-settings"
-                                            color="textSecondary"
-                                            iconPosition="start"
-                                            icon={<IconNotebook size="20"/>}
-                                            label="Templates"
-                                            {...a11yProps(0)}
-                                        />
-                                        <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconMap size="20"/>}
-                                            label="Locations"
-                                            {...a11yProps(1)}
-                                        />
-                                        <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconDoorExit size="20"/>}
-                                            label="Leaves"
-                                            {...a11yProps(2)}
-                                        />
-                                        <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconBell size="20"/>}
-                                            label="Notification Setting"
-                                            {...a11yProps(3)}
-                                        />
-                                        <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconLock size="20"/>}
-                                            label="Permissions"
-                                            {...a11yProps(4)}
-                                        />
-                                        <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconCategoryPlus size="20"/>}
-                                            label="Expense Category"
-                                            {...a11yProps(5)}
-                                        />
-                                         <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconCategory2 size="20"/>}
-                                            label="Comapny Trades"
-                                            {...a11yProps(6)}
-                                        />
-                                         <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconCategoryPlus size="20"/>}
-                                            label="Trade Categories"
-                                            {...a11yProps(7)}
-                                        />
-                                         <Tab
-                                            className="admin-settings"
-                                            iconPosition="start"
-                                            icon={<IconExclamationCircle size="20"/>}
-                                            label="History"
-                                            {...a11yProps(8)}
-                                        />
-                                    </Tabs>
-                                </Stack>
-                            </BlankCard>
-                        </Grid>
-                        <Grid
-                            display={'flex'}
-                            size={{
-                                xs: 12,
-                                lg: 10,
-                            }}
-                        >
-                            <BlankCard>
-                                <TabPanel value={value} index={0}>
-                                    <CreateWork/>
-                                </TabPanel>
-                                <TabPanel value={value} index={1}>
-                                    <LocationList/>
-                                </TabPanel>
-                                <TabPanel value={value} index={2}>
-                                    <LeaveList/>
-                                </TabPanel>
-                                <TabPanel value={value} index={3}>
-                                    <NotificationSettings/>
-                                </TabPanel>
-                                <TabPanel value={value} index={4}>
-                                    <PermissionSettings/>
-                                </TabPanel>
-                                <TabPanel value={value} index={5}>
-                                    <CategoryList />
-                                </TabPanel>
-                                <TabPanel value={value} index={6}>
-                                    <TradeList />
-                                </TabPanel>
-                                 <TabPanel value={value} index={7}>
-                                    <TradeCategoryList />
-                                </TabPanel>
-                                <TabPanel value={value} index={8}>
-                                    <HistoryList />
-                                </TabPanel>
-                            </BlankCard>
-                        </Grid>
+                        <BlankCard>
+                            <TabPanel value={value} index={0}>
+                                <CreateWork/>
+                            </TabPanel>
+                            <TabPanel value={value} index={1}>
+                                <LocationList/>
+                            </TabPanel>
+                            <TabPanel value={value} index={2}>
+                                <LeaveList/>
+                            </TabPanel>
+                            <TabPanel value={value} index={3}>
+                                <NotificationSettings/>
+                            </TabPanel>
+                            <TabPanel value={value} index={4}>
+                                <PermissionSettings/>
+                            </TabPanel>
+                            <TabPanel value={value} index={5}>
+                                <CategoryList />
+                            </TabPanel>
+                            <TabPanel value={value} index={6}>
+                                <TradeList />
+                            </TabPanel>
+                                <TabPanel value={value} index={7}>
+                                <TradeCategoryList />
+                            </TabPanel>
+                            <TabPanel value={value} index={8}>
+                                <HistoryList />
+                            </TabPanel>
+                        </BlankCard>
                     </Grid>
                 </Grid>
-            </PageContainer>
-        </PermissionGuard>
-    );
+            </Grid>
+        </PageContainer>
+    )
+    return user?.user_role_id === 1 ? (
+    content
+  ) : (
+    <PermissionGuard permission="Settings">
+      {content}
+    </PermissionGuard>
+  );
 };
 
 export default AdminSetting;
