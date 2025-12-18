@@ -145,7 +145,6 @@ const TablePagination = () => {
   const [selectedTeam, setSelectedTeam] = useState<any>(0);
   const [selectedTrade, setSelectedTrade] = useState<any>(0);
   const [phone, setPhone] = useState("");
-  const [userId, setUserId] = useState(0);
   const [extension, setExtension] = useState("+44");
   const [nationalPhone, setNationalPhone] = useState("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -423,6 +422,12 @@ const TablePagination = () => {
       filteredPermissions.every((p) => tempPermissions.has(p.id))
     );
   }, [filteredPermissions, tempPermissions]);
+
+  const userId = user.id;
+  const getColumnVisibilityKey = (userId?: number | string) =>
+    userId ? `columnVisibility_${userId}` : "columnVisibility";
+
+  const columnVisibilityKey = getColumnVisibilityKey(userId);
 
   const columnHelper = createColumnHelper<UserList>();
 
@@ -716,9 +721,16 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         return (
-          <Typography className="f-14" color="textPrimary">
-            {row.address ? row.address : "-"}
-          </Typography>
+          <Tooltip title={info.getValue() ?? "-"} placement="top" arrow>
+            <Typography
+              className="f-14"
+              color="textPrimary"
+              sx={{ width: 150 }}
+              noWrap
+            >
+              {info.getValue() ?? "-"}
+            </Typography>
+          </Tooltip>
         );
       },
     }),
@@ -836,6 +848,17 @@ const TablePagination = () => {
 
     table.setColumnVisibility(savedVisibility);
   }, [table]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const savedVisibility = Cookies.get(columnVisibilityKey)
+      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
+      : {};
+
+    table.setColumnVisibility(savedVisibility);
+  }, [table, userId]);
+
   useEffect(() => {
     const visibleColumns = table
       .getAllLeafColumns()
@@ -844,27 +867,11 @@ const TablePagination = () => {
     const allSelected = visibleColumns.every((col) => col.getIsVisible());
     setSelectAll(allSelected);
   }, [table.getState().columnVisibility]);
-  useEffect(() => {
-    const visibleColumns = table
-      .getAllLeafColumns()
-      .filter((col) => col.id !== "conflicts");
 
-    const allSelected = visibleColumns.every((col) => col.getIsVisible());
-    setSelectAll(allSelected);
-  }, [table.getState().columnVisibility]);
   const handleSelectAllChange = (e: any) => {
     const checked = e.target.checked;
     setSelectAll(checked);
 
-    const currentVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
-      : {};
-
-    currentVisibility["selectAll"] = checked;
-
-    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
-      expires: 365,
-    });
     const newVisibility: Record<string, boolean> = {};
 
     table.getAllLeafColumns().forEach((col) => {
@@ -873,20 +880,31 @@ const TablePagination = () => {
       }
     });
 
-    Cookies.set("columnVisibility", JSON.stringify(newVisibility), {
-      expires: 365,
-    });
+    Cookies.set(
+      columnVisibilityKey,
+      JSON.stringify({
+        ...newVisibility,
+        selectAll: checked,
+      }),
+      {
+        expires: 365,
+      }
+    );
 
     table.setColumnVisibility(newVisibility);
   };
+
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
-    const currentVisibility = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
+    const currentVisibility = Cookies.get(columnVisibilityKey)
+      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
       : {};
 
-    currentVisibility[colId] = value;
+    const updatedVisibility = {
+      ...currentVisibility,
+      [colId]: value,
+    };
 
-    Cookies.set("columnVisibility", JSON.stringify(currentVisibility), {
+    Cookies.set(columnVisibilityKey, JSON.stringify(updatedVisibility), {
       expires: 365,
     });
 
@@ -897,8 +915,10 @@ const TablePagination = () => {
   };
 
   useEffect(() => {
-    const saved = Cookies.get("columnVisibility")
-      ? JSON.parse(Cookies.get("columnVisibility")!)
+    if (!userId) return;
+
+    const saved = Cookies.get(columnVisibilityKey)
+      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
       : {};
 
     if (saved.selectAll !== undefined) {
@@ -906,7 +926,8 @@ const TablePagination = () => {
     }
 
     table.setColumnVisibility(saved);
-  }, [user, table]);
+  }, [userId, table]);
+
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);

@@ -1,6 +1,7 @@
 import {
     IconSettings,
     IconTicket,
+    IconUser,
     IconUserPlus,
     IconUsers
 } from '@tabler/icons-react';
@@ -25,6 +26,12 @@ const Menuitems = [
         title: "Users",
         icon: IconUsers,
         href: "/apps/users/list",
+      },
+      {
+        id: uniqueId(),
+        title: "User",
+        icon: IconUser,
+        href: "/apps/users/index",
       },
       {
         id: uniqueId(),

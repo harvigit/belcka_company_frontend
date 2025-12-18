@@ -328,7 +328,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         </Box>
       )}
       <Grid container spacing={2} mb={2}>
-        {["first_name", "middle_name", "last_name", "email", "post_code"].map(
+        {["first_name", "middle_name", "last_name", "email", "post_code","address"].map(
           (key) => (
             <Grid size={{ xs: 12, sm: 6 }} key={key}>
               <TextField
