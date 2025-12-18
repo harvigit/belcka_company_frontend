@@ -28,7 +28,7 @@ export default function UserQrPage() {
             return;
         }
 
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/qr-code?user_id=${userId}&company_id=${companyId}`)
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}user/qr-code?user_id=${userId}&company_id=${companyId}`)
             .then(res => res.json())
             .then(res => {
                 if (!res.IsSuccess) return;
