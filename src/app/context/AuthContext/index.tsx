@@ -19,7 +19,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!hasMounted) return;
 
-    if (status === "authenticated" && pathname === "/") {
+    if (status === "authenticated" && pathname === "/" || status === "authenticated"  && pathname == '/auth') {
       router.replace("/dashboard");
     }
 

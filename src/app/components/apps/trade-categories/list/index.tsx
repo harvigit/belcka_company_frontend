@@ -522,7 +522,7 @@ const TradeCategoryList = () => {
                 <ListItemIcon>
                   <IconPlus width={18} />
                 </ListItemIcon>
-                Add Trade
+                Add Category
               </Link>
             </MenuItem>
           </Menu>

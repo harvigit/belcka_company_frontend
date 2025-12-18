@@ -55,12 +55,12 @@ const SidebarItems = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
   
-  const filteredMenuItems = user.user_role_id == 2 ? MenuItems.filter((item) => {
+  const filteredMenuItems =  MenuItems.filter((item) => {
     const permission = permissions.find(
       (perm) => perm.name === item.title && perm.is_web === true && perm.status == true
     );
     return permission !== undefined;
-  }) : MenuItems ;
+  });
 
   return (
     <Box sx={{ px: 3 }}>
