@@ -390,3 +390,7 @@ input#project_id::placeholder {
     text-overflow: ellipsis;
     white-space: "nowrap";
 }
+.disabled_class{
+    cursor: no-drop !important;
+    pointer-events: none !important;
+}

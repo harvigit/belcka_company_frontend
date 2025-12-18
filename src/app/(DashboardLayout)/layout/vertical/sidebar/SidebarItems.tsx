@@ -42,7 +42,7 @@ const SidebarItems = () => {
           company_id: Number(user.company_id),
         };
 
-        const response = await api.post("/dashboard/user/permissions", payload);
+        const response = await api.post("/dashboard/user-permissions", payload);
         setPermissions(response.data.permissions);
       } catch (error) {
         console.error("Error fetching permissions:", error);
