@@ -11,6 +11,11 @@ export default withAuth(
             return NextResponse.next();
         }
 
+        // Allow access to public QR page
+        if (pathname.startsWith("/apps/users/qr-code")) {
+            return NextResponse.next();
+        }
+
         // Check if user is authenticated
         if (!token) {
             return NextResponse.redirect(new URL("/auth/login", req.url));
