@@ -32,7 +32,7 @@ const SidebarItems = () => {
     company_name?: string | null;
   } & {
     company_image?: number | null;
-  } & { id: number } & { user_role_id: number } ;
+  } & { id: number } & { user_role_id: number };
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -50,17 +50,23 @@ const SidebarItems = () => {
     };
 
     fetchPermissions();
-  }, [user?.company_id,user?.id]);
+  }, [user?.company_id, user?.id]);
 
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
-  
-  const filteredMenuItems = user.user_role_id == 2 ? MenuItems.filter((item) => {
+
+  const filteredMenuItems = MenuItems.filter((item) => {
+    if (item.title === "Settings" && user.user_role_id === 1) {
+      return true;
+    }
+
     const permission = permissions.find(
-      (perm) => perm.name === item.title && perm.is_web === true && perm.status == true
+      (perm) =>
+        perm.name === item.title && perm.is_web === true && perm.status === true
     );
-    return permission !== undefined;
-  }) : MenuItems ;
+
+    return Boolean(permission);
+  });
 
   return (
     <Box sx={{ px: 3 }}>
