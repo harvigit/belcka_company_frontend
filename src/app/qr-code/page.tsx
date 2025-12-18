@@ -4,14 +4,12 @@ import {
     Avatar,
     Box,
     Card,
-    CardContent,
     CircularProgress,
-    Divider,
-    Stack,
     Typography,
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 export default function UserQrPage() {
     const searchParams = useSearchParams();
@@ -35,11 +33,13 @@ export default function UserQrPage() {
 
                 setUser({
                     id: res.info.id,
+                    code: res.info.user_code,
                     name: res.info.user_name,
                     email: res.info.email,
                     phone: res.info.phone_with_extension,
                     trade: res.info.trade_name,
                     company_name: res.info.company_name,
+                    company_logo: res.info.company_logo,
                     photo: res.info.user_image,
                 });
             })
@@ -48,7 +48,13 @@ export default function UserQrPage() {
 
     if (loading) {
         return (
-            <Box minHeight="100vh" display="flex" justifyContent="center" alignItems="center">
+            <Box
+                minHeight="100vh"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                bgcolor="#ffffff"
+            >
                 <CircularProgress />
             </Box>
         );
@@ -56,30 +62,201 @@ export default function UserQrPage() {
 
     if (!user) {
         return (
-            <Box mt={5} textAlign="center">
+            <Box
+                minHeight="100vh"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                bgcolor="#ffffff"
+            >
                 <Typography color="error">Invalid or expired QR code</Typography>
             </Box>
         );
     }
 
     return (
-        <Box minHeight="100vh" display="flex" justifyContent="center" alignItems="center">
-            <Card sx={{ maxWidth: 420, width: '100%' }}>
-                <CardContent>
-                    <Stack alignItems="center">
-                        <Avatar src={user.photo || undefined} sx={{ width: 120, height: 120 }} />
-                        <Typography mt={2}><b>ID:</b> {user.id}</Typography>
-                    </Stack>
+        <Box
+            minHeight="100vh"
+            bgcolor="#f5f5f5"
+            p={3}
+        >
+            <Box
+                minHeight="45vh"
+                bgcolor="#ffffff"
+                p={3}
+            >
+                {/* Logo at top left */}
+                <Box mb={2}>
+                    <Image
+                        src="/images/logos/belcka.svg"
+                        alt="Belcka"
+                        width={140}
+                        height={60}
+                    />
+                </Box>
+    
+                {/* Centered Card Container */}
+                <Box
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="flex-start"
+                >
+                    <Box
+                        maxWidth={800}
+                        width="100%"
+                    >
+                        <Card
+                            sx={{
+                                boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
+                                borderRadius: 2,
+                                position: 'relative',
+                                p: 3,
+                                bgcolor: '#ffffff',
+                            }}
+                        >
+                            {/* Company Logo in top right */}
+                            {user.company_logo && (
+                                <Box
+                                    component="img"
+                                    src={user.company_logo}
+                                    alt={user.company_name}
+                                    sx={{
+                                        width: 50,
+                                        height: 50,
+                                        position: 'absolute',
+                                        top: 20,
+                                        right: 20,
+                                        objectFit: 'contain',
+                                    }}
+                                />
+                            )}
+    
+                            <Box
+                                display="flex"
+                                gap={3}
+                                sx={{
+                                    '@media (max-width: 768px)': {
+                                        flexDirection: 'column',
+                                    }
+                                }}
+                            >
+                                {/* Avatar */}
+                                <Box>
+                                    <Avatar
+                                        src={user.photo || undefined}
+                                        sx={{
+                                            width: 90,
+                                            height: 90,
+                                            border: '1px solid #e0e0e0',
+                                        }}
+                                    />
+                                </Box>
+                            </Box>
 
-                    <Divider sx={{ my: 3 }} />
+                            <Box
+                                flex={1}
+                                display="flex"
+                                gap={4}
+                                sx={{
+                                    '@media (max-width: 768px)': {
+                                        flexDirection: 'column',
+                                        gap: 0,
+                                    }
+                                }}
+                            >
+                                {/* Left Column */}
+                                <Box flex={1}>
+                                    {user.code && (
+                                        <Box mb={1.2}>
+                                            <Typography
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '14px',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                ID : {user.code}
+                                            </Typography>
+                                        </Box>
+                                    )}
 
-                    <Typography><b>Name:</b> {user.name}</Typography>
-                    <Typography><b>Company:</b> {user.company_name}</Typography>
-                    <Typography><b>Trade:</b> {user.trade}</Typography>
-                    <Typography><b>Email:</b> {user.email}</Typography>
-                    <Typography><b>Phone:</b> {user.phone}</Typography>
-                </CardContent>
-            </Card>
+                                    {user.name && (
+                                        <Box mb={1.2}>
+                                            <Typography
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '14px',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                Name : {user.name}
+                                            </Typography>
+                                        </Box>
+                                    )}
+
+                                    {user.trade && (
+                                        <Box mb={1.2}>
+                                            <Typography
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '14px',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                Trade : {user.trade}
+                                            </Typography>
+                                        </Box>
+                                    )}
+
+                                    {user.phone && (
+                                        <Box mb={1.2}>
+                                            <Typography
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '14px',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                Phone : {user.phone}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Box>
+
+                                <Box flex={1}>
+                                    {user.company_name && (
+                                        <Box mb={1.2}>
+                                            <Typography
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '14px',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                Company name : {user.company_name}
+                                            </Typography>
+                                        </Box>
+                                    )}
+
+                                    {user.email && (
+                                        <Box mb={1.2}>
+                                            <Typography
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '14px',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                Email : {user.email}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Box>
+                        </Card>
+                    </Box>
+                </Box>
+            </Box>
         </Box>
     );
 }
