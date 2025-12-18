@@ -29,7 +29,7 @@ export default function UserQrPage() {
         }
 
         fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/qr-code?user_id=${userId}&company_id=${companyId}`
+            `${process.env.NEXT_PUBLIC_API_URL}/user/qr-code?user_id=${userId}&company_id=${companyId}`
         )
             .then(res => res.json())
             .then(res => {
