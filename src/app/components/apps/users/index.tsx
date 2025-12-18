@@ -47,7 +47,6 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { format } from "date-fns";
@@ -102,8 +101,6 @@ const UserIndex = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
-  const searchParams = useSearchParams();
-  const isUser = searchParams ? searchParams.get("is_user") : "";
   const session = useSession();
   const user = session.data?.user as User & { id: number } & {
     company_id?: string | null;
@@ -131,7 +128,7 @@ const UserIndex = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [user.company_id, user.id, isUser]);
+  }, [user.company_id, user.id]);
 
   const formatDate = (date?: Date | string | null) => {
     if (!date) return "-";
@@ -158,6 +155,12 @@ const UserIndex = () => {
       return matchesSearch;
     });
   }, [data, searchTerm]);
+
+  const userId = user.id;
+  const getColumnVisibilityKey = (userId?: number | string) =>
+    userId ? `visibility_${userId}` : "visibility";
+
+  const columnVisibilityKey = getColumnVisibilityKey(userId);
 
   const columnHelper = createColumnHelper<UserList>();
 
@@ -576,6 +579,17 @@ const UserIndex = () => {
 
     table.setColumnVisibility(savedVisibility);
   }, [table]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const savedVisibility = Cookies.get(columnVisibilityKey)
+      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
+      : {};
+
+    table.setColumnVisibility(savedVisibility);
+  }, [table, userId]);
+
   useEffect(() => {
     const visibleColumns = table
       .getAllLeafColumns()
@@ -584,27 +598,11 @@ const UserIndex = () => {
     const allSelected = visibleColumns.every((col) => col.getIsVisible());
     setSelectAll(allSelected);
   }, [table.getState().columnVisibility]);
-  useEffect(() => {
-    const visibleColumns = table
-      .getAllLeafColumns()
-      .filter((col) => col.id !== "conflicts");
 
-    const allSelected = visibleColumns.every((col) => col.getIsVisible());
-    setSelectAll(allSelected);
-  }, [table.getState().columnVisibility]);
   const handleSelectAllChange = (e: any) => {
     const checked = e.target.checked;
     setSelectAll(checked);
 
-    const currentVisibility = Cookies.get("visibility")
-      ? JSON.parse(Cookies.get("visibility")!)
-      : {};
-
-    currentVisibility["selectAll"] = checked;
-
-    Cookies.set("visibility", JSON.stringify(currentVisibility), {
-      expires: 365,
-    });
     const newVisibility: Record<string, boolean> = {};
 
     table.getAllLeafColumns().forEach((col) => {
@@ -613,20 +611,31 @@ const UserIndex = () => {
       }
     });
 
-    Cookies.set("visibility", JSON.stringify(newVisibility), {
-      expires: 365,
-    });
+    Cookies.set(
+      columnVisibilityKey,
+      JSON.stringify({
+        ...newVisibility,
+        selectAll: checked,
+      }),
+      {
+        expires: 365,
+      }
+    );
 
     table.setColumnVisibility(newVisibility);
   };
+
   const handleColumnVisibilityChange = (colId: string, value: boolean) => {
-    const currentVisibility = Cookies.get("visibility")
-      ? JSON.parse(Cookies.get("visibility")!)
+    const currentVisibility = Cookies.get(columnVisibilityKey)
+      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
       : {};
 
-    currentVisibility[colId] = value;
+    const updatedVisibility = {
+      ...currentVisibility,
+      [colId]: value,
+    };
 
-    Cookies.set("visibility", JSON.stringify(currentVisibility), {
+    Cookies.set(columnVisibilityKey, JSON.stringify(updatedVisibility), {
       expires: 365,
     });
 
@@ -637,8 +646,10 @@ const UserIndex = () => {
   };
 
   useEffect(() => {
-    const saved = Cookies.get("visibility")
-      ? JSON.parse(Cookies.get("visibility")!)
+    if (!userId) return;
+
+    const saved = Cookies.get(columnVisibilityKey)
+      ? JSON.parse(Cookies.get(columnVisibilityKey)!)
       : {};
 
     if (saved.selectAll !== undefined) {
@@ -646,7 +657,8 @@ const UserIndex = () => {
     }
 
     table.setColumnVisibility(saved);
-  }, [user, table]);
+  }, [userId, table]);
+
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);

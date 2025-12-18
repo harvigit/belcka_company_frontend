@@ -14,7 +14,7 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import CategoryList from '@/app/components/apps/settings/expense-categories/list';
 import { useSession } from 'next-auth/react';
 import { User } from 'next-auth';
-import TradeList from '@/app/components/apps/settings/trades/list';
+import TradeList from '@/app/components/apps/settings/company-trades/list';
 import HistoryList from '@/app/components/apps/settings/history';
 import { IconCategoryPlus } from '@tabler/icons-react';
 import TradeCategoryList from '@/app/components/apps/trade-categories/list';

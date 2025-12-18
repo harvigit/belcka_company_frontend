@@ -48,7 +48,6 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [step, setStep] = useState(1);
   const [canCloseModal, setCanCloseModal] = useState(false);
-  const [otp, setOtp] = useState("0");
 
   const [registerData, setRegisterData] = useState({
     first_name: "",
@@ -240,7 +239,6 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     e.preventDefault();
     const code = joinData.company_code.join("");
     if (code.length !== 6) return toast.error("Enter full company code");
-    if (joinData.trade_id <= 0) return toast.error("Please select a trade!");
 
     try {
       setLoading(true);
