@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo, SetStateAction } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TableContainer,
   Table,
@@ -18,7 +18,6 @@ import {
   InputAdornment,
   MenuItem,
   Chip,
-  Drawer,
   Popover,
   FormGroup,
   FormControlLabel,
@@ -36,11 +35,9 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
-  IconArrowLeft,
   IconChevronLeft,
   IconChevronRight,
   IconSearch,
-  IconX,
   IconTableColumn,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -50,13 +47,11 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { useRouter, useSearchParams } from "next/navigation";
-import toast from "react-hot-toast";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { format } from "date-fns";
 import "react-phone-input-2/lib/material.css";
-import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
 import Cookies from "js-cookie";
@@ -104,7 +99,6 @@ export interface TradeList {
 const UserIndex = () => {
   const [data, setData] = useState<UserList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -117,18 +111,8 @@ const UserIndex = () => {
     user_role_id: number;
   };
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-
-  // Permissions drawer state
-  const [permissionsDrawerOpen, setPermissionsDrawerOpen] = useState(false);
-  const [selectedUserPermissions, setSelectedUserPermissions] =
-    useState<UserList | null>(null);
-  const [permissionSearch, setPermissionSearch] = useState("");
-  const [tempPermissions, setTempPermissions] = useState<Set<number>>(
-    new Set()
-  );
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
-  const [isPermission, setIsPermission] = useState(true);
   const [search, setSearch] = useState("");
   const [selectAll, setSelectAll] = useState(false);
 
@@ -158,108 +142,6 @@ const UserIndex = () => {
     }
   };
 
-  const handleOpenPermissionsDrawer = (userPermission: UserList) => {
-    setSelectedUserPermissions(userPermission);
-    const activePermissions = new Set(
-      userPermission.permissions.filter((p) => p.status).map((p) => p.id)
-    );
-    const permssion =
-      user.user_role_id == 1
-        ? true
-        : false || userPermission.id == user.id
-        ? true
-        : false;
-    setIsPermission(permssion);
-    setTempPermissions(activePermissions);
-    setPermissionSearch("");
-    setPermissionsDrawerOpen(true);
-  };
-
-  const handlePermissionToggle = (permissionId: number) => {
-    const newSelected = new Set(tempPermissions);
-    if (newSelected.has(permissionId)) {
-      newSelected.delete(permissionId);
-    } else {
-      newSelected.add(permissionId);
-    }
-    setTempPermissions(newSelected);
-  };
-
-  const handleSelectAll = () => {
-    if (!selectedUserPermissions) return;
-
-    const filteredPermissions = selectedUserPermissions.permissions.filter(
-      (p) => p.name.toLowerCase().includes(permissionSearch.toLowerCase())
-    );
-    const allSelected = filteredPermissions.every((p) =>
-      tempPermissions.has(p.id)
-    );
-    const newSelected = new Set(tempPermissions);
-
-    if (allSelected) {
-      filteredPermissions.forEach((p) => newSelected.delete(p.id));
-    } else {
-      filteredPermissions.forEach((p) => newSelected.add(p.id));
-    }
-    setTempPermissions(newSelected);
-  };
-
-  const handleSavePermissions = async () => {
-    if (!selectedUserPermissions || !user.company_id) return;
-
-    try {
-      const payload = {
-        user_id: selectedUserPermissions.id,
-        company_id: user.company_id,
-        permissions: selectedUserPermissions.permissions.map((permission) => ({
-          permission_id: permission.id,
-          status: tempPermissions.has(permission.id) ? 1 : 0,
-        })),
-      };
-
-      const response = await api.post(
-        "dashboard/user/change-bulk-permission-status",
-        payload
-      );
-
-      if (response.data.IsSuccess === true) {
-        toast.success(
-          response.data.message || "Permissions updated successfully"
-        );
-
-        setData((prevData) => {
-          const newData = prevData.map((u) => {
-            if (u.id === selectedUserPermissions.id) {
-              const updatedPermissions = u.permissions.map((p) => ({
-                ...p,
-                status: tempPermissions.has(p.id),
-              }));
-              return {
-                ...u,
-                permissions: updatedPermissions,
-                permission_count: updatedPermissions.filter((p) => p.status)
-                  .length,
-              };
-            }
-            return u;
-          });
-          return newData;
-        });
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-        setPermissionsDrawerOpen(false);
-      } else {
-        // throw new Error(
-        //   response.data.message || "Failed to update permissions"
-        // );
-      }
-    } catch (error: any) {
-      console.error("Failed to update permissions", error);
-      // toast.error(error.message || "Failed to update permissions");
-    }
-  };
-
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
   };
@@ -276,27 +158,6 @@ const UserIndex = () => {
       return matchesSearch;
     });
   }, [data, searchTerm]);
-
-  const filteredPermissions = useMemo(() => {
-    if (!selectedUserPermissions) return [];
-    const uniquePermissions = Array.from(
-      new Map(
-        selectedUserPermissions.permissions
-          .filter((p) =>
-            p.name.toLowerCase().includes(permissionSearch.toLowerCase())
-          )
-          .map((p) => [p.id, p])
-      ).values()
-    );
-    return uniquePermissions;
-  }, [selectedUserPermissions, permissionSearch]);
-
-  const allFilteredSelected = useMemo(() => {
-    return (
-      filteredPermissions.length > 0 &&
-      filteredPermissions.every((p) => tempPermissions.has(p.id))
-    );
-  }, [filteredPermissions, tempPermissions]);
 
   const columnHelper = createColumnHelper<UserList>();
 
@@ -470,7 +331,6 @@ const UserIndex = () => {
         return (
           <Chip
             size="small"
-            onClick={() => handleOpenPermissionsDrawer(user)}
             label={
               user.permission_count === 0
                 ? "Select"
@@ -897,154 +757,6 @@ const UserIndex = () => {
           </Stack>
         </Stack>
         <Divider />
-
-        {/* Permissions Drawer */}
-        <Drawer
-          anchor="right"
-          open={permissionsDrawerOpen}
-          onClose={() => setPermissionsDrawerOpen(false)}
-          sx={{
-            width: 400,
-            flexShrink: 0,
-            "& .MuiDrawer-paper": {
-              width: 400,
-              padding: 2,
-              backgroundColor: "#f9f9f9",
-            },
-          }}
-        >
-          <Box display="flex" flexDirection="column" height="100%">
-            {/* Drawer Header */}
-            <Box
-              display="flex"
-              alignContent="center"
-              alignItems="center"
-              flexWrap="wrap"
-              sx={{ mb: 2 }}
-            >
-              <IconButton
-                onClick={() => setPermissionsDrawerOpen(false)}
-                sx={{ p: 0, mr: 1 }}
-              >
-                <IconArrowLeft size={24} />
-              </IconButton>
-              <Typography variant="h5" fontWeight={700}>
-                Manage Permissions - {selectedUserPermissions?.name}
-              </Typography>
-              <IconButton
-                aria-label="close"
-                onClick={() => setPermissionsDrawerOpen(false)}
-                size="small"
-                sx={{
-                  position: "absolute",
-                  right: 8,
-                  top: 8,
-                  color: (theme) => theme.palette.grey[900],
-                  backgroundColor: "transparent",
-                  zIndex: 10,
-                  width: 50,
-                  height: 50,
-                }}
-              >
-                <IconX size={18} />
-              </IconButton>
-            </Box>
-
-            {/* Drawer Content */}
-            <Box height="100%" display="flex" flexDirection="column">
-              <Box sx={{ mb: 2 }}>
-                <TextField
-                  size="small"
-                  placeholder="Search permissions..."
-                  value={permissionSearch}
-                  onChange={(e) => setPermissionSearch(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <IconSearch size={16} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  fullWidth
-                />
-              </Box>
-
-              {/* Select All Toggle Switch */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  py: 1,
-                  px: 1,
-                  borderRadius: 1,
-                  "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-                  cursor: "pointer",
-                  pointerEvents: !isPermission ? "none" : "",
-                }}
-                onClick={handleSelectAll}
-              >
-                <Typography>Select All</Typography>
-                <IOSSwitch
-                  checked={allFilteredSelected}
-                  onChange={handleSelectAll}
-                  size="small"
-                  disabled={loading || !isPermission}
-                />
-              </Box>
-
-              <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
-                {filteredPermissions.map((permission) => (
-                  <Box
-                    key={permission.id}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      py: 1,
-                      px: 1,
-                      borderRadius: 1,
-                      "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-                      cursor: "pointer",
-                      pointerEvents: !isPermission ? "none" : "",
-                    }}
-                    onClick={() => handlePermissionToggle(permission.id)}
-                  >
-                    <Typography>{permission.name}</Typography>
-                    <IOSSwitch
-                      checked={tempPermissions.has(permission.id)}
-                      onChange={() => handlePermissionToggle(permission.id)}
-                      size="small"
-                      disabled={loading || !isPermission}
-                    />
-                  </Box>
-                ))}
-              </Box>
-
-              {/* Drawer Actions */}
-              {isPermission && (
-                <Box mt={2} display="flex" justifyContent="start" gap={2}>
-                  <Button
-                    color="primary"
-                    variant="contained"
-                    size="large"
-                    onClick={handleSavePermissions}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    color="error"
-                    onClick={() => setPermissionsDrawerOpen(false)}
-                    variant="outlined"
-                    size="large"
-                  >
-                    Cancel
-                  </Button>
-                </Box>
-              )}
-            </Box>
-          </Box>
-        </Drawer>
 
         <Grid container spacing={3}>
           <Grid size={12}>
