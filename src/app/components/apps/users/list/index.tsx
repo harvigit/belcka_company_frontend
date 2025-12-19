@@ -121,7 +121,11 @@ const TablePagination = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [filters, setFilters] = useState({ team: "", supervisor: "" });
+  const [filters, setFilters] = useState({
+    team: "",
+    supervisor: "",
+    trade: "",
+  });
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -225,6 +229,11 @@ const TablePagination = () => {
   const uniqueTeams = useMemo(
     () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],
     [data]
+  );
+
+  const uniqueTrades = useMemo(
+    () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
+    [trade]
   );
 
   const uniqueSupervisors = useMemo(
@@ -389,6 +398,7 @@ const TablePagination = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchesTeam = filters.team ? item.team_name === filters.team : true;
+      const matchesTrade = filters.trade ? item.trade_name === filters.trade : true;
       const matchesSupervisor = filters.supervisor
         ? item.supervisor_name === filters.supervisor
         : true;
@@ -398,7 +408,7 @@ const TablePagination = () => {
         item.trade_name?.toLowerCase().includes(search) ||
         item.supervisor_name?.toLowerCase().includes(search) ||
         item.team_name?.toLowerCase().includes(search);
-      return matchesTeam && matchesSupervisor && matchesSearch;
+      return matchesTeam && matchesSupervisor && matchesSearch && matchesTrade;
     });
   }, [data, filters, searchTerm]);
 
@@ -563,7 +573,7 @@ const TablePagination = () => {
         </Typography>
       ),
       cell: (info) => (
-        <Tooltip title={info.getValue() ?? "-"} placement="top" arrow>
+        <Tooltip title={info.getValue() ?? ""} placement="top" arrow>
           <Typography
             className="f-14"
             color="textPrimary"
@@ -721,7 +731,7 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         return (
-          <Tooltip title={info.getValue() ?? "-"} placement="top" arrow>
+          <Tooltip title={info.getValue() ?? ""} placement="top" arrow>
             <Typography
               className="f-14"
               color="textPrimary"
@@ -1016,6 +1026,21 @@ const TablePagination = () => {
                     </MenuItem>
                   ))}
                 </TextField>
+                <TextField
+                  select
+                  label="Trade"
+                  value={tempFilters.trade}
+                  onChange={(e) =>
+                    setTempFilters({ ...tempFilters, trade: e.target.value })
+                  }
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {uniqueTrades.map((team) => (
+                    <MenuItem key={team} value={team}>
+                      {team}
+                    </MenuItem>
+                  ))}
+                </TextField>
                 {uniqueSupervisors.length > 0 ? (
                   <TextField
                     select
@@ -1045,8 +1070,8 @@ const TablePagination = () => {
             <DialogActions>
               <Button
                 onClick={() => {
-                  setTempFilters({ team: "", supervisor: "" });
-                  setFilters({ team: "", supervisor: "" });
+                  setTempFilters({ team: "", supervisor: "", trade: "" });
+                  setFilters({ team: "", supervisor: "", trade: "" });
                   setOpen(false);
                 }}
                 color="inherit"

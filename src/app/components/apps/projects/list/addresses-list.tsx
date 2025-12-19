@@ -21,11 +21,8 @@ import {
   Menu,
   Badge,
   Button,
-  Popover,
   TextField,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
+  Slider,
 } from "@mui/material";
 import {
   flexRender,
@@ -42,7 +39,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconDotsVertical,
-  IconTableColumn,
+  IconProgress,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -103,6 +100,9 @@ const AddressesList = ({
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [hovered, setHovered] = useState(false);
+  const [address, setAddress] = useState<any>(null);
+  const [filterRequest, setFilterRequest] = useState<string>("13");
+  const [radius, setRadius] = useState(0);
 
   useEffect(() => {
     onSelectionChange(Array.from(selectedRowIds));
@@ -114,6 +114,7 @@ const AddressesList = ({
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [progressDrawerOpen, setProgressDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
 
@@ -173,7 +174,7 @@ const AddressesList = ({
   };
 
   useEffect(() => {
-    if(projectId){
+    if (projectId) {
       fetchAddresses();
     }
   }, [projectId, processedIds, shouldRefresh]);
@@ -287,6 +288,51 @@ const AddressesList = ({
       console.error("Download failed", error);
     }
   };
+  const getAddressDetail = async () => {
+    try {
+      const response = await api.get(
+        `address/address-detail?address_id=${sidebarData?.addressId}`
+      );
+      if (response.data.IsSuccess) {
+        setAddress(response.data.info);
+        const numericValue = Number(
+          response.data.info.progress.replace("%", "")
+        );
+        setFilterRequest(String(response.data.info.status_int));
+        setRadius(numericValue ?? 0);
+      }
+    } catch (error) {
+      console.log("error in get address detail");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        id: sidebarData?.addressId,
+        progress: radius,
+        status: Number(filterRequest),
+      };
+      const response = await api.put(
+        "address/change-address-progress",
+        payload
+      );
+      if (response.data.IsSuccess) {
+        toast.success(response.data.message);
+        setProgressDrawerOpen(false);
+        fetchAddresses();
+      }
+    } catch (error) {
+      console.error("Download failed", error);
+    }
+  };
+
+  useEffect(() => {
+    if (sidebarData?.addressId) {
+      getAddressDetail();
+    }
+  }, [sidebarData?.addressId]);
 
   const columns = useMemo(
     () => [
@@ -730,6 +776,29 @@ const AddressesList = ({
                         Add Task
                       </Link>
                     </MenuItem>
+                    <MenuItem onClick={handleClose}>
+                      <Link
+                        color="body1"
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setProgressDrawerOpen(true);
+                        }}
+                        style={{
+                          width: "100%",
+                          color: "#11142D",
+                          textTransform: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyItems: "center",
+                        }}
+                      >
+                        <ListItemIcon>
+                          <IconProgress width={18} />
+                        </ListItemIcon>
+                        Change Progress
+                      </Link>
+                    </MenuItem>
                   </Menu>
                 </Box>
                 <Box display="flex">
@@ -826,6 +895,106 @@ const AddressesList = ({
               No work logs available.
             </Typography>
           )}
+        </Box>
+      </Drawer>
+      <Drawer
+        anchor="right"
+        open={progressDrawerOpen}
+        onClose={() => setProgressDrawerOpen(false)}
+        sx={{
+          width: 350,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 350,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+          },
+        }}
+      >
+        <Box display="flex" flexDirection="column" height="100%">
+          <Box height={"100%"}>
+            <form onSubmit={handleSubmit} className="address-form">
+              <Grid container>
+                <Grid size={{ lg: 12, xs: 12 }}>
+                  <Box
+                    display={"flex"}
+                    alignContent={"center"}
+                    alignItems={"center"}
+                    flexWrap={"wrap"}
+                  >
+                    <IconButton onClick={() => setProgressDrawerOpen(false)}>
+                      <IconArrowLeft />
+                    </IconButton>
+                    <Typography variant="h6" color="inherit" fontWeight={700}>
+                      Change Address progress
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid size={{ lg: 12, xs: 12 }}>
+                  <TextField
+                    select
+                    label="Status"
+                    value={filterRequest}
+                    onChange={(e: any) => setFilterRequest(e.target.value)}
+                    sx={{ minWidth: 200, mt: 2 }}
+                  >
+                    <MenuItem value="13">To Do</MenuItem>
+                    <MenuItem value="3">In Progress</MenuItem>
+                    <MenuItem value="4">Completed</MenuItem>
+                  </TextField>
+                </Grid>
+                <Grid size={{ lg: 12, xs: 12 }} mt={2}>
+                  <Typography variant="h6" color="inherit" ml={1}>
+                    Progress
+                  </Typography>
+                  <Box display={"flex"} gap={2}>
+                    <Slider
+                      min={0}
+                      max={100}
+                      value={radius}
+                      onChange={(e, v) => setRadius(v as number)}
+                      sx={{ mb: 2, ml: 1 }}
+                    />
+                    <Typography>{radius}%</Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                  mt: 3,
+                }}
+              >
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  disabled={isSaving}
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => setProgressDrawerOpen(false)}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
+                </Button>
+              </Box>
+            </form>
+          </Box>
         </Box>
       </Drawer>
     </Box>

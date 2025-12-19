@@ -44,11 +44,9 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
 
     const fetchFilterOptions = async () => {
         try {
-            const res = await api.get('/trade/web-company-trades', {
-                params: { company_id: companyId }
-            });
+            const res = await api.get(`get-company-resources?flag=tradeList&company_id=${companyId}`);
             if (res.data?.IsSuccess) {
-                setFilterOptions(res.data.company_trades || []);
+                setFilterOptions(res.data.info || []);
             } else {
                 setFilterOptions([]);
             }

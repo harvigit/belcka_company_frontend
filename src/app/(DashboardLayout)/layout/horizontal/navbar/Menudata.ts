@@ -29,12 +29,6 @@ const Menuitems = [
       },
       {
         id: uniqueId(),
-        title: "User",
-        icon: IconUser,
-        href: "/apps/users/index",
-      },
-      {
-        id: uniqueId(),
         title: "Timesheet",
         icon: IconTicket,
         href: "/apps/timesheet/list",
