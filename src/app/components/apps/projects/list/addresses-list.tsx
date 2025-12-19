@@ -112,7 +112,7 @@ const AddressesList = ({
 
   const [formData, setFormData] = useState<any>({});
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null } & { user_role_id: number};
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [progressDrawerOpen, setProgressDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -776,29 +776,31 @@ const AddressesList = ({
                         Add Task
                       </Link>
                     </MenuItem>
-                    <MenuItem onClick={handleClose}>
-                      <Link
-                        color="body1"
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setProgressDrawerOpen(true);
-                        }}
-                        style={{
-                          width: "100%",
-                          color: "#11142D",
-                          textTransform: "none",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyItems: "center",
-                        }}
-                      >
-                        <ListItemIcon>
-                          <IconProgress width={18} />
-                        </ListItemIcon>
-                        Change Progress
-                      </Link>
-                    </MenuItem>
+                    {user.user_role_id == 1 && (
+                      <MenuItem onClick={handleClose}>
+                        <Link
+                          color="body1"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setProgressDrawerOpen(true);
+                          }}
+                          style={{
+                            width: "100%",
+                            color: "#11142D",
+                            textTransform: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyItems: "center",
+                          }}
+                        >
+                          <ListItemIcon>
+                            <IconProgress width={18} />
+                          </ListItemIcon>
+                          Change Progress
+                        </Link>
+                      </MenuItem>
+                    )}
                   </Menu>
                 </Box>
                 <Box display="flex">
