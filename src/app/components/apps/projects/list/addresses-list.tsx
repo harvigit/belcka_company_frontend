@@ -99,9 +99,10 @@ const AddressesList = ({
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [hovered, setHovered] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
+
   const [address, setAddress] = useState<any>(null);
-  const [filterRequest, setFilterRequest] = useState<string>("13");
   const [radius, setRadius] = useState(0);
 
   useEffect(() => {
@@ -112,7 +113,9 @@ const AddressesList = ({
 
   const [formData, setFormData] = useState<any>({});
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null } & { user_role_id: number};
+  const user = session.data?.user as User & { company_id?: number | null } & {
+    user_role_id: number;
+  };
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [progressDrawerOpen, setProgressDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -298,7 +301,6 @@ const AddressesList = ({
         const numericValue = Number(
           response.data.info.progress.replace("%", "")
         );
-        setFilterRequest(String(response.data.info.status_int));
         setRadius(numericValue ?? 0);
       }
     } catch (error) {
@@ -312,7 +314,6 @@ const AddressesList = ({
       const payload = {
         id: sidebarData?.addressId,
         progress: radius,
-        status: Number(filterRequest),
       };
       const response = await api.put(
         "address/change-address-progress",
@@ -351,9 +352,13 @@ const AddressesList = ({
               }
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
-                if (e.target.checked) {
+                const isChecked = e.target.checked;
+
+                setShowAllCheckboxes(isChecked);
+
+                if (isChecked) {
                   setSelectedRowIds(
-                    new Set(currentFilteredData.map((row) => row.id))
+                    new Set(currentFilteredData.map((r) => r.id))
                   );
                 } else {
                   setSelectedRowIds(new Set());
@@ -368,8 +373,11 @@ const AddressesList = ({
         enableSorting: true,
         cell: ({ row }) => {
           const item = row.original;
-          const isChecked = selectedRowIds.has(item.id);
           const isProcessed = processedIds.includes(item.id);
+          const isChecked = selectedRowIds.has(item.id);
+
+          const showCheckbox =
+            showAllCheckboxes || hoveredRow === item.id || isChecked;
 
           return (
             <Stack
@@ -377,8 +385,8 @@ const AddressesList = ({
               alignItems="center"
               spacing={4}
               sx={{ pl: 1 }}
-              onMouseEnter={() => setHovered(true)}
-              onMouseLeave={() => setHovered(false)}
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -387,12 +395,14 @@ const AddressesList = ({
                 onChange={() => {
                   if (isProcessed) return;
                   const newSelected = new Set(selectedRowIds);
-                  if (isChecked) newSelected.delete(item.id);
-                  else newSelected.add(item.id);
+                  isChecked
+                    ? newSelected.delete(item.id)
+                    : newSelected.add(item.id);
                   setSelectedRowIds(newSelected);
                 }}
                 sx={{
-                  opacity: hovered || isChecked ? 1 : 0,
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
                   transition: "opacity 0.2s ease",
                 }}
               />
@@ -611,6 +621,8 @@ const AddressesList = ({
                         sx={{
                           cursor: "pointer",
                         }}
+                        onMouseEnter={() => setHoveredRow(row.original.id)}
+                        onMouseLeave={() => setHoveredRow(null)}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id} sx={{ padding: "10px" }}>
@@ -931,19 +943,6 @@ const AddressesList = ({
                       Change Address progress
                     </Typography>
                   </Box>
-                </Grid>
-                <Grid size={{ lg: 12, xs: 12 }}>
-                  <TextField
-                    select
-                    label="Status"
-                    value={filterRequest}
-                    onChange={(e: any) => setFilterRequest(e.target.value)}
-                    sx={{ minWidth: 200, mt: 2 }}
-                  >
-                    <MenuItem value="13">To Do</MenuItem>
-                    <MenuItem value="3">In Progress</MenuItem>
-                    <MenuItem value="4">Completed</MenuItem>
-                  </TextField>
                 </Grid>
                 <Grid size={{ lg: 12, xs: 12 }} mt={2}>
                   <Typography variant="h6" color="inherit" ml={1}>

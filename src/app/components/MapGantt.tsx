@@ -28,6 +28,8 @@ import {
   InputAdornment,
   Drawer,
   Autocomplete,
+  Tabs,
+  Tab,
 } from "@mui/material";
 
 import {
@@ -37,15 +39,19 @@ import {
   Circle,
   Marker,
   OverlayView,
+  Polyline,
+  DrawingManager,
 } from "@react-google-maps/api";
 import { Circle as GCircle } from "@react-google-maps/api";
 import { IconEye, IconTrash, IconX, IconEdit } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { AxiosResponse } from "axios";
-import { Grid, width } from "@mui/system";
+import { Grid } from "@mui/system";
 import { IconSearch } from "@tabler/icons-react";
 import CustomTextField from "./forms/theme-elements/CustomTextField";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 type Props = {
   open: boolean;
@@ -66,7 +72,13 @@ export default function MapGantt({
   const [selected, setSelected] = useState<any | null>(null);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [value, setValue] = useState(0);
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null };
+  const handleTabChange = (event: any, newValue: any) => {
+    setValue(newValue);
+    setSelected(null);
+  };
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [addZoneOpen, setAddZoneOpen] = useState(false);
@@ -92,11 +104,17 @@ export default function MapGantt({
   const fetchProjectDetail = async (pid: number | null) => {
     if (!pid) return;
     try {
-      const res: AxiosResponse<any> = await api.get("address/zones", {
-        params: { project_id: pid },
-      });
-
-      setGeofences(res.data.info?.zones ?? []);
+      if (value === 0) {
+        const res: AxiosResponse<any> = await api.get("address/zones", {
+          params: { project_id: pid },
+        });
+        setGeofences(res.data.info?.zones ?? []);
+      } else if (value === 1) {
+        const res = await api.get("work-zone/get", {
+          params: { company_id: user.company_id, is_project: true },
+        });
+        setGeofences(res.data.info ?? []);
+      }
     } catch (err) {
       console.error("Geofence fetch error:", err);
     }
@@ -125,7 +143,7 @@ export default function MapGantt({
       setActiveProjectId(projectId);
       fetchProjectDetail(projectId);
     }
-  }, [open]);
+  }, [open, value]);
 
   // Delete Zone
   const handleDeleteZone = async () => {
@@ -163,9 +181,36 @@ export default function MapGantt({
     <Box p={2}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <Box display={"flex"} width={"80%"} gap={3} alignItems={"center"}>
-          <Typography variant="h5" fontWeight={700}>
-            Address Zones
-          </Typography>
+          <Box>
+            <Tabs
+              value={value}
+              onChange={handleTabChange}
+              aria-label="minimal-tabs"
+              sx={{
+                minHeight: 36,
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "#007bff",
+                  height: 2,
+                },
+                "& .MuiTab-root": {
+                  minHeight: 36,
+                  textTransform: "none",
+                  fontSize: 14,
+                  fontWeight: 400,
+                  color: "#555",
+                  padding: "0 8px",
+                },
+                "& .Mui-selected": {
+                  color: "#007bff",
+                  fontWeight: 600,
+                },
+                flexWrap: "wrap",
+              }}
+            >
+              <Tab label="Address" />
+              <Tab label="Project" />
+            </Tabs>
+          </Box>
           <TextField
             id="search"
             type="text"
@@ -315,10 +360,11 @@ export default function MapGantt({
             <EditZone
               key={selected.id}
               zone={selected}
+              activeTab={value}
               onSaved={() => fetchProjectDetail(activeProjectId!)}
               onCancel={() => setSelected(null)}
               projectId={activeProjectId}
-              companyId={companyId}
+              companyId={user.company_id ?? null}
               addresses={addresses}
             />
           )}
@@ -366,6 +412,7 @@ export default function MapGantt({
           projectId={activeProjectId}
           companyId={companyId}
           addresses={addresses}
+          activeTab={value}
           onAdded={() => {
             fetchProjectDetail(activeProjectId!);
             setAddZoneOpen(false);
@@ -377,79 +424,204 @@ export default function MapGantt({
   );
 }
 
+// ALL VIEW ZONE MAP
 const AllZonesMap = ({ zones, isLoaded }: any) => {
   const mapRef = useRef<google.maps.Map | null>(null);
-  if (!isLoaded) return <p>Loading map...</p>;
 
-  const defaultCenter = { lat: 20.5937, lng: 78.9629 };
+  const fitMapToZones = () => {
+    if (!mapRef.current || !zones.length) return;
 
-  const mapCenter = zones.length
-    ? { lat: Number(zones[0].latitude), lng: Number(zones[0].longitude) }
-    : defaultCenter;
+    const bounds = new google.maps.LatLngBounds();
+
+    zones.forEach((zone: any) => {
+      if (zone.type === "circle") {
+        bounds.extend({
+          lat: Number(zone.latitude),
+          lng: Number(zone.longitude),
+        });
+      } else if (zone.type === "polygon" && zone.coordinates?.length) {
+        zone.coordinates.forEach((point: any) =>
+          bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) })
+        );
+      } else if (zone.type === "polyline" && zone.coordinates?.length) {
+        zone.coordinates.forEach((point: any) =>
+          bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) })
+        );
+      }
+    });
+
+    mapRef.current.fitBounds(bounds);
+  };
+
+  useEffect(() => {
+    fitMapToZones();
+  }, [zones]);
 
   const onZoneClick = (zone: any) => {
     if (!mapRef.current) return;
 
-    const newCenter = {
-      lat: Number(zone.latitude),
-      lng: Number(zone.longitude),
-    };
-
-    mapRef.current.panTo(newCenter);
-    mapRef.current.setZoom(18);
+    if (zone.type === "circle") {
+      const newCenter = {
+        lat: Number(zone.latitude),
+        lng: Number(zone.longitude),
+      };
+      mapRef.current.panTo(newCenter);
+      mapRef.current.setZoom(18);
+    } else if (
+      (zone.type === "polygon" || zone.type === "polyline") &&
+      zone.coordinates?.length
+    ) {
+      const bounds = new google.maps.LatLngBounds();
+      zone.coordinates.forEach((point: any) =>
+        bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) })
+      );
+      mapRef.current.fitBounds(bounds);
+    }
   };
+
+  if (!isLoaded) return <p>Loading map...</p>;
+
+  const defaultCenter = { lat: 20.5937, lng: 78.9629 };
 
   return (
     <Paper sx={{ height: "90%", width: "100%" }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
-        zoom={18}
-        center={mapCenter}
+        zoom={16}
+        center={defaultCenter}
         onLoad={(map) => {
           mapRef.current = map;
         }}
       >
         {zones.map((zone: any) => {
-          const center = {
-            lat: Number(zone.latitude),
-            lng: Number(zone.longitude),
-          };
-
-          return (
-            <React.Fragment key={zone.id}>
-              <OverlayView
-                position={center}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <Box
-                  onClick={() => onZoneClick(zone)}
-                  sx={{
-                    cursor: "pointer",
-                    display: "flex",
-                    color: `${zone.color}`,
-                    width: "max-content",
-                  }}
-                  className="map-site-label"
+          if (zone.type === "circle") {
+            const center = {
+              lat: Number(zone.latitude),
+              lng: Number(zone.longitude),
+            };
+            return (
+              <React.Fragment key={zone.id}>
+                <OverlayView
+                  position={center}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                 >
-                  <Typography> {zone.name}</Typography>
-                </Box>
-              </OverlayView>
+                  <Box
+                    onClick={() => onZoneClick(zone)}
+                    sx={{
+                      cursor: "pointer",
+                      display: "flex",
+                      color: `${zone.color ? zone.color : "#1976d2"}`,
+                      width: "max-content",
+                    }}
+                    className="map-site-label"
+                  >
+                    <Typography> {zone.name}</Typography>
+                  </Box>
+                </OverlayView>
+                <Circle
+                  center={center}
+                  radius={Number(zone.radius)}
+                  options={{
+                    strokeColor: zone.color || "#1976d2",
+                    fillColor: (zone.color || "#1976d2") + "33",
+                  }}
+                />
+              </React.Fragment>
+            );
+          } else if (zone.type === "polygon") {
+            if (
+              !Array.isArray(zone.coordinates) ||
+              zone.coordinates.length < 3
+            ) {
+              return null;
+            }
 
-              <Marker
-                position={center}
-                icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 0 }}
-              />
+            const path = zone.coordinates.map((point: any) => ({
+              lat: Number(point.lat),
+              lng: Number(point.lng),
+            }));
 
-              <Circle
-                center={center}
-                radius={Number(zone.radius)}
-                options={{
-                  strokeColor: zone.color || "#1976d2",
-                  fillColor: (zone.color || "#1976d2") + "33",
-                }}
-              />
-            </React.Fragment>
-          );
+            if (path.length === 0) return null;
+
+            const centroid = {
+              lat:
+                path.reduce((sum: any, p: any) => sum + p.lat, 0) / path.length,
+              lng:
+                path.reduce((sum: any, p: any) => sum + p.lng, 0) / path.length,
+            };
+
+            return (
+              <React.Fragment key={zone.id}>
+                <OverlayView
+                  position={centroid}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <Box
+                    onClick={() => onZoneClick(zone)}
+                    sx={{
+                      cursor: "pointer",
+                      display: "flex",
+                      color: zone.color || "#1976d2",
+                      width: "max-content",
+                    }}
+                    className="map-site-label"
+                  >
+                    <Typography>{zone.name}</Typography>
+                  </Box>
+                </OverlayView>
+
+                <Polygon
+                  paths={path}
+                  options={{
+                    strokeColor: zone.color || "#1976d2",
+                    fillColor: (zone.color || "#1976d2") + "33",
+                    strokeWeight: 2,
+                  }}
+                  onClick={() => onZoneClick(zone)}
+                />
+              </React.Fragment>
+            );
+          } else if (zone.type === "polyline") {
+            const path = zone.coordinates.map((point: any) => ({
+              lat: Number(point.lat),
+              lng: Number(point.lng),
+            }));
+
+            const midpointIndex = Math.floor(path.length / 2);
+            const midpoint = path[midpointIndex];
+
+            return (
+              <React.Fragment key={zone.id}>
+                <OverlayView
+                  position={midpoint}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <Box
+                    onClick={() => onZoneClick(zone)}
+                    sx={{
+                      cursor: "pointer",
+                      display: "flex",
+                      color: `${zone.color ? zone.color : "#1976d2"}`,
+                      width: "max-content",
+                    }}
+                    className="map-site-label"
+                  >
+                    <Typography> {zone.name}</Typography>
+                  </Box>
+                </OverlayView>
+                <Polyline
+                  path={path}
+                  options={{
+                    strokeColor: zone.color || "#1976d2",
+                    strokeWeight: 3,
+                  }}
+                  onClick={() => onZoneClick(zone)}
+                />
+              </React.Fragment>
+            );
+          }
+
+          return null;
         })}
       </GoogleMap>
     </Paper>
@@ -466,10 +638,19 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
     lat: Number(zone.latitude),
     lng: Number(zone.longitude),
   };
+  let path = zone?.coordinates;
+  const polygonCenter =
+    path?.length > 0
+      ? {
+          lat: path.reduce((s: any, p: any) => s + p.lat, 0) / path.length,
+          lng: path.reduce((s: any, p: any) => s + p.lng, 0) / path.length,
+        }
+      : center;
+  const polylineCenter =
+    path?.length > 0 ? path[Math.floor(path.length / 2)] : center;
 
   const handleMapLoad = (map: google.maps.Map) => {
     const bounds = new google.maps.LatLngBounds();
-
     if (zone.type === "circle") {
       const circleCenter = new google.maps.LatLng(center.lat, center.lng);
       const radius = Number(zone.radius);
@@ -499,18 +680,33 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
       map.fitBounds(bounds);
       map.setZoom(DEFAULT_ZOOM);
     }
+
+    if (zone.type === "polyline" && zone.coordinates?.length > 0) {
+      zone.coordinates.forEach((point: any) =>
+        bounds.extend(new google.maps.LatLng(point.lat, point.lng))
+      );
+
+      map.fitBounds(bounds);
+      map.setZoom(DEFAULT_ZOOM);
+    }
   };
+  const markerPosition =
+    zone.type === "circle"
+      ? center
+      : zone.type === "polygon"
+      ? polygonCenter
+      : polylineCenter;
 
   return (
     <Paper sx={{ height: "90%" }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
         zoom={DEFAULT_ZOOM}
-        center={center}
+        center={markerPosition}
         onLoad={handleMapLoad}
       >
         <Marker
-          position={center}
+          position={markerPosition}
           label={{
             text: zone.name || "",
             color: zone.color || "#1976d2",
@@ -532,10 +728,20 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
 
         {zone.type === "polygon" && (
           <Polygon
-            paths={zone.coordinates}
+            paths={path}
             options={{
-              strokeColor: zone.color,
-              fillColor: `${zone.color}33`,
+              strokeColor: zone.color || "#1976d2",
+              fillColor: `${zone.color || "#1976d2"}33`,
+            }}
+          />
+        )}
+
+        {zone.type === "polyline" && (
+          <Polyline
+            path={path}
+            options={{
+              strokeColor: zone.color || "#1976d2",
+              strokeWeight: 3,
             }}
           />
         )}
@@ -551,9 +757,12 @@ const AddZone = ({
   projectId,
   companyId,
   addresses,
+  activeTab,
 }: any) => {
   const [addressId, setAddressId] = useState<number | null>(null);
   const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [color, setColor] = useState("#000000");
   const [radius, setRadius] = useState(10);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -584,7 +793,7 @@ const AddZone = ({
 
   // Google search input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setName(e.target.value);
+    setAddress(e.target.value);
     setTypedAddress(true);
     fetchPredictions(e.target.value);
   };
@@ -623,7 +832,7 @@ const AddZone = ({
       document.createElement("div")
     ).getDetails({ placeId }, (place, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-        setName(place.formatted_address || place.name || "");
+        setAddress(place.formatted_address || place.name || "");
 
         if (place.geometry?.location) {
           setLocation({
@@ -639,18 +848,16 @@ const AddZone = ({
 
   const handleSave = async () => {
     try {
-      if (!addressId) {
+      if (activeTab === 0 && !addressId) {
         toast.error("Please select address!");
         return;
       }
       setIsSaving(true);
 
-      const payload = {
+      const payload: any = {
         company_id: companyId,
-        project_id: projectId,
-        name,
-        address: name,
-        address_id: addressId,
+        name: activeTab == 0 ? address : name,
+        address,
         lat: location.lat,
         lng: location.lng,
         type: "circle",
@@ -662,10 +869,13 @@ const AddZone = ({
         }),
       };
 
-      const res: AxiosResponse<any> = await api.post(
-        "work-zone/create",
-        payload
-      );
+      if (activeTab === 0) {
+        payload.project_id = projectId;
+        payload.address_id = addressId;
+      } else {
+        payload.project_id = projectId;
+      }
+      const res = await api.post("work-zone/create", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         onAdded();
@@ -706,7 +916,6 @@ const AddZone = ({
           <IconX />
         </IconButton>
       </Box>
-      {/* <Box display="flex" flexDirection="column" height="100%"> */}
       <Box
         sx={{
           flex: 1,
@@ -717,26 +926,40 @@ const AddZone = ({
         <Box className="task-form">
           <Grid container mt={3}>
             <Grid size={{ lg: 12, xs: 12 }}>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Select Address</InputLabel>
-                <Select
-                  value={addressId || ""}
-                  label="Select Address"
-                  onChange={(e) => handleAddressChange(Number(e.target.value))}
-                >
-                  {addresses.map((a: any) => (
-                    <MenuItem key={a.id} value={a.id}>
-                      {a.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {activeTab === 0 && (
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Select Address</InputLabel>
+                  <Select
+                    value={addressId || ""}
+                    label="Select Address"
+                    onChange={(e) =>
+                      handleAddressChange(Number(e.target.value))
+                    }
+                  >
+                    {addresses.map((a: any) => (
+                      <MenuItem key={a.id} value={a.id}>
+                        {a.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {activeTab === 1 && (
+                <TextField
+                  fullWidth
+                  label="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  sx={{ mb: 2 }}
+                />
+              )}
 
               {/* Address Search Box */}
               <TextField
                 fullWidth
                 label="Search location"
-                value={name}
+                value={address}
                 onChange={handleInputChange}
                 placeholder="Search location..."
                 sx={{ mb: 2 }}
@@ -836,6 +1059,20 @@ const AddZone = ({
                   />
                 </GoogleMap>
               </Box>
+              <Box mt={2}>
+                <Typography>Zone Color</Typography>
+                <input
+                  type="color"
+                  value={color || "#000000"}
+                  onChange={(e) => setColor(e.target.value)}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                />
+              </Box>
             </Grid>
           </Grid>
         </Box>
@@ -879,14 +1116,16 @@ const AddZone = ({
   );
 };
 
-type EditZoneProps = {
+// EDIT ZONE COMPONENT
+interface EditZoneProps {
   zone: any;
   onSaved: () => void;
   onCancel: () => void;
   projectId: number | null;
   companyId: number | null;
-  addresses: any;
-};
+  addresses: any[];
+  activeTab: number;
+}
 
 const EditZone = ({
   zone,
@@ -895,109 +1134,141 @@ const EditZone = ({
   projectId,
   companyId,
   addresses,
+  activeTab,
 }: EditZoneProps) => {
   const [name, setName] = useState(zone.name);
-  const [radius, setRadius] = useState(Number(zone.radius));
+  const [color, setColor] = useState(zone.color);
+  const [address, setAddress] = useState(zone.address);
+  const [radius, setRadius] = useState(Number(zone.radius || 0));
   const [isSaving, setIsSaving] = useState(false);
+
+  const [zoneType, setZoneType] = useState<"circle" | "polygon" | "polyline">(
+    zone.type || "circle"
+  );
 
   const [location, setLocation] = useState({
     lat: Number(zone.latitude),
     lng: Number(zone.longitude),
   });
+
+  const [path, setPath] = useState<any[]>(zone.coordinates || []);
+
   const [typedAddress, setTypedAddress] = useState(false);
   const [predictions, setPredictions] = useState<
     google.maps.places.AutocompletePrediction[]
   >([]);
+
   const [addressId, setAddressId] = useState<number | null>(
     zone.address_id || null
   );
+
   const circleRef = useRef<google.maps.Circle | null>(null);
-  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const polygonRef = useRef<google.maps.Polygon | null>(null);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
 
   const onMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
     const newLoc = { lat: e.latLng.lat(), lng: e.latLng.lng() };
     setLocation(newLoc);
-    if (circleRef.current) circleRef.current.setCenter(newLoc);
+    circleRef.current?.setCenter(newLoc);
   };
 
   const onRadiusChanged = () => {
-    if (circleRef.current) {
-      const newRadius = circleRef.current.getRadius();
-      if (newRadius > 100) {
-        circleRef.current.setRadius(100);
-        setRadius(100);
-      } else {
-        setRadius(newRadius);
-      }
-    }
+    if (!circleRef.current) return;
+    setRadius(circleRef.current.getRadius());
+  };
+
+  const syncFromPolygon = () => {
+    if (!polygonRef.current) return;
+    const mvcPath = polygonRef.current.getPath();
+
+    const updatedPath = mvcPath.getArray().map((p) => ({
+      lat: p.lat(),
+      lng: p.lng(),
+    }));
+
+    setPath(updatedPath);
+  };
+
+  const syncFromPolyline = () => {
+    if (!polylineRef.current) return;
+
+    const mvcPath = polylineRef.current.getPath();
+    const updatedPath = mvcPath.getArray().map((p) => ({
+      lat: p.lat(),
+      lng: p.lng(),
+    }));
+
+    setPath(updatedPath);
+  };
+
+  const getPolylineCenter = (points: any[]) => {
+    if (!points || points.length === 0) return location;
+    const lat = points.reduce((s, p) => s + p.lat, 0) / points.length;
+    const lng = points.reduce((s, p) => s + p.lng, 0) / points.length;
+    return { lat, lng };
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setName(e.target.value);
+    setAddress(e.target.value);
     setTypedAddress(true);
     fetchPredictions(e.target.value);
   };
 
-  const handleAddressChange = (addressId: number) => {
-    setAddressId(addressId);
-  };
-
   const fetchPredictions = (input: string) => {
     if (!input) return setPredictions([]);
-    const service = new google.maps.places.AutocompleteService();
-    service.getPlacePredictions({ input }, (preds) => {
-      setPredictions(preds || []);
-    });
+    new google.maps.places.AutocompleteService().getPlacePredictions(
+      { input },
+      (preds) => setPredictions(preds || [])
+    );
   };
 
   const selectPrediction = (placeId: string) => {
-    const service = new google.maps.places.PlacesService(
+    new google.maps.places.PlacesService(
       document.createElement("div")
-    );
-    service.getDetails({ placeId }, (place, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-        setName(place.formatted_address || place.name || "");
-        if (place.geometry?.location) {
-          setLocation({
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-          });
-        }
-        setTypedAddress(false);
-        setPredictions([]);
+    ).getDetails({ placeId }, (place, status) => {
+      if (
+        status === google.maps.places.PlacesServiceStatus.OK &&
+        place?.geometry?.location
+      ) {
+        setAddress(place.formatted_address || "");
+        setLocation({
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        });
       }
+      setTypedAddress(false);
+      setPredictions([]);
     });
   };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      const boundary =
+        zoneType === "circle"
+          ? { lat: location.lat, lng: location.lng, radius }
+          : path;
+
       const payload = {
         id: zone.id,
         company_id: companyId,
         project_id: projectId,
         name,
-        address: name,
-        address_id: addressId,
+        address,
+        address_id: activeTab === 0 ? addressId : null,
         lat: location.lat,
         lng: location.lng,
-        type: "circle",
-        boundary: JSON.stringify({
-          lat: location.lat,
-          lng: location.lng,
-          radius,
-        }),
+        type: zoneType,
+        boundary: JSON.stringify(boundary),
+        color,
       };
 
-      const res: AxiosResponse<any> = await api.put(
-        "work-zone/update",
-        payload
-      );
+      const res = await api.put("work-zone/update", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         onSaved();
-        // onCancel();
+        onCancel();
       }
     } catch (err) {
       console.error(err);
@@ -1007,187 +1278,176 @@ const EditZone = ({
 
   return (
     <Box
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: "#f9f9f9",
-        p: 2,
-        width: "100%",
-        overflowX: "hidden",
-      }}
+      sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          pr: 1,
-        }}
-      >
-        <Box className="address-form">
-          <Grid container mt={3}>
-            <Grid size={{ lg: 12, xs: 12 }}>
-              <Typography variant="h6" mb={2}>
-                Edit Zone
-              </Typography>
+      <Box sx={{ flex: 1, overflowY: "auto" }}>
+        <Typography variant="h6" mb={2}>
+          Edit Zone
+        </Typography>
 
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Address title</InputLabel>
-                <Select
-                  value={addressId || ""}
-                  label="Select Address"
-                  onChange={(e) => handleAddressChange(Number(e.target.value))}
-                >
-                  {addresses.map((a: any) => (
-                    <MenuItem key={a.id} value={a.id}>
-                      {a.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+        {activeTab === 0 && (
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Address title</InputLabel>
+            <Select
+              value={addressId || ""}
+              label="Address title"
+              onChange={(e) => setAddressId(Number(e.target.value))}
+            >
+              {addresses.map((a: any) => (
+                <MenuItem key={a.id} value={a.id}>
+                  {a.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
 
-              <TextField
-                fullWidth
-                label="Search location"
-                name="zoneAddress"
-                value={name}
-                onChange={handleInputChange}
-                sx={{ mb: 2 }}
-                placeholder="Search for address..."
-              />
+        {activeTab === 1 && (
+          <TextField
+            fullWidth
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+        )}
 
-              {typedAddress && predictions.length > 0 && (
-                <List
-                  sx={{
-                    border: "1px solid #ccc",
-                    maxHeight: 200,
-                    mb: 2,
-                  }}
-                >
-                  {predictions.map((prediction) => (
-                    <ListItem key={prediction.place_id} disablePadding>
-                      <ListItemButton
-                        onClick={() => selectPrediction(prediction.place_id)}
-                      >
-                        {prediction.description}
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
+        <TextField
+          fullWidth
+          label="Search location"
+          value={address}
+          onChange={handleInputChange}
+          sx={{ mb: 2 }}
+        />
 
-              <Typography fontWeight={600}>
-                Area size [{radius} Meter]
-              </Typography>
+        {typedAddress && predictions.length > 0 && (
+          <List sx={{ border: "1px solid #ccc", maxHeight: 200 }}>
+            {predictions.map((p) => (
+              <ListItem key={p.place_id} disablePadding>
+                <ListItemButton onClick={() => selectPrediction(p.place_id)}>
+                  {p.description}
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        )}
 
-              <Slider
-                min={0}
-                max={100}
-                value={radius}
-                onChange={(e, v) => setRadius(v as number)}
-                sx={{ mb: 2, width: "99%" }}
-              />
+        {zoneType === "circle" && (
+          <>
+            <Typography fontWeight={600}>
+              Area size [{Math.round(radius)} Meter]
+            </Typography>
+            <Slider
+              min={0}
+              max={100}
+              value={radius}
+              onChange={(e, v) => setRadius(v as number)}
+              sx={{ mb: 2 }}
+            />
+          </>
+        )}
 
-              <Box
-                sx={{
-                  height: 400,
-                  overflow: "auto",
-                  mb: 2,
-                  mt: 2,
+        <GoogleMap
+          zoom={17}
+          center={location}
+          mapContainerStyle={{ height: 400, width: "100%" }}
+        >
+          {zoneType === "circle" && (
+            <GCircle
+              center={location}
+              radius={radius}
+              options={{
+                fillColor: color + "33",
+                strokeColor: color,
+                editable: true,
+                draggable: true,
+              }}
+              onLoad={(circle) => (circleRef.current = circle)}
+              onRadiusChanged={onRadiusChanged}
+              onDragEnd={onMarkerDragEnd}
+            />
+          )}
+
+          {zoneType === "polygon" && (
+            <Polygon
+              paths={path}
+              options={{
+                fillColor: color + "33",
+                strokeColor: color,
+                editable: true,
+                draggable: true,
+              }}
+              onLoad={(polygon) => (polygonRef.current = polygon)}
+              onMouseUp={syncFromPolygon}
+              onDragEnd={syncFromPolygon}
+            />
+          )}
+
+          {zoneType === "polyline" && path.length >= 2 && (
+            <>
+              <Polyline
+                path={path}
+                options={{
+                  strokeColor: color,
+                  strokeWeight: 3,
+                  editable: true,
                 }}
-              >
-                <GoogleMap
-                  zoom={17}
-                  center={location}
-                  mapContainerStyle={{ width: "100%", height: "400px" }}
-                >
-                  <Marker
-                    position={location}
-                    draggable
-                    onDragEnd={onMarkerDragEnd}
-                  />
-                  <GCircle
-                    center={location}
-                    radius={radius}
-                    options={{
-                      strokeColor: "#1976d2",
-                      fillColor: "#1976d233",
-                      editable: true,
-                      draggable: true,
-                    }}
-                    onRadiusChanged={onRadiusChanged}
-                    onLoad={(circle) => {
-                      circleRef.current = circle;
+                onLoad={(polyline) => (polylineRef.current = polyline)}
+                onMouseUp={syncFromPolyline}
+              />
 
-                      circle.addListener("center_changed", () => {
-                        const c = circle.getCenter();
-                        if (!c) return;
-                        if (circleRef.current) {
-                          const newLoc = { lat: c.lat(), lng: c.lng() };
-                          const newRadius = circleRef.current.getRadius();
+              <Marker
+                position={getPolylineCenter(path)}
+                draggable
+                icon={{
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 6,
+                  fillColor: color,
+                  fillOpacity: 1,
+                  strokeWeight: 0,
+                }}
+                onDragEnd={(e) => {
+                  if (!e.latLng) return;
 
-                          if (newRadius > 100) {
-                            circleRef.current.setRadius(100);
-                            setRadius(100);
-                          } else {
-                            setRadius(newRadius);
-                          }
-                          if (
-                            lastCenterRef.current &&
-                            lastCenterRef.current.lat === newLoc.lat &&
-                            lastCenterRef.current.lng === newLoc.lng
-                          ) {
-                            return;
-                          }
-                          lastCenterRef.current = newLoc;
-                          setLocation(newLoc);
-                        }
-                      });
-                    }}
-                  />
-                </GoogleMap>
-              </Box>
-            </Grid>
-          </Grid>
+                  const newCenter = {
+                    lat: e.latLng.lat(),
+                    lng: e.latLng.lng(),
+                  };
+
+                  const oldCenter = getPolylineCenter(path);
+                  const dLat = newCenter.lat - oldCenter.lat;
+                  const dLng = newCenter.lng - oldCenter.lng;
+
+                  const movedPath = path.map((p) => ({
+                    lat: p.lat + dLat,
+                    lng: p.lng + dLng,
+                  }));
+
+                  setPath(movedPath);
+                }}
+              />
+            </>
+          )}
+        </GoogleMap>
+
+        <Box mt={2}>
+          <Typography>Zone Color</Typography>
+          <input
+            type="color"
+            value={color || "#000000"}
+            onChange={(e) => setColor(e.target.value)}
+            style={{ width: "100%", height: "40px", border: "none" }}
+          />
         </Box>
-      </Box>
 
-      <Box
-        sx={{
-          display: "flex",
-          gap: 2,
-          pt: 2,
-          mb: 3,
-          mt: "auto",
-          borderTop: "1px solid #ddd",
-          background: "#f9f9f9",
-        }}
-      >
-        <Button
-          color="primary"
-          onClick={handleSave}
-          variant="contained"
-          size="large"
-          disabled={isSaving}
-          sx={{ borderRadius: 3 }}
-        >
-          {isSaving ? "Saving..." : "Save"}
-        </Button>
-
-        <Button
-          color="inherit"
-          onClick={onCancel}
-          variant="contained"
-          size="large"
-          sx={{
-            backgroundColor: "transparent",
-            borderRadius: 3,
-            color: "GrayText",
-          }}
-        >
-          Cancel
-        </Button>
+        <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+          <Button variant="contained" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+          <Button variant="outlined" onClick={onCancel}>
+            Cancel
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
