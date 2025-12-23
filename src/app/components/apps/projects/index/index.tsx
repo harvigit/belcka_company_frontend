@@ -72,9 +72,9 @@ const TablePagination = () => {
         }}
       >
         <BlankCard>
-          <CardContent sx={{ flex: 1 }}>
+          {/* <CardContent sx={{ flex: 1 }}> */}
             <ProjectListing projectId={projectId} />
-          </CardContent>
+          {/* </CardContent> */}
         </BlankCard>
       </Grid>
     </Grid>

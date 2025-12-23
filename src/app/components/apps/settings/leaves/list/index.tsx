@@ -367,7 +367,6 @@ const TablePagination = () => {
     <Box>
       {/* Render the search and table */}
       <Stack
-        mt={1}
         mr={2}
         ml={2}
         mb={2}
