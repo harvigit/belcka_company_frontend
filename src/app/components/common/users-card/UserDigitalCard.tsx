@@ -22,6 +22,7 @@ interface ApiDigitalCardInfo {
     is_expired: boolean;
     id: number;
     user_id: number;
+    user_code: string;
     company_name: string;
     company_logo: string;
     name: string;
@@ -47,27 +48,28 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
     const cardRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        const fetchCardData = async () => {
-            if (!user?.id) return;
-            // setLoading(true);
-            try {
-                // noinspection JSAnnotator
-                const res = await api.get('/user/get-user-digital-card', {
-                    params: { user_id: user.id },
-                });
-                if (res.data?.IsSuccess) {
-                    setCardData(res.data.info);
-                } else {
-                    setCardData(null);
-                }
-            } catch (err) {
-                console.error('Failed to fetch digital card', err);
-            } finally {
-                // setLoading(false);
-            }
-        };
-
-        if (open && user) fetchCardData();
+        setCardData(user);
+        
+    //     const fetchCardData = async () => {
+    //         if (!user?.id) return;
+    //         try {
+    //             const res = await api.get('/user/get-user-digital-card', {
+    //                 params: { user_id: user.id },
+    //             });
+    //             if (res.data?.IsSuccess) {
+    //                 setCardData(res.data.info);
+    //                 setCardData(user);
+    //             } else {
+    //                 setCardData(null);
+    //             }
+    //         } catch (err) {
+    //             console.error('Failed to fetch digital card', err);
+    //         } finally {
+    //             // setLoading(false);
+    //         }
+    //     };
+    //
+    //     if (open && user) fetchCardData();
     }, [open, user]);
 
     const handleDownloadPDF = async () => {
@@ -123,12 +125,14 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
                                     <Typography color="#25384b" lineHeight={1} fontSize="35px" fontWeight={700}>
                                         {cardData.first_name}
                                     </Typography>
-                                    <Typography color="#25384b" lineHeight={1} fontSize="35px" fontWeight={700}>
+                                    <Typography color="#25384b" lineHeight={1} fontSize="35px" fontWeight={700} my={1}>
                                         {cardData.last_name}
                                     </Typography>
-                                    <Typography  my={1} fontSize="16px" color="#25384b" fontWeight={300}>
-                                        USER ID: {String(cardData.user_id)}
-                                    </Typography>
+                                    {cardData.user_code && (
+                                        <Typography  my={1} fontSize="16px" color="#25384b" fontWeight={300}>
+                                            USER CODE: {String(cardData.user_code)}
+                                        </Typography>
+                                    )}
                                     <Typography fontSize="22px" color="#25384b" fontWeight={600}>
                                         {cardData.trade_name}
                                     </Typography>

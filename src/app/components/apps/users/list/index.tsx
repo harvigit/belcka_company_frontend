@@ -80,7 +80,7 @@ dayjs.extend(customParseFormat);
 export interface Permission {
   id: number;
   name: string;
-  status: boolean;
+  status: number;
 }
 
 export interface UserList {
@@ -157,10 +157,12 @@ const TablePagination = () => {
   const [selectedUserPermissions, setSelectedUserPermissions] =
     useState<UserList | null>(null);
   const [permissionSearch, setPermissionSearch] = useState("");
-  const [tempPermissions, setTempPermissions] = useState<Set<number>>(
-    new Set()
-  );
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+    const [tempPermissions, setTempPermissions] = useState<{ web: Set<number>; app: Set<number>; }>({
+        web: new Set(),
+        app: new Set(),
+    });
+
+    const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [isPermission, setIsPermission] = useState(true);
   const [search, setSearch] = useState("");
@@ -281,9 +283,16 @@ const TablePagination = () => {
 
   const handleOpenPermissionsDrawer = (userPermission: UserList) => {
     setSelectedUserPermissions(userPermission);
-    const activePermissions = new Set(
-      userPermission.permissions.filter((p) => p.status).map((p) => p.id)
-    );
+      const web = new Set<number>();
+      const app = new Set<number>();
+
+      userPermission.permissions.forEach((p) => {
+          // status: 1 = web+app, 2 = web, 3 = app
+          if (p.status === 1 || p.status === 2) web.add(p.id);
+          if (p.status === 1 || p.status === 3) app.add(p.id);
+      });
+
+      setTempPermissions({ web, app });
     const permssion =
       user.user_role_id == 1
         ? true
@@ -291,95 +300,114 @@ const TablePagination = () => {
         ? true
         : false;
     setIsPermission(permssion);
-    setTempPermissions(activePermissions);
     setPermissionSearch("");
     setPermissionsDrawerOpen(true);
   };
 
-  const handlePermissionToggle = (permissionId: number) => {
-    const newSelected = new Set(tempPermissions);
-    if (newSelected.has(permissionId)) {
-      newSelected.delete(permissionId);
-    } else {
-      newSelected.add(permissionId);
-    }
-    setTempPermissions(newSelected);
-  };
+    const handlePermissionToggle = (
+        permissionId: number,
+        type: "web" | "app"
+    ) => {
+        setTempPermissions((prev) => {
+            const updated = new Set(prev[type]);
+            updated.has(permissionId)
+                ? updated.delete(permissionId)
+                : updated.add(permissionId);
 
-  const handleSelectAll = () => {
-    if (!selectedUserPermissions) return;
+            return { ...prev, [type]: updated };
+        });
+    };
 
-    const filteredPermissions = selectedUserPermissions.permissions.filter(
-      (p) => p.name.toLowerCase().includes(permissionSearch.toLowerCase())
-    );
-    const allSelected = filteredPermissions.every((p) =>
-      tempPermissions.has(p.id)
-    );
-    const newSelected = new Set(tempPermissions);
-
-    if (allSelected) {
-      filteredPermissions.forEach((p) => newSelected.delete(p.id));
-    } else {
-      filteredPermissions.forEach((p) => newSelected.add(p.id));
-    }
-    setTempPermissions(newSelected);
-  };
-
-  const handleSavePermissions = async () => {
-    if (!selectedUserPermissions || !user.company_id) return;
-
-    try {
-      const payload = {
-        user_id: selectedUserPermissions.id,
-        company_id: user.company_id,
-        permissions: selectedUserPermissions.permissions.map((permission) => ({
-          permission_id: permission.id,
-          status: tempPermissions.has(permission.id) ? 1 : 0,
-        })),
-      };
-
-      const response = await api.post(
-        "dashboard/user/change-bulk-permission-status",
-        payload
-      );
-
-      if (response.data.IsSuccess === true) {
-        toast.success(
-          response.data.message || "Permissions updated successfully"
+    const handleSelectAll = (type: "web" | "app") => {
+        const allSelected = filteredPermissions.every((p) =>
+            tempPermissions[type].has(p.id)
         );
 
-        setData((prevData) => {
-          const newData = prevData.map((u) => {
-            if (u.id === selectedUserPermissions.id) {
-              const updatedPermissions = u.permissions.map((p) => ({
-                ...p,
-                status: tempPermissions.has(p.id),
-              }));
-              return {
-                ...u,
-                permissions: updatedPermissions,
-                permission_count: updatedPermissions.filter((p) => p.status)
-                  .length,
-              };
+        setTempPermissions((prev) => {
+            const updated = new Set(prev[type]);
+
+            if (allSelected) {
+                filteredPermissions.forEach((p) => updated.delete(p.id));
+            } else {
+                filteredPermissions.forEach((p) => updated.add(p.id));
             }
-            return u;
-          });
-          return newData;
+
+            return { ...prev, [type]: updated };
         });
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-        setPermissionsDrawerOpen(false);
-      } else {
-        // throw new Error(
-        //   response.data.message || "Failed to update permissions"
-        // );
-      }
-    } catch (error: any) {
-      console.error("Failed to update permissions", error);
-      // toast.error(error.message || "Failed to update permissions");
-    }
-  };
+    };
+
+    const handleSavePermissions = async () => {
+        if (!selectedUserPermissions || !user.company_id) return;
+
+        try {
+            const payload = {
+                user_id: selectedUserPermissions.id,
+                company_id: user.company_id,
+                permissions: selectedUserPermissions.permissions.map((permission) => {
+                    const hasWeb = tempPermissions.web.has(permission.id);
+                    const hasApp = tempPermissions.app.has(permission.id);
+
+                    // Determine status: 1 = both, 2 = web only, 3 = app only, 0 = none
+                    let status = 0;
+                    if (hasWeb && hasApp) status = 1;
+                    else if (hasWeb) status = 2;
+                    else if (hasApp) status = 3;
+
+                    return {
+                        permission_id: permission.id,
+                        status: status,
+                    };
+                }),
+            };
+
+            const response = await api.post(
+                "dashboard/user/change-bulk-permission-status",
+                payload
+            );
+
+            if (response.data.IsSuccess === true) {
+                toast.success(
+                    response.data.message || "Permissions updated successfully"
+                );
+
+                setData((prevData) => {
+                    const newData = prevData.map((u) => {
+                        if (u.id === selectedUserPermissions.id) {
+                            const updatedPermissions = u.permissions.map((p) => {
+                                const hasWeb = tempPermissions.web.has(p.id);
+                                const hasApp = tempPermissions.app.has(p.id);
+                                let status = 0;
+                                if (hasWeb && hasApp) status = 1;
+                                else if (hasWeb) status = 2;
+                                else if (hasApp) status = 3;
+
+                                return {
+                                    ...p,
+                                    status: status,
+                                };
+                            });
+                            return {
+                                ...u,
+                                permissions: updatedPermissions,
+                                permission_count: updatedPermissions.filter(
+                                    (p) => p.status > 0
+                                ).length,
+                            };
+                        }
+                        return u;
+                    });
+                    return newData;
+                });
+
+                setTimeout(() => {
+                    window.location.reload();
+                }, 100);
+                setPermissionsDrawerOpen(false);
+            }
+        } catch (error: any) {
+            console.error("Failed to update permissions", error);
+        }
+    };
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
@@ -416,12 +444,12 @@ const TablePagination = () => {
     return uniquePermissions;
   }, [selectedUserPermissions, permissionSearch]);
 
-  const allFilteredSelected = useMemo(() => {
-    return (
-      filteredPermissions.length > 0 &&
-      filteredPermissions.every((p) => tempPermissions.has(p.id))
-    );
-  }, [filteredPermissions, tempPermissions]);
+  // const allFilteredSelected = useMemo(() => {
+  //   return (
+  //     filteredPermissions.length > 0 &&
+  //     filteredPermissions.every((p) => tempPermissions.has(p.id))
+  //   );
+  // }, [filteredPermissions, tempPermissions]);
 
   const userId = user.id;
   const getColumnVisibilityKey = (userId?: number | string) =>
@@ -431,6 +459,14 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<UserList>();
 
+    const allWebSelected =
+        filteredPermissions.length > 0 &&
+        filteredPermissions.every((p) => tempPermissions.web.has(p.id));
+
+    const allAppSelected =
+        filteredPermissions.length > 0 &&
+        filteredPermissions.every((p) => tempPermissions.app.has(p.id));
+    
   const columns = [
     columnHelper.accessor("name", {
       id: "name",
@@ -1272,57 +1308,90 @@ const TablePagination = () => {
                 />
               </Box>
 
-              {/* Select All Toggle Switch */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  py: 1,
-                  px: 1,
-                  borderRadius: 1,
-                  "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-                  cursor: "pointer",
-                  pointerEvents: !isPermission ? "none" : "",
-                }}
-                onClick={handleSelectAll}
-              >
-                <Typography>Select All</Typography>
-                <IOSSwitch
-                  checked={allFilteredSelected}
-                  onChange={handleSelectAll}
-                  size="small"
-                  disabled={loading || !isPermission}
-                />
-              </Box>
-
-              <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
-                {filteredPermissions.map((permission) => (
-                  <Box
-                    key={permission.id}
+                <Box
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      py: 1,
-                      px: 1,
-                      borderRadius: 1,
-                      "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-                      cursor: "pointer",
-                      pointerEvents: !isPermission ? "none" : "",
+                        display: "grid",
+                        gridTemplateColumns: "1fr 100px 100px",
+                        px: 1,
+                        py: 1,
+                        fontWeight: 600,
                     }}
-                    onClick={() => handlePermissionToggle(permission.id)}
-                  >
-                    <Typography>{permission.name}</Typography>
-                    <IOSSwitch
-                      checked={tempPermissions.has(permission.id)}
-                      onChange={() => handlePermissionToggle(permission.id)}
-                      size="small"
-                      disabled={loading || !isPermission}
-                    />
-                  </Box>
-                ))}
-              </Box>
+                >
+                    <Typography></Typography>
+                    <Typography align="center">Web</Typography>
+                    <Typography align="center">App</Typography>
+                </Box>
+                
+                
+              {/* Select All Toggle Switch */}
+                <Box
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 100px 100px",
+                        alignItems: "center",
+                        px: 1,
+                        py: 1,
+                        borderRadius: 1,
+                        "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+                    }}
+                >
+                    <Typography>Select All</Typography>
+
+                    <Box textAlign="center">
+                        <IOSSwitch
+                            checked={allWebSelected}
+                            onChange={() => handleSelectAll("web")}
+                            disabled={loading || !isPermission}
+                        />
+                    </Box>
+
+                    <Box textAlign="center">
+                        <IOSSwitch
+                            checked={allAppSelected}
+                            onChange={() => handleSelectAll("app")}
+                            disabled={loading || !isPermission}
+                        />
+                    </Box>
+                </Box>
+
+                <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
+                    {filteredPermissions.map((permission) => (
+                        <Box
+                            key={permission.id}
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 100px 100px",
+                                alignItems: "center",
+                                px: 1,
+                                py: 1,
+                                borderRadius: 1,
+                                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+                            }}
+                        >
+                            <Typography>{permission.name}</Typography>
+
+                            <Box textAlign="center">
+                                <IOSSwitch
+                                    checked={tempPermissions.web.has(permission.id)}
+                                    onChange={() =>
+                                        handlePermissionToggle(permission.id, "web")
+                                    }
+                                    disabled={loading || !isPermission}
+                                />
+                            </Box>
+
+                            <Box textAlign="center">
+                                <IOSSwitch
+                                    checked={tempPermissions.app.has(permission.id)}
+                                    onChange={() =>
+                                        handlePermissionToggle(permission.id, "app")
+                                    }
+                                    disabled={loading || !isPermission}
+                                />
+                            </Box>
+                        </Box>
+                    ))}
+                </Box>
 
               {/* Drawer Actions */}
               {isPermission && (

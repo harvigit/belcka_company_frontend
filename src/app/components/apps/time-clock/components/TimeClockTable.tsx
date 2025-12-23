@@ -878,7 +878,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             position: 'relative',
                                                         }}
                                                     >
-                                                        {!log.is_leave && !log.is_working && (
+                                                        {!isRowLocked && !log.is_leave && !log.is_working && (
                                                             <Button
                                                                 size="small"
                                                                 className="action-icon"

@@ -55,18 +55,30 @@ const SidebarItems = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
 
-  const filteredMenuItems = MenuItems.filter((item) => {
-    if (item.title === "Settings" && user.user_role_id === 1) {
-      return true;
-    }
+    const hasWebPermission = (title?: string) => {
+        if (!title) return false;
 
-    const permission = permissions.find(
-      (perm) =>
-        perm.name === item.title && perm.is_web === true && perm.status === true
-    );
+        return permissions.some(
+            (perm) =>
+                perm.name === title &&
+                perm.is_web === true &&
+                (perm.status === 1 || perm.status === 2)
+        );
+    };
 
-    return Boolean(permission);
-  });
+    const filteredMenuItems = MenuItems.filter((item: any) => {
+        if (item.title === 'Settings' && user?.user_role_id === 1) {
+            return true;
+        }
+
+        if (item.children && item.children.length > 0) {
+            return item.children.some((child: any) =>
+                hasWebPermission(child.title)
+            );
+        }
+
+        return hasWebPermission(item.title);
+    });
 
   return (
     <Box sx={{ px: 3 }}>

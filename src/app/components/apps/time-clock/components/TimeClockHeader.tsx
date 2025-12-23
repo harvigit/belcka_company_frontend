@@ -235,6 +235,8 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                             <MenuItem value="all">All Days</MenuItem>
                             <MenuItem value="lock">Lock Days</MenuItem>
                             <MenuItem value="unlock">Unlock Days</MenuItem>
+                            <MenuItem value="paid">Paid</MenuItem>
+                            <MenuItem value="leave">Leave</MenuItem>
                         </Select>
                     </Stack>
                 </Stack>

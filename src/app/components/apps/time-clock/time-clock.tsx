@@ -690,21 +690,19 @@ const TimeClock = () => {
             return;
         }
         
-        // try {
-        //     const ids = timesheetIds.join(',');
-        //     const response = await api.post('/time-clock/mark-as-paid', { ids });
-        //     if (response.data.IsSuccess) {
-        //         if (startDate && endDate) {
-        //             await fetchData(startDate, endDate);
-        //         }
-        //         setSelectedRowIds(new Set());
-        //         setHasDataChanged(true);
-        //     }
-        // } catch (error) {
-        //     setErrorMessage('Failed to mark timesheets as paid.');
-        // }
-
-        alert(`Marking ${selectedRowIds.size} record(s) as Paid with IDs: ${timesheetIds.join(', ')}`);
+        try {
+            const ids = timesheetIds.join(',');
+            const response = await api.post('/timesheet/paid', { ids });
+            if (response.data.IsSuccess) {
+                if (startDate && endDate) {
+                    await fetchData(startDate, endDate);
+                }
+                setSelectedRowIds(new Set());
+                setHasDataChanged(true);
+            }
+        } catch (error) {
+            // setErrorMessage('Failed to mark timesheets as paid.');
+        }
     };
 
     const toggleWeeklyTimesheetStatus = async (timesheetIds: (number | string)[], action: 'approve' | 'unapprove') => {

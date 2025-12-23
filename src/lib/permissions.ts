@@ -4,7 +4,7 @@ export interface Permission {
     id: number;
     name: string;
     is_web: boolean;
-    status: boolean;
+    status: number;
 }
 
 export interface UserPermissions {
@@ -34,7 +34,7 @@ export function hasPermission(
     permissionName: string
 ): boolean {
     return permissions.some(
-        (perm) => perm.name === permissionName && perm.is_web === true && perm.status === true
+        (perm) => perm.name === permissionName && perm.is_web === true && (perm.status === 1 || perm.status === 2)
     );
 }
 

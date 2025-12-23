@@ -289,11 +289,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const isRecordLocked = (log: any): boolean => {
-        return log?.status === 6 || log?.status === '6';
+        return log?.status === 6 || log?.status === '6' || log?.status === 9 || log?.status === '9';
     };
 
     const isRecordUnlocked = (log: any): boolean => {
-        return log?.status === 7 || log?.status === '7' || (log?.status && log.status !== 6 && log.status !== '6');
+        return log?.status === 7 || log?.status === '7';
     };
 
     const hasValidWorklogData = (row: DailyBreakdown): boolean => {
@@ -785,6 +785,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 } else if (filterValue === 'unlock') {
                     filteredWorklogs = filteredWorklogs.filter(
                         (log: any) => log.status === '7' || log.status === 7
+                    );
+                } else if (filterValue === 'paid') {
+                    filteredWorklogs = filteredWorklogs.filter(
+                        (log: any) => log.status === '9' || log.status === 9
+                    );
+                } else if (filterValue === 'leave') {
+                    filteredWorklogs = filteredWorklogs.filter(
+                        (log: any) => log.type === 'leave'
                     );
                 }
 
@@ -1509,7 +1517,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         borderRadius: 0,
                         boxShadow: 'none',
                         overflow: 'hidden',
-                        width: '450px',
+                        width: '500px',
                         borderTopLeftRadius: 18,
                         borderBottomLeftRadius: 18,
                     },
