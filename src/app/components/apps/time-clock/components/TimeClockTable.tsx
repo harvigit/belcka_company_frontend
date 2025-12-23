@@ -16,7 +16,8 @@ import {
     FormControl,
     Select,
     Tooltip,
-    Popover
+    Popover, 
+    Chip
 } from '@mui/material';
 import { flexRender } from '@tanstack/react-table';
 import {
@@ -39,6 +40,7 @@ import {
     Project,
     RecordType
 } from '@/app/components/apps/time-clock/types/timeClock';
+import TimeClock from '@/app/components/apps/time-clock/time-clock';
 
 interface TimeClockTableProps {
     table: any;
@@ -807,6 +809,72 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         }}
                                                     >
                                                         {`${log.check_ins || 0}`}
+                                                    </TableCell>
+                                                )}
+
+                                                {/* Status Column */}
+                                                {visibleColumnConfigs.status?.visible && (
+                                                    <TableCell
+                                                        align="center"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                        }}
+                                                    >
+                                                        {(() => {
+                                                            const statusText = log.status_text;
+                                                            const statusColorFromApi = log.status_color;
+
+                                                            if (!statusText || !statusColorFromApi) {
+                                                                return (
+                                                                    <Typography color="text.secondary" variant="body2">
+                                                                        -
+                                                                    </Typography>
+                                                                );
+                                                            }
+
+                                                            const muiColors = [
+                                                                'success',
+                                                                'error',
+                                                                'warning',
+                                                                'primary',
+                                                                'info',
+                                                                'secondary',
+                                                            ] as const;
+
+                                                            if (muiColors.includes(statusColorFromApi as any)) {
+                                                                return (
+                                                                    <Chip
+                                                                        label={statusText}
+                                                                        color={statusColorFromApi as any}
+                                                                        size="small"
+                                                                        sx={{
+                                                                            height: 28,
+                                                                            fontWeight: 600,
+                                                                            fontSize: '0.75rem',
+                                                                            textTransform: 'capitalize',
+                                                                        }}
+                                                                    />
+                                                                );
+                                                            }
+
+                                                            return (
+                                                                <Chip
+                                                                    label={statusText}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        height: 28,
+                                                                        fontWeight: 600,
+                                                                        fontSize: '0.75rem',
+                                                                        backgroundColor: statusColorFromApi,
+                                                                        color: '#fff',
+                                                                        textTransform: 'capitalize',
+                                                                    }}
+                                                                />
+                                                            );
+                                                        })()}
                                                     </TableCell>
                                                 )}
 

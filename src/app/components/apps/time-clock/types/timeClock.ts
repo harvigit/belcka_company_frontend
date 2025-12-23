@@ -40,6 +40,8 @@ export type DailyBreakdown = {
     date_added?: string;
     worklog_id?: string;
     status?: number;
+    status_text?: string;
+    status_color?: string;
     userChecklogs?: CheckLog[];
     allUserChecklogs?: CheckLog[];
 };

@@ -793,7 +793,7 @@ const TimeClock = () => {
                                 <Button
                                     startIcon={<IconLock size={16}/>}
                                     variant="outlined"
-                                    color="success"
+                                    color="primary"
                                     size="small"
                                     onClick={handleLock}
                                     sx={{textTransform: 'none', fontWeight: 600}}
@@ -814,7 +814,7 @@ const TimeClock = () => {
 
                                 <Button
                                     variant="contained"
-                                    color="primary"
+                                    color="success"
                                     size="small"
                                     onClick={handleMarkAsPaid}
                                     sx={{textTransform: 'none', fontWeight: 600}}

@@ -28,6 +28,7 @@ import Checklogs from './time-clock-details/checklogs/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
+import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -772,7 +773,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 rowType: 'week',
                 weekLabel: week.week_range,
                 weeklyTotalHours: formatHour(week.weekly_total_hours),
-                weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
+                weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`
             });
 
             const dayRows = (week.days || []).flatMap((day: any) => {
@@ -1293,6 +1294,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Check Ins</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.check_in : null,
                 size: 140,
+            },
+            {
+                id: 'status',
+                accessorKey: 'checkIns',
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Status</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.status_text : null,
+                size: 100,
             },
             {
                 id: 'dailyTotal',
