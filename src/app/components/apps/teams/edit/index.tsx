@@ -303,7 +303,7 @@ const EditTeamPage = () => {
         <Grid
           size={{
             xs: 12,
-            sm: 9,
+            sm: 6,
           }}
         >
           <Autocomplete
