@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, {  useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -15,8 +15,6 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
 
 interface ProjectListingProps {
   userId: number;
@@ -68,10 +66,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   >([]);
   const [hasExistingInfo, setHasExistingInfo] = useState(false);
   const [phone, setPhone] = useState("");
-  const session = useSession();
-  const user = session.data?.user as User & { user_role_id?: number | null } & {
-    id: number;
-  };
+
   useEffect(() => {
     const fetchHealthInfo = async () => {
       if (!userId || !active) return;
@@ -311,9 +306,6 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                 <TextField
                   fullWidth
                   className="custom_color"
-                  disabled={
-                    Number(userId) !== Number(user.id) && user.user_role_id == 2
-                  }
                   label={key
                     .replace(/_/g, " ")
                     .replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -360,9 +352,6 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
           <TextField
             className="custom_color"
             fullWidth
-            disabled={
-              Number(userId) !== Number(user.id) && user.user_role_id == 2
-            }
             label="Height (cm)"
             value={healthInfo.height}
             inputProps={{
@@ -375,9 +364,6 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
         <Grid sx={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
-            disabled={
-              Number(userId) !== Number(user.id) && user.user_role_id == 2
-            }
             className="custom_color"
             label="Weight (kg)"
             value={healthInfo.weight}
@@ -412,10 +398,6 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                     type="radio"
                     name={`health-issue-${index}`}
                     value="yes"
-                    disabled={
-                      Number(userId) !== Number(user.id) &&
-                      user.user_role_id == 2
-                    }
                     checked={issue.is_check === true}
                     onChange={() =>
                       handleHealthIssueChange(index, "is_check", true)
@@ -427,10 +409,6 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                 <label className="custom_color">
                   <input
                     type="radio"
-                    disabled={
-                      Number(userId) !== Number(user.id) &&
-                      user.user_role_id == 2
-                    }
                     name={`health-issue-${index}`}
                     value="no"
                     checked={issue.is_check === false}
@@ -450,9 +428,6 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                   label="Detail"
                   value={issue.comment || ""}
                   required
-                  disabled={
-                    Number(userId) !== Number(user.id) && user.user_role_id == 2
-                  }
                   onChange={(e) =>
                     handleHealthIssueChange(index, "comment", e.target.value)
                   }

@@ -217,7 +217,7 @@ const CreateTeam = () => {
           <Grid
             size={{
               xs: 12,
-              sm: 6,
+              sm: 9,
             }}
           >
             <Autocomplete

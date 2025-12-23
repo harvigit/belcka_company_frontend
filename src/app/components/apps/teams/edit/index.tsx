@@ -9,7 +9,6 @@ import {
   Grid,
   CircularProgress,
   Autocomplete,
-  Chip,
 } from "@mui/material";
 import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -85,7 +84,7 @@ const EditTeamPage = () => {
 
   useEffect(() => {
     const fetchTeamData = async () => {
-      if (teams.length > 0 && teamId) {
+      if ( teams.length > 0 && teamId) {
         try {
           const res = await api.get(
             `team/get-team-member-list?team_id=${teamId}`
@@ -304,7 +303,7 @@ const EditTeamPage = () => {
         <Grid
           size={{
             xs: 12,
-            sm: 6,
+            sm: 9,
           }}
         >
           <Autocomplete
@@ -324,16 +323,6 @@ const EditTeamPage = () => {
             getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             filterSelectedOptions
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  {...getTagProps({ index })}
-                  key={option.id}
-                  label={option.name}
-                  sx={{ margin: "2px" }}
-                />
-              ))
-            }
             renderInput={(params) => (
               <CustomTextField
                 {...params}

@@ -71,8 +71,8 @@ const SidebarItems = () => {
             return true;
         }
 
-        if (item && item.length > 0) {
-            return item.some((child: any) =>
+        if (item.children && item.children.length > 0) {
+            return item.children.some((child: any) =>
                 hasWebPermission(child.title)
             );
         }

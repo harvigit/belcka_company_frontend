@@ -324,6 +324,7 @@ const ArchiveUserList = () => {
     <PermissionGuard permission="Users">
       <Box>
         <Stack
+          mt={3}
           mr={2}
           ml={2}
           mb={2}

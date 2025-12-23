@@ -745,12 +745,14 @@ const AddressesList = ({
                   color="error"
                   overlap="circular"
                 >
-                  <IconButton
+                  <Button
+                    variant="outlined"
                     color="error"
+                    size="small"
                     onClick={() => handleDownloadZip(info.row.original.id)}
                   >
-                    <IconDownload size={20} />
-                  </IconButton>
+                    <IconDownload size={24} />
+                  </Button>
                 </Badge>
               </Box>
             </Box>

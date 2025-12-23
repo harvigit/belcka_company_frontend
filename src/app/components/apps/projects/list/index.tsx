@@ -394,10 +394,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setDrawerOpen(true);
   };
 
-  const handleAddressClose = () => {
-    setSidebar(false);
-    setTypedAddress(false);
-  };
   const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -463,7 +459,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         setTimeout(() => {
           setLoading(false);
         }, 100);
-        setRadius(100);
+        setRadius(100)
         setFormData({
           project_id: Number(projectID),
           company_id: user.company_id,
@@ -655,7 +651,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         const boundary: Boundary = {
           lat,
           lng,
-          radius,
+          radius, 
         };
 
         setFormData({
@@ -733,7 +729,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
   return (
     <PermissionGuard permission="Projects">
-      <Box p={2}>
+      <Box>
         <Stack
           mb={2}
           direction={{ xs: "column", sm: "row", xl: "row" }}
@@ -1175,7 +1171,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         <Drawer
           anchor="right"
           open={sidebar}
-          onClose={() => handleAddressClose()}
+          onClose={() => setSidebar(false)}
           sx={{
             width: 500,
             flexShrink: 0,
@@ -1197,7 +1193,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       alignItems={"center"}
                       flexWrap={"wrap"}
                     >
-                      <IconButton onClick={() => handleAddressClose()}>
+                      <IconButton onClick={() => setSidebar(false)}>
                         <IconArrowLeft />
                       </IconButton>
                       <Typography variant="h6" color="inherit" fontWeight={700}>
@@ -1341,7 +1337,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   </Button>
                   <Button
                     color="inherit"
-                    onClick={() => handleAddressClose()}
+                    onClick={() => setSidebar(false)}
                     variant="contained"
                     size="large"
                     sx={{
