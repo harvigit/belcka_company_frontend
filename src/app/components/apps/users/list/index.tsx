@@ -81,6 +81,8 @@ export interface Permission {
   id: number;
   name: string;
   status: number;
+    is_web?: boolean;  
+    is_app?: boolean;  
 }
 
 export interface UserList {
@@ -1336,15 +1338,20 @@ const TablePagination = () => {
                 <Box
                     sx={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 100px 100px",
+                        gridTemplateColumns: "1fr auto auto",
                         px: 1,
                         py: 1,
                         fontWeight: 600,
+                        gap: 2,
                     }}
                 >
                     <Typography></Typography>
-                    <Typography align="center">Web</Typography>
-                    <Typography align="center">App</Typography>
+                    {filteredPermissions.some(p => p.is_web !== false) && (
+                        <Typography align="center" sx={{ width: "100px" }}>Web</Typography>
+                    )}
+                    {filteredPermissions.some(p => p.is_app !== false) && (
+                        <Typography align="center" sx={{ width: "100px" }}>App</Typography>
+                    )}
                 </Box>
                 
                 
@@ -1352,32 +1359,38 @@ const TablePagination = () => {
                 <Box
                     sx={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 100px 100px",
+                        gridTemplateColumns: "1fr auto auto",
                         alignItems: "center",
                         px: 1,
                         py: 1,
                         borderRadius: 1,
+                        gap: 2,
                         "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
                     }}
                 >
                     <Typography>Select All</Typography>
 
-                    <Box textAlign="center">
-                        <IOSSwitch
-                            checked={allWebSelected}
-                            onChange={() => handleSelectAll("web")}
-                            disabled={loading || !isPermission}
-                        />
-                    </Box>
+                    {filteredPermissions.some(p => p.is_web !== false) && (
+                        <Box textAlign="center" sx={{ width: "100px" }}>
+                            <IOSSwitch
+                                checked={allWebSelected}
+                                onChange={() => handleSelectAll("web")}
+                                disabled={loading || !isPermission}
+                            />
+                        </Box>
+                    )}
 
-                    <Box textAlign="center">
-                        <IOSSwitch
-                            checked={allAppSelected}
-                            onChange={() => handleSelectAll("app")}
-                            disabled={loading || !isPermission}
-                        />
-                    </Box>
+                    {filteredPermissions.some(p => p.is_app !== false) && (
+                        <Box textAlign="center" sx={{ width: "100px" }}>
+                            <IOSSwitch
+                                checked={allAppSelected}
+                                onChange={() => handleSelectAll("app")}
+                                disabled={loading || !isPermission}
+                            />
+                        </Box>
+                    )}
                 </Box>
+
 
                 <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
                     {filteredPermissions.map((permission) => (
@@ -1385,35 +1398,48 @@ const TablePagination = () => {
                             key={permission.id}
                             sx={{
                                 display: "grid",
-                                gridTemplateColumns: "1fr 100px 100px",
+                                gridTemplateColumns: "1fr auto auto",
                                 alignItems: "center",
                                 px: 1,
                                 py: 1,
                                 borderRadius: 1,
+                                gap: 2,
                                 "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
                             }}
                         >
                             <Typography>{permission.name}</Typography>
 
-                            <Box textAlign="center">
-                                <IOSSwitch
-                                    checked={tempPermissions.web.has(permission.id)}
-                                    onChange={() =>
-                                        handlePermissionToggle(permission.id, "web")
-                                    }
-                                    disabled={loading || !isPermission}
-                                />
-                            </Box>
+                            {permission.is_web !== false ? (
+                                <Box textAlign="center" sx={{ width: "100px" }}>
+                                    <IOSSwitch
+                                        checked={tempPermissions.web.has(permission.id)}
+                                        onChange={() =>
+                                            handlePermissionToggle(permission.id, "web")
+                                        }
+                                        disabled={loading || !isPermission}
+                                    />
+                                </Box>
+                            ) : (
+                                filteredPermissions.some(p => p.is_web !== false) && (
+                                    <Box sx={{ width: "100px" }} />
+                                )
+                            )}
 
-                            <Box textAlign="center">
-                                <IOSSwitch
-                                    checked={tempPermissions.app.has(permission.id)}
-                                    onChange={() =>
-                                        handlePermissionToggle(permission.id, "app")
-                                    }
-                                    disabled={loading || !isPermission}
-                                />
-                            </Box>
+                            {permission.is_app !== false ? (
+                                <Box textAlign="center" sx={{ width: "100px" }}>
+                                    <IOSSwitch
+                                        checked={tempPermissions.app.has(permission.id)}
+                                        onChange={() =>
+                                            handlePermissionToggle(permission.id, "app")
+                                        }
+                                        disabled={loading || !isPermission}
+                                    />
+                                </Box>
+                            ) : (
+                                filteredPermissions.some(p => p.is_app !== false) && (
+                                    <Box sx={{ width: "100px" }} />
+                                )
+                            )}
                         </Box>
                     ))}
                 </Box>

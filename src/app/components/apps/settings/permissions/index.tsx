@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     Table,
     TableBody,
@@ -42,7 +42,12 @@ export default function PermissionSettings() {
     const [originalPermissions, setOriginalPermissions] = useState<PermissionItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [hasChanges, setHasChanges] = useState<boolean>(false);
-    
+
+    const columnVisibility = useMemo(() => ({
+        showWebColumn: permissions.some(p => p.is_web === true),
+        showAppColumn: permissions.some(p => p.is_app === true),
+    }), [permissions]);
+
     const fetchPermissions = async () => {
         setLoading(true);
         try {
@@ -56,8 +61,8 @@ export default function PermissionSettings() {
 
                     return {
                         ...perm,
-                        is_web: flags.is_web,
-                        is_app: flags.is_app,
+                        is_web: perm.is_web === true,
+                        is_app: perm.is_app === true,
                     };
                 });
 
@@ -78,37 +83,52 @@ export default function PermissionSettings() {
     useEffect(() => {
         fetchPermissions();
     }, []);
-    
+
     const updatePermissionState = (
         permissionId: number,
         field: 'is_web' | 'is_app',
         value: boolean
     ) => {
         setPermissions((prev) => {
-            const updated = prev.map((perm) =>
-                perm.id === permissionId
-                    ? { ...perm, [field]: value }
-                    : perm
-            );
+            const updated = prev.map((perm) => {
+                if (perm.id === permissionId) {
+                    const permission = permissions.find(p => p.id === permissionId);
 
-            const hasModifications = updated.some((perm, idx) =>
-                perm.is_web !== originalPermissions[idx]?.is_web ||
-                perm.is_app !== originalPermissions[idx]?.is_app
-            );
+                    if (field === 'is_web' && !permission?.is_web && originalPermissions.find(p => p.id === permissionId)?.is_web === false) {
+                        return perm; 
+                    }
+                    if (field === 'is_app' && !permission?.is_app && originalPermissions.find(p => p.id === permissionId)?.is_app === false) {
+                        return perm;
+                    }
+
+                    return { ...perm, [field]: value };
+                }
+                return perm;
+            });
+
+            const hasModifications = updated.some((perm, idx) => {
+                const orig = originalPermissions[idx];
+                return (
+                    (orig?.is_web === true && perm.is_web !== orig.is_web) ||
+                    (orig?.is_app === true && perm.is_app !== orig.is_app)
+                );
+            });
 
             setHasChanges(hasModifications);
             return updated;
         });
     };
-    
+
     const savePermissions = async () => {
         setLoading(true);
         try {
             const payload = {
-                permissions: permissions.map((perm) => ({
-                    permission_id: perm.permission_id,
-                    status: flagsToStatus(perm.is_web, perm.is_app),
-                })),
+                permissions: permissions
+                    .filter(perm => perm.is_web || perm.is_app)
+                    .map((perm) => ({
+                        permission_id: perm.permission_id,
+                        status: flagsToStatus(perm.is_web, perm.is_app),
+                    })),
             };
 
             const response = await api.post(
@@ -132,7 +152,7 @@ export default function PermissionSettings() {
             setLoading(false);
         }
     };
-    
+
     if (loading && permissions.length === 0) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
@@ -163,60 +183,84 @@ export default function PermissionSettings() {
                             <TableCell>
                                 <Typography variant="subtitle1">Titles</Typography>
                             </TableCell>
-                            <TableCell align="center">
-                                <Typography variant="subtitle1">Web</Typography>
-                            </TableCell>
-                            <TableCell align="center">
-                                <Typography variant="subtitle1">App</Typography>
-                            </TableCell>
+                            {columnVisibility.showWebColumn && (
+                                <TableCell align="center">
+                                    <Typography variant="subtitle1">Web</Typography>
+                                </TableCell>
+                            )}
+                            {columnVisibility.showAppColumn && (
+                                <TableCell align="center">
+                                    <Typography variant="subtitle1">App</Typography>
+                                </TableCell>
+                            )}
                         </TableRow>
                     </TableHead>
 
                     <TableBody>
                         {permissions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={3}>
+                                <TableCell colSpan={
+                                    1 +
+                                    (columnVisibility.showWebColumn ? 1 : 0) +
+                                    (columnVisibility.showAppColumn ? 1 : 0)
+                                }>
                                     <Typography m={3} textAlign="center">
                                         No permissions are found for this company!!
                                     </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            permissions.map((permission) => (
-                                <TableRow key={permission.id}>
-                                    <TableCell sx={{ padding: '10px' }}>
-                                        {permission.name}
-                                    </TableCell>
+                            permissions.map((permission) => {
+                                const originalPerm = originalPermissions.find(p => p.id === permission.id);
+                                const canToggleWeb = originalPerm?.is_web === true;
+                                const canToggleApp = originalPerm?.is_app === true;
 
-                                    <TableCell align="center" sx={{ padding: '10px' }}>
-                                        <IOSSwitch
-                                            checked={permission.is_web}
-                                            onChange={(e) =>
-                                                updatePermissionState(
-                                                    permission.id,
-                                                    'is_web',
-                                                    e.target.checked
-                                                )
-                                            }
-                                            disabled={loading}
-                                        />
-                                    </TableCell>
+                                return (
+                                    <TableRow key={permission.id}>
+                                        <TableCell sx={{ padding: '10px' }}>
+                                            {permission.name}
+                                        </TableCell>
 
-                                    <TableCell align="center" sx={{ padding: '10px' }}>
-                                        <IOSSwitch
-                                            checked={permission.is_app}
-                                            onChange={(e) =>
-                                                updatePermissionState(
-                                                    permission.id,
-                                                    'is_app',
-                                                    e.target.checked
-                                                )
-                                            }
-                                            disabled={loading}
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                        {/* Web Column */}
+                                        {columnVisibility.showWebColumn && (
+                                            <TableCell align="center" sx={{ padding: '10px' }}>
+                                                {canToggleWeb && (
+                                                    <IOSSwitch
+                                                        checked={permission.is_web}
+                                                        onChange={(e) =>
+                                                            updatePermissionState(
+                                                                permission.id,
+                                                                'is_web',
+                                                                e.target.checked
+                                                            )
+                                                        }
+                                                        disabled={loading}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                        )}
+
+                                        {/* App Column */}
+                                        {columnVisibility.showAppColumn && (
+                                            <TableCell align="center" sx={{ padding: '10px' }}>
+                                                {canToggleApp && (
+                                                    <IOSSwitch
+                                                        checked={permission.is_app}
+                                                        onChange={(e) =>
+                                                            updatePermissionState(
+                                                                permission.id,
+                                                                'is_app',
+                                                                e.target.checked
+                                                            )
+                                                        }
+                                                        disabled={loading}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
