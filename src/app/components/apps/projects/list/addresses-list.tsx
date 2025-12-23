@@ -21,11 +21,8 @@ import {
   Menu,
   Badge,
   Button,
-  Popover,
   TextField,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
+  Slider,
 } from "@mui/material";
 import {
   flexRender,
@@ -42,7 +39,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconDotsVertical,
-  IconTableColumn,
+  IconProgress,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -102,7 +99,11 @@ const AddressesList = ({
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [hovered, setHovered] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
+
+  const [address, setAddress] = useState<any>(null);
+  const [radius, setRadius] = useState(0);
 
   useEffect(() => {
     onSelectionChange(Array.from(selectedRowIds));
@@ -112,8 +113,11 @@ const AddressesList = ({
 
   const [formData, setFormData] = useState<any>({});
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
+  const user = session.data?.user as User & { company_id?: number | null } & {
+    user_role_id: number;
+  };
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [progressDrawerOpen, setProgressDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
 
@@ -173,7 +177,7 @@ const AddressesList = ({
   };
 
   useEffect(() => {
-    if(projectId){
+    if (projectId) {
       fetchAddresses();
     }
   }, [projectId, processedIds, shouldRefresh]);
@@ -287,6 +291,49 @@ const AddressesList = ({
       console.error("Download failed", error);
     }
   };
+  const getAddressDetail = async () => {
+    try {
+      const response = await api.get(
+        `address/address-detail?address_id=${sidebarData?.addressId}`
+      );
+      if (response.data.IsSuccess) {
+        setAddress(response.data.info);
+        const numericValue = Number(
+          response.data.info.progress.replace("%", "")
+        );
+        setRadius(numericValue ?? 0);
+      }
+    } catch (error) {
+      console.log("error in get address detail");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        id: sidebarData?.addressId,
+        progress: radius,
+      };
+      const response = await api.put(
+        "address/change-address-progress",
+        payload
+      );
+      if (response.data.IsSuccess) {
+        toast.success(response.data.message);
+        setProgressDrawerOpen(false);
+        fetchAddresses();
+      }
+    } catch (error) {
+      console.error("Download failed", error);
+    }
+  };
+
+  useEffect(() => {
+    if (sidebarData?.addressId) {
+      getAddressDetail();
+    }
+  }, [sidebarData?.addressId]);
 
   const columns = useMemo(
     () => [
@@ -305,9 +352,13 @@ const AddressesList = ({
               }
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
-                if (e.target.checked) {
+                const isChecked = e.target.checked;
+
+                setShowAllCheckboxes(isChecked);
+
+                if (isChecked) {
                   setSelectedRowIds(
-                    new Set(currentFilteredData.map((row) => row.id))
+                    new Set(currentFilteredData.map((r) => r.id))
                   );
                 } else {
                   setSelectedRowIds(new Set());
@@ -322,8 +373,11 @@ const AddressesList = ({
         enableSorting: true,
         cell: ({ row }) => {
           const item = row.original;
-          const isChecked = selectedRowIds.has(item.id);
           const isProcessed = processedIds.includes(item.id);
+          const isChecked = selectedRowIds.has(item.id);
+
+          const showCheckbox =
+            showAllCheckboxes || hoveredRow === item.id || isChecked;
 
           return (
             <Stack
@@ -331,8 +385,8 @@ const AddressesList = ({
               alignItems="center"
               spacing={4}
               sx={{ pl: 1 }}
-              onMouseEnter={() => setHovered(true)}
-              onMouseLeave={() => setHovered(false)}
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -341,12 +395,14 @@ const AddressesList = ({
                 onChange={() => {
                   if (isProcessed) return;
                   const newSelected = new Set(selectedRowIds);
-                  if (isChecked) newSelected.delete(item.id);
-                  else newSelected.add(item.id);
+                  isChecked
+                    ? newSelected.delete(item.id)
+                    : newSelected.add(item.id);
                   setSelectedRowIds(newSelected);
                 }}
                 sx={{
-                  opacity: hovered || isChecked ? 1 : 0,
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
                   transition: "opacity 0.2s ease",
                 }}
               />
@@ -565,6 +621,8 @@ const AddressesList = ({
                         sx={{
                           cursor: "pointer",
                         }}
+                        onMouseEnter={() => setHoveredRow(row.original.id)}
+                        onMouseLeave={() => setHoveredRow(null)}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id} sx={{ padding: "10px" }}>
@@ -730,6 +788,31 @@ const AddressesList = ({
                         Add Task
                       </Link>
                     </MenuItem>
+                    {user.user_role_id == 1 && (
+                      <MenuItem onClick={handleClose}>
+                        <Link
+                          color="body1"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setProgressDrawerOpen(true);
+                          }}
+                          style={{
+                            width: "100%",
+                            color: "#11142D",
+                            textTransform: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyItems: "center",
+                          }}
+                        >
+                          <ListItemIcon>
+                            <IconProgress width={18} />
+                          </ListItemIcon>
+                          Change Progress
+                        </Link>
+                      </MenuItem>
+                    )}
                   </Menu>
                 </Box>
                 <Box display="flex">
@@ -826,6 +909,93 @@ const AddressesList = ({
               No work logs available.
             </Typography>
           )}
+        </Box>
+      </Drawer>
+      <Drawer
+        anchor="right"
+        open={progressDrawerOpen}
+        onClose={() => setProgressDrawerOpen(false)}
+        sx={{
+          width: 350,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 350,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+          },
+        }}
+      >
+        <Box display="flex" flexDirection="column" height="100%">
+          <Box height={"100%"}>
+            <form onSubmit={handleSubmit} className="address-form">
+              <Grid container>
+                <Grid size={{ lg: 12, xs: 12 }}>
+                  <Box
+                    display={"flex"}
+                    alignContent={"center"}
+                    alignItems={"center"}
+                    flexWrap={"wrap"}
+                  >
+                    <IconButton onClick={() => setProgressDrawerOpen(false)}>
+                      <IconArrowLeft />
+                    </IconButton>
+                    <Typography variant="h6" color="inherit" fontWeight={700}>
+                      Change Address progress
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid size={{ lg: 12, xs: 12 }} mt={2}>
+                  <Typography variant="h6" color="inherit" ml={1}>
+                    Progress
+                  </Typography>
+                  <Box display={"flex"} gap={2}>
+                    <Slider
+                      min={0}
+                      max={100}
+                      value={radius}
+                      onChange={(e, v) => setRadius(v as number)}
+                      sx={{ mb: 2, ml: 1 }}
+                    />
+                    <Typography>{radius}%</Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                  mt: 3,
+                }}
+              >
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  disabled={isSaving}
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => setProgressDrawerOpen(false)}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
+                </Button>
+              </Box>
+            </form>
+          </Box>
         </Box>
       </Drawer>
     </Box>

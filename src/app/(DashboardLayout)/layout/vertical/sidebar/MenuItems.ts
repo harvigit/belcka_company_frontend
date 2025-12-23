@@ -22,13 +22,6 @@ const MenuItems: NavGroup[] = [
   },
   {
     id: uniqueId(),
-    title: "User",
-    slug: "user",
-    icon: IconUser,
-    href: "/apps/users/index",
-  },
-  {
-    id: uniqueId(),
     title: "Teams", 
     slug: "teams",
     icon: IconUserPlus,

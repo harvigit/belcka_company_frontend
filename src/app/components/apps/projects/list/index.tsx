@@ -129,20 +129,25 @@ interface ProjectFormData {
   workzone_ids?: string;
 }
 
-interface FormData {
-  name: string;
-  address: string;
-  budget: string;
-  description?: string;
-  code: number;
-  shift_ids: string;
-  team_ids: string;
-  company_id: number;
-  workzone_ids?: string;
-}
+type PostcoderAddress = {
+  summaryline: string;
+  addressline1: string;
+  addressline2: string;
+  posttown: string;
+  postcode: string;
+};
+
+type GooglePrediction = google.maps.places.AutocompletePrediction;
+
+type UnifiedPrediction =
+  | ({ source: "google" } & GooglePrediction)
+  | ({ source: "postcoder" } & PostcoderAddress);
 
 const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const POSTCODER_COUNTRIES = ["UK", "IE", "AU", "NZ"];
+  const isLikelyUKPostcode = (value: string) =>
+    /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i.test(value.trim());
 
   const handleSelectedRows = (ids: number[]) => {
     setSelectedIds(ids);
@@ -199,9 +204,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     lat: number;
     lng: number;
   } | null>(null);
-  const [predictions, setPredictions] = useState<
-    google.maps.places.AutocompletePrediction[]
-  >([]);
+  const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
+
   const [radius, setRadius] = useState(100);
   const [typedAddress, setTypedAddress] = useState(false);
   const [formData, setFormData] = useState<any>({
@@ -345,24 +349,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       fetchAddresses();
     }
   }, [value]);
-
-  // const fetchArchiveAddress = async () => {
-  //   if (!projectId) return;
-  //   try {
-  //     const res = await api.get(`address/archive-list?project_id=${projectId}`);
-  //     if (res.data) {
-  //       setData(res.data.info);
-  //     }
-  //   } catch (err) {
-  //     console.error("Failed to fetch archive addresses", err);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   if (projectId) {
-  //     fetchArchiveAddress();
-  //   }
-  // }, [archiveList]);
 
   const fetchHistories = async () => {
     try {
@@ -598,43 +584,92 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setFormData({ ...formData, name: e.target.value });
   };
 
-  const handleSearchClick = () => {
-    if (formData.name.trim() === "") {
+  const handleSearchClick = async () => {
+    const query = formData.name.trim();
+    if (!query) {
       setPredictions([]);
       return;
     }
+
+    setTypedAddress(true);
+
+    if (isLikelyUKPostcode(query)) {
+      try {
+        const res = await fetch(
+          `https://ws.postcoder.com/pcw/${
+            process.env.NEXT_PUBLIC_POSTCODER_KEY
+          }/address/UK/${encodeURIComponent(query)}?format=json`
+        );
+
+        const data = await res.json();
+        setPredictions(data || []);
+        return;
+      } catch (err) {
+        console.error("Postcoder failed, falling back to Google", err);
+      }
+    }
+
     const service = new google.maps.places.AutocompleteService();
-    service.getPlacePredictions({ input: formData.name }, (results, status) => {
+
+    service.getPlacePredictions({ input: query }, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-        setPredictions(results);
+        setPredictions(
+          results.map((r) => ({
+            ...r,
+            source: "google",
+          }))
+        );
       } else {
         setPredictions([]);
       }
     });
-    setTypedAddress(true);
   };
-
-  const selectPrediction = (placeId: string) => {
+  const selectGooglePrediction = (
+    item: { source: "google" } & google.maps.places.AutocompletePrediction
+  ) => {
     const service = new google.maps.places.PlacesService(
       document.createElement("div")
     );
-    service.getDetails({ placeId }, (place, status) => {
+
+    service.getDetails({ placeId: item.place_id }, (place, status) => {
       if (
         status === google.maps.places.PlacesServiceStatus.OK &&
         place?.geometry?.location
       ) {
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
-        setFormData({ ...formData, lat: lat, lng: lng });
-        const newBoundary: Boundary = { lat, lng, radius };
-        setSelectedLocation({ lat, lng });
+
         setFormData({
           ...formData,
           name: place.formatted_address || "",
           lat,
           lng,
-          boundary: JSON.stringify(newBoundary),
         });
+
+        setSelectedLocation({ lat, lng });
+        setPredictions([]);
+      }
+    });
+  };
+
+  const selectPostcoderPrediction = (
+    item: { source: "postcoder" } & PostcoderAddress
+  ) => {
+    const geocoder = new google.maps.Geocoder();
+
+    geocoder.geocode({ address: item.postcode }, (results, status) => {
+      if (status === "OK" && results?.[0]?.geometry?.location) {
+        const lat = results[0].geometry.location.lat();
+        const lng = results[0].geometry.location.lng();
+
+        setFormData({
+          ...formData,
+          name: item.summaryline,
+          lat,
+          lng,
+        });
+
+        setSelectedLocation({ lat, lng });
         setPredictions([]);
       }
     });
@@ -1168,24 +1203,27 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       </Button>
                     </Box>
 
-                    {/* Display address predictions */}
                     {typedAddress && predictions.length > 0 && (
                       <List
                         sx={{
                           border: "1px solid #ccc",
                           maxHeight: 200,
                           overflow: "auto",
-                          marginTop: 1,
+                          mt: 1,
                         }}
                       >
-                        {predictions.map((prediction) => (
-                          <ListItem key={prediction.place_id} disablePadding>
+                        {predictions.map((item, index) => (
+                          <ListItem key={index} disablePadding>
                             <ListItemButton
                               onClick={() =>
-                                selectPrediction(prediction.place_id)
+                                item.source === "google"
+                                  ? selectGooglePrediction(item)
+                                  : selectPostcoderPrediction(item)
                               }
                             >
-                              {prediction.description}
+                              {item.source === "google"
+                                ? item.description
+                                : item.summaryline}
                             </ListItemButton>
                           </ListItem>
                         ))}

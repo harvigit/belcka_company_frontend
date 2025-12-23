@@ -21,7 +21,7 @@ export async function getUserPermissions(
             company_id: companyId,
         };
 
-        const response = await api.post("/dashboard/user/permissions", payload);
+        const response = await api.post("/dashboard/user-permissions", payload);
         return response.data.permissions || [];
     } catch (error) {
         console.error("Error fetching permissions:", error);

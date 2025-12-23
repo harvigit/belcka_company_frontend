@@ -32,7 +32,11 @@ export interface TradeList {
   name: string;
 }
 
-const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name ,userId}) => {
+const ComapnyRate: React.FC<ProjectListingProps> = ({
+  active,
+  name,
+  userId,
+}) => {
   const [loading, setLoading] = useState<boolean>(true);
   const params = useParams();
   const [comapny, setCompany] = useState<any>();
@@ -761,122 +765,130 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({ active, name ,userId}) => 
                   },
                 }}
               >
-                {history?.map((item: any, index: number) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      position: "relative",
-                      pl: 1,
-                      mb: 3,
-                    }}
-                  >
-                    {/* Blue dot */}
+                {history
+                  ?.filter((item: any) => item.status !== 3) 
+                  .map((item: any, index: number) => (
                     <Box
+                      key={index}
                       sx={{
-                        position: "absolute",
-                        left: "-35px",
-                        top: "16px",
-                        width: "12px",
-                        height: "12px",
-                        backgroundColor: "#1976d2",
-                        borderRadius: "50%",
-                      }}
-                    />
-
-                    {/* Card box */}
-                    <Box
-                      sx={{
-                        border: 1,
-                        p: 2,
-                        borderColor: "#c5c3c3ff",
-                        borderRadius: 2,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                        backgroundColor: "#fff",
+                        position: "relative",
+                        pl: 1,
+                        mb: 3,
                       }}
                     >
-                      <Typography
-                        variant="body2"
-                        color="textSecondary"
-                        mb={1}
+                      {/* Blue dot */}
+                      <Box
                         sx={{
-                          backgroundColor: "#888c8f1f",
-                          p: 1,
-                          borderRadius: 4,
-                          width: "fit-content",
-                          px: 2,
+                          position: "absolute",
+                          left: "-35px",
+                          top: "16px",
+                          width: "12px",
+                          height: "12px",
+                          backgroundColor: "#1976d2",
+                          borderRadius: "50%",
+                        }}
+                      />
+
+                      {/* Card box */}
+                      <Box
+                        sx={{
+                          border: 1,
+                          p: 2,
+                          borderColor: "#c5c3c3ff",
+                          borderRadius: 2,
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                          backgroundColor: "#fff",
                         }}
                       >
-                        Effective date: {item.effective_date}
-                      </Typography>
-
-                      <Box
-                        display={"flex"}
-                        justifyContent={"space-between"}
-                        alignItems={"center"}
-                      >
-                        {/* Old rate */}
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          mt={1}
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          mb={1}
+                          sx={{
+                            backgroundColor: "#888c8f1f",
+                            p: 1,
+                            borderRadius: 4,
+                            width: "fit-content",
+                            px: 2,
+                          }}
                         >
-                          <Typography variant="h6" fontWeight="bold">
-                            Old rate :
-                          </Typography>
-                          <Typography variant="body1" fontWeight="bold">
-                            {item.currency}
-                            {item.old_net_rate_perday
-                              ? item.old_net_rate_perday
-                              : 0}
-                            <Typography component="span" color="textSecondary">
-                              /day
-                            </Typography>
-                          </Typography>
-                        </Box>
-                        {/* New rate */}
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          alignContent={"center"}
-                        >
-                          <Typography variant="h6" fontWeight="bold">
-                            New rate :
-                          </Typography>
-                          <Typography variant="body1" fontWeight="bold">
-                            {item.currency}
-                            {item.new_net_rate_perday
-                              ? item.new_net_rate_perday
-                              : 0}
-                            <Typography component="span" color="textSecondary">
-                              /day
-                            </Typography>
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Divider sx={{ mt: 2, mb: 1 }} />
-
-                      {item.user_name && (
-                        <Typography variant="caption" color="textSecondary">
-                          {item.status_text == "approved"
-                            ? "Approved"
-                            : item.status_text == "rejected"
-                            ? "Rejected"
-                            : `Requested ${
-                                item.action_by !== null
-                                  ? `by ${item.action_by}`
-                                  : ""
-                              } on ${item.date} at ${item.time}`}{" "}
-                          {item.action_by && item.status_text !== "pending"
-                            ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
-                            : ""}{" "}
+                          Effective date: {item.effective_date}
                         </Typography>
-                      )}
+
+                        <Box
+                          display={"flex"}
+                          justifyContent={"space-between"}
+                          alignItems={"center"}
+                        >
+                          {/* Old rate */}
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            mt={1}
+                          >
+                            <Typography variant="h6" fontWeight="bold">
+                              Old rate :
+                            </Typography>
+                            <Typography variant="body1" fontWeight="bold">
+                              {item.currency}
+                              {item.old_net_rate_perday
+                                ? item.old_net_rate_perday
+                                : 0}
+                              <Typography
+                                component="span"
+                                color="textSecondary"
+                              >
+                                /day
+                              </Typography>
+                            </Typography>
+                          </Box>
+                          {/* New rate */}
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            alignContent={"center"}
+                          >
+                            <Typography variant="h6" fontWeight="bold">
+                              New rate :
+                            </Typography>
+                            <Typography variant="body1" fontWeight="bold">
+                              {item.currency}
+                              {item.new_net_rate_perday
+                                ? item.new_net_rate_perday
+                                : 0}
+                              <Typography
+                                component="span"
+                                color="textSecondary"
+                              >
+                                /day
+                              </Typography>
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        <Divider sx={{ mt: 2, mb: 1 }} />
+
+                        {item.user_name && (
+                          <Typography variant="caption" color="textSecondary">
+                            {item.status_text == "approved"
+                              ? "Approved"
+                              : item.status_text == "rejected"
+                              ? "Rejected"
+                              : `Requested ${
+                                  item.action_by !== null
+                                    ? `by ${item.action_by}`
+                                    : ""
+                                } on ${item.date} at ${item.time}`}{" "}
+                            {item.action_by && item.status_text !== "pending"
+                              ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
+                              : ""}{" "}
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
-                ))}
+                  ))}
               </Box>
             </>
           ) : (

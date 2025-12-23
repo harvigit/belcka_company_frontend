@@ -55,6 +55,7 @@ export interface TeamList {
   company_name: string;
   extension: string | null;
   is_working: boolean;
+  user_role_id: number;
 }
 
 export interface TradeList {
@@ -80,7 +81,7 @@ const TablePagination = () => {
 
   const userRole = user?.user_role_id;
   const [phone, setPhone] = useState("");
-
+  const [openModel, setOpenModel] = useState(false);
   const [openIdCard, setOpenIdCard] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
@@ -182,6 +183,27 @@ const TablePagination = () => {
     handleFieldChange("phone", numberOnly);
   };
 
+  const handleConfirmAdmin = async () => {
+    try {
+      setLoading(true);
+      const payload = {
+        company_id: user.company_id,
+        user_id: data?.id,
+      };
+
+      const res = await api.post("company/change-admin", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        setOpenModel(false);
+        fetchData();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const tabParam = searchParams ? searchParams.get("tab") : "";
     if (tabParam) {
@@ -198,6 +220,7 @@ const TablePagination = () => {
       router.replace(`/apps/users/${userId}`);
     }
   }, [searchParams]);
+
   if (loading) {
     return (
       <Box
@@ -271,7 +294,18 @@ const TablePagination = () => {
                 </Typography>
               </Box>
             </Box>
-            <Box>
+            <Box display={"flex"} gap={2}>
+              {data?.user_role_id == 2 && user.user_role_id == 1 && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => {
+                    setOpenModel(true);
+                  }}
+                >
+                  Make an admin
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 color="primary"
@@ -474,7 +508,11 @@ const TablePagination = () => {
                 />
               </Box>
               <Box hidden={value !== 2}>
-                <ComapnyRate active={value === 2} name={formData.first_name} userId={Number(userId)}/>
+                <ComapnyRate
+                  active={value === 2}
+                  name={formData.first_name}
+                  userId={Number(userId)}
+                />
               </Box>
               <Box hidden={value !== 3}>
                 <Notifications
@@ -664,6 +702,48 @@ const TablePagination = () => {
             color="error"
           >
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openModel} onClose={() => setOpenModel(false)}>
+        <DialogTitle>
+          Confirmation
+          <IconButton
+            aria-label="close"
+            onClick={() => setOpenModel(false)}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <IconX />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to make this user an admin?
+          </Typography>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => setOpenModel(false)}
+            variant="outlined"
+            color="error"
+          >
+            Cancel
+          </Button>
+
+          <Button
+            onClick={handleConfirmAdmin}
+            color="primary"
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? "Updating..." : "Yes, Confirm"}
           </Button>
         </DialogActions>
       </Dialog>
