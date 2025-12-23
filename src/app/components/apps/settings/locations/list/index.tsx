@@ -583,11 +583,7 @@ const TablePagination = () => {
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
-            <TableContainer
-              sx={{
-                maxHeight: 600,
-              }}
-            >
+            <TableContainer>
               <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (

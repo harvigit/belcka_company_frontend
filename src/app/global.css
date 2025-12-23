@@ -394,3 +394,20 @@ input#project_id::placeholder {
     cursor: no-drop !important;
     pointer-events: none !important;
 }
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #214cd8;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #214cd8;
+  cursor: pointer;
+}

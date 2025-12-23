@@ -993,7 +993,7 @@ const AddZone = ({
                 max={100}
                 value={radius}
                 onChange={(e, v) => setRadius(v as number)}
-                sx={{ mb: 2 }}
+                sx={{ mb: 2 ,width: "98%", mr:2}}
               />
               <Box
                 sx={{
@@ -1278,7 +1278,7 @@ const EditZone = ({
 
   return (
     <Box
-      sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
+      sx={{ height: "100%", display: "flex", flexDirection: "column", p: 1 }}
     >
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         <Typography variant="h6" mb={2}>
@@ -1342,7 +1342,7 @@ const EditZone = ({
               max={100}
               value={radius}
               onChange={(e, v) => setRadius(v as number)}
-              sx={{ mb: 2 }}
+               sx={{ mb: 2 ,width: "98%", mr:2 }}
             />
           </>
         )}

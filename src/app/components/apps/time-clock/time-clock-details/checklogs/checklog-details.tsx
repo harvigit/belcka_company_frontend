@@ -12,10 +12,14 @@ import {
     Drawer,
     Tooltip,
     Collapse,
+    Button,
 } from '@mui/material';
 import Image from 'next/image';
 import {IconArrowLeft, IconChevronDown, IconChevronUp} from '@tabler/icons-react';
 import {Stack} from '@mui/system';
+import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 interface ChecklogDetailPageProps {
     checklogId: number | null;
@@ -44,6 +48,12 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
     const [checklogTasks, setChecklogTasks] = useState<ChecklogTask[]>([]);
     const [hoveredImage, setHoveredImage] = useState<string | null>(null);
     const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
+    const [editableProgress, setEditableProgress] = useState<Record<number, number>>({});
+    const [originalProgress, setOriginalProgress] = useState<Record<number, number>>({});
+    const session = useSession();
+    const user = session.data?.user as User & { company_id?: number | null } & {
+    user_role_id: number;
+    };
 
     useEffect(() => {
         if (checklogId && open) {
@@ -69,6 +79,50 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
             setLoading(false);
         }
     };
+
+    const hasProgressChanged = (taskId: number) =>
+    editableProgress[taskId] !== originalProgress[taskId];
+
+
+    useEffect(() => {
+    if (checklogTasks.length > 0) {
+        const initialProgress: Record<number, number> = {};
+        const original: Record<number, number> = {};
+
+        checklogTasks.forEach((task: any) => {
+        initialProgress[task.id] = task.progress ?? 0;
+        original[task.id] = task.progress ?? 0;
+        });
+
+        setEditableProgress(initialProgress);
+        setOriginalProgress(original);
+    }
+    }, [checklogTasks]);
+
+    const handleUpdateProgress = async (taskId: number) => {
+    try {
+        console.log(taskId)
+        const res = await api.put("company-tasks/update", {
+            id: taskId,
+            progress: String(editableProgress[taskId]),
+            company_id: user.company_id,
+        });
+
+        if (res.data?.IsSuccess) {
+            toast.success(res.data.message);
+            await fetchChecklogDetail();
+            onClose?.();
+        }
+
+        setOriginalProgress((prev) => ({
+        ...prev,
+        [taskId]: editableProgress[taskId],
+        }));
+    } catch (err) {
+        console.error(err);
+    }
+    };
+
 
     const toggleExpand = (index: number) => {
         setExpandedTasks(prev => {
@@ -135,7 +189,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                         <Typography className="f-18">No detail found for this checklog!</Typography>
                     </Box>
                 ) : (
-                    checklogTasks.map((checklog, index) => (
+                    checklogTasks.map((checklog: any, index) => (
                         <Box key={checklog.id || index} mb={3}>
                             <Box
                                 sx={{
@@ -228,7 +282,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                     variant="body1"
                                                     className="f-16"
                                                 >
-                                                    Progress: {checklog.progress}%
+                                                    Progress: {editableProgress[checklog.id] ?? 0}%
                                                 </Typography>
                                                 {hasAttachments(checklog) && (
                                                     <IconButton
@@ -246,18 +300,49 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                     </IconButton>
                                                 )}
                                             </Stack>
-                                            <LinearProgress
+                                            {checklog.status_int !== 4 ? (
+                                                <>
+                                                <input
+                                                type="range"
+                                                min={0}
+                                                max={99}
+                                                value={editableProgress[checklog.id] ?? 0}
+                                                onChange={(e) =>
+                                                    setEditableProgress((prev) => ({
+                                                    ...prev,
+                                                    [checklog.id]: Number(e.target.value),
+                                                    }))
+                                                }
+                                                style={{
+                                                    width: "100%",
+                                                    height: "10px",
+                                                    appearance: "none",
+                                                    background: `linear-gradient(
+                                                    to right,
+                                                    ${getProgressColor(editableProgress[checklog.id] ?? 0)} ${editableProgress[checklog.id] ?? 0}%,
+                                                    #eee ${editableProgress[checklog.id] ?? 0}%
+                                                    )`,
+                                                    borderRadius: "5px",
+                                                    outline: "none",
+                                                    cursor: "pointer",
+                                                }}
+                                                />
+
+                                                </>
+                                            ) : (
+                                                <LinearProgress
                                                 variant="determinate"
                                                 value={checklog.progress}
                                                 sx={{
                                                     height: 10,
                                                     borderRadius: 5,
-                                                    '& .MuiLinearProgress-bar': {
-                                                        backgroundColor: getProgressColor(checklog.progress),
+                                                    "& .MuiLinearProgress-bar": {
+                                                    backgroundColor: getProgressColor(checklog.progress),
                                                     },
-                                                    backgroundColor: '#eee',
+                                                    backgroundColor: "#eee",
                                                 }}
-                                            />
+                                                />
+                                            )}
                                         </Box>
                                     )}
                                 </Stack>
@@ -273,7 +358,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                 Photos Before
                                             </Typography>
                                             <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                                                {checklog.before_attachments.map((img, idx) => (
+                                                {checklog.before_attachments.map((img: any, idx: any) => (
                                                     <Box
                                                         key={idx}
                                                         sx={{
@@ -312,7 +397,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                 Photos After
                                             </Typography>
                                             <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                                                {checklog.after_attachments.map((img, idx) => (
+                                                {checklog.after_attachments.map((img: any, idx : any) => (
                                                     <Box
                                                         key={idx}
                                                         sx={{
@@ -345,6 +430,12 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                     )}
                                 </Box>
                             </Collapse>
+
+                            {hasProgressChanged(checklog.id) && (
+                            <Button  color="primary" variant="contained" size="large" onClick={() => handleUpdateProgress(checklog.id)} sx={{ mt: 2 ,borderRadius: 3, width: "50%"}}>
+                                Update Progress
+                            </Button>
+                            )}
                         </Box>
                     ))
                 )}

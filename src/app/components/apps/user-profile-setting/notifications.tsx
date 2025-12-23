@@ -157,7 +157,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
         )}
       </Box>
       <TableContainer
-        sx={{ maxHeight: 570, boxShadow: (theme) => theme.shadows[2] }}
+        sx={{boxShadow: (theme) => theme.shadows[2] }}
         component={Paper}
       >
         <Table stickyHeader aria-label="sticky table">
