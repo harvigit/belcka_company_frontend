@@ -729,7 +729,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
   return (
     <PermissionGuard permission="Projects">
-      <Box>
+      <Box p={2} pt={1}>
         <Stack
           mb={2}
           direction={{ xs: "column", sm: "row", xl: "row" }}

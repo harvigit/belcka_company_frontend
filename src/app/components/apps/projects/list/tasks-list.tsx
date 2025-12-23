@@ -463,10 +463,8 @@ const TasksList = ({
                 color="error"
                 overlap="circular"
               >
-                <Button
-                  variant="outlined"
+                <IconButton
                   color="error"
-                  size="small"
                   onClick={() =>
                     handleDownloadZip(
                       info.row.original.address_id,
@@ -474,8 +472,8 @@ const TasksList = ({
                     )
                   }
                 >
-                  <IconDownload size={24} />
-                </Button>
+                  <IconDownload size={20} />
+                </IconButton>
               </Badge>
             </Box>
           );

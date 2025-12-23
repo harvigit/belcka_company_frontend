@@ -164,7 +164,7 @@ export default function PermissionSettings() {
     return (
         <Box>
             <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography fontWeight={500}>Permission Settings</Typography>
+                <Typography fontWeight={500} ml={2}>Permission Settings</Typography>
                 {permissions.length > 0 && (
                     <Button
                         onClick={savePermissions}

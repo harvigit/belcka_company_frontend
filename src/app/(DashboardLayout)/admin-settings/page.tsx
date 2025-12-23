@@ -36,7 +36,7 @@ function TabPanel(props: TabPanelProps) {
             aria-labelledby={`vertical-tab-${index}`}
             {...other}
         >
-            {value === index && <Box sx={{p: 2}}>{children}</Box>}
+            {value === index && <Box sx={{pt: 1}}>{children}</Box>}
         </div>
     );
 }
@@ -77,7 +77,7 @@ const AdminSetting = () => {
                         }}
                     >
                         <BlankCard className="tab-balnkcard">
-                            <Stack direction="row" mt={3} ml={2} mb={3} mr={2}>
+                            <Stack direction="row" mt={1} ml={2} mb={3} mr={2}>
                                 <Tabs
                                     className="admin-settings-tabs"
                                     orientation="vertical"

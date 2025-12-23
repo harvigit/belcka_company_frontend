@@ -143,7 +143,7 @@ export default function NotificationSettings() {
   return (
     <Box>
       <Box display={"flex"} justifyContent={"space-between"} mb={1}>
-        <Typography fontWeight={500}>Notification Settings</Typography>
+        <Typography fontWeight={500} ml={2}>Notification Settings</Typography>
         {categories.length > 0 && (
           <>
             <Button onClick={saveNotifications} disabled={loading}>
