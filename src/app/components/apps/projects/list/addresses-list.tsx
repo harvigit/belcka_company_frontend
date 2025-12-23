@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -23,6 +23,9 @@ import {
   Button,
   TextField,
   Slider,
+  List,
+  ListItem,
+  ListItemButton,
 } from "@mui/material";
 import {
   flexRender,
@@ -39,6 +42,8 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconDotsVertical,
+  IconEdit,
+  IconPencil,
   IconProgress,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -58,6 +63,8 @@ import { User } from "next-auth";
 import CreateProjectTask from "../tasks";
 import toast from "react-hot-toast";
 import { IconDownload } from "@tabler/icons-react";
+import { Circle, GoogleMap, Marker } from "@react-google-maps/api";
+import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
 
 dayjs.extend(customParseFormat);
 
@@ -81,6 +88,26 @@ export interface TradeList {
   name: string;
 }
 
+interface Boundary {
+  lat: number;
+  lng: number;
+  radius: number;
+}
+
+type PostcoderAddress = {
+  summaryline: string;
+  addressline1: string;
+  addressline2: string;
+  posttown: string;
+  postcode: string;
+};
+
+type GooglePrediction = google.maps.places.AutocompletePrediction;
+
+type UnifiedPrediction =
+  | ({ source: "google" } & GooglePrediction)
+  | ({ source: "postcoder" } & PostcoderAddress);
+
 const AddressesList = ({
   projectId,
   searchTerm,
@@ -99,15 +126,30 @@ const AddressesList = ({
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
-
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [addressEdit, setAddressEdit] = useState(false);
   const [address, setAddress] = useState<any>(null);
   const [radius, setRadius] = useState(0);
 
+  const isIEPostcode = (value: string) =>
+    /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
+
+  const isAUPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+
+  const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
   useEffect(() => {
     onSelectionChange(Array.from(selectedRowIds));
   }, [selectedRowIds]);
+
+  const [typedAddress, setTypedAddress] = useState(false);
 
   const openMenu = Boolean(anchorEl);
 
@@ -143,7 +185,7 @@ const AddressesList = ({
     if (drawerOpen == true) {
       fetchTrades();
     }
-  }, [drawerOpen == drawerOpen]);
+  }, [drawerOpen]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -200,6 +242,7 @@ const AddressesList = ({
       if (result.data.IsSuccess === true) {
         toast.success(result.data.message);
         setDrawerOpen(false);
+        setTypedAddress(false);
         setLoading(true);
         onProjectUpdated?.();
         setTimeout(() => {
@@ -335,6 +378,208 @@ const AddressesList = ({
     }
   }, [sidebarData?.addressId]);
 
+  const handleAddressClose = () => {
+    setAddressEdit(false);
+    setTypedAddress(false);
+  };
+  const handleEdit = useCallback((task: any) => {
+    setSelectedTask(task);
+
+    setFormData({
+      id: task.id,
+      name: task.name,
+      lat: task.latitude,
+      lng: task.longitude,
+      radius: task.radius ?? 100,
+      boundary: task.boundary,
+      type: task.type,
+      color: task.color,
+    });
+
+    setSelectedLocation({
+      lat: task.latitude,
+      lng: task.longitude,
+    });
+
+    setAddressEdit(true);
+  }, []);
+
+  const handleAddressEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      let payload = {
+        id: selectedTask.id,
+        ...formData,
+        project_id: projectId,
+        type: "circle",
+      };
+
+      if (!payload.boundary && selectedLocation) {
+        payload.boundary = JSON.stringify({
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          radius: formData.radius,
+        });
+      }
+
+      const result = await api.put("address/update", payload);
+      if (result.data.IsSuccess === true) {
+        toast.success(result.data.message);
+        setAddressEdit(false);
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+        }, 100);
+        setFormData({
+          project_id: Number(projectId),
+          company_id: user.company_id,
+          name: "",
+        });
+        fetchAddresses();
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error creating address:", error);
+      setLoading(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, name: e.target.value });
+  };
+
+  const handleSearchClick = async () => {
+    const query = formData.name.trim();
+    if (!query) {
+      setPredictions([]);
+      return;
+    }
+
+    setTypedAddress(true);
+
+    try {
+      let country = "UK";
+
+      if (isIEPostcode(query)) country = "IE";
+      else if (isAUPostcode(query)) country = "AU";
+      else if (isNZPostcode(query)) country = "NZ";
+
+      const res = await fetch(
+        `https://ws.postcoder.com/pcw/${
+          process.env.NEXT_PUBLIC_POSTCODER_KEY
+        }/address/${country}/${encodeURIComponent(query)}?format=json`
+      );
+
+      const data = await res.json();
+      setPredictions(data || []);
+      return;
+    } catch (err) {
+      console.error("Postcoder failed, falling back to Google", err);
+    }
+
+    const service = new google.maps.places.AutocompleteService();
+
+    service.getPlacePredictions({ input: query }, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        setPredictions(
+          results.map((r) => ({
+            ...r,
+            source: "google",
+          }))
+        );
+      } else {
+        setPredictions([]);
+      }
+    });
+  };
+
+  const selectGooglePrediction = (
+    item: { source: "google" } & google.maps.places.AutocompletePrediction
+  ) => {
+    const service = new google.maps.places.PlacesService(
+      document.createElement("div")
+    );
+
+    service.getDetails({ placeId: item.place_id }, (place, status) => {
+      if (
+        status === google.maps.places.PlacesServiceStatus.OK &&
+        place?.geometry?.location
+      ) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+
+        const boundary: Boundary = {
+          lat,
+          lng,
+          radius: formData.radius ?? 50,
+        };
+
+        setFormData((prev: any) => ({
+          ...prev,
+          name: place.formatted_address || "",
+          lat,
+          lng,
+          boundary: JSON.stringify(boundary),
+        }));
+
+        setSelectedLocation({ lat, lng });
+        setPredictions([]);
+      }
+    });
+  };
+
+  const selectPostcoderPrediction = (
+    item: { source: "postcoder" } & PostcoderAddress
+  ) => {
+    const geocoder = new google.maps.Geocoder();
+
+    geocoder.geocode({ address: item.postcode }, (results, status) => {
+      if (status === "OK" && results?.[0]?.geometry?.location) {
+        const lat = results[0].geometry.location.lat();
+        const lng = results[0].geometry.location.lng();
+
+        const boundary: Boundary = {
+          lat,
+          lng,
+          radius: formData.radius ?? 50,
+        };
+
+        setFormData((prev: any) => ({
+          ...prev,
+          name: item.summaryline,
+          lat,
+          lng,
+          boundary: JSON.stringify(boundary),
+        }));
+
+        setSelectedLocation({ lat, lng });
+        setPredictions([]);
+      }
+    });
+  };
+
+  const handleRadiusChange = (event: Event, newValue: number | number[]) => {
+    const value = Array.isArray(newValue) ? newValue[0] : newValue;
+
+    if (!selectedLocation) return;
+
+    const newBoundary: Boundary = {
+      lat: selectedLocation.lat,
+      lng: selectedLocation.lng,
+      radius: value,
+    };
+
+    setFormData((prev: any) => ({
+      ...prev,
+      radius: value,
+      boundary: JSON.stringify(newBoundary),
+    }));
+  };
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
@@ -377,7 +622,7 @@ const AddressesList = ({
           const isChecked = selectedRowIds.has(item.id);
 
           const showCheckbox =
-            showAllCheckboxes || hoveredRow === item.id || isChecked;
+            showAllCheckboxes || hoveredRow === row.id || isChecked;
 
           return (
             <Stack
@@ -385,7 +630,7 @@ const AddressesList = ({
               alignItems="center"
               spacing={4}
               sx={{ pl: 1 }}
-              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseEnter={() => setHoveredRow(row.id)}
               onMouseLeave={() => setHoveredRow(null)}
             >
               <CustomCheckbox
@@ -409,16 +654,16 @@ const AddressesList = ({
 
               <Typography
                 className="f-14"
-                onClick={() => {
+                sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                onClick={() =>
                   setSidebarData({
                     addressName: item.name,
                     companyId: item.company_id,
                     projectId: item.project_id,
                     addressId: item.id,
                     info: [true],
-                  });
-                }}
-                sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                  })
+                }
               >
                 {item.name ?? "-"}
               </Typography>
@@ -488,20 +733,28 @@ const AddressesList = ({
               <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
                 {formatDate(info.getValue())}
               </Typography>
-              <Badge
-                badgeContent={info.row.original.image_count}
-                color="error"
-                overlap="circular"
-              >
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  onClick={() => handleDownloadZip(info.row.original.id)}
+              <Box display={"flex"} gap={2}>
+                <IconButton
+                  onClick={() => handleEdit(info.row.original)}
+                  color="primary"
                 >
-                  <IconDownload size={24} />
-                </Button>
-              </Badge>
+                  <IconEdit size={18} />
+                </IconButton>
+                <Badge
+                  badgeContent={info.row.original.image_count}
+                  color="error"
+                  overlap="circular"
+                >
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() => handleDownloadZip(info.row.original.id)}
+                  >
+                    <IconDownload size={24} />
+                  </Button>
+                </Badge>
+              </Box>
             </Box>
           );
         },
@@ -527,26 +780,13 @@ const AddressesList = ({
     if (onTableReady) onTableReady(table);
     table.setPageIndex(0);
   }, [table]);
-
-  // if (loading) {
-  //   return (
-  //     <Box
-  //       display="flex"
-  //       justifyContent="center"
-  //       alignItems="center"
-  //       minHeight="300px"
-  //     >
-  //       <CircularProgress />
-  //     </Box>
-  //   );
-  // }
-
+  
   return (
     <Box>
       <Grid container spacing={3}>
         <Grid size={12}>
           <Box>
-            <TableContainer sx={{ maxHeight: 600 }}>
+            <TableContainer>
               <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -621,8 +861,6 @@ const AddressesList = ({
                         sx={{
                           cursor: "pointer",
                         }}
-                        onMouseEnter={() => setHoveredRow(row.original.id)}
-                        onMouseLeave={() => setHoveredRow(null)}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id} sx={{ padding: "10px" }}>
@@ -983,6 +1221,190 @@ const AddressesList = ({
                 <Button
                   color="inherit"
                   onClick={() => setProgressDrawerOpen(false)}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
+                </Button>
+              </Box>
+            </form>
+          </Box>
+        </Box>
+      </Drawer>
+
+      {/* Edit Address Drawer */}
+      <Drawer
+        anchor="right"
+        open={addressEdit}
+        onClose={() => handleAddressClose()}
+        sx={{
+          width: 500,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 500,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+          },
+        }}
+      >
+        <Box display="flex" flexDirection="column" height="100%">
+          <Box height={"100%"}>
+            <form onSubmit={handleAddressEdit} className="address-form">
+              <Grid container mt={3}>
+                <Grid size={{ xs: 12 }}>
+                  <Box
+                    display={"flex"}
+                    alignContent={"center"}
+                    alignItems={"center"}
+                    flexWrap={"wrap"}
+                  >
+                    <IconButton onClick={() => handleAddressClose()}>
+                      <IconArrowLeft />
+                    </IconButton>
+                    <Typography variant="h6" color="inherit" fontWeight={700}>
+                      Edit Address
+                    </Typography>
+                  </Box>
+
+                  <Typography variant="h5" mt={3}></Typography>
+                  <Box
+                    display={"flex"}
+                    justifyContent={"space-between"}
+                    gap={3}
+                  >
+                    <TextField
+                      label="Enter address"
+                      id="name"
+                      name="name"
+                      placeholder="Search for address.."
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      variant="outlined"
+                      fullWidth
+                    />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleSearchClick}
+                    >
+                      Search
+                    </Button>
+                  </Box>
+
+                  {typedAddress && predictions.length > 0 && (
+                    <List
+                      sx={{
+                        border: "1px solid #ccc",
+                        maxHeight: 200,
+                        overflow: "auto",
+                        mt: 1,
+                      }}
+                    >
+                      {predictions.map((item, index) => (
+                        <ListItem key={index} disablePadding>
+                          <ListItemButton
+                            onClick={() =>
+                              item.source === "google"
+                                ? selectGooglePrediction(item)
+                                : selectPostcoderPrediction(item)
+                            }
+                          >
+                            {item.source === "google"
+                              ? item.description
+                              : item.summaryline}
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+
+                  {selectedLocation && (
+                    <Box
+                      sx={{ marginTop: 3 }}
+                      width={"98%"}
+                      className="slider_wrapper"
+                    >
+                      <Typography variant="h6">
+                        Area size [{formData.radius} Meter]
+                      </Typography>
+                      <CustomRangeSlider
+                        value={formData.radius}
+                        onChange={handleRadiusChange}
+                        min={0}
+                        max={100}
+                        step={1}
+                        sx={{ height: "1px" }}
+                      />
+
+                      <GoogleMap
+                        zoom={17}
+                        center={selectedLocation}
+                        mapContainerStyle={{
+                          width: "100%",
+                          height: "400px",
+                          marginTop: "20px",
+                        }}
+                      >
+                        <Marker position={selectedLocation} />
+                        <Circle
+                          center={selectedLocation}
+                          radius={formData.radius}
+                          options={{
+                            fillColor: ` ${formData?.color ?? "#FF0000"}`,
+                            fillOpacity: 0.3,
+                            strokeColor: ` ${formData?.color ?? "#FF0000"}`,
+                            strokeOpacity: 1,
+                            strokeWeight: 1,
+                          }}
+                        />
+                      </GoogleMap>
+                      <Box mt={2}>
+                        <Typography>Zone Color</Typography>
+                        <input
+                          type="color"
+                          value={formData.color || "#000000"}
+                          onChange={(e) =>
+                            setFormData({ ...formData, color: e.target.value })
+                          }
+                          style={{
+                            width: "100%",
+                            height: "40px",
+                            border: "none",
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  )}
+                </Grid>
+              </Grid>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                  marginTop: 3,
+                }}
+              >
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => handleAddressClose()}
                   variant="contained"
                   size="large"
                   sx={{

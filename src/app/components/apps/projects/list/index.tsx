@@ -437,11 +437,19 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const payload = {
+      let payload = {
         ...formData,
         project_id: projectId,
         type: "circle",
       };
+      if (!payload.boundary && selectedLocation) {
+        payload.boundary = JSON.stringify({
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          radius,
+        });
+      }
+
       const result = await api.post("address/create", payload);
       if (result.data.IsSuccess === true) {
         toast.success(result.data.message);
@@ -451,6 +459,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         setTimeout(() => {
           setLoading(false);
         }, 100);
+        setRadius(100)
         setFormData({
           project_id: Number(projectID),
           company_id: user.company_id,
@@ -639,11 +648,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
 
+        const boundary: Boundary = {
+          lat,
+          lng,
+          radius, 
+        };
+
         setFormData({
           ...formData,
           name: place.formatted_address || "",
           lat,
           lng,
+          boundary: JSON.stringify(boundary),
         });
 
         setSelectedLocation({ lat, lng });
@@ -662,11 +678,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         const lat = results[0].geometry.location.lat();
         const lng = results[0].geometry.location.lng();
 
+        const boundary: Boundary = {
+          lat,
+          lng,
+          radius,
+        };
+
         setFormData({
           ...formData,
           name: item.summaryline,
           lat,
           lng,
+          boundary: JSON.stringify(boundary),
         });
 
         setSelectedLocation({ lat, lng });
@@ -1262,14 +1285,32 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             center={selectedLocation}
                             radius={radius}
                             options={{
-                              fillColor: "#FF0000",
+                              fillColor: `${formData.color || "#000000"}`,
                               fillOpacity: 0.3,
-                              strokeColor: "#FF0000",
+                              strokeColor: `${formData.color || "#000000"}`,
                               strokeOpacity: 1,
                               strokeWeight: 1,
                             }}
                           />
                         </GoogleMap>
+                        <Box mt={2}>
+                          <Typography>Zone Color</Typography>
+                          <input
+                            type="color"
+                            value={formData.color || "#000000"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                color: e.target.value,
+                              })
+                            }
+                            style={{
+                              width: "100%",
+                              height: "40px",
+                              border: "none",
+                            }}
+                          />
+                        </Box>
                       </Box>
                     )}
                   </Grid>

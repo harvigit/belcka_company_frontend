@@ -43,12 +43,9 @@ export default function WorkDetailPage({
     x: 0,
     y: 0,
   });
-  const router = useRouter();
-
-  useEffect(() => {
-    if (workId && companyId && addressId) fetchWorkDetail();
-  }, [workId, companyId, addressId]);
-
+  const [editableProgress, setEditableProgress] = useState<number>(0);
+  const [originalProgress, setOriginalProgress] = useState<number>(0);
+  const [updatingProgress, setUpdatingProgress] = useState(false);
   useEffect(() => {
     setEditing(false);
     setNewBeforeFiles([]);
@@ -56,6 +53,7 @@ export default function WorkDetailPage({
     setRemoveBeforeIds([]);
     setRemoveAfterIds([]);
   }, [open]);
+
   const fetchWorkDetail = async () => {
     setLoading(true);
     try {
@@ -63,7 +61,11 @@ export default function WorkDetailPage({
         `project/get-work-detail?company_id=${companyId}&address_id=${addressId}&work_id=${workId}`
       );
       if (res.data?.IsSuccess) {
-        setWork(res.data.info);
+        if (res.data?.IsSuccess) {
+          setWork(res.data.info);
+          setEditableProgress(res.data.info.progress ?? 0);
+          setOriginalProgress(res.data.info.progress ?? 0);
+        }
       } else {
         setWork(null);
       }
@@ -73,6 +75,17 @@ export default function WorkDetailPage({
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (open && work) {
+      setEditableProgress(work.progress ?? 0);
+      setOriginalProgress(work.progress ?? 0);
+    }
+  }, [open, work]);
+
+  useEffect(() => {
+    if (workId && companyId && addressId) fetchWorkDetail();
+  }, [workId, companyId, addressId]);
 
   const getProgressColor = (progress: number) => {
     if (progress < 25) return "#FF0000";
@@ -144,6 +157,27 @@ export default function WorkDetailPage({
       console.error(err);
     }
     setLoading(false);
+  };
+  const handleUpdateProgress = async () => {
+    try {
+      setUpdatingProgress(true);
+
+      const res = await api.put("company-tasks/update", {
+        id: work.id,
+        progress: String(editableProgress),
+        company_id: companyId,
+      });
+
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message);
+        await fetchWorkDetail();
+        onClose?.();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdatingProgress(false);
+    }
   };
 
   return (
@@ -283,13 +317,37 @@ export default function WorkDetailPage({
             )}
 
             {work.progress !== undefined && (
-              <Box>
-                <Typography
-                  variant="h6"
-                  mb={0.5}
-                  sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-                >
-                  Progress: {work.progress}%
+              <Box sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}>
+                <Typography variant="h6" mb={1}>
+                  Progress: {editableProgress}%
+                </Typography>
+
+                {work.status_text !== "Completed" ? (
+                  <>
+                    <input
+                      type="range"
+                      min={0}
+                      max={99}
+                      value={editableProgress}
+                      onChange={(e) =>
+                        setEditableProgress(Number(e.target.value))
+                      }
+                      style={{
+                        width: "100%",
+                        height: "10px",
+                        appearance: "none",
+                        background: `linear-gradient(
+      to right,
+      ${getProgressColor(editableProgress)} ${editableProgress}%,
+      #eee ${editableProgress}%
+    )`,
+                        borderRadius: "5px",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </>
+                ) : (
                   <LinearProgress
                     variant="determinate"
                     value={work.progress}
@@ -302,7 +360,7 @@ export default function WorkDetailPage({
                       backgroundColor: "#eee",
                     }}
                   />
-                </Typography>
+                )}
               </Box>
             )}
           </Box>
@@ -513,6 +571,22 @@ export default function WorkDetailPage({
             </Box>
           )}
         </>
+      )}
+      {work?.status_int !== 4 && editableProgress !== originalProgress && (
+        <Box p={2}>
+          <Button
+            color="primary"
+            variant="contained"
+            size="large"
+            type="submit"
+            fullWidth
+            sx={{ borderRadius: 3, width: "50%" }}
+            disabled={updatingProgress}
+            onClick={handleUpdateProgress}
+          >
+            {updatingProgress ? "Updating..." : "Update Progress"}
+          </Button>
+        </Box>
       )}
     </Drawer>
   );

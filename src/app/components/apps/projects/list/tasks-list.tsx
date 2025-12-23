@@ -548,7 +548,7 @@ const TasksList = ({
             <CircularProgress />
           </Box>
         ) : (
-          <TableContainer sx={{ maxHeight: 600 }}>
+          <TableContainer>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (

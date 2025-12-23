@@ -881,7 +881,7 @@ const TimeClock = () => {
 
                 <Divider/>
 
-                <TableContainer sx={{maxHeight: 600, overflowX: 'auto'}}>
+                <TableContainer sx={{overflowX: 'auto'}}>
                     <Table stickyHeader>
                         <TableHead>
                             {table.getHeaderGroups().map((headerGroup) => (
