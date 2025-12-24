@@ -865,6 +865,7 @@ const TablePagination = () => {
             onClose={() => setEditDrawer(false)}
             teamId={editTeamId}
             teams={data}
+            onWorkUpdated={fetchTeams}
           />
         )}
 
