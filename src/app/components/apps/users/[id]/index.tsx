@@ -529,7 +529,7 @@ const TablePagination = () => {
         <DigitalIDCard
           open={openIdCard}
           onClose={() => setOpenIdCard(false)}
-          user={selectedUser}
+          userId={Number(userId)}
         />
       )}
       <Dialog

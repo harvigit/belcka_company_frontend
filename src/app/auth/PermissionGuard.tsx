@@ -44,6 +44,7 @@ export default function PermissionGuard({
 
         let authorized = false;
 
+        console.log(permission, 'permissionpermissionpermission')
         if (permission) {
             authorized = hasPermission(permissions, permission);
         } else if (requiredPermissions && requiredPermissions.length > 0) {

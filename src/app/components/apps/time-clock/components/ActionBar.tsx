@@ -62,7 +62,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                     <Button
                         size="small"
                         variant="outlined"
-                        color="success"
+                        color="primary"
                         sx={{
                             px: 2.5,
                             textTransform: 'none',
@@ -71,7 +71,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)' }
                         }}
                         onClick={onLockClick}
-                        disabled={!hasUnlockedRows}
+                        disabled={hasLockedRows}
                     >
                         <IconLock size={16} />
                         <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 600 }}>
@@ -91,7 +91,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                             '&:hover': { boxShadow: '0 2px 8px rgba(211, 47, 47, 0.2)' }
                         }}
                         onClick={onUnlockClick}
-                        disabled={!hasLockedRows}
+                        disabled={hasUnlockedRows}
                     >
                         <IconLockOpen size={16} />
                         <Typography variant="caption" sx={{ ml: 0.5, fontWeight: 600 }}>

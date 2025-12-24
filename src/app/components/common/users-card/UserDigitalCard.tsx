@@ -39,38 +39,39 @@ interface ApiDigitalCardInfo {
 interface DigitalIDCardProps {
     open: boolean;
     onClose: () => void;
-    user: ApiDigitalCardInfo | null;
+    userId: number;
 }
 
-const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) => {
+const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId }) => {
     const [cardData, setCardData] = useState<ApiDigitalCardInfo | null>(null);
     const [loading, setLoading] = useState(false);
     const cardRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        setCardData(user);
+        // setCardData(user);
         
-    //     const fetchCardData = async () => {
-    //         if (!user?.id) return;
-    //         try {
-    //             const res = await api.get('/user/get-user-digital-card', {
-    //                 params: { user_id: user.id },
-    //             });
-    //             if (res.data?.IsSuccess) {
-    //                 setCardData(res.data.info);
-    //                 setCardData(user);
-    //             } else {
-    //                 setCardData(null);
-    //             }
-    //         } catch (err) {
-    //             console.error('Failed to fetch digital card', err);
-    //         } finally {
-    //             // setLoading(false);
-    //         }
-    //     };
-    //
-    //     if (open && user) fetchCardData();
-    }, [open, user]);
+        const fetchCardData = async () => {
+            if (!userId) return;
+            try {
+                const res = await api.get('/user/get-user-digital-card', {
+                    params: { user_id: userId },
+                });
+                if (res.data?.IsSuccess) {
+                    setCardData(res.data.info);
+                } else {
+                    setCardData(null);
+                }
+            } catch (err) {
+                console.error('Failed to fetch digital card', err);
+            } finally {
+                // setLoading(false);
+            }
+        };
+
+        if (open && userId) fetchCardData();
+    }, [open, userId]);
+
+    console.log(cardData, 'cardDatacardDatacardDatacardDatacardDatacardData')
 
     const handleDownloadPDF = async () => {
         if (!cardRef.current) return;
@@ -83,6 +84,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, user }) =>
         pdf.save(`${cardData?.name}_ID_Card.pdf`);
     };
 
+    console.log(cardData, 'cardData.qr_code_urlcardData.qr_code_urlcardData.qr_code_url')
     if (!cardData) return null;
 
     return (

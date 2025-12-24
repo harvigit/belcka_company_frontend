@@ -17,14 +17,14 @@ import toast from 'react-hot-toast';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 const statusToFlags = (status: number) => ({
-    is_web: status === 1 || status === 2,
-    is_app: status === 1 || status === 3,
+    is_web_enabled: status === 1 || status === 2,
+    is_app_enabled: status === 1 || status === 3,
 });
 
-const flagsToStatus = (is_web: boolean, is_app: boolean) => {
-    if (is_web && is_app) return 1;
-    if (is_web && !is_app) return 2;
-    if (!is_web && is_app) return 3;
+const flagsToStatus = (is_web_enabled: boolean, is_app_enabled: boolean) => {
+    if (is_web_enabled && is_app_enabled) return 1;
+    if (is_web_enabled && !is_app_enabled) return 2;
+    if (!is_web_enabled && is_app_enabled) return 3;
     return 0;
 };
 
@@ -35,6 +35,8 @@ interface PermissionItem {
     status: number;
     is_web: boolean;
     is_app: boolean;
+    is_web_enabled: boolean;
+    is_app_enabled: boolean;
 }
 
 export default function PermissionSettings() {
@@ -43,10 +45,15 @@ export default function PermissionSettings() {
     const [loading, setLoading] = useState<boolean>(true);
     const [hasChanges, setHasChanges] = useState<boolean>(false);
 
-    const columnVisibility = useMemo(() => ({
-        showWebColumn: permissions.some(p => p.is_web === true),
-        showAppColumn: permissions.some(p => p.is_app === true),
-    }), [permissions]);
+    const columnVisibility = useMemo(() => {
+        const hasWebSupport = originalPermissions.some(p => p.is_web);
+        const hasAppSupport = originalPermissions.some(p => p.is_app);
+
+        return {
+            showWebColumn: hasWebSupport,
+            showAppColumn: hasAppSupport,
+        };
+    }, [originalPermissions]);
 
     const fetchPermissions = async () => {
         setLoading(true);
@@ -57,12 +64,17 @@ export default function PermissionSettings() {
 
             if (res.data?.IsSuccess) {
                 const normalizedPermissions = res.data.permissions.map((perm: any) => {
-                    const flags = statusToFlags(perm.status);
+                    const { is_web_enabled, is_app_enabled } = statusToFlags(perm.status);
 
                     return {
-                        ...perm,
-                        is_web: perm.is_web === true,
-                        is_app: perm.is_app === true,
+                        id: perm.id,
+                        permission_id: perm.permission_id,
+                        name: perm.name,
+                        status: perm.status,
+                        is_web: perm.is_web,           // From API - controls visibility
+                        is_app: perm.is_app,           // From API - controls visibility
+                        is_web_enabled,                // From status - controls switch state
+                        is_app_enabled,                // From status - controls switch state
                     };
                 });
 
@@ -86,32 +98,20 @@ export default function PermissionSettings() {
 
     const updatePermissionState = (
         permissionId: number,
-        field: 'is_web' | 'is_app',
+        field: 'is_web_enabled' | 'is_app_enabled',
         value: boolean
     ) => {
         setPermissions((prev) => {
-            const updated = prev.map((perm) => {
-                if (perm.id === permissionId) {
-                    const permission = permissions.find(p => p.id === permissionId);
+            const updated = prev.map((perm) =>
+                perm.id === permissionId ? { ...perm, [field]: value } : perm
+            );
 
-                    if (field === 'is_web' && !permission?.is_web && originalPermissions.find(p => p.id === permissionId)?.is_web === false) {
-                        return perm; 
-                    }
-                    if (field === 'is_app' && !permission?.is_app && originalPermissions.find(p => p.id === permissionId)?.is_app === false) {
-                        return perm;
-                    }
-
-                    return { ...perm, [field]: value };
-                }
-                return perm;
-            });
-
-            const hasModifications = updated.some((perm, idx) => {
-                const orig = originalPermissions[idx];
-                return (
-                    (orig?.is_web === true && perm.is_web !== orig.is_web) ||
-                    (orig?.is_app === true && perm.is_app !== orig.is_app)
-                );
+            // Check if there are actual changes compared to original
+            const hasModifications = updated.some((updatedPerm) => {
+                const original = originalPermissions.find(o => o.id === updatedPerm.id);
+                if (!original) return false;
+                return updatedPerm.is_web_enabled !== original.is_web_enabled ||
+                    updatedPerm.is_app_enabled !== original.is_app_enabled;
             });
 
             setHasChanges(hasModifications);
@@ -122,12 +122,13 @@ export default function PermissionSettings() {
     const savePermissions = async () => {
         setLoading(true);
         try {
+            console.log(permissions, 'permissionspermissionspermissions')
             const payload = {
                 permissions: permissions
                     .filter(perm => perm.is_web || perm.is_app)
                     .map((perm) => ({
                         permission_id: perm.permission_id,
-                        status: flagsToStatus(perm.is_web, perm.is_app),
+                        status: flagsToStatus(perm.is_web_enabled, perm.is_app_enabled),
                     })),
             };
 
@@ -138,14 +139,14 @@ export default function PermissionSettings() {
 
             if (response.data?.IsSuccess) {
                 toast.success(response.data.message || 'Permissions updated successfully');
-                setOriginalPermissions(permissions);
+                setOriginalPermissions(permissions.map(p => ({ ...p })));
                 setHasChanges(false);
             } else {
                 toast.error(response.data.message || 'Update failed');
                 fetchPermissions();
             }
         } catch (err: any) {
-            console.error('Failed to update permission', err);
+            console.error('Failed to update permissions', err);
             toast.error(err?.response?.data?.message || 'Failed to update permissions');
             fetchPermissions();
         } finally {
@@ -199,11 +200,13 @@ export default function PermissionSettings() {
                     <TableBody>
                         {permissions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={
-                                    1 +
-                                    (columnVisibility.showWebColumn ? 1 : 0) +
-                                    (columnVisibility.showAppColumn ? 1 : 0)
-                                }>
+                                <TableCell
+                                    colSpan={
+                                        1 +
+                                        (columnVisibility.showWebColumn ? 1 : 0) +
+                                        (columnVisibility.showAppColumn ? 1 : 0)
+                                    }
+                                >
                                     <Typography m={3} textAlign="center">
                                         No permissions are found for this company!!
                                     </Typography>
@@ -221,40 +224,42 @@ export default function PermissionSettings() {
                                             {permission.name}
                                         </TableCell>
 
-                                        {/* Web Column */}
                                         {columnVisibility.showWebColumn && (
                                             <TableCell align="center" sx={{ padding: '10px' }}>
-                                                {canToggleWeb && (
+                                                {canToggleWeb ? (
                                                     <IOSSwitch
-                                                        checked={permission.is_web}
+                                                        checked={permission.is_web_enabled}
                                                         onChange={(e) =>
                                                             updatePermissionState(
                                                                 permission.id,
-                                                                'is_web',
+                                                                'is_web_enabled',
                                                                 e.target.checked
                                                             )
                                                         }
                                                         disabled={loading}
                                                     />
+                                                ) : (
+                                                    <Typography color="text.disabled">-</Typography>
                                                 )}
                                             </TableCell>
                                         )}
 
-                                        {/* App Column */}
                                         {columnVisibility.showAppColumn && (
                                             <TableCell align="center" sx={{ padding: '10px' }}>
-                                                {canToggleApp && (
+                                                {canToggleApp ? (
                                                     <IOSSwitch
-                                                        checked={permission.is_app}
+                                                        checked={permission.is_app_enabled}
                                                         onChange={(e) =>
                                                             updatePermissionState(
                                                                 permission.id,
-                                                                'is_app',
+                                                                'is_app_enabled',
                                                                 e.target.checked
                                                             )
                                                         }
                                                         disabled={loading}
                                                     />
+                                                ) : (
+                                                    <Typography color="text.disabled">-</Typography>
                                                 )}
                                             </TableCell>
                                         )}

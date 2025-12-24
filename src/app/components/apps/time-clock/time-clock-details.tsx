@@ -918,7 +918,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const getSelectedRowsLockStatus = () => {
         let hasLockedRows = false;
         let hasUnlockedRows = false;
-
+        
         const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
             return parseInt(rowId.replace('row-', ''));
         });
@@ -943,32 +943,29 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 }
             }
         });
-
+        
         return {hasLockedRows, hasUnlockedRows};
     };
 
-    const toggleTimesheetStatus = useCallback(
-        async (timesheetIds: (string | number)[], action: 'approve' | 'unapprove') => {
-            try {
-                const ids = timesheetIds.join(',');
-                const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
-                const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, {ids});
+    const toggleTimesheetStatus = useCallback(async (timesheetIds: (string | number)[], action: 'approve' | 'unapprove') => {
+        try {
+            const ids = timesheetIds.join(',');
+            const endpoint = action === 'approve' ? '/timesheet/approve' : '/timesheet/unapprove';
+            const response: AxiosResponse<{ IsSuccess: boolean }> = await api.post(endpoint, {ids});
 
-                if (response.data.IsSuccess) {
-                    const defaultStartDate = startDate || defaultStart;
-                    const defaultEndDate = endDate || defaultEnd;
-                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                    setSelectedRows(new Set());
-                    onDataChange?.();
-                } else {
-                    console.error(`Error ${action}ing timesheets`);
-                }
-            } catch (error) {
-                console.error(`Error ${action}ing timesheets:`, error);
+            if (response.data.IsSuccess) {
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                setSelectedRows(new Set());
+                onDataChange?.();
+            } else {
+                console.error(`Error ${action}ing timesheets`);
             }
-        },
-        [startDate, endDate, fetchTimeClockData, onDataChange]
-    );
+        } catch (error) {
+            console.error(`Error ${action}ing timesheets:`, error);
+        }
+    }, [startDate, endDate, fetchTimeClockData, onDataChange]);
 
     // Navigation logic
     const currentUserIndex = useMemo(() => {
