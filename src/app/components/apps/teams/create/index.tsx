@@ -240,7 +240,7 @@ const CreateTeam = () => {
               }
               filterSelectedOptions
               renderInput={(params) => (
-                <CustomTextField {...params} placeholder="Team Members" />
+                <CustomTextField {...params} placeholder="Team Members" className="team_selection" />
               )}
             />
           </Grid>

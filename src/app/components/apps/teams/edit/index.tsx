@@ -326,6 +326,7 @@ const EditTeamPage = () => {
             renderInput={(params) => (
               <CustomTextField
                 {...params}
+                className="team_selection"
                 placeholder="Select team members..."
               />
             )}

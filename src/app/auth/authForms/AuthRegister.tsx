@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -48,6 +48,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [step, setStep] = useState(1);
   const [canCloseModal, setCanCloseModal] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [registerData, setRegisterData] = useState({
     first_name: "",
@@ -155,8 +156,11 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     const { first_name, last_name, extension, nationalPhone, otp, user_image } =
       registerData;
 
+    if (!user_image)
+      return toast.error("Please select your profile picture !!");
     if (!first_name.trim() || !last_name.trim())
       return toast.error("Please enter your full name.");
+
     if (!nationalPhone) return toast.error("Please enter your phone number.");
 
     const payload = {
@@ -397,7 +401,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
               />
             </label>
             <input
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
               id="upload-image"
               type="file"
               style={{ display: "none" }}
@@ -556,25 +560,27 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
               <Typography textAlign={"center"}>
                 Enter 6-digit Company Code
               </Typography>
-              <Stack
-                display={"block"}
-                direction="row"
-                justifyContent="center"
-                textAlign={"center"}
-                spacing={1}
-                mt={1}
-              >
+              <Stack direction="row" justifyContent="center" spacing={1} mt={1}>
                 {companyCode.map((val, i) => (
                   <TextField
-                    sx={{ mt: 1 }}
-                    type="text"
                     key={i}
-                    id={`code-${i}`}
                     value={val}
+                    inputRef={(el) => (inputRefs.current[i] = el)}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (/^\d{0,6}$/.test(value)) {
+                      if (/^\d?$/.test(value)) {
                         handleCodeChange(i, value);
+
+                        if (value && i < companyCode.length - 1) {
+                          inputRefs.current[i + 1]?.focus();
+                        }
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace") {
+                        if (!companyCode[i] && i > 0) {
+                          inputRefs.current[i - 1]?.focus();
+                        }
                       }
                     }}
                     inputProps={{
@@ -584,12 +590,13 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                       style: {
                         textAlign: "center",
                         fontSize: "1.5rem",
-                        width: "20px",
+                        width: "40px",
                       },
                     }}
                   />
                 ))}
               </Stack>
+
               <Typography color="textSecondary" mt={2}>
                 Use your company&apos;s unique 6-digit code.if you&apos;ve been
                 join the company.

@@ -261,6 +261,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setAnchorEl(null);
   };
 
+  const handleAddressClose = () => {
+    setSidebar(false);
+    setTypedAddress(false);
+  };
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
   };
@@ -1171,7 +1175,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         <Drawer
           anchor="right"
           open={sidebar}
-          onClose={() => setSidebar(false)}
+          onClose={() => handleAddressClose()}
           sx={{
             width: 500,
             flexShrink: 0,
@@ -1193,7 +1197,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       alignItems={"center"}
                       flexWrap={"wrap"}
                     >
-                      <IconButton onClick={() => setSidebar(false)}>
+                      <IconButton onClick={() => handleAddressClose()}>
                         <IconArrowLeft />
                       </IconButton>
                       <Typography variant="h6" color="inherit" fontWeight={700}>
@@ -1337,7 +1341,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   </Button>
                   <Button
                     color="inherit"
-                    onClick={() => setSidebar(false)}
+                    onClick={() => handleAddressClose()}
                     variant="contained"
                     size="large"
                     sx={{
