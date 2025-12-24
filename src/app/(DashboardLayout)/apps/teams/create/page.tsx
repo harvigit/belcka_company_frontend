@@ -1,3 +1,5 @@
+"use client";
+
 import PageContainer from "@/app/components/container/PageContainer";
 import React from "react";
 import BlankCard from "@/app/components/shared/BlankCard";
@@ -15,4 +17,5 @@ const CreateTrade = () => {
     </PageContainer>
   );
 };
+
 export default CreateTrade;
