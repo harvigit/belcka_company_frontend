@@ -50,7 +50,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
   const fetchTeams = useCallback(async () => {
     try {
       setLoading(true);
-      const res : AxiosResponse<any> = await api.get(`team/archive-team-list`);
+      const res: AxiosResponse<any> = await api.get(`team/archive-team-list`);
 
       if (res.data) {
         setData(res.data.info);
@@ -63,7 +63,9 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
   }, []);
 
   useEffect(() => {
-    fetchTeams();
+    if (open == true) {
+      fetchTeams();
+    }
   }, [open]);
 
   const handleConfirmAction = async () => {
@@ -80,6 +82,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
           toast.success(response.data.message);
           fetchTeams();
           onWorkUpdated?.();
+          onClose();
         }
       } else if (selectedItem.action === "delete") {
         const response = await api.delete(
@@ -88,6 +91,8 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
           fetchTeams();
+          onWorkUpdated?.();
+          onClose();
         }
       }
     } catch (err) {
@@ -121,13 +126,13 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
         }}
       >
         <Box className="task-form">
-          <Grid container mt={3}>
+          <Grid container>
             <Grid size={{ xs: 12, lg: 12 }}>
               <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
                 <IconButton onClick={onClose}>
                   <IconArrowLeft />
                 </IconButton>
-                <Typography variant="h5" fontWeight={700}>
+                <Typography variant="h6" color="inherit" fontWeight={700}>
                   Archive Team List
                 </Typography>
               </Box>

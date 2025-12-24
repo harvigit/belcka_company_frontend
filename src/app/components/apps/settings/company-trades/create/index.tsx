@@ -98,7 +98,7 @@ const CreateTrade: React.FC<CreateTradeProps> = ({
                   <IconButton onClick={onClose}>
                     <IconArrowLeft />
                   </IconButton>
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="h6" color="inherit" fontWeight={700}>
                     Add Trade
                   </Typography>
                 </Box>

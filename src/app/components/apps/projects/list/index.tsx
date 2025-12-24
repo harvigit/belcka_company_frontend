@@ -1189,7 +1189,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           <Box display="flex" flexDirection="column" height="100%">
             <Box height={"100%"}>
               <form onSubmit={handleSubmit} className="address-form">
-                <Grid container mt={3}>
+                <Grid container>
                   <Grid size={{ xs: 12 }}>
                     <Box
                       display={"flex"}

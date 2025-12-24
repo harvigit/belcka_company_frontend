@@ -4,9 +4,9 @@ import ProjectList from "@/app/components/apps/projects/index";
 
 const ProjectListing = () => {
   return (
-      <PageContainer title="Project List" description="this is Project List">
-        <ProjectList />
-      </PageContainer>
+    <PageContainer title="Project List" description="this is Project List">
+      <ProjectList />
+    </PageContainer>
   );
 };
 export default ProjectListing;

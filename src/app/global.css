@@ -181,6 +181,11 @@ input#project_id::placeholder {
     display: none;
 }
 
+.team_selection .mui-qfpvdy-MuiAutocomplete-root .MuiAutocomplete-endAdornment{
+    top: 66% !important;
+    right: 4px !important
+}
+
 .team_selection .MuiAutocomplete-endAdornment button {
     height: 30px !important;
     width: 30px !important;

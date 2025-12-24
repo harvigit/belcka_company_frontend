@@ -11,19 +11,13 @@ import AuthProvider from "./context/AuthContext";
 import { Toaster } from "react-hot-toast";
 import Providers from "./providers";
 
-const MyApp = ({
-  children,
-  session,
-}: {
-  children: React.ReactNode;
-  session: any;
-}) => {
+const MyApp = ({ children }: { children: React.ReactNode }) => {
   const theme = ThemeSettings();
   const { activeDir } = useContext(CustomizerContext);
 
   return (
     <>
-      <Providers session={session}>
+      <Providers>
         <AuthProvider>
           <AppRouterCacheProvider options={{ enableCssLayer: true }}>
             <ThemeProvider theme={theme}>

@@ -152,7 +152,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   };
 
   useEffect(() => {
-    fetchRateHistory();
+    if (active) {
+      fetchRateHistory();
+    }
   }, []);
 
   useEffect(() => {
@@ -766,7 +768,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                 }}
               >
                 {history
-                  ?.filter((item: any) => item.status !== 3) 
+                  ?.filter((item: any) => item.status !== 3)
                   .map((item: any, index: number) => (
                     <Box
                       key={index}

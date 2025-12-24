@@ -1,5 +1,11 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import {
   TableContainer,
   Table,
@@ -43,7 +49,6 @@ import {
   IconChevronRight,
   IconDotsVertical,
   IconEdit,
-  IconPencil,
   IconProgress,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -132,7 +137,7 @@ const AddressesList = ({
   const [addressEdit, setAddressEdit] = useState(false);
   const [address, setAddress] = useState<any>(null);
   const [radius, setRadius] = useState(0);
-
+  const fetched = useRef(false);
   const isIEPostcode = (value: string) =>
     /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
 
@@ -219,10 +224,15 @@ const AddressesList = ({
   };
 
   useEffect(() => {
-    if (projectId) {
-      fetchAddresses();
-    }
-  }, [projectId, processedIds, shouldRefresh]);
+    if (fetched.current) return;
+    fetched.current = true;
+    fetchAddresses();
+  }, []);
+  // useEffect(() => {
+  //   if (projectId) {
+  //     fetchAddresses();
+  //   }
+  // }, [projectId, processedIds, shouldRefresh]);
 
   useEffect(() => {
     if (sidebarData !== null) {
@@ -778,7 +788,7 @@ const AddressesList = ({
     if (onTableReady) onTableReady(table);
     table.setPageIndex(0);
   }, [table]);
-  
+
   return (
     <Box>
       <Grid container spacing={3}>
@@ -1253,7 +1263,7 @@ const AddressesList = ({
         <Box display="flex" flexDirection="column" height="100%">
           <Box height={"100%"}>
             <form onSubmit={handleAddressEdit} className="address-form">
-              <Grid container mt={3}>
+              <Grid container>
                 <Grid size={{ xs: 12 }}>
                   <Box
                     display={"flex"}

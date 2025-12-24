@@ -120,7 +120,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
         }}
       >
         <Box className="task-form">
-          <Grid container mt={3}>
+          <Grid container>
             <Grid size={{ xs: 12, lg: 12 }}>
               <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
                 <IconButton onClick={onClose}>

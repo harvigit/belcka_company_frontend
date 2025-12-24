@@ -1,15 +1,12 @@
 import React from "react";
 import PageContainer from "@/app/components/container/PageContainer";
 import UserList from "@/app/components/apps/users/[id]";
-import { UserProvider } from "@/app/context/UserContext";
 
 const UserListing = () => {
   return (
-    <UserProvider>
-      <PageContainer title="User" description="this is User">
-        <UserList />
-      </PageContainer>
-    </UserProvider>
+    <PageContainer title="User" description="this is User">
+      <UserList />
+    </PageContainer>
   );
 };
 export default UserListing;

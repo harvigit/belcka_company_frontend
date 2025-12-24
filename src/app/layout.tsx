@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={roboto.className}>
         <NextTopLoader color="#1e4db7" />
         <CustomizerContextProvider>
-          <MyApp session={undefined}>
+          <MyApp>
             <RouteLoadingProvider>{children}</RouteLoadingProvider>
           </MyApp>
         </CustomizerContextProvider>

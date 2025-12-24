@@ -91,7 +91,7 @@ const EditTradeCategory: React.FC<EditTradeCategoryProps> = ({
                   <IconButton onClick={onClose}>
                     <IconArrowLeft />
                   </IconButton>
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="h6" color="inherit" fontWeight={700}>
                     Edit Category
                   </Typography>
                 </Box>

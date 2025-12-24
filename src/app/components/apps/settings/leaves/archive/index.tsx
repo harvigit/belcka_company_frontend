@@ -119,13 +119,13 @@ const ArchiveLeave: React.FC<ArchiveLeaveProps> = ({
                 }}
             >
                 <Box className="leave-form">
-                    <Grid container mt={3}>
+                    <Grid container>
                         <Grid size={{xs: 12, lg: 12}}>
                             <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
                                 <IconButton onClick={onClose}>
                                     <IconArrowLeft/>
                                 </IconButton>
-                                <Typography variant="h5" fontWeight={700}>
+                                <Typography variant="h6" color='inherit' fontWeight={700}>
                                     Archive Leave List
                                 </Typography>
                             </Box>

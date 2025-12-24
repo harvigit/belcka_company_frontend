@@ -1,10 +1,14 @@
 import { SessionProvider } from "next-auth/react";
 import NotificationClient from "./notifications/NotificationClient";
+import React from "react";
 
-export default function Providers({ children, session }: { children: React.ReactNode; session: any }) {
+interface ProvidersProps {
+  children: React.ReactNode;
+}
+
+export default function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider
-      session={session}
       refetchOnWindowFocus={false}
       refetchInterval={0}
     >

@@ -68,6 +68,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ArchiveTeam from "../archive";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { IconTableColumn } from "@tabler/icons-react";
+import CreateTeam from "../create";
+import EditTeam from "../edit";
 
 dayjs.extend(customParseFormat);
 
@@ -135,7 +137,14 @@ const TablePagination = () => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const searchParams = useSearchParams();
   const projectId = searchParams ? searchParams.get("project_id") : "";
+  const [createDrawer, setCreateDrawer] = useState(false);
+  const [editDrawer, setEditDrawer] = useState(false);
+  const [editTeamId, setEditTeamId] = useState<number | null>(null);
 
+  const handleEditClick = (teamId: number) => {
+    setEditTeamId(teamId);
+    setEditDrawer(true);
+  };
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -144,7 +153,7 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  const fetchTeams = useCallback(async () => {
+  const fetchTeams = async () => {
     setLoading(true);
     try {
       const url = projectId
@@ -160,7 +169,7 @@ const TablePagination = () => {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  };
 
   useEffect(() => {
     fetchTeams();
@@ -436,10 +445,7 @@ const TablePagination = () => {
             {!subcontractor && (
               <Tooltip title="Edit">
                 <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEdit(item.team_id);
-                  }}
+                  onClick={() => handleEditClick(item.team_id)}
                   color="primary"
                 >
                   <IconEdit size={18} />
@@ -622,7 +628,6 @@ const TablePagination = () => {
             direction={{ xs: "column", sm: "row" }}
           >
             {selectedRowIds.size > 0 && (
-              // <Button variant="contained">Remove User: {selectedRowIdsStr}</Button>
               <Button
                 variant="outlined"
                 color="error"
@@ -720,7 +725,6 @@ const TablePagination = () => {
                       setSelectedRowIds(new Set());
                       await fetchTeams();
                     } catch (error) {
-                      // toast.error("Failed to archive teams");
                     } finally {
                       setConfirmOpen(false);
                     }
@@ -737,7 +741,7 @@ const TablePagination = () => {
               <DialogTitle>Confirm Deletion</DialogTitle>
               <DialogContent>
                 <Typography>
-                  Are you sure you want to remove this subcontracoter team?
+                  Are you sure you want to remove this subcontractor team?
                 </Typography>
               </DialogContent>
               <DialogActions>
@@ -776,7 +780,11 @@ const TablePagination = () => {
               <MenuItem onClick={handleClose}>
                 <Link
                   color="body1"
-                  href="/apps/teams/create"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCreateDrawer(true);
+                  }}
                   style={{
                     width: "100%",
                     color: "#11142D",
@@ -843,6 +851,23 @@ const TablePagination = () => {
           onClose={() => setarchiveDrawerOpen(false)}
           onWorkUpdated={fetchTeams}
         />
+
+        {/* Create team */}
+        <CreateTeam
+          open={createDrawer}
+          onClose={() => setCreateDrawer(false)}
+          onWorkUpdated={fetchTeams}
+        />
+
+        {editTeamId && (
+          <EditTeam
+            open={editDrawer}
+            onClose={() => setEditDrawer(false)}
+            teamId={editTeamId}
+            teams={data}
+          />
+        )}
+
         <Grid container spacing={3}>
           <Grid size={12}>
             <Box>

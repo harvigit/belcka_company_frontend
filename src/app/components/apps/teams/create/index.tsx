@@ -1,28 +1,36 @@
 "use client";
-import React, { useState, useContext, useEffect, ChangeEvent } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 import {
   Button,
   Typography,
   Box,
-  Stack,
   Grid,
   MenuItem,
   Select,
-  Paper,
   Autocomplete,
+  Drawer,
+  IconButton,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import toast from "react-hot-toast";
-import { TeamContext } from "@/app/context/TeamContext";
 import { TeamList, UserList } from "../list";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import { IconArrowLeft } from "@tabler/icons-react";
 
-const CreateTeam = () => {
-  const { addTeam, teams } = useContext(TeamContext);
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onWorkUpdated?: () => void;
+}
+
+const CreateTeam: React.FC<Props> = ({
+  open,
+  onClose,
+  onWorkUpdated,
+}) => {
   const router = useRouter();
   const [data, setData] = useState<TeamList[]>([]);
   const [users, setUsers] = useState<UserList[]>([]);
@@ -55,7 +63,7 @@ const CreateTeam = () => {
       setLoading(false);
     };
     fetchTrades();
-  }, [user?.company_id]);
+  }, [user?.company_id, open]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -71,15 +79,7 @@ const CreateTeam = () => {
       setLoading(false);
     };
     fetchTrades();
-  }, [user.id]);
-
-  useEffect(() => {
-    const lastId = teams.length > 0 ? teams[teams.length - 1].id + 1 : 1;
-    setFormData((prevData: FormData) => ({
-      ...prevData,
-      id: lastId,
-    }));
-  }, [teams]);
+  }, [user.id, open]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -102,7 +102,8 @@ const CreateTeam = () => {
       const response = await api.post(`team/add`, payload);
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
-        router.push("/apps/teams/list");
+        onWorkUpdated?.();
+        onClose();
       }
       return response.data;
     } catch (error) {
@@ -112,161 +113,141 @@ const CreateTeam = () => {
   };
 
   return (
-    <form>
-      <Box>
-        <Stack
-          direction="row"
-          spacing={2}
-          justifyContent="space-between"
-          mb={3}
-        >
-          <Typography variant="h5">#Add Team</Typography>
-        </Stack>
-        {/* <Divider /> */}
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      sx={{
+        width: 400,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: 400,
+          padding: 2,
+          backgroundColor: "#f9f9f9",
+          display: "flex",
+          flexDirection: "column",
+        },
+      }}
+    >
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          paddingRight: 1,
+        }}
+      >
+        <Box className="task-form">
+          <Grid container>
+            <Grid size={{ xs: 12, lg: 12 }}>
+              <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
+                <IconButton onClick={onClose}>
+                  <IconArrowLeft />
+                </IconButton>
+                <Typography variant="h6" color="inherit" fontWeight={700}>
+                  Add Team
+                </Typography>
+              </Box>
+              <Typography variant="h5" mt={3}>
+                Name
+              </Typography>
 
-        <Grid container spacing={3}>
-          {/* 1 */}
-          <Grid
-            display="flex"
-            alignItems="center"
-            size={{
-              xs: 12,
-              sm: 3,
-            }}
-          >
-            <CustomFormLabel
-              htmlFor="bl-name"
-              sx={{ mt: 0, mb: { xs: "-10px", sm: 0 } }}
-            >
-              Name
-            </CustomFormLabel>
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              sm: 9,
-            }}
-          >
-            <CustomTextField
-              id="name"
-              name="name"
-              placeholder="Enter Team name.."
-              value={formData.name}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid>
+              <CustomTextField
+                id="name"
+                name="name"
+                placeholder="Enter Team name.."
+                value={formData.name}
+                onChange={handleChange}
+                fullWidth
+              />
+              <Typography variant="h5" mt={3}>
+                Supervisor
+              </Typography>
 
-          <Grid
-            display="flex"
-            alignItems="center"
-            size={{
-              xs: 12,
-              sm: 3,
-            }}
-          >
-            <CustomFormLabel
-              htmlFor="bl-name"
-              sx={{ mt: 0, mb: { xs: "-10px", sm: 0 } }}
-            >
-              Supervisor
-            </CustomFormLabel>
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              sm: 9,
-            }}
-          >
-            <Select
-              name="supervisor_id"
-              value={formData.supervisor_id}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  supervisor_id: Number(e.target.value),
-                })
-              }
-              fullWidth
-              displayEmpty
-            >
-              <MenuItem value={0}>Select Supervisor</MenuItem>
-              {data.map((users) => (
-                <MenuItem key={users.id} value={users.id}>
-                  {users.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </Grid>
+              <Select
+                name="supervisor_id"
+                value={formData.supervisor_id}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    supervisor_id: Number(e.target.value),
+                  })
+                }
+                fullWidth
+                displayEmpty
+              >
+                <MenuItem value={0}>Select Supervisor</MenuItem>
+                {data.map((users) => (
+                  <MenuItem key={users.id} value={users.id}>
+                    {users.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography variant="h5" mt={3}>
+                Team Member&apos;s
+              </Typography>
 
-          <Grid
-            display="flex"
-            alignItems="center"
-            size={{
-              xs: 12,
-              sm: 3,
-            }}
-          >
-            <CustomFormLabel
-              htmlFor="bl-name"
-              sx={{ mt: 0, mb: { xs: "-10px", sm: 0 } }}
-            >
-              Team Member&apos;s
-            </CustomFormLabel>
+              <Autocomplete
+                multiple
+                fullWidth
+                disableCloseOnSelect
+                options={users || []}
+                value={users.filter((user) =>
+                  formData.team_member_ids.includes(Number(user.id))
+                )}
+                onChange={(event, newValue) => {
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    team_member_ids: newValue.map((user) => Number(user.id)),
+                  }));
+                }}
+                getOptionLabel={(option) => option.name || ""}
+                isOptionEqualToValue={(option, value) =>
+                  Number(option.id) === Number(value.id)
+                }
+                filterSelectedOptions
+                renderInput={(params) => (
+                  <CustomTextField {...params} className="team_selection" />
+                )}
+              />
+            </Grid>
           </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              sm: 6,
-            }}
-          >
-            <Autocomplete
-              multiple
-              fullWidth
-              disableCloseOnSelect
-              options={users || []}
-              value={users.filter((user) =>
-                formData.team_member_ids.includes(Number(user.id))
-              )}
-              onChange={(event, newValue) => {
-                setFormData((prev:any) => ({
-                  ...prev,
-                  team_member_ids: newValue.map((user) => Number(user.id)),
-                }));
-              }}
-              getOptionLabel={(option) => option.name || ""}
-              isOptionEqualToValue={(option, value) =>
-                Number(option.id) === Number(value.id)
-              }
-              filterSelectedOptions
-              renderInput={(params) => (
-                <CustomTextField {...params} placeholder="Team Members" className="team_selection" />
-              )}
-            />
-          </Grid>
-
-          <Grid
-            size={{
-              xs: 12,
-              sm: 12,
-            }}
-            display={"flex"}
-            justifyContent={"end"}
-          >
-            <Button
-              color="primary"
-              variant="contained"
-              size="medium"
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isSaving}
-            >
-              {isSaving ? "Creating Team..." : "Save"}
-            </Button>
-          </Grid>
-        </Grid>
+        </Box>
       </Box>
-    </form>
+
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "start",
+          gap: 2,
+          marginTop: 3,
+        }}
+      >
+        <Button
+          color="primary"
+          variant="contained"
+          size="large"
+          onClick={handleSubmit}
+          sx={{ borderRadius: 3 }}
+          className="drawer_buttons"
+          disabled={isSaving}
+        >
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+        <Button
+          color="inherit"
+          onClick={onClose}
+          variant="contained"
+          size="large"
+          sx={{
+            backgroundColor: "transparent",
+            borderRadius: 3,
+            color: "GrayText",
+          }}
+        >
+          Close
+        </Button>
+      </Box>
+    </Drawer>
   );
 };
 

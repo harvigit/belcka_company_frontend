@@ -119,7 +119,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
                   <IconButton onClick={onClose}>
                     <IconArrowLeft />
                   </IconButton>
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="h6" color="inherit" fontWeight={700}>
                     Edit Trade
                   </Typography>
                 </Box>

@@ -190,7 +190,7 @@ const HistoryList = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
-      const matchesType = filters.type ? item.type_name === filters.type : true;
+      const matchesType = filters.type ? item.request_type === Number(filters.type) : true;
       const matchesUser = filters.user ? item.user_name === filters.user : true;
       const matchesSearch =
         item.user_name?.toLowerCase().includes(search) ||
@@ -444,15 +444,19 @@ const HistoryList = () => {
                 }
               >
                 <MenuItem value="">All</MenuItem>
-                <MenuItem value="Team">Team</MenuItem>
-                <MenuItem value="Project">Project</MenuItem>
-                <MenuItem value="Company">Comapny</MenuItem>
-                <MenuItem value="Shift">Worklog</MenuItem>
-                <MenuItem value="User">User</MenuItem>
-                <MenuItem value="Zone">Zone</MenuItem>
-                <MenuItem value="Address">Address</MenuItem>
-                <MenuItem value="Expense">Expense</MenuItem>
-                <MenuItem value="Leave">Leave</MenuItem>
+                <MenuItem value="101">Timesheet</MenuItem>
+                <MenuItem value="102">Worklog</MenuItem>
+                <MenuItem value="103">Billing Info</MenuItem>
+                <MenuItem value="104">User</MenuItem>
+                <MenuItem value="105">User Company</MenuItem>
+                <MenuItem value="106">Project</MenuItem>
+                <MenuItem value="107">Address</MenuItem>
+                <MenuItem value="108">Company</MenuItem>
+                <MenuItem value="109">Team</MenuItem>
+                <MenuItem value="110">Leave</MenuItem>
+                <MenuItem value="111">Expense</MenuItem>
+                <MenuItem value="112">Zone</MenuItem>
+                <MenuItem value="113">Shift</MenuItem>
               </TextField>
 
               {uniqueSupervisors.length > 0 ? (
