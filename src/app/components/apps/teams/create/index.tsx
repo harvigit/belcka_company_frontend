@@ -26,11 +26,7 @@ interface Props {
   onWorkUpdated?: () => void;
 }
 
-const CreateTeam: React.FC<Props> = ({
-  open,
-  onClose,
-  onWorkUpdated,
-}) => {
+const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
   const router = useRouter();
   const [data, setData] = useState<TeamList[]>([]);
   const [users, setUsers] = useState<UserList[]>([]);
@@ -206,7 +202,30 @@ const CreateTeam: React.FC<Props> = ({
                 }
                 filterSelectedOptions
                 renderInput={(params) => (
-                  <CustomTextField {...params} className="team_selection" />
+                  <CustomTextField
+                    {...params}
+                    sx={{
+                      "& .MuiAutocomplete-inputRoot": {
+                        flexWrap: "wrap",
+                        alignItems: "flex-start",
+                        minHeight: 56,
+                        paddingTop: "10px",
+                        paddingBottom: "10px",
+                        paddingRight: "30px",
+                      },
+                      "& .MuiAutocomplete-tag": {
+                        margin: "4px",
+                        maxWidth: "100%",
+                      },
+                      "& .MuiAutocomplete-endAdornment": {
+                        right: "8px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      },
+                    }}
+                    placeholder="Select team members..."
+                    className="team_selection"
+                  />
                 )}
               />
             </Grid>

@@ -185,6 +185,9 @@ input#project_id::placeholder {
     top: 66% !important;
     right: 4px !important
 }
+.team_selection input {
+    width: 100% !important;
+}
 
 .team_selection .MuiAutocomplete-endAdornment button {
     height: 30px !important;
