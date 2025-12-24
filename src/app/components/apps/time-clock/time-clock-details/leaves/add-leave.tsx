@@ -212,6 +212,25 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
         }
     }, [leaveData]);
 
+    const validateAndFormatTime = (value: string): string | null => {
+        if (!value) return null;
+
+        const trimmed = value.trim();
+
+        const match = trimmed.match(/^(\d{1,2})(?::?(\d{1,2}))?$/);
+        if (!match) return null;
+
+        let hours = Number(match[1]);
+        let minutes = Number(match[2] ?? 0);
+
+        if (Number.isNaN(hours) || Number.isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+            return null;
+        }
+
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
+
+
     const getUsers = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -787,11 +806,35 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                     mb={2}
                                     justifyContent="center"
                                 >
+                                    {/* START TIME */}
                                     <TextField
-                                        type="time"
+                                        type="text"
                                         value={startTime}
-                                        onChange={(e) => handleTimeChange(setStartTime, e.target.value)}
+                                        placeholder="HH:MM"
                                         size="small"
+                                        onChange={(e) => {
+                                            const cleanValue = e.target.value.replace(/[^0-9:]/g, '');
+                                            setStartTime(cleanValue);
+                                        }}
+                                        onBlur={() => {
+                                            const formatted = validateAndFormatTime(startTime);
+                                            if (formatted) {
+                                                setStartTime(formatted);
+                                            } else {
+                                                setStartTime(''); // or revert to previous value
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                const formatted = validateAndFormatTime(startTime);
+                                                if (formatted) setStartTime(formatted);
+                                            }
+                                            if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                setStartTime('');
+                                            }
+                                        }}
                                         sx={{
                                             width: '180px',
                                             '& .MuiOutlinedInput-root': {
@@ -799,26 +842,54 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                                 '&:hover fieldset': { borderColor: '#bdbdbd' },
                                                 '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
                                             },
+                                            '& .MuiInputBase-input': {
+                                                textAlign: 'center',
+                                            },
                                         }}
                                     />
-                                    <Typography
-                                        color="#666"
-                                        sx={{ fontSize: '14px' }}
-                                        component="span"
-                                    >
+
+                                    <Typography color="#666" sx={{ fontSize: '14px' }}>
                                         to
                                     </Typography>
+
+                                    {/* END TIME */}
                                     <TextField
-                                        type="time"
+                                        type="text"
                                         value={endTime}
-                                        onChange={(e) => handleTimeChange(setEndTime, e.target.value)}
+                                        placeholder="HH:MM"
                                         size="small"
+                                        onChange={(e) => {
+                                            const cleanValue = e.target.value.replace(/[^0-9:]/g, '');
+                                            setEndTime(cleanValue);
+                                        }}
+                                        onBlur={() => {
+                                            const formatted = validateAndFormatTime(endTime);
+                                            if (formatted) {
+                                                setEndTime(formatted);
+                                            } else {
+                                                setEndTime('');
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                const formatted = validateAndFormatTime(endTime);
+                                                if (formatted) setEndTime(formatted);
+                                            }
+                                            if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                setEndTime('');
+                                            }
+                                        }}
                                         sx={{
                                             width: '180px',
                                             '& .MuiOutlinedInput-root': {
                                                 '& fieldset': { borderColor: '#e0e0e0' },
                                                 '&:hover fieldset': { borderColor: '#bdbdbd' },
                                                 '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                textAlign: 'center',
                                             },
                                         }}
                                     />
