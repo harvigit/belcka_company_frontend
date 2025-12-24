@@ -223,20 +223,21 @@ const CreateTeam = () => {
             <Autocomplete
               multiple
               fullWidth
-              id="team_member_ids"
-              options={users}
+              disableCloseOnSelect
+              options={users || []}
               value={users.filter((user) =>
-                formData.team_member_ids.includes(user.id)
+                formData.team_member_ids.includes(Number(user.id))
               )}
               onChange={(event, newValue) => {
-                const selectedIds = newValue.map((user) => user.id);
-                setFormData({
-                  ...formData,
-                  team_member_ids: selectedIds,
-                });
+                setFormData((prev:any) => ({
+                  ...prev,
+                  team_member_ids: newValue.map((user) => Number(user.id)),
+                }));
               }}
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
+              getOptionLabel={(option) => option.name || ""}
+              isOptionEqualToValue={(option, value) =>
+                Number(option.id) === Number(value.id)
+              }
               filterSelectedOptions
               renderInput={(params) => (
                 <CustomTextField {...params} placeholder="Team Members" />

@@ -84,7 +84,7 @@ const EditTeamPage = () => {
 
   useEffect(() => {
     const fetchTeamData = async () => {
-      if ( teams.length > 0 && teamId) {
+      if (teams.length > 0 && teamId) {
         try {
           const res = await api.get(
             `team/get-team-member-list?team_id=${teamId}`
@@ -152,13 +152,11 @@ const EditTeamPage = () => {
                 team_members: flattened.filter((u: any) => u.id),
               });
             } else {
-              // toast.error("Team not found.");
               router.push("/apps/teams/list");
             }
           }
         } catch (error) {
           console.error("Error fetching team data:", error);
-          // toast.error("Failed to fetch team data.");
         }
       }
     };
@@ -309,19 +307,21 @@ const EditTeamPage = () => {
           <Autocomplete
             multiple
             fullWidth
-            id="team_member_ids"
-            options={formData.team_members}
-            value={formData.team_members.filter((u) =>
-              formData.team_member_ids?.includes(u.id)
+            disableCloseOnSelect
+            options={formData.team_members || []}
+            value={(formData.team_members || []).filter((u) =>
+              (formData.team_member_ids || []).includes(Number(u.id))
             )}
             onChange={(event, newValue) => {
-              setFormData({
-                ...formData,
-                team_member_ids: newValue.map((u) => u.id),
-              });
+              setFormData((prev: any) => ({
+                ...prev,
+                team_member_ids: newValue.map((u) => Number(u.id)),
+              }));
             }}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
+            getOptionLabel={(option) => option.name || ""}
+            isOptionEqualToValue={(option, value) =>
+              Number(option.id) === Number(value.id)
+            }
             filterSelectedOptions
             renderInput={(params) => (
               <CustomTextField
