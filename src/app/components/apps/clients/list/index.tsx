@@ -104,12 +104,7 @@ const TablePagination = () => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({
-    team: "",
-    supervisor: "",
-  });
 
-  const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -162,16 +157,15 @@ const TablePagination = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      const matchesTeam = filters.team ? item.name === filters.team : true;
       const search = searchTerm.toLowerCase();
 
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.email?.toLocaleLowerCase().includes(search);
 
-      return matchesTeam && matchesSearch;
+      return matchesSearch;
     });
-  }, [data, filters, searchTerm]);
+  }, [data, searchTerm]);
 
   const handleCopy = (link: string) => {
     const codeToCopy = link ?? "";

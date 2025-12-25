@@ -65,10 +65,8 @@ const CreateProject: React.FC<CreateProjectProps> = ({
     const { name, value } = e.target as HTMLInputElement;
     const key = name as keyof FormData;
 
-    // Prevent unnecessary re-renders
     if (formData[key] === value) return;
 
-    // Numeric validation for budget
     if (key === "budget" && !/^\d*$/.test(value)) return;
 setFormData(prev => {
   if (prev[key] === value) return prev;
@@ -76,10 +74,6 @@ setFormData(prev => {
 });
 
   };
-
-  // =====================
-  // FETCH DATA
-  // =====================
 
   const [shift, setShift] = useState<Shift[]>([]);
   const [team, setTeam] = useState<Team[]>([]);
@@ -145,10 +139,6 @@ setFormData(prev => {
     getGeofence();
   }, [open, user?.company_id]);
 
-  // =====================
-  // MEMOIZED VALUES (performance)
-  // =====================
-
   const memoShiftOptions = useMemo(() => shift, [shift]);
   const memoTeamOptions = useMemo(() => team, [team]);
   const memoGeofenceOptions = useMemo(() => geofence, [geofence]);
@@ -167,10 +157,6 @@ setFormData(prev => {
     const ids = formData.workzone_ids?.split(",") ?? [];
     return memoGeofenceOptions.filter((item) => ids.includes(String(item.id)));
   }, [formData.workzone_ids, memoGeofenceOptions]);
-
-  // =====================
-  // COMPONENT RENDER
-  // =====================
 
   return (
     <Drawer

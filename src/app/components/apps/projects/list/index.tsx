@@ -349,7 +349,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   useEffect(() => {
-    if (projectID) {
+    if (projectID && openDrawer == true) {
       fetchAddresses();
     }
   }, [value]);

@@ -116,13 +116,13 @@ const Company = () => {
     };
 
     fetchCompanies();
-  }, [user?.company_id,user?.id]);
+  }, [user?.company_id, user?.id]);
 
-  const fetchFeeds = useCallback(async () => {
+  const fetchFeeds = async () => {
     if (!user?.company_id || !user?.id) return;
 
     try {
-      const res: AxiosResponse<any> = await api.get(
+      const res = await api.get(
         `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
       );
 
@@ -140,7 +140,7 @@ const Company = () => {
     } catch (e) {
       console.error(e);
     }
-  }, [user.company_id, user.id]);
+  };
 
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
@@ -275,20 +275,21 @@ const Company = () => {
     Comapny: (id) => `/apps/users/${id}?tab=billing`,
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
-    // Leave: (recordId, startDate, endDate) => {
-    //   let url = `/apps/timesheet/list`;
-    //   const params: any[] = [];
+    Leave: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
 
-    //   if (recordId) params.push(`user_id=${recordId}`);
-    //   if (startDate) params.push(`start_date=${startDate}`);
-    //   if (endDate) params.push(`end_date=${endDate}`);
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push(`open=true`);
 
-    //   if (params.length > 0) {
-    //     url += `?${params.join("&")}`;
-    //   }
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
 
-    //   return url;
-    // },
+      return url;
+    },
   };
 
   useEffect(() => {
@@ -497,6 +498,14 @@ const Company = () => {
                                 (item.request_name === "Timesheet" &&
                                   item.action !== "stop")
                               ) {
+                                const start = startDate
+                                  ? format(startDate, "yyyy-MM-dd")
+                                  : undefined;
+                                const end = endDate
+                                  ? format(endDate, "yyyy-MM-dd")
+                                  : undefined;
+                                router.push(routeFn(item.user_id, start, end));
+                              } else if (item.request_name === "Leave") {
                                 const start = startDate
                                   ? format(startDate, "yyyy-MM-dd")
                                   : undefined;

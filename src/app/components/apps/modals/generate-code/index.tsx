@@ -29,40 +29,6 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // const handleCopyCode = async (code: string | null) => {
-  //   if (!code) {
-  //     toast.error("No code to copy!");
-  //     return;
-  //   }
-
-  //   try {
-  //     if (navigator?.clipboard?.writeText) {
-  //       await navigator.clipboard.writeText(code);
-  //       toast.success("Code copied!");
-  //     } else {
-  //       const textArea = document.createElement("textarea");
-  //       textArea.value = code;
-  //       textArea.style.position = "fixed";
-  //       textArea.style.opacity = "0";
-  //       document.body.appendChild(textArea);
-  //       textArea.focus();
-  //       textArea.select();
-  //       const success = document.execCommand("copy");
-  //       document.body.removeChild(textArea);
-
-  //       if (success) {
-  //         toast.success("Code copied!");
-  //       } else {
-  //         fallbackCopy(code);
-  //         throw new Error("Fallback copy failed");
-  //       }
-  //     }
-  //   } catch (err) {
-  //     console.error("Clipboard copy failed:", err);
-  //     toast.error("Failed to copy code!");
-  //   }
-  // };
-
   const fallbackCopy = (text: string) => {
     try {
       const textArea = document.createElement("textarea");

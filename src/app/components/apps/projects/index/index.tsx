@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Grid, CardContent } from "@mui/material";
+import { Grid } from "@mui/material";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import BlankCard from "@/app/components/shared/BlankCard";
@@ -50,19 +50,6 @@ const TablePagination = () => {
     }
   }, [projectId, user?.id]);
 
-  // if (loading == true) {
-  //   return (
-  //     <Box
-  //       display="flex"
-  //       justifyContent="center"
-  //       alignItems="center"
-  //       minHeight="300px"
-  //     >
-  //       <CircularProgress />
-  //     </Box>
-  //   );
-  // }
-
   return (
     <Grid container spacing={3}>
       <Grid
@@ -72,9 +59,7 @@ const TablePagination = () => {
         }}
       >
         <BlankCard>
-          {/* <CardContent sx={{ flex: 1 }}> */}
-            <ProjectListing projectId={projectId} />
-          {/* </CardContent> */}
+          <ProjectListing projectId={projectId} />
         </BlankCard>
       </Grid>
     </Grid>
