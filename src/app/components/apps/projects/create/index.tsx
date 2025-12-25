@@ -176,14 +176,14 @@ setFormData(prev => {
       <Box display="flex" flexDirection="column" height="100%">
         <Box height="100%">
           <form onSubmit={handleSubmit}>
-            <Grid container mt={3}>
+            <Grid container>
               <Grid size={{ xs: 12 }}>
                 <Box display="flex" alignItems="center">
                   <IconButton onClick={onClose}>
                     <IconArrowLeft />
                   </IconButton>
 
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="h6" fontWeight={700}>
                     Add Project
                   </Typography>
                 </Box>

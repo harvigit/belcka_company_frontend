@@ -1,4 +1,5 @@
-import React, { useCallback, useRef, useState } from "react";
+"use client";
+import React, { useCallback, useState } from "react";
 import { useEffect } from "react";
 import { Box, Grid } from "@mui/system";
 import {

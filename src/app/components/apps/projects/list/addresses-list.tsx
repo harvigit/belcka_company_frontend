@@ -224,15 +224,10 @@ const AddressesList = ({
   };
 
   useEffect(() => {
-    if (fetched.current) return;
-    fetched.current = true;
-    fetchAddresses();
-  }, []);
-  // useEffect(() => {
-  //   if (projectId) {
-  //     fetchAddresses();
-  //   }
-  // }, [projectId, processedIds, shouldRefresh]);
+    if (projectId) {
+      fetchAddresses();
+    }
+  }, [projectId, processedIds, shouldRefresh]);
 
   useEffect(() => {
     if (sidebarData !== null) {

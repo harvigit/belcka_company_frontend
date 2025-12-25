@@ -13,7 +13,6 @@ import toast from "react-hot-toast";
 import { Box, Grid } from "@mui/system";
 import dayjs, { Dayjs } from "dayjs";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
-import { IconUser, IconUserPlus } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 export default function PenaltySettings() {
@@ -33,8 +32,22 @@ export default function PenaltySettings() {
   const [swEnabled, setSwEnabled] = useState<boolean>(false);
   const [swValue, setSwValue] = useState<Dayjs | null>(dayjs());
   const [swTemp, setSwTemp] = useState<string>(swValue?.format("HH:mm") ?? "");
-  const [swTeams, setSwTeams] = useState<any[]>([]);
-  const [swUsers, setSwUsers] = useState<any[]>([]);
+  const [swTeams, setSwTeams] = useState<any[]>(
+    teams.map((t) => ({
+      ...t,
+      selected: t.selected || false,
+      is_autostop_work_penalty: t.is_autostop_work_penalty || false,
+    }))
+  );
+
+  const [swUsers, setSwUsers] = useState<any[]>(
+    users.map((u) => ({
+      ...u,
+      selected: u.selected || false,
+      is_autostop_work_penalty: u.is_autostop_work_penalty || false,
+    }))
+  );
+
   const [showSwTeamsList, setShowSwTeamsList] = useState(false);
   const [showSwUsersList, setShowSwUsersList] = useState(false);
   const [swTeamsDirty, setSwTeamsDirty] = useState(false);
@@ -313,6 +326,24 @@ export default function PenaltySettings() {
     );
   }, [swUsers, searchSwUser]);
 
+  // OUTSIDE PENALTY
+  const outsideTeamsAllOn =
+    filteredData.length > 0 &&
+    filteredData.every((t) => !!t.is_outside_boundary_penalty);
+
+  const outsideUsersAllOn =
+    filteredUserData.length > 0 &&
+    filteredUserData.every((u) => !!u.is_outside_boundary_penalty);
+
+  // STOP WORK PENALTY
+  const stopTeamsAllOn =
+    filteredSwTeams.length > 0 &&
+    filteredSwTeams.every((t) => !!t.is_autostop_work_penalty);
+
+  const stopUsersAllOn =
+    filteredSwUsers.length > 0 &&
+    filteredSwUsers.every((u) => !!u.is_autostop_work_penalty);
+
   const parseDigitsToTime = (digits: string): string | null => {
     if (digits.includes(":")) {
       const [hStr, mStr] = digits.split(":");
@@ -381,7 +412,7 @@ export default function PenaltySettings() {
               Enable Outside Working Penalty
             </Typography>
 
-            <IOSSwitch checked={enabled} onChange={handleSwitchToggle} />
+            <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -396,7 +427,6 @@ export default function PenaltySettings() {
               }}
               mt={2}
             >
-              {/* Small Section Header */}
               <Typography
                 p={2}
                 sx={{
@@ -409,7 +439,7 @@ export default function PenaltySettings() {
                 Stop work outside of working area penalty
               </Typography>
 
-              {/* TIME + TEAMS/USERS BUTTON ROW */}
+              {/* TIME + BUTTONS */}
               <Grid
                 container
                 alignItems="center"
@@ -422,86 +452,45 @@ export default function PenaltySettings() {
                     value={temp}
                     placeholder="HH:MM"
                     size="small"
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9:]/g, "");
-                      console.log(raw, "raw");
-                      setTemp(raw);
-                    }}
+                    onChange={(e) =>
+                      setTemp(e.target.value.replace(/[^0-9:]/g, ""))
+                    }
                     onBlur={() => {
                       const formatted = parseDigitsToTime(temp);
-                      console.log(formatted, "asgdyusa", temp);
-                      if (formatted) {
-                        setTemp(formatted);
-                        setValue(dayjs(formatted, "HH:mm"));
-                        handleToggle(true, formatted);
-                      } else {
-                        const fallback = value ? value.format("HH:mm") : "";
-                        setTemp(fallback);
-                        handleToggle(true, fallback || null);
-                      }
+                      const fallback = value ? value.format("HH:mm") : "";
+                      setTemp(formatted || fallback);
+                      handleToggle(true, formatted || fallback || null);
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const formatted = parseDigitsToTime(temp);
-
-                        if (formatted) {
-                          setTemp(formatted);
-                          setValue(dayjs(formatted, "HH:mm"));
-                          handleToggle(true, formatted);
-                        } else {
-                          const fallback = value ? value.format("HH:mm") : "";
-                          setTemp(fallback);
-                          handleToggle(true, fallback || null);
-                        }
-                      }
-
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        setTemp(value ? value.format("HH:mm") : "");
-                      }
-                    }}
-                    sx={{
-                      width: "90px",
-                      "& input": {
-                        textAlign: "center",
-                        fontWeight: 400,
-                      },
-                    }}
+                    sx={{ width: "90px", "& input": { textAlign: "center" } }}
                   />
                 </Grid>
 
                 <Box display="flex" gap={2}>
                   <Button
                     variant="outlined"
-                    startIcon={<IconUserPlus size={16} />}
                     onClick={() => {
                       setShowTeamsList(!showTeamsList);
                       setShowUsersList(false);
                     }}
-                    sx={{ textTransform: "none" }}
                   >
                     Teams
                   </Button>
 
                   <Button
                     variant="outlined"
-                    startIcon={<IconUser size={16} />}
                     onClick={() => {
                       setShowUsersList(!showUsersList);
                       setShowTeamsList(false);
                     }}
-                    sx={{ textTransform: "none" }}
                   >
                     Users
                   </Button>
                 </Box>
               </Grid>
 
-              {/* ---------------- TEAM LIST ---------------- */}
+              {/* ---------------- TEAMS ---------------- */}
               {showTeamsList && (
                 <>
-                  {/* Search + Update Row */}
                   <Box
                     display="flex"
                     justifyContent="space-between"
@@ -519,18 +508,12 @@ export default function PenaltySettings() {
                       <Button
                         variant="contained"
                         onClick={handleUpdateSelectedTeams}
-                        sx={{
-                          textTransform: "none",
-                          borderRadius: "8px",
-                          px: 3,
-                        }}
                       >
                         Update
                       </Button>
                     )}
                   </Box>
 
-                  {/* Modern Card List */}
                   <Box
                     m={2}
                     p={2.5}
@@ -540,10 +523,9 @@ export default function PenaltySettings() {
                       borderRadius: 2,
                     }}
                   >
-                    {/* SELECT ALL */}
+                    {/* SELECT ALL TEAMS */}
                     <Box
                       display="flex"
-                      alignItems="center"
                       justifyContent="space-between"
                       mb={1}
                       ml={2}
@@ -558,51 +540,66 @@ export default function PenaltySettings() {
                           onChange={(e) => {
                             const checked = e.target.checked;
                             setTeams((prev) =>
-                              prev.map((t) => ({ ...t, selected: checked }))
+                              prev.map((t) =>
+                                filteredData.some((f) => f.id === t.id)
+                                  ? {
+                                      ...t,
+                                      selected: checked,
+                                      is_outside_boundary_penalty: checked,
+                                    }
+                                  : t
+                              )
                             );
+                            setIsTeamsDirty(true);
                           }}
                         />
-                        <Typography fontWeight={600} ml={1}>
+                        <Typography fontWeight={600}>
                           Select All Teams
                         </Typography>
                       </Box>
 
                       <IOSSwitch
+                        checked={!!outsideTeamsAllOn}
                         onChange={(e) => {
-                          const value = e.target.checked;
+                          const checked = e.target.checked;
                           setTeams((prev) =>
-                            prev.map((t) => ({
-                              ...t,
-                              selected: true,
-                              is_outside_boundary_penalty: value,
-                            }))
+                            prev.map((t) =>
+                              filteredData.some((f) => f.id === t.id)
+                                ? {
+                                    ...t,
+                                    selected: checked,
+                                    is_outside_boundary_penalty: checked,
+                                  }
+                                : t
+                            )
                           );
                           setIsTeamsDirty(true);
                         }}
                       />
                     </Box>
 
-                    {/* Team Cards */}
+                    {/* TEAM CARDS */}
                     {filteredData.map((team) => (
                       <Box
                         key={team.id}
                         p={2}
                         mt={2}
-                        sx={{
-                          border: "1px solid #eee",
-                          borderRadius: 1.5,
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
-                        }}
+                        sx={{ border: "1px solid #eee", borderRadius: 1.5 }}
                       >
                         <Box display="flex" justifyContent="space-between">
                           <Box display="flex" gap={2} alignItems="center">
                             <CustomCheckbox
-                              checked={team.selected}
-                              onChange={() => {
+                              checked={!!team.selected}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
                                 setTeams((prev) =>
                                   prev.map((t) =>
                                     t.id === team.id
-                                      ? { ...t, selected: !t.selected }
+                                      ? {
+                                          ...t,
+                                          selected: checked,
+                                          is_outside_boundary_penalty: checked,
+                                        }
                                       : t
                                   )
                                 );
@@ -613,7 +610,7 @@ export default function PenaltySettings() {
                           </Box>
 
                           <IOSSwitch
-                            checked={team.is_outside_boundary_penalty || false}
+                            checked={!!team.is_outside_boundary_penalty}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               setTeams((prev) =>
@@ -621,8 +618,8 @@ export default function PenaltySettings() {
                                   t.id === team.id
                                     ? {
                                         ...t,
+                                        selected: checked,
                                         is_outside_boundary_penalty: checked,
-                                        selected: true,
                                       }
                                     : t
                                 )
@@ -637,10 +634,9 @@ export default function PenaltySettings() {
                 </>
               )}
 
-              {/* ---------------- USERS LIST ---------------- */}
+              {/* ---------------- USERS ---------------- */}
               {showUsersList && (
                 <>
-                  {/* Search + Update Row */}
                   <Box
                     display="flex"
                     justifyContent="space-between"
@@ -654,23 +650,17 @@ export default function PenaltySettings() {
                       sx={{ width: "40%" }}
                     />
 
-                    {(filteredUserData.some((t) => t.selected) ||
+                    {(filteredUserData.some((u) => u.selected) ||
                       isUsersDirty) && (
                       <Button
                         variant="contained"
                         onClick={handleUpdateSelectedUsers}
-                        sx={{
-                          textTransform: "none",
-                          borderRadius: "8px",
-                          px: 3,
-                        }}
                       >
                         Update
                       </Button>
                     )}
                   </Box>
 
-                  {/* Modern Users List */}
                   <Box
                     m={2}
                     p={2.5}
@@ -683,39 +673,52 @@ export default function PenaltySettings() {
                     {/* SELECT ALL USERS */}
                     <Box
                       display="flex"
-                      alignItems="center"
                       justifyContent="space-between"
                       mb={1}
                       ml={2}
                       mr={2}
                     >
-                      <Box display="flex" gap={2} alignItems="center">
+                      <Box display="flex" alignItems="center" gap={1}>
                         <CustomCheckbox
                           checked={
                             filteredUserData.length > 0 &&
-                            filteredUserData.every((t) => t.selected)
+                            filteredUserData.every((u) => u.selected)
                           }
                           onChange={(e) => {
                             const checked = e.target.checked;
                             setUsers((prev) =>
-                              prev.map((t) => ({ ...t, selected: checked }))
+                              prev.map((u) =>
+                                filteredUserData.some((f) => f.id === u.id)
+                                  ? {
+                                      ...u,
+                                      selected: checked,
+                                      is_outside_boundary_penalty: checked,
+                                    }
+                                  : u
+                              )
                             );
+                            setIsUsersDirty(true);
                           }}
                         />
-                        <Typography fontWeight={600} ml={1}>
+                        <Typography fontWeight={600}>
                           Select All Users
                         </Typography>
                       </Box>
 
                       <IOSSwitch
+                        checked={!!outsideUsersAllOn}
                         onChange={(e) => {
-                          const value = e.target.checked;
+                          const checked = e.target.checked;
                           setUsers((prev) =>
-                            prev.map((u) => ({
-                              ...u,
-                              selected: true,
-                              is_outside_boundary_penalty: value,
-                            }))
+                            prev.map((u) =>
+                              filteredUserData.some((f) => f.id === u.id)
+                                ? {
+                                    ...u,
+                                    selected: checked,
+                                    is_outside_boundary_penalty: checked,
+                                  }
+                                : u
+                            )
                           );
                           setIsUsersDirty(true);
                         }}
@@ -728,21 +731,22 @@ export default function PenaltySettings() {
                         key={user.id}
                         p={2}
                         mt={2}
-                        sx={{
-                          border: "1px solid #eee",
-                          borderRadius: 1.5,
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
-                        }}
+                        sx={{ border: "1px solid #eee", borderRadius: 1.5 }}
                       >
                         <Box display="flex" justifyContent="space-between">
                           <Box display="flex" gap={2} alignItems="center">
                             <CustomCheckbox
-                              checked={user.selected}
-                              onChange={() => {
+                              checked={!!user.selected}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
                                 setUsers((prev) =>
                                   prev.map((u) =>
                                     u.id === user.id
-                                      ? { ...u, selected: !u.selected }
+                                      ? {
+                                          ...u,
+                                          selected: checked,
+                                          is_outside_boundary_penalty: checked,
+                                        }
                                       : u
                                   )
                                 );
@@ -755,16 +759,16 @@ export default function PenaltySettings() {
                           </Box>
 
                           <IOSSwitch
-                            checked={user.is_outside_boundary_penalty || false}
+                            checked={!!user.is_outside_boundary_penalty}
                             onChange={(e) => {
-                              const value = e.target.checked;
+                              const checked = e.target.checked;
                               setUsers((prev) =>
                                 prev.map((u) =>
                                   u.id === user.id
                                     ? {
                                         ...u,
-                                        is_outside_boundary_penalty: value,
-                                        selected: true,
+                                        selected: checked,
+                                        is_outside_boundary_penalty: checked,
                                       }
                                     : u
                                 )
@@ -800,7 +804,10 @@ export default function PenaltySettings() {
               Enable Stop Work Penalty
             </Typography>
 
-            <IOSSwitch checked={swEnabled} onChange={handleAutoSwitchToggle} />
+            <IOSSwitch
+              checked={!!swEnabled}
+              onChange={handleAutoSwitchToggle}
+            />
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -841,82 +848,46 @@ export default function PenaltySettings() {
                     value={swTemp}
                     placeholder="HH:MM"
                     size="small"
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9:]/g, "");
-                      setSwTemp(raw);
-                    }}
+                    onChange={(e) =>
+                      setSwTemp(e.target.value.replace(/[^0-9:]/g, ""))
+                    }
                     onBlur={() => {
                       const formatted = parseDigitsToTime(swTemp);
-                      if (formatted) {
-                        setSwTemp(formatted);
-                        setSwValue(dayjs(formatted, "HH:mm"));
-                        handleToggleStopWork(swEnabled, formatted);
-                      } else {
-                        const fallback = swValue ? swValue.format("HH:mm") : "";
-                        setSwTemp(fallback);
-                        handleToggleStopWork(swEnabled, fallback || null);
-                      }
+                      const fallback = swValue ? swValue.format("HH:mm") : "";
+                      setSwTemp(formatted || fallback);
+                      handleToggleStopWork(
+                        swEnabled,
+                        formatted || fallback || null
+                      );
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const formatted = parseDigitsToTime(swTemp);
-                        if (formatted) {
-                          setSwTemp(formatted);
-                          setSwValue(dayjs(formatted, "HH:mm"));
-                          handleToggleStopWork(swEnabled, formatted);
-                        } else {
-                          const fallback = swValue
-                            ? swValue.format("HH:mm")
-                            : "";
-                          setSwTemp(fallback);
-                          handleToggleStopWork(swEnabled, fallback || null);
-                        }
-                      }
-
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        setSwTemp(swValue ? swValue.format("HH:mm") : "");
-                      }
-                    }}
-                    sx={{
-                      width: "90px",
-                      "& input": {
-                        textAlign: "center",
-                        fontWeight: 400,
-                      },
-                    }}
+                    sx={{ width: "90px", "& input": { textAlign: "center" } }}
                   />
                 </Grid>
 
                 <Box display="flex" gap={2}>
                   <Button
                     variant="outlined"
-                    startIcon={<IconUserPlus size={16} />}
                     onClick={() => {
                       setShowSwTeamsList(!showSwTeamsList);
                       setShowSwUsersList(false);
                     }}
-                    sx={{ textTransform: "none" }}
                   >
                     Teams
                   </Button>
 
                   <Button
                     variant="outlined"
-                    startIcon={<IconUser size={16} />}
                     onClick={() => {
                       setShowSwUsersList(!showSwUsersList);
                       setShowSwTeamsList(false);
                     }}
-                    sx={{ textTransform: "none" }}
                   >
                     Users
                   </Button>
                 </Box>
               </Grid>
 
-              {/* ==================== STOPWORK TEAMS ==================== */}
+              {/* ==================== TEAMS ==================== */}
               {showSwTeamsList && (
                 <>
                   <Box
@@ -937,11 +908,6 @@ export default function PenaltySettings() {
                       <Button
                         variant="contained"
                         onClick={handleUpdateStopWorkTeams}
-                        sx={{
-                          textTransform: "none",
-                          borderRadius: "8px",
-                          px: 3,
-                        }}
                       >
                         Update
                       </Button>
@@ -965,34 +931,47 @@ export default function PenaltySettings() {
                       ml={2}
                       mr={2}
                     >
-                      <Box display="flex" gap={2} alignItems="center">
+                      <Box display="flex" alignItems="center" gap={1}>
                         <CustomCheckbox
                           checked={
-                            filteredSwTeams.length > 0 &&
+                            filteredSwTeams?.length > 0 &&
                             filteredSwTeams.every((t) => t.selected)
                           }
                           onChange={(e) => {
                             const checked = e.target.checked;
                             setSwTeams((prev) =>
-                              prev.map((t) => ({ ...t, selected: checked }))
+                              prev.map((t) =>
+                                filteredSwTeams.some((f) => f.id === t.id)
+                                  ? {
+                                      ...t,
+                                      selected: checked,
+                                      is_autostop_work_penalty: checked,
+                                    }
+                                  : t
+                              )
                             );
+                            setSwTeamsDirty(true);
                           }}
                         />
-
-                        <Typography fontWeight={600} ml={1}>
+                        <Typography fontWeight={600}>
                           Select All Teams
                         </Typography>
                       </Box>
 
                       <IOSSwitch
+                        checked={!!stopTeamsAllOn}
                         onChange={(e) => {
-                          const chk = e.target.checked;
+                          const checked = e.target.checked;
                           setSwTeams((prev) =>
-                            prev.map((t) => ({
-                              ...t,
-                              selected: true,
-                              is_autostop_work_penalty: chk,
-                            }))
+                            prev.map((t) =>
+                              filteredSwTeams.some((f) => f.id === t.id)
+                                ? {
+                                    ...t,
+                                    selected: checked,
+                                    is_autostop_work_penalty: checked,
+                                  }
+                                : t
+                            )
                           );
                           setSwTeamsDirty(true);
                         }}
@@ -1005,21 +984,22 @@ export default function PenaltySettings() {
                         key={team.id}
                         p={2}
                         mt={2}
-                        sx={{
-                          border: "1px solid #eee",
-                          borderRadius: 1.5,
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
-                        }}
+                        sx={{ border: "1px solid #eee", borderRadius: 1.5 }}
                       >
                         <Box display="flex" justifyContent="space-between">
                           <Box display="flex" gap={2} alignItems="center">
                             <CustomCheckbox
-                              checked={team.selected}
-                              onChange={() => {
+                              checked={!!team.selected}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
                                 setSwTeams((prev) =>
                                   prev.map((t) =>
                                     t.id === team.id
-                                      ? { ...t, selected: !t.selected }
+                                      ? {
+                                          ...t,
+                                          selected: checked,
+                                          is_autostop_work_penalty: checked,
+                                        }
                                       : t
                                   )
                                 );
@@ -1030,16 +1010,16 @@ export default function PenaltySettings() {
                           </Box>
 
                           <IOSSwitch
-                            checked={team.is_autostop_work_penalty || false}
+                            checked={!!team.is_autostop_work_penalty}
                             onChange={(e) => {
-                              const ch = e.target.checked;
+                              const checked = e.target.checked;
                               setSwTeams((prev) =>
                                 prev.map((t) =>
                                   t.id === team.id
                                     ? {
                                         ...t,
-                                        is_autostop_work_penalty: ch,
-                                        selected: true,
+                                        selected: checked,
+                                        is_autostop_work_penalty: checked,
                                       }
                                     : t
                                 )
@@ -1054,7 +1034,7 @@ export default function PenaltySettings() {
                 </>
               )}
 
-              {/* ==================== STOPWORK USERS ==================== */}
+              {/* ==================== USERS ==================== */}
               {showSwUsersList && (
                 <>
                   <Box
@@ -1064,22 +1044,17 @@ export default function PenaltySettings() {
                     mx={2}
                   >
                     <TextField
-                      placeholder="Search"
+                      placeholder="Search name or team name"
                       value={searchSwUser}
                       onChange={(e) => setSearchSwUser(e.target.value)}
                       sx={{ width: "40%" }}
                     />
 
-                    {(filteredSwUsers.some((t) => t.selected) ||
+                    {(filteredSwUsers.some((u) => u.selected) ||
                       swUsersDirty) && (
                       <Button
                         variant="contained"
                         onClick={handleUpdateStopWorkUsers}
-                        sx={{
-                          textTransform: "none",
-                          borderRadius: "8px",
-                          px: 3,
-                        }}
                       >
                         Update
                       </Button>
@@ -1103,34 +1078,47 @@ export default function PenaltySettings() {
                       ml={2}
                       mr={2}
                     >
-                      <Box display="flex" gap={2} alignItems="center">
+                      <Box display="flex" alignItems="center" gap={1}>
                         <CustomCheckbox
                           checked={
                             filteredSwUsers.length > 0 &&
-                            filteredSwUsers.every((t) => t.selected)
+                            filteredSwUsers.every((u) => u.selected)
                           }
                           onChange={(e) => {
                             const checked = e.target.checked;
                             setSwUsers((prev) =>
-                              prev.map((t) => ({ ...t, selected: checked }))
+                              prev.map((u) =>
+                                filteredSwUsers.some((f) => f.id === u.id)
+                                  ? {
+                                      ...u,
+                                      selected: checked,
+                                      is_autostop_work_penalty: checked,
+                                    }
+                                  : u
+                              )
                             );
+                            setSwUsersDirty(true);
                           }}
                         />
-
-                        <Typography fontWeight={600} ml={1}>
+                        <Typography fontWeight={600}>
                           Select All Users
                         </Typography>
                       </Box>
 
                       <IOSSwitch
+                        checked={!!stopUsersAllOn}
                         onChange={(e) => {
-                          const value = e.target.checked;
+                          const checked = e.target.checked;
                           setSwUsers((prev) =>
-                            prev.map((u) => ({
-                              ...u,
-                              selected: true,
-                              is_autostop_work_penalty: value,
-                            }))
+                            prev.map((u) =>
+                              filteredSwUsers.some((f) => f.id === u.id)
+                                ? {
+                                    ...u,
+                                    selected: checked,
+                                    is_autostop_work_penalty: checked,
+                                  }
+                                : u
+                            )
                           );
                           setSwUsersDirty(true);
                         }}
@@ -1143,44 +1131,44 @@ export default function PenaltySettings() {
                         key={user.id}
                         p={2}
                         mt={2}
-                        sx={{
-                          border: "1px solid #eee",
-                          borderRadius: 1.5,
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
-                        }}
+                        sx={{ border: "1px solid #eee", borderRadius: 1.5 }}
                       >
                         <Box display="flex" justifyContent="space-between">
                           <Box display="flex" gap={2} alignItems="center">
                             <CustomCheckbox
-                              checked={user.selected}
-                              onChange={() => {
+                              checked={!!user.selected}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
                                 setSwUsers((prev) =>
                                   prev.map((u) =>
                                     u.id === user.id
-                                      ? { ...u, selected: !u.selected }
+                                      ? {
+                                          ...u,
+                                          selected: checked,
+                                          is_autostop_work_penalty: checked,
+                                        }
                                       : u
                                   )
                                 );
                                 setSwUsersDirty(true);
                               }}
                             />
-
                             <Typography>
                               {user.first_name} {user.last_name}
                             </Typography>
                           </Box>
 
                           <IOSSwitch
-                            checked={user.is_autostop_work_penalty || false}
+                            checked={!!user.is_autostop_work_penalty}
                             onChange={(e) => {
-                              const val = e.target.checked;
+                              const checked = e.target.checked;
                               setSwUsers((prev) =>
                                 prev.map((u) =>
                                   u.id === user.id
                                     ? {
                                         ...u,
-                                        is_autostop_work_penalty: val,
-                                        selected: true,
+                                        selected: checked,
+                                        is_autostop_work_penalty: checked,
                                       }
                                     : u
                                 )
