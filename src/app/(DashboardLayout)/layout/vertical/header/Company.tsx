@@ -434,7 +434,7 @@ const Company = () => {
                       <IconArrowLeft />
                     </IconButton>
 
-                    <Typography variant="h5" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={700}>
                       Feeds ({filteredFeeds ? filteredFeeds.length : 0})
                     </Typography>
 
@@ -637,7 +637,7 @@ const Company = () => {
                       <IconArrowLeft />
                     </IconButton>
 
-                    <Typography variant="h5" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={700}>
                       Announcement
                     </Typography>
                   </Box>

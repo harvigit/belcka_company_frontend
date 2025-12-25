@@ -62,7 +62,6 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -131,8 +130,6 @@ const TablePagination = () => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const searchParams = useSearchParams();
-  const projectId = searchParams ? searchParams.get("project_id") : "";
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const session = useSession();
@@ -1744,7 +1741,7 @@ const TablePagination = () => {
               <IconButton onClick={closeInviteDrawer} sx={{ p: 0 }}>
                 <IconArrowLeft />
               </IconButton>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography variant="h6" fontWeight={700}>
                 Invite User
               </Typography>
               <IconButton

@@ -67,7 +67,9 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   // Fetch all projects
   const fetchProjects = async () => {
     try {
-      const res: AxiosResponse<any> = await api.get(`project/get?company_id=${user.company_id}`);
+      const res: AxiosResponse<any> = await api.get(
+        `project/get?company_id=${user.company_id}`
+      );
       if (res.data?.info) {
         setProjects(res.data.info);
       }
@@ -80,7 +82,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   const fetchClients = useCallback(async () => {
     if (!id) return;
     try {
-      const res : AxiosResponse<any>= await api.get(
+      const res: AxiosResponse<any> = await api.get(
         `company-clients/get?company_id=${user.company_id}&client_id=${id}`
       );
       if (res.data?.info?.length > 0) {
@@ -138,10 +140,13 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
         user_role_id: 3,
         company_id: user.company_id,
         project_ids: selectedIds,
-        expire_date: expireDate
+        expire_date: expireDate,
       };
 
-      const response : AxiosResponse<any>= await api.post("company-clients/edit", payload);
+      const response: AxiosResponse<any> = await api.post(
+        "company-clients/edit",
+        payload
+      );
 
       if (response.data.IsSuccess) {
         onWorkUpdated?.();
@@ -156,7 +161,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
   };
 
   return (
-    <Box sx={{ p: 3, pt: 1,marginBottom: 4 }}>
+    <Box sx={{ p: 3, pt: 1, marginBottom: 4 }}>
       <Grid size={{ xs: 12, lg: 12 }}>
         <Box>
           <form onSubmit={handleEditClient}>
@@ -197,7 +202,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
                   />
                 </Box>
                 <Box className="form_inputs" mt={3}>
-                  <Typography>Select Projects</Typography>
+                  <Typography variant="caption">Select Projects</Typography>
                   <Autocomplete
                     fullWidth
                     multiple
@@ -226,7 +231,7 @@ const EditClient = ({ open, onClose, onWorkUpdated, id }: Props) => {
               </Box>
               <Box display={"flex"} gap={3}>
                 <Box className="form_inputs" mt={3}>
-                  <Typography>Select Expiry time</Typography>
+                  <Typography variant="caption">Select Expiry time</Typography>
                   <CustomTextField
                     type="date"
                     id="invite_date"

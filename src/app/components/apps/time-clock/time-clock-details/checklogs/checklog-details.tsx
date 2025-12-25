@@ -101,7 +101,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
 
     const handleUpdateProgress = async (taskId: number) => {
     try {
-        console.log(taskId)
+        
         const res = await api.put("company-tasks/update", {
             id: taskId,
             progress: String(editableProgress[taskId]),

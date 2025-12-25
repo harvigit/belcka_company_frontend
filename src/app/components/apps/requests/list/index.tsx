@@ -258,7 +258,7 @@ export default function UserRequests({
         display="flex"
         justifyContent="space-between"
         alignItems="center"
-        py={1.5}
+        py={1}
       >
         <Stack direction="row" alignItems="center" spacing={1}>
           <IconButton onClick={onClose}>

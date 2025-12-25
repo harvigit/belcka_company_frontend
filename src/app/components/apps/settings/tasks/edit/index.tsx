@@ -135,7 +135,7 @@ const EditTask: React.FC<EditTaskProps> = ({
       <Box display="flex" flexDirection="column" height="100%">
         <Box height={"100%"}>
           <form onSubmit={EditTask} className="address-form">
-            <Grid container mt={3}>
+            <Grid container>
               <Grid size={{ lg: 12, xs: 12 }}>
                 <Box
                   display={"flex"}
@@ -146,7 +146,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   <IconButton onClick={onClose}>
                     <IconArrowLeft />
                   </IconButton>
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="h6" fontWeight={700}>
                     Edit Template
                   </Typography>
                 </Box>

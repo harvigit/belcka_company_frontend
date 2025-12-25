@@ -201,7 +201,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                     />
                   </Box>
                   <Box className="form_inputs" mt={3}>
-                    <Typography>Select Projects</Typography>
+                    <Typography variant="caption">Select Projects</Typography>
                     <Autocomplete
                       fullWidth
                       multiple
@@ -230,7 +230,7 @@ const AuthRegister = ({ open, onClose, onWorkUpdated }: Props) => {
                 </Box>
                 <Box display={"flex"} gap={3}>
                   <Box className="form_inputs" mt={3}>
-                    <Typography>Select Expiry time</Typography>
+                    <Typography variant="caption">Select Expiry time</Typography>
                     <CustomTextField
                       type="date"
                       id="invite_date"

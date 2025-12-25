@@ -1697,7 +1697,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 <IconButton onClick={() => setOpenDrawer(false)}>
                   <IconArrowLeft />
                 </IconButton>
-                <Typography variant="h5" fontWeight={700}>
+                <Typography variant="h6" fontWeight={700}>
                   Project Activities
                 </Typography>
               </Box>

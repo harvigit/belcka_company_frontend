@@ -101,13 +101,13 @@ const TasksList = ({
   const [address, setAddress] = useState<any[]>([]);
   const [location, setLocation] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [taskSearch, setTaskSearch] = useState("");
   const [formData, setFormData] = useState<any>({});
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteIds, setDeleteIds] = useState<number[]>([]);
-  const [hovered, setHovered] = useState(false);
 
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const fetchTasks = async () => {
@@ -328,8 +328,14 @@ const TasksList = ({
               }
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedRowIds(new Set(data.map((_, i) => i)));
+                const isChecked = e.target.checked;
+
+                setShowAllCheckboxes(isChecked);
+
+                if (isChecked) {
+                  setSelectedRowIds(
+                    new Set(currentFilteredData.map((r) => r.id))
+                  );
                 } else {
                   setSelectedRowIds(new Set());
                 }
@@ -343,7 +349,10 @@ const TasksList = ({
         enableSorting: true,
         cell: ({ row }) => {
           const item = row.original;
-          const isChecked = selectedRowIds.has(row.index);
+          const isChecked = selectedRowIds.has(item.id);
+
+          const showCheckbox =
+            showAllCheckboxes || hoveredRow === item.id || isChecked;
 
           return (
             <Stack
@@ -351,8 +360,10 @@ const TasksList = ({
               alignItems="center"
               spacing={2}
               sx={{ pl: 1 }}
-              onMouseEnter={() => setHovered(true)}
-              onMouseLeave={() => setHovered(false)}
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() =>
+                setHoveredRow((prev) => (prev === item.id ? null : prev))
+              }
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -365,7 +376,8 @@ const TasksList = ({
                   setSelectedRowIds(newSelected);
                 }}
                 sx={{
-                  opacity: hovered || isChecked ? 1 : 0,
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
                   transition: "opacity 0.2s ease",
                 }}
               />
@@ -516,7 +528,7 @@ const TasksList = ({
         },
       }),
     ];
-  }, [data, selectedRowIds]);
+  }, [data, selectedRowIds, hoveredRow, showAllCheckboxes]);
   const table = useReactTable<TaskList>({
     data: currentFilteredData,
     columns,

@@ -62,7 +62,7 @@ const CreateLocation: React.FC<CreateLocationProps> = ({
         <Box height={"100%"}>
           <form onSubmit={handleSubmit} className="address-form">
             {" "}
-            <Grid container mt={3}>
+            <Grid container>
               <Grid size={{ lg: 12, xs: 12 }}>
                 <Box
                   display={"flex"}
@@ -73,7 +73,7 @@ const CreateLocation: React.FC<CreateLocationProps> = ({
                   <IconButton onClick={onClose}>
                     <IconArrowLeft />
                   </IconButton>
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="h6" fontWeight={700}>
                     Add Location
                   </Typography>
                 </Box>
