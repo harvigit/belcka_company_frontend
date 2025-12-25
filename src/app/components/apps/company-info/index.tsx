@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import { useRouter } from "next/navigation";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -23,12 +22,7 @@ export interface CompanyList {
 
 const TablePagination = () => {
   const [data, setData] = useState<CompanyList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const rerender = React.useReducer(() => ({}), {})[1];
-
-  const router = useRouter();
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
 

@@ -43,38 +43,40 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
     team_member_ids: [],
   });
 
-  useEffect(() => {
-    const fetchTrades = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get(
-          `team/user-list?company_id=${user.company_id}`
-        );
-        if (res.data) {
-          setUsers(res.data.info);
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+  const fetchTrades = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`team/user-list?company_id=${user.company_id}`);
+      if (res.data) {
+        setUsers(res.data.info);
       }
-      setLoading(false);
-    };
-    fetchTrades();
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    }
+    setLoading(false);
+  };
+  useEffect(() => {
+    if (open == true) {
+      fetchTrades();
+    }
   }, [user?.company_id, open]);
 
-  useEffect(() => {
-    const fetchTrades = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get(`user/get-user-lists`);
-        if (res.data) {
-          setData(res.data.info);
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`user/get-user-lists`);
+      if (res.data) {
+        setData(res.data.info);
       }
-      setLoading(false);
-    };
-    fetchTrades();
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    }
+    setLoading(false);
+  };
+  useEffect(() => {
+    if (open == true) {
+      fetchUsers();
+    }
   }, [user.id, open]);
 
   const handleChange = (

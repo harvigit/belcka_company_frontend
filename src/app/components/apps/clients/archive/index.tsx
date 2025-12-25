@@ -15,7 +15,7 @@ import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { AxiosResponse } from "axios";
 
@@ -98,6 +98,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
         );
         if (response.data.IsSuccess == true) {
           toast.success(response.data.message);
+          onWorkUpdated?.();
         }
       }
 
