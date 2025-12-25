@@ -20,7 +20,7 @@ import "react-day-picker/dist/style.css";
 import api from '@/utils/axios';
 
 interface Project { id: number; name: string; }
-interface Address { id: number; name: string; }
+interface Address { id: number; name: string; project_id: number;}
 interface Category { id: number; name: string; }
 
 interface UploadedFile {
@@ -28,11 +28,7 @@ interface UploadedFile {
     preview?: string;
 }
 
-const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number }> = ({
-                                                                                              onClose,
-                                                                                              userId,
-                                                                                              companyId,
-                                                                                          }) => {
+const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number }> = ({onClose, userId, companyId}) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +64,17 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         };
         fetchResources();
     }, []);
+
+    useEffect(() => {
+        setSelectedAddress('');
+    }, [selectedProject]);
+
+    const filteredAddresses = React.useMemo(() => {
+        if (!selectedProject) return [];
+        return addresses.filter(
+            (addr) => addr.project_id === Number(selectedProject)
+        );
+    }, [addresses, selectedProject]);
 
     // Cleanup preview URLs on unmount
     useEffect(() => {
@@ -267,7 +274,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                         <Typography variant="body2" fontWeight={600} color="#1a1a1a">
                             Address
                         </Typography>
-                        <FormControl fullWidth size="small">
+                        <FormControl fullWidth size="small" disabled={!selectedProject}>
                             <Select
                                 value={selectedAddress}
                                 onChange={(e) => setSelectedAddress(e.target.value)}
@@ -279,9 +286,11 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                 }}
                             >
                                 <MenuItem value="" disabled>
-                                    <span style={{ color: '#999' }}>Select Address</span>
+                                    <span style={{ color: '#999' }}>
+                                        {selectedProject ? 'Select Address' : 'Select Project first'}
+                                    </span>
                                 </MenuItem>
-                                {addresses.map((addr) => (
+                                {filteredAddresses.map((addr) => (
                                     <MenuItem key={addr.id} value={addr.id.toString()}>
                                         {addr.name}
                                     </MenuItem>
