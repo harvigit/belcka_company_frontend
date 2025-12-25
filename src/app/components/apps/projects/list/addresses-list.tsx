@@ -661,6 +661,15 @@ const AddressesList = ({
               />
 
               <Typography
+                onClick={() =>
+                  setSidebarData({
+                    addressName: item.name,
+                    companyId: item.company_id,
+                    projectId: item.project_id,
+                    addressId: item.id,
+                    info: [true],
+                  })
+                }
                 className="f-14"
                 sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
               >
