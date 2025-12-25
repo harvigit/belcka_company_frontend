@@ -131,7 +131,7 @@ const AddressesList = ({
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [addressEdit, setAddressEdit] = useState(false);
@@ -300,8 +300,6 @@ const AddressesList = ({
 
     return filtered;
   }, [data, filters, searchTerm]);
-
-  const columnHelper = createColumnHelper<ProjectList>();
 
   const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
@@ -585,6 +583,8 @@ const AddressesList = ({
     }));
   };
 
+  const columnHelper = createColumnHelper<ProjectList>();
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
@@ -627,7 +627,7 @@ const AddressesList = ({
           const isChecked = selectedRowIds.has(item.id);
 
           const showCheckbox =
-            showAllCheckboxes || hoveredRow === row.id || isChecked;
+            showAllCheckboxes || hoveredRow === item.id || isChecked;
 
           return (
             <Stack
@@ -635,8 +635,10 @@ const AddressesList = ({
               alignItems="center"
               spacing={4}
               sx={{ pl: 1 }}
-              onMouseEnter={() => setHoveredRow(row.id)}
-              onMouseLeave={() => setHoveredRow(null)}
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() =>
+                setHoveredRow((prev) => (prev === item.id ? null : prev))
+              }
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -644,11 +646,12 @@ const AddressesList = ({
                 onClick={(e) => e.stopPropagation()}
                 onChange={() => {
                   if (isProcessed) return;
-                  const newSelected = new Set(selectedRowIds);
-                  isChecked
-                    ? newSelected.delete(item.id)
-                    : newSelected.add(item.id);
-                  setSelectedRowIds(newSelected);
+
+                  setSelectedRowIds((prev) => {
+                    const next = new Set(prev);
+                    isChecked ? next.delete(item.id) : next.add(item.id);
+                    return next;
+                  });
                 }}
                 sx={{
                   opacity: showCheckbox ? 1 : 0,
@@ -660,17 +663,8 @@ const AddressesList = ({
               <Typography
                 className="f-14"
                 sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-                onClick={() =>
-                  setSidebarData({
-                    addressName: item.name,
-                    companyId: item.company_id,
-                    projectId: item.project_id,
-                    addressId: item.id,
-                    info: [true],
-                  })
-                }
               >
-                {item.name ?? "-"}
+                {item.name}
               </Typography>
             </Stack>
           );
@@ -763,7 +757,7 @@ const AddressesList = ({
         },
       }),
     ],
-    [data, selectedRowIds]
+    [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds]
   );
 
   const table = useReactTable({
