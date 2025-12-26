@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useEffect } from "react";
 import { Box, Grid } from "@mui/system";
 import {
@@ -68,6 +68,7 @@ const Company = () => {
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const limit = 20;
+  const [loadingFeeds, setLoadingFeeds] = useState(false);
 
   const user = session.data?.user as User & { company_id?: string | null } & {
     company_name?: string | null;
@@ -121,7 +122,7 @@ const Company = () => {
 
   const fetchFeeds = async () => {
     if (!user?.company_id || !user?.id) return;
-
+    setLoadingFeeds(true);
     try {
       const res = await api.get(
         `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
@@ -141,10 +142,16 @@ const Company = () => {
     } catch (e) {
       console.error(e);
     }
+    setLoadingFeeds(true);
   };
+
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     if (!user?.company_id || !user?.id) return;
+    if (hasFetched.current) return;
+
+    hasFetched.current = true;
     fetchFeeds();
   }, [user?.company_id, user?.id]);
 
@@ -348,17 +355,20 @@ const Company = () => {
           </MenuItem>
         ))}
       </Menu>
-      <Badge
-        badgeContent={count > 0 ? count : null}
-        color="error"
-        overlap="circular"
-      >
-        <IconBell
-          size={24}
-          onClick={() => setOpenDrawer(true)}
-          className="header-icons"
-        />
-      </Badge>
+      {loadingFeeds && (
+        <Badge
+          badgeContent={count > 0 ? count : null}
+          color="error"
+          overlap="circular"
+        >
+          <IconBell
+            size={24}
+            onClick={() => setOpenDrawer(true)}
+            className="header-icons"
+          />
+        </Badge>
+      )}
+
       <Badge
         badgeContent={announcemntCount > 0 ? announcemntCount : null}
         color="error"
