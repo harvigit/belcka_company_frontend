@@ -298,6 +298,7 @@ const TablePagination = () => {
       const response = await api.post(`company/add-team-to-company`, payload);
       toast.success(response.data.message);
       setOpenOtpDialog(false);
+      setOtp("")
     } catch (error: any) {
       // toast.error(error?.response?.data?.message || "Something went wrong.");
     } finally {
@@ -521,7 +522,7 @@ const TablePagination = () => {
         }}
       >
         <BlankCard>
-          <CardContent>
+          <CardContent sx={{ pt: 1}}>
             <Box textAlign="center" display="flex" justifyContent="center">
               <Box>
                 <Avatar

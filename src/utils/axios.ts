@@ -4,9 +4,7 @@ import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
-  timeout: 15000,
+  baseURL: process.env.NEXT_PUBLIC_API_URL
 });
 
 api.interceptors.request.use(

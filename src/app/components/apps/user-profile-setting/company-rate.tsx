@@ -281,6 +281,16 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       if (res.data.IsSuccess == true) {
         toast.success(res.data.message);
         getCompanyData();
+        if (Number(userId) === Number(user?.id)) {
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              trade_id: comapny?.trade_id,
+              trade_name: comapny?.trade_name,
+            },
+          });
+        }
       }
     } catch (err) {
       console.error("Approval failed:", err);
@@ -301,6 +311,16 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       if (res.data.IsSuccess == true) {
         toast.success(res.data.message);
         getCompanyData();
+        if (Number(userId) === Number(user?.id)) {
+          await update({
+            ...session,
+            user: {
+              ...session?.user,
+              trade_id: comapny?.trade_id,
+              trade_name: comapny?.trade_name,
+            },
+          });
+        }
       }
     } catch (err) {
       console.error("Rejection failed:", err);

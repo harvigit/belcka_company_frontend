@@ -230,9 +230,9 @@ export default function UserRequests({
 
   const TYPE_COLOR: Record<string, string> = {
     Shift: "#FF7F00",
-    "Billing Info": "#fc34b2d5",
+    "Billing Info": "#4CBC6D",
     Company: "#f5c21bf8",
-    Leave: "#FF484B",
+    Leave: "#949090ff",
     "Work log": "#FFFF7F00",
     Timesheet: "#FFFF7F00",
     "User Account": "#FF3F51B5",
