@@ -90,7 +90,7 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
                 <Box height={'100%'}>
                     <form onSubmit={EditExpenseCategory} className="address-form">
                         {' '}
-                        <Grid container mt={3}>
+                        <Grid container>
                             <Grid size={{lg: 12, xs: 12}}>
                                 <Box
                                     display={'flex'}
@@ -101,7 +101,7 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
                                     <IconButton onClick={onClose}>
                                         <IconArrowLeft/>
                                     </IconButton>
-                                    <Typography variant="h5" fontWeight={700}>
+                                    <Typography variant="h6" fontWeight={700}>
                                         Edit Expense Category
                                     </Typography>
                                 </Box>

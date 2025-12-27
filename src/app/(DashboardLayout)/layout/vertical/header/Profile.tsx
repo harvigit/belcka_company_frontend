@@ -99,14 +99,14 @@ const Profile = () => {
             width: "360px",
             p: 4,
             pb: 2,
+            pt: 2,
           },
         }}
       >
         <Typography variant="h4">User Profile</Typography>
-        <Stack direction="row" py={3} pb={0} spacing={2} alignItems="center">
+        <Stack direction="row" spacing={2} alignItems="center">
           <Avatar
             src={user?.user_image || "/default-avatar.png"}
-            // src={"/images/logos/belcka_logo.png"}
             alt={user?.first_name || "User"}
             sx={{ width: 95, height: 95 }}
           />

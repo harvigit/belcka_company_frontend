@@ -142,7 +142,7 @@ export default function NotificationSettings() {
 
   return (
     <Box>
-      <Box display={"flex"} justifyContent={"space-between"} mb={1}>
+      <Box display={"flex"} justifyContent={"space-between"} p={2} pb={0}>
         <Typography fontWeight={500} ml={2}>Notification Settings</Typography>
         {categories.length > 0 && (
           <>
@@ -152,7 +152,7 @@ export default function NotificationSettings() {
           </>
         )}
       </Box>
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ p: 2, pt: 0}}>
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow sx={{ background: "#e5e8ed" }}>

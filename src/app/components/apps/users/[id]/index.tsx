@@ -237,7 +237,7 @@ const TablePagination = () => {
   return (
     <Box>
       <BlankCard>
-        <CardContent>
+        <CardContent sx={{ pt: 1}}>
           <Box
             display="flex"
             alignItems={"center"}

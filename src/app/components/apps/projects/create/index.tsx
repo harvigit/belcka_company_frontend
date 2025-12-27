@@ -68,11 +68,10 @@ const CreateProject: React.FC<CreateProjectProps> = ({
     if (formData[key] === value) return;
 
     if (key === "budget" && !/^\d*$/.test(value)) return;
-setFormData(prev => {
-  if (prev[key] === value) return prev;
-  return { ...prev, [key]: value };
-});
-
+    setFormData((prev) => {
+      if (prev[key] === value) return prev;
+      return { ...prev, [key]: value };
+    });
   };
 
   const [shift, setShift] = useState<Shift[]>([]);
@@ -175,7 +174,7 @@ setFormData(prev => {
     >
       <Box display="flex" flexDirection="column" height="100%">
         <Box height="100%">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="address-form">
             <Grid container>
               <Grid size={{ xs: 12 }}>
                 <Box display="flex" alignItems="center">
@@ -348,7 +347,13 @@ setFormData(prev => {
             </Grid>
 
             {/* ACTION BUTTONS */}
-            <Box display="flex" gap={2} mt={3}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "start",
+                gap: 2,
+              }}
+            >
               <Button
                 color="primary"
                 variant="contained"

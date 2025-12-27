@@ -993,7 +993,7 @@ const AddZone = ({
                 max={100}
                 value={radius}
                 onChange={(e, v) => setRadius(v as number)}
-                sx={{ mb: 2 ,width: "98%", mr:2}}
+                sx={{ mb: 2, width: "98%", mr: 2 }}
               />
               <Box
                 sx={{
@@ -1139,7 +1139,7 @@ const EditZone = ({
   const [name, setName] = useState(zone.name);
   const [color, setColor] = useState(zone.color);
   const [address, setAddress] = useState(zone.address);
-  const [radius, setRadius] = useState(Number(zone.radius || 0));
+  const [radius, setRadius] = useState(Number(zone.radius || 100));
   const [isSaving, setIsSaving] = useState(false);
 
   const [zoneType, setZoneType] = useState<"circle" | "polygon" | "polyline">(
@@ -1173,8 +1173,19 @@ const EditZone = ({
     circleRef.current?.setCenter(newLoc);
   };
 
+  const handleRadiusChange = (radius: number) => {
+    if (!radius) return;
+    if (radius > 100) {
+      setRadius(100);
+    }
+    setRadius(radius);
+  };
+
   const onRadiusChanged = () => {
     if (!circleRef.current) return;
+    if (Number(circleRef.current.getRadius()) > 100) {
+      setRadius(100);
+    }
     setRadius(circleRef.current.getRadius());
   };
 
@@ -1341,8 +1352,8 @@ const EditZone = ({
               min={0}
               max={100}
               value={radius}
-              onChange={(e, v) => setRadius(v as number)}
-               sx={{ mb: 2 ,width: "98%", mr:2 }}
+              onChange={(e: any) => handleRadiusChange(e.target.value)}
+              sx={{ mb: 2, width: "98%", mr: 2 }}
             />
           </>
         )}

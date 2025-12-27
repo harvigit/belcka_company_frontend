@@ -112,12 +112,10 @@ const EditLeave: React.FC<EditLeaveProps> = ({
                     <IconButton onClick={onClose} aria-label="close drawer">
                         <ArrowBackIcon /> {/* Consistent with CreateLeave */}
                     </IconButton>
-                    <Typography variant="h5" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={700}>
                         Edit Leave
                     </Typography>
                 </Box>
-
-                <Divider />
 
                 <Box height="100%" p={2}>
                     <form onSubmit={EditLeave} className="address-form">

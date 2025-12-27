@@ -84,12 +84,10 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
                     <IconButton onClick={onClose} aria-label="close drawer">
                         <ArrowBackIcon />
                     </IconButton>
-                    <Typography variant="h5" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={700}>
                         Add Leave
                     </Typography>
                 </Box>
-
-                <Divider />
 
                 <Box height="100%" p={2}>
                     <form onSubmit={handleSubmit} className="address-form">

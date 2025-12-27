@@ -230,7 +230,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           <IconButton onClick={onClose}>
             <IconArrowLeft />
           </IconButton>
-          <Typography variant="h6" fontWeight={600}>
+          <Typography variant="h6" color="inherit" fontWeight={700}>
             Announcement
           </Typography>
         </Box>
