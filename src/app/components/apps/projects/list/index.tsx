@@ -145,10 +145,12 @@ type UnifiedPrediction =
 
 const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const POSTCODER_COUNTRIES = ["UK", "IE", "AU", "NZ"];
-  const isLikelyUKPostcode = (value: string) =>
-    /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i.test(value.trim());
+  const isIEPostcode = (value: string) =>
+    /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
 
+  const isAUPostcode = (value: string) => /^\d{4}$/.test(value.trim());
+
+  const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
   const handleSelectedRows = (ids: number[]) => {
     setSelectedIds(ids);
   };
@@ -463,7 +465,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         setTimeout(() => {
           setLoading(false);
         }, 100);
-        setRadius(100)
+        setRadius(100);
         setFormData({
           project_id: Number(projectID),
           company_id: user.company_id,
@@ -606,20 +608,24 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
     setTypedAddress(true);
 
-    if (isLikelyUKPostcode(query)) {
-      try {
-        const res = await fetch(
-          `https://ws.postcoder.com/pcw/${
-            process.env.NEXT_PUBLIC_POSTCODER_KEY
-          }/address/UK/${encodeURIComponent(query)}?format=json`
-        );
+    try {
+      let country = "UK";
 
-        const data = await res.json();
-        setPredictions(data || []);
-        return;
-      } catch (err) {
-        console.error("Postcoder failed, falling back to Google", err);
-      }
+      if (isIEPostcode(query)) country = "IE";
+      else if (isAUPostcode(query)) country = "AU";
+      else if (isNZPostcode(query)) country = "NZ";
+
+      const res = await fetch(
+        `https://ws.postcoder.com/pcw/${
+          process.env.NEXT_PUBLIC_POSTCODER_KEY
+        }/address/${country}/${encodeURIComponent(query)}?format=json`
+      );
+
+      const data = await res.json();
+      setPredictions(data || []);
+      return;
+    } catch (err) {
+      console.error("Postcoder failed, falling back to Google", err);
     }
 
     const service = new google.maps.places.AutocompleteService();
@@ -655,7 +661,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         const boundary: Boundary = {
           lat,
           lng,
-          radius, 
+          radius,
         };
 
         setFormData({
