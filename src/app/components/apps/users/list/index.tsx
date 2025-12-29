@@ -369,7 +369,7 @@ const TablePagination = () => {
             };
 
             const response = await api.post(
-                "dashboard/user/change-bulk-permission-status",
+                "dashboard/company/change-user-permissions-status",
                 payload
             );
 
