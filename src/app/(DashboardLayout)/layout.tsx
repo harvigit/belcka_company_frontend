@@ -66,7 +66,7 @@ export default function DashboardLayout({ children }: Props) {
                     <Container
                         sx={{
                             maxWidth:
-                                isLayout === "boxed" ? "1800px !important" : "100%!important",
+                                isLayout === "boxed" ? "2500px !important" : "100%!important",
                         }}
                     >
                         <Box sx={{ minHeight: "calc(100vh - 170px)" }}>{children}</Box>
