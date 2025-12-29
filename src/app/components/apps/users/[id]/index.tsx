@@ -29,7 +29,7 @@ import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import HealthInfo from "../../user-profile-setting/health-info";
 import BillingInfo from "../../user-profile-setting/billing-info";
-import { useSession } from "next-auth/react";
+import { getSession, useSession } from "next-auth/react";
 import { User } from "next-auth";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
@@ -184,8 +184,8 @@ const TablePagination = () => {
   };
 
   const handleConfirmAdmin = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const payload = {
         company_id: user.company_id,
         user_id: data?.id,
@@ -195,7 +195,23 @@ const TablePagination = () => {
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         setOpenModel(false);
-        fetchData();
+        try {
+          const res = await api.get(`user/get-user-lists?user_id=${user.id}`);
+
+          if (res.data?.info?.length) {
+            const data = res.data.info[0];
+
+            await update({
+              user: {
+                ...session?.user,
+                user_role_id: data.user_role_id,
+                user_role: data.user_role,
+              },
+            });
+          }
+        } catch (err) {
+          console.error("Failed to fetch users", err);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -237,7 +253,7 @@ const TablePagination = () => {
   return (
     <Box>
       <BlankCard>
-        <CardContent sx={{ pt: 1}}>
+        <CardContent sx={{ pt: 1 }}>
           <Box
             display="flex"
             alignItems={"center"}

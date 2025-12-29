@@ -61,7 +61,7 @@ const AdminSetting = () => {
             title="Account Setting"
             description="This is Account Setting"
         >
-            <Grid container spacing={1}>
+            <Grid container spacing={2}>
                 <Grid
                     container
                     display={'flex'}
