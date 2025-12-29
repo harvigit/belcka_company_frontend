@@ -118,6 +118,7 @@ span.MuiTabs-indicator.mui-at3d3q{
     color: #1e4db7;
     border-radius: 7px;
     margin-bottom: 7px;
+    text-align: start !important;
     /* gap:10px; */
     align-content: start !important;
     justify-content: flex-start;
@@ -137,6 +138,9 @@ span.MuiTabs-indicator.mui-at3d3q{
     width: 100%
 }
 
+.admin-settings .mui-gm7013-MuiButtonBase-root-MuiTab-root>.MuiTab-icon {
+    margin-right: 13px !important;
+}
 input#project_id::placeholder {
     color: #ffffff;
 }
