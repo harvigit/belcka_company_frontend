@@ -205,7 +205,6 @@ const TablePagination = () => {
               user: {
                 ...session?.user,
                 user_role_id: data.user_role_id,
-                user_role: data.user_role,
               },
             });
           }

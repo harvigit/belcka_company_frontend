@@ -69,7 +69,8 @@ export const authOptions: NextAuthOptions = {
             company_image: companyData?.info?.image ?? null,
             trade_id: companyData?.info?.trade_id ?? null,
             trade_name: companyData?.info?.trade_name ?? null,
-            currency_id: companyData?.info?.currency_id ?? null
+            currency_id: companyData?.info?.currency_id ?? null,
+            user_role_id: companyData?.info?.user_role_id ?? null
           };
           
         } catch (err) {
@@ -126,7 +127,8 @@ export const authOptions: NextAuthOptions = {
             company_image: data?.info?.image ?? null,
             trade_id: data?.info?.trade_id ?? null,
             trade_name: data?.info?.trade_name ?? null,
-            currency_id: data?.info?.currency_id ?? null
+            currency_id: data?.info?.currency_id ?? null,
+            user_role_id: data?.info?.user_role_id ?? null
           };
         } else {
           console.error("Failed to fetch updated company data:", data);
