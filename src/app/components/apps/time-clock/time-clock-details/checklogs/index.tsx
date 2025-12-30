@@ -190,7 +190,7 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                 <IconButton onClick={() => onClose()}>
                     <IconArrowLeft />
                 </IconButton>
-                <Typography variant="h5" fontWeight={700}>
+                <Typography variant="h6" fontWeight={700}>
                     {date} {day}
                 </Typography>
             </Box>

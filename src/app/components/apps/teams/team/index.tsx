@@ -732,7 +732,7 @@ const TablePagination = () => {
                   <ListItemIcon>
                     <IconRotate width={18} />
                   </ListItemIcon>
-                  Generate Code
+                  Create Code
                 </MenuItem>
               </Menu>
               <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
