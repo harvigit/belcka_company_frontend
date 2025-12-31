@@ -820,6 +820,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         expense: '--',
                         checkIns: '--',
                         totalHours: '--',
+                        penaltyHours: '--',
                         dailyTotal: formatHour(day.daily_total),
                         // expenseAmount: `${currency}${totalExpenseAmount.toFixed(2)}`,
                         payableAmount: `${currency}${totalPayableAmount.toFixed(2)}`,
@@ -854,6 +855,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     priceWork: '--',
                     expense: '--',
                     totalHours: '--',
+                    penaltyHours: '--',
                     dailyTotal: '--',
                     // expenseAmount: '--',
                     payableAmount: '--',
@@ -1266,6 +1268,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     return (
                         <span style={{color: isEdited ? '#ff0000' : 'inherit'}}>
                           {isPricework ? '--' : totalHours}
+                        </span>
+                    );
+                },
+                size: 150,
+            },
+            {
+                id: 'penaltyHours',
+                accessorKey: 'penaltyHours',
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Penalty hours</span>,
+                cell: ({row}) => {
+                    if (row.original.rowType !== 'day') return null;
+                    const penaltyHours = row.original.penaltyHours;
+                    const isEdited = row.original.is_edited;
+                    const isPricework = row.original.rowsData ?
+                        row.original.rowsData.some((log: any) => log.is_pricework) : false;
+                    return (
+                        <span style={{color: isEdited ? '#ff0000' : 'inherit'}}>
+                          {isPricework ? '--' : penaltyHours}
                         </span>
                     );
                 },

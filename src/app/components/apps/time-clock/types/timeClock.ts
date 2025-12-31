@@ -22,6 +22,7 @@ export type DailyBreakdown = {
     start?: string;
     end?: string;
     totalHours?: string;
+    penaltyHours?: string;
     priceWork?: string;
     expense?: string;
     checkIns?: string;

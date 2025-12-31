@@ -768,6 +768,22 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         )}
                                                     </TableCell>
                                                 )}
+                                                
+                                                {/* Total Hours Column */}
+                                                {visibleColumnConfigs.penaltyHours?.visible && (
+                                                    <TableCell
+                                                        align="center"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                            color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit')
+                                                        }}
+                                                    >
+                                                        {log.is_pricework ? '--' : formatHour(log?.penalty_hours ?? 0)}
+                                                    </TableCell>
+                                                )}
 
                                                 {/* Pricework Column */}
                                                 {visibleColumnConfigs.priceWork?.visible && (
