@@ -1574,6 +1574,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <AddExpense
                     onClose={closeAddExpenseSidebar}
                     userId={user_id}
+                    selecteUser={false}
                     companyId={companyId}
                 />
             </Drawer>

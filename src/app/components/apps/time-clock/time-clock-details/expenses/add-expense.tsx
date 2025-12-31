@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     Box,
     IconButton,
@@ -13,6 +13,7 @@ import {
     Alert,
     InputAdornment,
     Popover,
+    Avatar,
 } from '@mui/material';
 import { IconX, IconUpload, IconFile, IconTrash, IconCalendar } from '@tabler/icons-react';
 import { DayPicker } from "react-day-picker";
@@ -28,14 +29,14 @@ interface UploadedFile {
     preview?: string;
 }
 
-const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number }> = ({onClose, userId, companyId}) => {
+const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number ,selecteUser: boolean}> = ({onClose, userId, companyId,selecteUser}) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
     const [projects, setProjects] = useState<Project[]>([]);
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-
+    const [users, setUsers] = useState<any[]>([]);
+    const [selectedUser, setSelectedUser] = useState<string>('');
     const [selectedProject, setSelectedProject] = useState<string>('');
     const [selectedAddress, setSelectedAddress] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -68,6 +69,23 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
     useEffect(() => {
         setSelectedAddress('');
     }, [selectedProject]);
+
+    const getUsers = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await api.get(`user/list`);
+            setUsers(res.data.info || []);
+        } catch (error) {
+            setError('Failed to load users. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    }, [userId]);
+
+    useEffect(() => {
+        getUsers();
+    }, [selecteUser == true]);
 
     const filteredAddresses = React.useMemo(() => {
         if (!selectedProject) return [];
@@ -141,6 +159,11 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         e.preventDefault();
         setError(null);
 
+        if(selecteUser == true && !selectedUser){
+            setError('Please select user.');
+            return;
+        }
+
         if (!selectedProject || !selectedAddress || !selectedCategory || !amount || !date) {
             setError('Please fill in all required fields.');
             return;
@@ -148,7 +171,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
 
         // Create FormData for file upload
         const formData = new FormData();
-        formData.append('user_id', userId.toString());
+        formData.append('user_id', selecteUser == true ? selectedUser : userId.toString());
         formData.append('company_id', companyId.toString());
         formData.append('project_id', selectedProject);
         formData.append('address_id', selectedAddress);
@@ -241,6 +264,46 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                 )}
 
                 <Box px={3} py={3} display="flex" flexDirection="column" gap={3}>
+                   {selecteUser == true && (
+                        /* User */
+                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                                User
+                            </Typography>
+                            <FormControl fullWidth size="small">
+                                <Select
+                                    value={selectedUser}
+                                    onChange={(e) => setSelectedUser(e.target.value)}
+                                    displayEmpty
+                                    sx={{
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
+                                    }}
+                                >
+                                    <MenuItem value="" disabled>
+                                        <span style={{ color: '#999' }}>Select User</span>
+                                    </MenuItem>
+                                    {users.map((user) => (
+                                        <MenuItem key={user.id} value={user.id.toString()}>
+                                            <Box display="flex" alignItems="center" gap={1}>
+                                            <Avatar
+                                                src={user?.user_image || user?.image}
+                                                sx={{ width: 24, height: 24, fontSize: '12px' }}
+                                            >
+                                                {user?.first_name?.[0]?.toUpperCase()}
+                                            </Avatar>
+                                            <Typography sx={{ fontSize: '14px' }} component="span">
+                                                {user?.first_name} {user?.last_name}
+                                            </Typography>
+                                        </Box>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
+                    )}
+
                     {/* Project */}
                     <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
                         <Typography variant="body2" fontWeight={600} color="#1a1a1a">
