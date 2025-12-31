@@ -997,9 +997,7 @@ const TimeClock = () => {
             >
               <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
               <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
-              {user.user_role_id == 1 && (
-                <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
-              )}
+              <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
             </Menu>
 
             <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)}>
