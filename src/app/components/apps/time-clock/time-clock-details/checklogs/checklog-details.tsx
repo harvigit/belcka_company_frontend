@@ -175,7 +175,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                     <IconButton onClick={onClose}>
                         <IconArrowLeft/>
                     </IconButton>
-                    <Typography variant="h5" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={700}>
                         Checklog Task Details
                     </Typography>
                 </Box>
