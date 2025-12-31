@@ -808,7 +808,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
             },
           }}
         >
-          {loading ? <CircularProgress size={24} /> : "Add Leave"}
+          {loading ? <CircularProgress size={24} /> : "Add Worklog"}
         </Button>
         <Button
           variant="outlined"

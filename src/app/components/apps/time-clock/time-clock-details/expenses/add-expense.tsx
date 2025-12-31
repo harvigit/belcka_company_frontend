@@ -14,6 +14,7 @@ import {
     InputAdornment,
     Popover,
     Avatar,
+    CircularProgress,
 } from '@mui/material';
 import { IconX, IconUpload, IconFile, IconTrash, IconCalendar } from '@tabler/icons-react';
 import { DayPicker } from "react-day-picker";
@@ -631,34 +632,43 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                         </Box>
                     </Box>
                 </Box>
-
-                {/* Footer */}
-                <Box
-                    display="flex"
-                    justifyContent="flex-end"
-                    gap={2}
-                    px={3}
-                    py={2.5}
-                    borderTop="1px solid #f0f0f0"
-                    bgcolor="#fafafa"
-                >
-                    <Button variant="outlined" color="inherit" onClick={onClose} sx={{ textTransform: 'none' }}>
-                        Cancel
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="contained"
+            </Box>
+            
+            {/* Footer */}
+            <Box
+                display="flex"
+                // justifyContent="flex-end"
+                gap={2}
+                px={3}
+                py={2.5}
+                borderTop="1px solid #f0f0f0"
+                bgcolor="#fafafa"
+            >
+                <Button
+                    type="submit"
+                    variant="contained"
                         disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
                         sx={{
-                            textTransform: 'none',
-                            bgcolor: '#1e4db7',
+                        textTransform: "none",
+                        fontWeight: 500,
+                        bgcolor:"#1e4db7",
+                        color: "white",
+                        boxShadow: "none",
+                        px: 3,
                             '&:hover': { bgcolor: '#173a8c' },
-                            '&:disabled': { bgcolor: '#e0e0e0' },
+                        '&:disabled': { bgcolor: '#e0e0e0' },
                         }}
                     >
-                        {loading ? 'Saving...' : 'Add Expense'}
-                    </Button>
-                </Box>
+                        {loading ? <CircularProgress size={24} /> : "Add Expense"}
+                </Button>
+                <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={onClose}
+                    disabled={loading}
+                >
+                    Cancel
+                </Button>
             </Box>
         </Box>
     );
