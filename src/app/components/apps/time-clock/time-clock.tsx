@@ -868,7 +868,6 @@ const TimeClock = () => {
       }}
     >
       <Box
-        display={"flex"}
         sx={{
           transition: "height 0.3s ease-in-out",
           flex: 1,
