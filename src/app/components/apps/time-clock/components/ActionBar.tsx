@@ -62,7 +62,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
                     <Button
                         size="small"
                         variant="outlined"
-                        color="primary"
+                        color="success"
                         sx={{
                             px: 2.5,
                             textTransform: 'none',

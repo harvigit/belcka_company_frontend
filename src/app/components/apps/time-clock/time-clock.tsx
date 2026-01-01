@@ -516,7 +516,7 @@ const TimeClock = () => {
 
     columnHelper.accessor("daylog_payable_amount", {
       id: "daylog_payable_amount",
-      header: "Payable",
+      header: "Daywork Total",
       cell: (info: any) => {
         const value = info.getValue();
         return value === 0 ? "0" : value ? `${currency}${value}` : "-";
@@ -936,7 +936,7 @@ const TimeClock = () => {
                 <Button
                   startIcon={<IconLock size={16} />}
                   variant="outlined"
-                  color="primary"
+                  color="success"
                   size="small"
                   onClick={handleLock}
                   sx={{ textTransform: "none", fontWeight: 600 }}
@@ -957,7 +957,7 @@ const TimeClock = () => {
 
                 <Button
                   variant="contained"
-                  color="success"
+                  color="primary"
                   size="small"
                   onClick={handleMarkAsPaid}
                   sx={{ textTransform: "none", fontWeight: 600 }}

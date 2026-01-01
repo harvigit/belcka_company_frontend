@@ -23,7 +23,7 @@ import { styled } from '@mui/material/styles';
 import { IconX } from '@tabler/icons-react';
 import SearchIcon from '@mui/icons-material/Search';
 import { debounce } from 'lodash';
-import { format, parseISO, differenceInDays, parse } from 'date-fns';
+import {format, parseISO, differenceInDays, parse, differenceInCalendarDays} from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import api from '@/utils/axios';
@@ -72,6 +72,22 @@ interface AddLeaveProps {
     companyId: number;
     leaveData?: LeaveData;
 }
+
+const today = new Date();
+
+const minSelectableDate = new Date(
+    today.getFullYear() - 1,
+    today.getMonth(),
+    today.getDate()
+);
+
+const maxSelectableDate = new Date(
+    today.getFullYear() + 1,
+    today.getMonth(),
+    today.getDate()
+);
+
+const MAX_RANGE_DAYS = 31;
 
 const IOSSwitch = styled(Switch)(({ theme }) => ({
     width: 42,
@@ -320,6 +336,24 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
     };
 
     const handleDateRangeChange = (range: DateRange | undefined) => {
+        if (!range?.from) {
+            setDateRange(range);
+            return;
+        }
+
+        if (!range.to) {
+            setDateRange(range);
+            return;
+        }
+
+        const daysDiff = differenceInCalendarDays(range.to, range.from) + 1;
+
+        if (daysDiff > MAX_RANGE_DAYS) {
+            setError('You can select a maximum of 1 month only');
+        }else{
+            setError(null);
+        }
+
         setDateRange(range);
     };
 
@@ -776,7 +810,10 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                             selected={dateRange}
                                             onSelect={handleDateRangeChange}
                                             showOutsideDays
-                                            defaultMonth={dateRange?.from || new Date()}
+                                            defaultMonth={dateRange?.from || today}
+                                            fromDate={minSelectableDate}
+                                            toDate={maxSelectableDate}
+                                            disabled={(day) => day < minSelectableDate || day > maxSelectableDate}
                                             modifiersClassNames={{
                                                 selected: 'rdp-day_selected',
                                                 range_start: 'rdp-day_selected',
@@ -974,7 +1011,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                 <Button
                     variant="contained"
                     onClick={handleSubmit}
-                    disabled={!formData.userId || !formData.leaveId || loading}
+                    disabled={!formData.userId || !formData.leaveId || loading || error}
                     sx={{
                         textTransform: 'none',
                         fontWeight: 500,
