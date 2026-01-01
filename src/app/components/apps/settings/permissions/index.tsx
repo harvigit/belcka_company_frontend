@@ -8,13 +8,14 @@ import {
     TableRow,
     Paper,
     Typography,
-    CircularProgress,
     Button,
 } from '@mui/material';
 import { Box } from '@mui/system';
 import api from '@/utils/axios';
 import toast from 'react-hot-toast';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import Image from 'next/image';
+import SkeletonLoader from "@/app/components/SkeletonLoader"; 
 
 const statusToFlags = (status: number) => ({
     is_web_enabled: status === 1 || status === 2,
@@ -43,6 +44,7 @@ export default function PermissionSettings() {
     const [permissions, setPermissions] = useState<PermissionItem[]>([]);
     const [originalPermissions, setOriginalPermissions] = useState<PermissionItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [fetchPermission, setFetchPermission] = useState<boolean>(true);
     const [hasChanges, setHasChanges] = useState<boolean>(false);
 
     const columnVisibility = useMemo(() => {
@@ -56,7 +58,7 @@ export default function PermissionSettings() {
     }, [originalPermissions]);
 
     const fetchPermissions = async () => {
-        setLoading(true);
+        setFetchPermission(true);
         try {
             const res = await api.get('dashboard/company/permissions', {
                 params: { is_web: true },
@@ -88,7 +90,7 @@ export default function PermissionSettings() {
                 toast.error('Failed to fetch permissions');
             }
         } finally {
-            setLoading(false);
+            setFetchPermission(false);
         }
     };
 
@@ -122,7 +124,7 @@ export default function PermissionSettings() {
     const savePermissions = async () => {
         setLoading(true);
         try {
-            console.log(permissions, 'permissionspermissionspermissions')
+            console.log(permissions, 'permissionspermissionspermissions');
             const payload = {
                 permissions: permissions
                     .filter(perm => perm.is_web || perm.is_app)
@@ -154,14 +156,6 @@ export default function PermissionSettings() {
         }
     };
 
-    if (loading && permissions.length === 0) {
-        return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
-                <CircularProgress />
-            </Box>
-        );
-    }
-
     return (
         <Box>
             <Box display="flex" justifyContent="space-between" mb={1} p={2} pb={0}>
@@ -169,10 +163,10 @@ export default function PermissionSettings() {
                 {permissions.length > 0 && (
                     <Button
                         onClick={savePermissions}
-                        disabled={loading || !hasChanges}
+                        disabled={fetchPermission || !hasChanges}
                         variant="contained"
                     >
-                        {loading ? 'Updating...' : 'Update'}
+                        {fetchPermission ? 'Updating...' : 'Update'}
                     </Button>
                 )}
             </Box>
@@ -198,18 +192,37 @@ export default function PermissionSettings() {
                     </TableHead>
 
                     <TableBody>
-                        {permissions.length === 0 ? (
+                        {fetchPermission ? (
+                            <SkeletonLoader
+                                columns={[{ name: "Title" }, { name: "Web" }, { name: "App" }]}
+                                rowCount={3} 
+                            />
+                        ) : permissions.length === 0 ? (
                             <TableRow>
-                                <TableCell
-                                    colSpan={
-                                        1 +
-                                        (columnVisibility.showWebColumn ? 1 : 0) +
-                                        (columnVisibility.showAppColumn ? 1 : 0)
-                                    }
-                                >
-                                    <Typography m={3} textAlign="center">
-                                        No permissions are found for this company!!
-                                    </Typography>
+                                <TableCell colSpan={
+                                    1 +
+                                    (columnVisibility.showWebColumn ? 1 : 0) +
+                                    (columnVisibility.showAppColumn ? 1 : 0)
+                                }>
+                                    <Box
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        height: "calc(50vh - 100px)",
+                                    }}
+                                    >
+                                    <Image
+                                        src="/images/svgs/no-data.webp"
+                                        alt="No data"
+                                        style={{
+                                        maxWidth: "100%",
+                                        maxHeight: "100%",
+                                        }}
+                                        width={200}
+                                        height={200}
+                                    />
+                                    </Box>
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -236,7 +249,7 @@ export default function PermissionSettings() {
                                                                 e.target.checked
                                                             )
                                                         }
-                                                        disabled={loading}
+                                                        disabled={fetchPermission}
                                                     />
                                                 ) : (
                                                     <Typography color="text.disabled">-</Typography>
@@ -256,7 +269,7 @@ export default function PermissionSettings() {
                                                                 e.target.checked
                                                             )
                                                         }
-                                                        disabled={loading}
+                                                        disabled={fetchPermission}
                                                     />
                                                 ) : (
                                                     <Typography color="text.disabled">-</Typography>

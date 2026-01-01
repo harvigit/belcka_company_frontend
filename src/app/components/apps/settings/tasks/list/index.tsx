@@ -65,6 +65,8 @@ import { IconEdit } from "@tabler/icons-react";
 import EditTask from "../edit";
 import { AxiosResponse } from "axios";
 import { IconTableColumn } from "@tabler/icons-react";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(customParseFormat);
 
@@ -94,7 +96,7 @@ export type UserList = {
 const TablePagination = () => {
   const [data, setData] = useState<TaskList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [fetchTask, setFetchTask] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -144,18 +146,17 @@ const TablePagination = () => {
 
   // Fetch data
   const fetchTasks = async () => {
-    setLoading(true);
+    setFetchTask(true);
     try {
       const res = await api.get(`type-works/get?company_id=${id.company_id}`);
       if (res.data) {
         setData(res.data.info);
-        setLoading(false);
         setarchiveDrawerOpen(false);
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);
     }
-    setLoading(false);
+    setFetchTask(false);
   };
 
   useEffect(() => {
@@ -476,6 +477,11 @@ const TablePagination = () => {
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
+
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
 
   return (
     <Box
@@ -884,10 +890,38 @@ const TablePagination = () => {
               ))}
             </TableHead>
             <TableBody>
-              {
-                // table.getRowModel().rows.length ? (
+              {fetchTask ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/svgs/no-data.webp"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
@@ -898,18 +932,11 @@ const TablePagination = () => {
                     ))}
                   </TableRow>
                 ))
-                // ) : (
-                //   <TableRow>
-                //     <TableCell colSpan={columns.length} align="center">
-                //       No records found
-                //     </TableCell>
-                //   </TableRow>
-                // )
-              }
+              )}
             </TableBody>
           </Table>
         </TableContainer>
-        <Divider />
+        {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
       <Stack

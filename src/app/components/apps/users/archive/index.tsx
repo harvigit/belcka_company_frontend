@@ -56,6 +56,8 @@ import { User } from "next-auth";
 import { format } from "date-fns";
 import "react-phone-input-2/lib/material.css";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(customParseFormat);
 
@@ -106,8 +108,10 @@ const ArchiveUserList = () => {
   const [inviteUser, setInviteUser] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [fetchUser, setFetchUser] = useState<boolean>(false);
 
   const fetchUsers = async () => {
+    setFetchUser(true);
     try {
       const res = await api.get(
         `user/archive-users-list?company_id=${user.company_id}`
@@ -118,6 +122,7 @@ const ArchiveUserList = () => {
     } catch (err) {
       console.error("Failed to fetch archive users", err);
     }
+    setFetchUser(false);
   };
 
   useEffect(() => {
@@ -319,6 +324,11 @@ const ArchiveUserList = () => {
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
+
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
 
   return (
     <PermissionGuard permission="Users">
@@ -611,22 +621,53 @@ const ArchiveUserList = () => {
                 ))}
               </TableHead>
               <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+                {fetchUser ? (
+                  <SkeletonLoader
+                    columns={simpleColumns}
+                    rowCount={simpleColumns.length}
+                  />
+                ) : data.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "calc(50vh - 100px)",
+                        }}
+                      >
+                        <Image
+                          src="/images/svgs/no-data.webp"
+                          alt="No data"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                          }}
+                          width={200}
+                          height={200}
+                        />
+                      </Box>
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
-          <Divider />
+          {data.length ? <Divider /> : <></>}
         </Box>
 
         <Divider />

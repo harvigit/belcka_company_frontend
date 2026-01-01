@@ -70,6 +70,8 @@ import toast from "react-hot-toast";
 import { IconDownload } from "@tabler/icons-react";
 import { Circle, GoogleMap, Marker } from "@react-google-maps/api";
 import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
+import Image from "next/image";
 
 dayjs.extend(customParseFormat);
 
@@ -126,6 +128,7 @@ const AddressesList = ({
   const [data, setData] = useState<ProjectList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [fetchAddress, setFetchAddress] = useState<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
   const [sidebarData, setSidebarData] = useState<any>(null);
@@ -208,7 +211,7 @@ const AddressesList = ({
 
   const fetchAddresses = async () => {
     if (!projectId) return;
-    setLoading(true);
+    setFetchAddress(true);
     try {
       const res = await api.get(
         `address/get?project_id=${projectId}&company_id=${user.company_id}`
@@ -219,7 +222,7 @@ const AddressesList = ({
     } catch (err) {
       console.error("Failed to fetch addresses", err);
     } finally {
-      setLoading(false);
+      setFetchAddress(false);
     }
   };
 
@@ -787,6 +790,11 @@ const AddressesList = ({
     table.setPageIndex(0);
   }, [table]);
 
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
+
   return (
     <Box
       sx={{
@@ -867,16 +875,38 @@ const AddressesList = ({
               ))}
             </TableHead>
             <TableBody>
-              {
-                // table.getRowModel().rows.length ? (
+              {fetchAddress ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/svgs/no-data.webp"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    sx={{
-                      cursor: "pointer",
-                    }}
-                  >
+                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
@@ -887,18 +917,11 @@ const AddressesList = ({
                     ))}
                   </TableRow>
                 ))
-                // ) : (
-                //   <TableRow>
-                //     <TableCell colSpan={columns.length} align="center">
-                //       No records found
-                //     </TableCell>
-                //   </TableRow>
-                // )
-              }
+              )}
             </TableBody>
           </Table>
         </TableContainer>
-        <Divider />
+        {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
 

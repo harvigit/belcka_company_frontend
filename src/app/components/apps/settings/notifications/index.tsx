@@ -11,13 +11,16 @@ import {
   Typography,
   CircularProgress,
   Button,
+  Skeleton,
 } from "@mui/material";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import toast from "react-hot-toast";
 import { Box } from "@mui/system";
-import IOSSwitch from '@/app/components/common/IOSSwitch';
+import IOSSwitch from "@/app/components/common/IOSSwitch";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 interface NotificationItem {
   id: number;
@@ -36,12 +39,13 @@ interface NotificationCategory {
 export default function NotificationSettings() {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchNotification, setFetchNotification] = useState<boolean>(true);
 
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
 
   const fetchNotifications = async () => {
-    setLoading(true);
+    setFetchNotification(true);
     try {
       const res = await api.get(
         `notifications/company-notifications?company_id=${user.company_id}`
@@ -52,7 +56,7 @@ export default function NotificationSettings() {
     } catch (err) {
       console.error("Failed to fetch notifications", err);
     }
-    setLoading(false);
+    setFetchNotification(false);
   };
   useEffect(() => {
     if (user?.company_id) {
@@ -127,65 +131,72 @@ export default function NotificationSettings() {
     return "indeterminate";
   };
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <Box>
       <Box display={"flex"} justifyContent={"space-between"} p={2} pb={0}>
-        <Typography fontWeight={500} ml={2}>Notification Settings</Typography>
+        <Typography fontWeight={500} ml={2}>
+          Notification Settings
+        </Typography>
         {categories.length > 0 && (
           <>
-            <Button onClick={saveNotifications} disabled={loading}>
-              {loading ? "Updating..." : "Update"}
+            <Button onClick={saveNotifications} disabled={fetchNotification}>
+              {fetchNotification ? "Updating..." : "Update"}
             </Button>
           </>
         )}
       </Box>
-      <TableContainer component={Paper} sx={{ p: 2, pt: 0, height: "calc(93vh - 100px)"}}>
+      <TableContainer
+        component={Paper}
+        sx={{ p: 2, pt: 0, height: "calc(93vh - 100px)" }}
+      >
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow sx={{ background: "#e5e8ed" }}>
               <TableCell>
-                <Typography
-                  variant="subtitle1"
-                >
-                  Titles
-                </Typography>
+                <Typography variant="subtitle1">Titles</Typography>
               </TableCell>
               <TableCell align="center">
-                <Typography
-                  variant="subtitle1"
-                >
-                  Push
-                </Typography>
+                <Typography variant="subtitle1">Push</Typography>
               </TableCell>
               <TableCell align="center">
-                <Typography
-                  variant="subtitle1"
-                >
-                  Feed
-                </Typography>
+                <Typography variant="subtitle1">Feed</Typography>
               </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {categories.length == 0 ? (
-              <>
-                <Typography m={3}>
-                  No notifications are found for this company!!
-                </Typography>
-              </>
+            {fetchNotification ? (
+              <SkeletonLoader
+                columns={[
+                  { name: "Title" },
+                  { name: "Push" },
+                  { name: "Feed" },
+                ]}
+                rowCount={5}
+              />
+            ) : categories.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "calc(50vh - 100px)",
+                    }}
+                  >
+                    <Image
+                      src="/images/svgs/no-data.webp"
+                      alt="No data"
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                      }}
+                      width={200}
+                      height={200}
+                    />
+                  </Box>
+                </TableCell>
+              </TableRow>
             ) : (
               <>
                 {categories.map((category) => (
@@ -228,39 +239,51 @@ export default function NotificationSettings() {
                       </TableCell>
                     </TableRow>
 
-                    {category.notifications.map((notification) => (
-                      <TableRow key={notification.id}>
-                        <TableCell sx={{ padding: "10px" }}>
-                          {notification.name}
-                        </TableCell>
-                        <TableCell align="center" sx={{ padding: "10px" }}>
-                          <IOSSwitch
-                            checked={notification.is_push}
-                            onChange={(e) =>
-                              updateNotificationState(
-                                category.id,
-                                notification.id,
-                                "is_push",
-                                e.target.checked
-                              )
-                            }
-                          />
-                        </TableCell>
-                        <TableCell align="center" sx={{ padding: "10px" }}>
-                          <IOSSwitch
-                            checked={notification.is_feed}
-                            onChange={(e) =>
-                              updateNotificationState(
-                                category.id,
-                                notification.id,
-                                "is_feed",
-                                e.target.checked
-                              )
-                            }
+                    {category.notifications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Skeleton
+                            variant="rectangular"
+                            height={50}
+                            sx={{ borderRadius: 1 }}
                           />
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      category.notifications.map((notification) => (
+                        <TableRow key={notification.id}>
+                          <TableCell sx={{ padding: "10px" }}>
+                            {notification.name}
+                          </TableCell>
+                          <TableCell align="center" sx={{ padding: "10px" }}>
+                            <IOSSwitch
+                              checked={notification.is_push}
+                              onChange={(e) =>
+                                updateNotificationState(
+                                  category.id,
+                                  notification.id,
+                                  "is_push",
+                                  e.target.checked
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell align="center" sx={{ padding: "10px" }}>
+                            <IOSSwitch
+                              checked={notification.is_feed}
+                              onChange={(e) =>
+                                updateNotificationState(
+                                  category.id,
+                                  notification.id,
+                                  "is_feed",
+                                  e.target.checked
+                                )
+                              }
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </React.Fragment>
                 ))}
               </>

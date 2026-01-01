@@ -65,6 +65,8 @@ import { IconTableColumn } from "@tabler/icons-react";
 import CreateTrade from "../create";
 import EditTrade from "../edit";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(customParseFormat);
 
@@ -77,6 +79,7 @@ const TradeList = () => {
   const [data, setData] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchTrade, setFetchTrade] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -122,7 +125,7 @@ const TradeList = () => {
 
   // Fetch data
   const fetchTrades = async () => {
-    setLoading(true);
+    setFetchTrade(true);
     try {
       const res = await api.get(`trade/get-trades?company_id=${id.company_id}`);
       if (res.data) {
@@ -132,7 +135,7 @@ const TradeList = () => {
     } catch (err) {
       console.error("Failed to fetch trades", err);
     }
-    setLoading(false);
+    setFetchTrade(false);
   };
 
   useEffect(() => {
@@ -428,6 +431,11 @@ const TradeList = () => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
+  
   return (
     <Box
       sx={{
@@ -805,10 +813,38 @@ const TradeList = () => {
               ))}
             </TableHead>
             <TableBody>
-              {
-                // table.getRowModel().rows.length ? (
+              {fetchTrade ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/svgs/no-data.webp"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} hover>
+                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
@@ -819,18 +855,11 @@ const TradeList = () => {
                     ))}
                   </TableRow>
                 ))
-                // ) : (
-                //   <TableRow>
-                //     <TableCell colSpan={columns.length} align="center">
-                //       No records found
-                //     </TableCell>
-                //   </TableRow>
-                // )
-              }
+              )}
             </TableBody>
           </Table>
         </TableContainer>
-        <Divider />
+        {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
 

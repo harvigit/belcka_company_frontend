@@ -54,6 +54,8 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { IconX } from "@tabler/icons-react";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(customParseFormat);
 
@@ -91,6 +93,7 @@ const HistoryList = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchHistory, setFetchHistory] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -134,7 +137,7 @@ const HistoryList = () => {
 
   // Fetch histories
   const fetchHistories = async (start?: string, end?: string) => {
-    setLoading(true);
+    setFetchHistory(true);
     try {
       const res = await api.get(
         `requests/get-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}`
@@ -145,7 +148,7 @@ const HistoryList = () => {
     } catch (err) {
       console.error("Failed to fetch location", err);
     }
-    setLoading(false);
+    setFetchHistory(false);
   };
 
   const fetchUsers = async () => {
@@ -365,6 +368,11 @@ const HistoryList = () => {
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
+
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
 
   return (
     <Box
@@ -649,30 +657,59 @@ const HistoryList = () => {
               ))}
             </TableHead>
             <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow
-                  hover
-                  sx={{
-                    cursor: "pointer",
-                  }}
-                  key={row.id}
-                  onMouseEnter={() => setHoveredRow(row.original.id)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+              {fetchHistory ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/svgs/no-data.webp"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredRow(row.original.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
-        <Divider />
+        {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
       <Stack

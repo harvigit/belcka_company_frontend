@@ -1,5 +1,11 @@
 "use client";
-import React, { useEffect, useState, useMemo, SetStateAction } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  SetStateAction,
+  useRef,
+} from "react";
 import {
   TableContainer,
   Table,
@@ -73,6 +79,8 @@ import IOSSwitch from "@/app/components/common/IOSSwitch";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
 import Cookies from "js-cookie";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(customParseFormat);
 
@@ -120,6 +128,9 @@ const TablePagination = () => {
   const [data, setData] = useState<UserList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [fetchUser, setFetchUser] = useState<boolean>(false);
+  const [visibleColumnsCount, setVisibleColumnsCount] = useState(0);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [filters, setFilters] = useState({
@@ -154,6 +165,8 @@ const TablePagination = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
 
+  const tableContainerRef = useRef<HTMLDivElement | null>(null);
+  const [hasHorizontalScrollbar, setHasHorizontalScrollbar] = useState(false);
   const openMenu = Boolean(anchorEl);
   // Permissions drawer state
   const [permissionsDrawerOpen, setPermissionsDrawerOpen] = useState(false);
@@ -183,6 +196,7 @@ const TablePagination = () => {
   };
 
   const fetchUsers = async () => {
+    setFetchUser(true);
     try {
       const res: AxiosResponse<any> = await api.get("user/get-user-lists");
       if (res.data) {
@@ -191,6 +205,7 @@ const TablePagination = () => {
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
+    setFetchUser(false);
   };
 
   useEffect(() => {
@@ -423,6 +438,24 @@ const TablePagination = () => {
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (tableContainerRef.current) {
+        setHasHorizontalScrollbar(
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth
+        );
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [data]);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -911,10 +944,11 @@ const TablePagination = () => {
   useEffect(() => {
     const visibleColumns = table
       .getAllLeafColumns()
-      .filter((col) => col.id !== "conflicts");
+      .filter((col) => col.id !== "conflicts" && col.getIsVisible());
 
     const allSelected = visibleColumns.every((col) => col.getIsVisible());
     setSelectAll(allSelected);
+    setVisibleColumnsCount(visibleColumns.length);
   }, [table.getState().columnVisibility]);
 
   const handleSelectAllChange = (e: any) => {
@@ -980,6 +1014,15 @@ const TablePagination = () => {
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
+
+  const visibleColumns = table
+    .getAllLeafColumns()
+    .filter((col) => col.id !== "conflicts" && col.getIsVisible());
+  const columnData = visibleColumns.length ? visibleColumns : columns;
+  const simpleColumns = columnData.map((column: any) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
 
   return (
     <PermissionGuard permission="Users">
@@ -1549,7 +1592,6 @@ const TablePagination = () => {
                   await fetchUsers();
                 } catch (error) {
                   console.error("Failed to remove users", error);
-                  // toast.error("Failed to remove users");
                 } finally {
                   setConfirmOpen(false);
                 }
@@ -1562,80 +1604,108 @@ const TablePagination = () => {
           </DialogActions>
         </Dialog>
 
-        <Box
+        <TableContainer
+          ref={tableContainerRef}
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: "auto",
+            overflowX: "auto",
+            overflowY: "auto",
           }}
         >
-          <TableContainer>
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
 
-                      return (
-                        <TableCell
-                          key={header.id}
-                          align="center"
+                    return (
+                      <TableCell
+                        key={header.id}
+                        align="center"
+                        sx={{
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width: header.column.id === "actions" ? 120 : "auto",
+                        }}
+                      >
+                        <Box
+                          onClick={header.column.getToggleSortingHandler()}
+                          p={0}
                           sx={{
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            width:
-                              header.column.id === "actions" ? 120 : "auto",
+                            cursor: isSortable ? "pointer" : "default",
+                            border: "2px solid transparent",
+                            borderRadius: "6px",
+                            display: "flex",
+                            justifyContent: "flex-start",
+                            "&:hover": { color: "#888" },
+                            "&:hover .hoverIcon": { opacity: 1 },
                           }}
                         >
-                          <Box
-                            onClick={header.column.getToggleSortingHandler()}
-                            p={0}
-                            sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              border: "2px solid transparent",
-                              borderRadius: "6px",
-                              display: "flex",
-                              justifyContent: "flex-start",
-                              "&:hover": { color: "#888" },
-                              "&:hover .hoverIcon": { opacity: 1 },
-                            }}
-                          >
-                            {/* <Typography variant="subtitle2"> */}
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                            {/* </Typography> */}
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
+                              sx={{
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {fetchUser ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={visibleColumnsCount}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/svgs/no-data.webp"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
                   <TableRow
                     hover
                     sx={{
@@ -1654,83 +1724,92 @@ const TablePagination = () => {
                       </TableCell>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Divider />
-        </Box>
+                ))
+              )}
+              {data.length ? <Divider /> : <></>}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={1}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
+        <Box
+          sx={{
+            position: hasHorizontalScrollbar ? "sticky" : "static",
+            bottom: hasHorizontalScrollbar ? 0 : "auto",
+            zIndex: 1,
+            padding: "10px",
+          }}
         >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: { xs: "block", sm: "flex" },
-              alignItems: "center",
-            }}
+          <Stack
+            gap={1}
+            pr={3}
+            pt={1}
+            pl={3}
+            pb={1}
+            alignItems="center"
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
           >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600} ml={1}>
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography color="textSecondary">
+                {table.getPrePaginationRowModel().rows.length} Rows
               </Typography>
-              <Typography color="textSecondary" ml={"3px"}>
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
+            </Box>
+            <Box
+              sx={{
+                display: { xs: "block", sm: "flex" },
+                alignItems: "center",
+              }}
             >
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
+              <Stack direction="row" alignItems="center">
+                <Typography color="textSecondary">Page</Typography>
+                <Typography color="textSecondary" fontWeight={600} ml={1}>
+                  {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </Typography>
+                <Typography color="textSecondary" ml={"3px"}>
+                  {" "}
+                  | Entries :{" "}
+                </Typography>
+              </Stack>
+              <Stack
+                ml={"5px"}
+                direction="row"
+                alignItems="center"
+                color="textSecondary"
               >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+                <CustomSelect
+                  value={table.getState().pagination.pageSize}
+                  onChange={(e: { target: { value: any } }) => {
+                    table.setPageSize(Number(e.target.value));
+                  }}
+                >
+                  {[50, 100, 250, 500].map((pageSize) => (
+                    <MenuItem key={pageSize} value={pageSize}>
+                      {pageSize}
+                    </MenuItem>
+                  ))}
+                </CustomSelect>
+                <IconButton
+                  size="small"
+                  sx={{ width: "30px" }}
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <IconChevronLeft />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ width: "30px" }}
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <IconChevronRight />
+                </IconButton>
+              </Stack>
+            </Box>
+          </Stack>
+        </Box>
         <Divider />
 
         <Drawer

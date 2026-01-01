@@ -70,6 +70,8 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import { IconTableColumn } from "@tabler/icons-react";
 import CreateTeam from "../create";
 import EditTeam from "../edit";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
+import Image from "next/image";
 
 dayjs.extend(customParseFormat);
 
@@ -106,6 +108,7 @@ const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchTeam, setFetchTeam] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -154,7 +157,7 @@ const TablePagination = () => {
 
   // Fetch data
   const fetchTeams = async () => {
-    setLoading(true);
+    setFetchTeam(true);
     try {
       const url = projectId
         ? `team/get-team-member-list?project_id=${projectId}`
@@ -167,7 +170,7 @@ const TablePagination = () => {
     } catch (err) {
       console.error("Failed to fetch trades", err);
     } finally {
-      setLoading(false);
+      setFetchTeam(false);
     }
   };
 
@@ -485,6 +488,11 @@ const TablePagination = () => {
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
+
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
 
   return (
     <PermissionGuard permission="Teams">
@@ -948,8 +956,37 @@ const TablePagination = () => {
                 ))}
               </TableHead>
               <TableBody>
-                {
-                  // table.getRowModel().rows.length ? (
+                {fetchTeam ? (
+                  <SkeletonLoader
+                    columns={simpleColumns}
+                    rowCount={simpleColumns.length}
+                    hasAvatar={true}
+                  />
+                ) : data.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "calc(50vh - 100px)",
+                        }}
+                      >
+                        <Image
+                          src="/images/svgs/no-data.webp"
+                          alt="No data"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                          }}
+                          width={200}
+                          height={200}
+                        />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
                   table.getRowModel().rows.map((row) => {
                     const item = row.original;
                     const isDisabled =
@@ -994,18 +1031,11 @@ const TablePagination = () => {
                       </TableRow>
                     );
                   })
-                  // ) : (
-                  //   <TableRow>
-                  //     <TableCell colSpan={columns.length} align="center">
-                  //       No records found
-                  //     </TableCell>
-                  //   </TableRow>
-                  // )
-                }
+                )}
               </TableBody>
             </Table>
           </TableContainer>
-          <Divider />
+          {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
         <Stack

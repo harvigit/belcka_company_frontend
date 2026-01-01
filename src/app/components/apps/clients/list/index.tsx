@@ -29,6 +29,7 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
+  Skeleton,
 } from "@mui/material";
 import {
   flexRender,
@@ -68,6 +69,8 @@ import CustomTextField from "@/app/components/forms/theme-elements/CustomTextFie
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { AxiosResponse } from "axios";
 import { IconTableColumn } from "@tabler/icons-react";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(relativeTime);
 
@@ -93,6 +96,7 @@ const TablePagination = () => {
   const [data, setData] = useState<ClientList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchClient, setFetchClient] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -127,7 +131,7 @@ const TablePagination = () => {
   const handlePopoverClose = () => setAnchorEl2(null);
   // Fetch data
   const fetchClients = useCallback(async () => {
-    setLoading(true);
+    setFetchClient(true);
     try {
       const res: AxiosResponse<any> = await api.get(
         `company-clients/get?company_id=${id.company_id}`
@@ -138,7 +142,7 @@ const TablePagination = () => {
     } catch (err) {
       console.error("Failed to fetch clients", err);
     } finally {
-      setLoading(false);
+      setFetchClient(false);
     }
   }, [id.company_id]);
 
@@ -500,6 +504,11 @@ const TablePagination = () => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
+
   return (
     <PermissionGuard permission="Clients">
       <Box
@@ -766,8 +775,36 @@ const TablePagination = () => {
                 ))}
               </TableHead>
               <TableBody>
-                {
-                  // table.getRowModel().rows.length ? (
+                {fetchClient ? (
+                  <SkeletonLoader
+                    columns={simpleColumns}
+                    rowCount={simpleColumns.length}
+                  />
+                ) : data.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "calc(50vh - 100px)",
+                        }}
+                      >
+                        <Image
+                          src="/images/svgs/no-data.webp"
+                          alt="No data"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                          }}
+                          width={200}
+                          height={200}
+                        />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                       {row.getVisibleCells().map((cell) => (
@@ -780,18 +817,11 @@ const TablePagination = () => {
                       ))}
                     </TableRow>
                   ))
-                  // ) : (
-                  //   <TableRow>
-                  //     <TableCell colSpan={columns.length} align="center">
-                  //       No records found
-                  //     </TableCell>
-                  //   </TableRow>
-                  // )
-                }
+                )}
               </TableBody>
             </Table>
           </TableContainer>
-          <Divider />
+          {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
 

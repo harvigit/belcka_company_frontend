@@ -22,7 +22,6 @@ import {
   DialogContent,
   Dialog,
   Chip,
-  CircularProgress,
   CardContent,
   Menu,
   ListItemIcon,
@@ -46,7 +45,6 @@ import {
   IconChevronRight,
   IconDotsVertical,
   IconFilter,
-  IconPlus,
   IconRotate,
   IconSearch,
   IconTableColumn,
@@ -65,9 +63,10 @@ import { User } from "next-auth";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconX } from "@tabler/icons-react";
 import toast from "react-hot-toast";
-import Link from "next/link";
 import JoinCompanyDialog from "../../modals/join-company";
 import GenerateCodeDialog from "../../modals/generate-code";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(customParseFormat);
 
@@ -104,6 +103,7 @@ const TablePagination = () => {
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchTeam, setFetchTeam] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const rerender = React.useReducer(() => ({}), {})[1];
@@ -155,8 +155,8 @@ const TablePagination = () => {
 
   // fetch team member's
   const fetchData = async () => {
+    setFetchTeam(true);
     try {
-      setLoading(true);
       const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
       if (res.data?.info) {
         const flattened = res.data.info.flatMap((team: any) => {
@@ -205,11 +205,10 @@ const TablePagination = () => {
       if (res.data?.info.length <= 0 && teamId !== null) {
         router.push("/apps/teams/list");
       }
-      setLoading(false);
     } catch (err) {
       console.error("Failed to fetch users", err);
-      setLoading(false);
     }
+    setFetchTeam(false);
   };
 
   const fetchUniqueUsers = async () => {
@@ -499,18 +498,10 @@ const TablePagination = () => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
 
   return (
     <Grid container spacing={2}>
@@ -986,9 +977,39 @@ const TablePagination = () => {
                     ))}
                   </TableHead>
                   <TableBody>
-                    {table.getRowModel().rows.length ? (
+                    {fetchTeam ? (
+                      <SkeletonLoader
+                        columns={simpleColumns}
+                        rowCount={simpleColumns.length}
+                        hasAvatar={true}
+                      />
+                    ) : data.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={columns.length}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              height: "calc(50vh - 100px)",
+                            }}
+                          >
+                            <Image
+                              src="/images/svgs/no-data.webp"
+                              alt="No data"
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "100%",
+                              }}
+                              width={200}
+                              height={200}
+                            />
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
                       table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id} hover>
+                        <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id} sx={{ padding: "10px" }}>
                               {flexRender(
@@ -999,17 +1020,11 @@ const TablePagination = () => {
                           ))}
                         </TableRow>
                       ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} align="center">
-                          No records found
-                        </TableCell>
-                      </TableRow>
                     )}
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Divider />
+              {data.length ? <Divider /> : <></>}
             </Box>
             <Divider />
             <Stack

@@ -64,6 +64,8 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import AddExpense from "./time-clock-details/expenses/add-expense";
 import AddWorklog from "./time-clock-details/worklog/add-worklog";
+import Image from "next/image";
+import SkeletonLoader from "../../SkeletonLoader";
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -200,7 +202,6 @@ const TimeClock = () => {
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-
   const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(
     null
   );
@@ -295,6 +296,7 @@ const TimeClock = () => {
 
   const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
     try {
+      setFetchTimesheet(true);
       const params: Record<string, string> = {
         start_date: format(start, "dd/MM/yyyy"),
         end_date: format(end, "dd/MM/yyyy"),
@@ -312,11 +314,13 @@ const TimeClock = () => {
         setCompanyId(response.data.company_id);
         if (response.data.currency !== null) {
           setCurrency(response.data.currency);
+          setFetchTimesheet(false);
         }
         return response.data.info;
       }
     } catch (error) {
       setErrorMessage("Failed to fetch timesheet data. Please try again.");
+      setFetchTimesheet(false);
     }
     return [];
   };
@@ -324,6 +328,7 @@ const TimeClock = () => {
   useEffect(() => {
     if (startDate && endDate) fetchData(startDate, endDate);
   }, [startDate, endDate]);
+  const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -857,6 +862,11 @@ const TimeClock = () => {
 
   const isAnyRowSelected = selectedRowIds.size > 0;
 
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
+
   return (
     <Box
       sx={{
@@ -1139,38 +1149,69 @@ const TimeClock = () => {
               ))}
             </TableHead>
             <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow
-                  hover
-                  key={row.id}
-                  onMouseEnter={() => {
-                    setHoveredRow(Number(row.original.user_id));
-                  }}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  onClick={() => handleRowClick(row.original)}
-                  sx={{
-                    cursor: "pointer",
-                    transition: "background-color 0.2s ease",
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      sx={{ padding: "10px" }}
-                      align="left"
+              {fetchTimesheet ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
                     >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                      <Image
+                        src="/images/svgs/no-data.webp"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    hover
+                    key={row.id}
+                    onMouseEnter={() => {
+                      setHoveredRow(Number(row.original.user_id));
+                    }}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    onClick={() => handleRowClick(row.original)}
+                    sx={{
+                      cursor: "pointer",
+                      transition: "background-color 0.2s ease",
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        sx={{ padding: "10px" }}
+                        align="left"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
-        <Divider />
+        {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
 
