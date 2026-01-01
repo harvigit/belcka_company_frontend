@@ -694,7 +694,6 @@ const TablePagination = () => {
 
         <Divider />
         <Box
-          display={"flex"}
           sx={{
             flex: 1,
             minHeight: 0,

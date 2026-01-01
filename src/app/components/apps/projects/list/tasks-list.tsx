@@ -564,7 +564,6 @@ const TasksList = ({
         </Box>
       ) : (
         <Box
-          display={"flex"}
           sx={{
             flex: 1,
             minHeight: 0,
@@ -660,6 +659,7 @@ const TasksList = ({
               </TableBody>
             </Table>
           </TableContainer>
+          <Divider />
         </Box>
       )}
 

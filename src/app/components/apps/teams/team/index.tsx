@@ -914,7 +914,6 @@ const TablePagination = () => {
             }}
           >
             <Box
-              display={"flex"}
               sx={{
                 flex: 1,
                 minHeight: 0,

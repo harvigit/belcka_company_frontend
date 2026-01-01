@@ -155,7 +155,6 @@ const Notifications: React.FC<ProjectListingProps> = ({
       }}
     >
       <Box
-        display={"flex"}
         justifyContent={"space-between"}
         sx={{
           flex: 1,

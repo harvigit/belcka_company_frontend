@@ -615,7 +615,6 @@ const TablePagination = () => {
         onWorkUpdated={fetchLeaves}
       />
       <Box
-        display={"flex"}
         sx={{
           flex: 1,
           minHeight: 0,
