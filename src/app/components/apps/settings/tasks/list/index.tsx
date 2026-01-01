@@ -907,7 +907,7 @@ const TablePagination = () => {
                       }}
                     >
                       <Image
-                        src="/images/svgs/no-data.webp"
+                        src="/images/no-data.png"
                         alt="No data"
                         style={{
                           maxWidth: "100%",

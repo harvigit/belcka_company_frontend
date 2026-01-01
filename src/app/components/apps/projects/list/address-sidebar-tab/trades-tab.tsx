@@ -8,6 +8,8 @@ import {
 import { Stack } from '@mui/system';
 import { IconChevronRight, IconFilter, IconSearch, IconX } from '@tabler/icons-react';
 import api from '@/utils/axios';
+import Image from 'next/image';
+import SkeletonLoader from '@/app/components/SkeletonLoader';
 
 interface TradesTabProps {
     companyId: number;
@@ -26,8 +28,10 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
     const [filters, setFilters] = useState<FilterState>({ type: '' });
     const [tempFilters, setTempFilters] = useState<FilterState>(filters);
     const [filterOptions, setFilterOptions] = useState<any[]>([]);
+    const [fetchWork, setFetchWork] = useState(false);
 
     const fetchTradeTabData = async () => {
+        setFetchWork(true)
         try {
             const res = await api.get('/trade/get-checklogs', {
                 params: { project_id: projectId, address_id: addressId }
@@ -40,6 +44,7 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
         } catch {
             setTabData([]);
         }
+        setFetchWork(false)
     };
 
     const fetchFilterOptions = async () => {
@@ -201,7 +206,9 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
             </Dialog>
 
             {/* Data List */}
-            {filteredData.length > 0 ? (
+            {fetchWork ? (
+                <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
+            ) : filteredData.length > 0 ? (
                 filteredData.map((trade, idx) => (
                     <Box key={idx} mb={1}>
                         <Box
@@ -278,10 +285,26 @@ export const TradesTab = ({ companyId, addressId, projectId }: TradesTabProps) =
                     </Box>
                 ))
             ) : (
-                <Typography variant="body2" color="text.secondary">
-                    No trades found for this address.
-                </Typography>
-            )}
+                <Box
+                    sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "calc(50vh - 100px)",
+                    }}
+                >
+                    <Image
+                    src="/images/svgs/no-data.webp"
+                    alt="No data"
+                    style={{
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                    }}
+                    width={250}
+                    height={250}
+                    />
+                </Box>
+                )}
         </Box>
     );
 };

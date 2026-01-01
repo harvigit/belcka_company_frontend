@@ -18,6 +18,7 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import Image from "next/image";
+import SkeletonLoader from "../../SkeletonLoader";
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -134,23 +135,8 @@ const Notifications: React.FC<ProjectListingProps> = ({
   };
 
   return (
-    <Box
-      mt={0}
-      ml={5}
-      sx={{
-        height: "calc(82vh - 120px)",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Box
-        justifyContent={"space-between"}
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "auto",
-        }}
-      >
+    <Box mt={0} ml={5}>
+      <Box display={"flex"} justifyContent={"space-between"} m={1}>
         <Typography fontWeight={500}></Typography>
         {categories.length > 0 && (
           <>
@@ -161,7 +147,13 @@ const Notifications: React.FC<ProjectListingProps> = ({
         )}
       </Box>
       <TableContainer
-        sx={{ boxShadow: (theme) => theme.shadows[2],mb:3 }}
+        sx={{
+          boxShadow: (theme) => theme.shadows[2],
+          mb: 3,
+          p: 2,
+          pt: 0,
+          height: "calc(70vh - 100px)",
+        }}
         component={Paper}
       >
         <Table stickyHeader aria-label="sticky table">
@@ -197,7 +189,12 @@ const Notifications: React.FC<ProjectListingProps> = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {categories.length == 0 ? (
+            {fetchCategory ? (
+              <SkeletonLoader
+                columns={[{ name: "Title" }, { name: "Web" }, { name: "App" }]}
+                rowCount={3}
+              />
+            ) : categories.length == 0 ? (
               <>
                 <TableRow>
                   <TableCell colSpan={categories.length}>
@@ -210,7 +207,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
                       }}
                     >
                       <Image
-                        src="/images/svgs/no-data.webp"
+                        src="/images/no-data.png"
                         alt="No data"
                         style={{
                           maxWidth: "100%",

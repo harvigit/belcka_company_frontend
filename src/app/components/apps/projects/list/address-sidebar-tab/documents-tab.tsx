@@ -26,6 +26,8 @@ import {
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { Grid } from "@mui/system";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
+import Image from "next/image";
 
 interface DocumentsTabProps {
   addressId: number;
@@ -54,6 +56,7 @@ export const DocumentsTab = ({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fetchWork, setFetchWork] = useState(false);
 
   const handleBoxClick = () => {
     fileInputRef.current?.click(); // Trigger file input click
@@ -72,6 +75,7 @@ export const DocumentsTab = ({
   }, [addressId, projectId]);
 
   const fetchDocumentTabData = async () => {
+    setFetchWork(true)
     try {
       const res = await api.get(
         `address/address-document?address_id=${addressId}&company_id=${companyId}`
@@ -82,6 +86,7 @@ export const DocumentsTab = ({
       console.error("Document fetch failed:", error);
       setTabData([]);
     }
+    setFetchWork(false)
   };
 
   const handleDownloadZip = async (taskIds: number[]) => {
@@ -293,7 +298,9 @@ export const DocumentsTab = ({
           <IconFilter width={18} />
         </Button>
       </Stack>
-      {filteredData.length > 0 ? (
+      {fetchWork ? (
+        <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
+      ) : filteredData.length > 0 ? (
         filteredData.map((doc) => (
           <Box key={doc.id} mb={3} mt={1}>
             <Stack
@@ -438,12 +445,26 @@ export const DocumentsTab = ({
           </Box>
         ))
       ) : (
-        <Box textAlign="center" py={4}>
-          <Typography variant="body1" color="textSecondary">
-            No documents found
-          </Typography>
+        <Box
+          sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "calc(55vh - 100px)",
+          }}
+        >
+          <Image
+          src="/images/svgs/no-data.webp"
+          alt="No data"
+          style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+          }}
+          width={250}
+          height={250}
+          />
         </Box>
-      )}
+        )}
 
       {hasUnsavedChanges && (
         <Box mt={3} textAlign="center">
