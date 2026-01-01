@@ -80,8 +80,8 @@ export interface Permission {
   id: number;
   name: string;
   status: number;
-    is_web?: boolean;  
-    is_app?: boolean;  
+  is_web?: boolean;
+  is_app?: boolean;
 }
 
 export interface UserList {
@@ -160,12 +160,15 @@ const TablePagination = () => {
   const [selectedUserPermissions, setSelectedUserPermissions] =
     useState<UserList | null>(null);
   const [permissionSearch, setPermissionSearch] = useState("");
-    const [tempPermissions, setTempPermissions] = useState<{ web: Set<number>; app: Set<number>; }>({
-        web: new Set(),
-        app: new Set(),
-    });
+  const [tempPermissions, setTempPermissions] = useState<{
+    web: Set<number>;
+    app: Set<number>;
+  }>({
+    web: new Set(),
+    app: new Set(),
+  });
 
-    const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [isPermission, setIsPermission] = useState(true);
   const [search, setSearch] = useState("");
@@ -291,16 +294,16 @@ const TablePagination = () => {
 
   const handleOpenPermissionsDrawer = (userPermission: UserList) => {
     setSelectedUserPermissions(userPermission);
-      const web = new Set<number>();
-      const app = new Set<number>();
+    const web = new Set<number>();
+    const app = new Set<number>();
 
-      userPermission.permissions.forEach((p) => {
-          // status: 1 = web+app, 2 = web, 3 = app
-          if (p.status === 1 || p.status === 2) web.add(p.id);
-          if (p.status === 1 || p.status === 3) app.add(p.id);
-      });
+    userPermission.permissions.forEach((p) => {
+      // status: 1 = web+app, 2 = web, 3 = app
+      if (p.status === 1 || p.status === 2) web.add(p.id);
+      if (p.status === 1 || p.status === 3) app.add(p.id);
+    });
 
-      setTempPermissions({ web, app });
+    setTempPermissions({ web, app });
     const permssion =
       user.user_role_id == 1
         ? true
@@ -312,110 +315,109 @@ const TablePagination = () => {
     setPermissionsDrawerOpen(true);
   };
 
-    const handlePermissionToggle = (
-        permissionId: number,
-        type: "web" | "app"
-    ) => {
-        setTempPermissions((prev) => {
-            const updated = new Set(prev[type]);
-            updated.has(permissionId)
-                ? updated.delete(permissionId)
-                : updated.add(permissionId);
+  const handlePermissionToggle = (
+    permissionId: number,
+    type: "web" | "app"
+  ) => {
+    setTempPermissions((prev) => {
+      const updated = new Set(prev[type]);
+      updated.has(permissionId)
+        ? updated.delete(permissionId)
+        : updated.add(permissionId);
 
-            return { ...prev, [type]: updated };
-        });
-    };
+      return { ...prev, [type]: updated };
+    });
+  };
 
-    const handleSelectAll = (type: "web" | "app") => {
-        const allSelected = filteredPermissions.every((p) =>
-            tempPermissions[type].has(p.id)
+  const handleSelectAll = (type: "web" | "app") => {
+    const allSelected = filteredPermissions.every((p) =>
+      tempPermissions[type].has(p.id)
+    );
+
+    setTempPermissions((prev) => {
+      const updated = new Set(prev[type]);
+
+      if (allSelected) {
+        filteredPermissions.forEach((p) => updated.delete(p.id));
+      } else {
+        filteredPermissions.forEach((p) => updated.add(p.id));
+      }
+
+      return { ...prev, [type]: updated };
+    });
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUserPermissions || !user.company_id) return;
+
+    try {
+      const payload = {
+        user_id: selectedUserPermissions.id,
+        company_id: user.company_id,
+        permissions: selectedUserPermissions.permissions.map((permission) => {
+          const hasWeb = tempPermissions.web.has(permission.id);
+          const hasApp = tempPermissions.app.has(permission.id);
+
+          // Determine status: 1 = both, 2 = web only, 3 = app only, 0 = none
+          let status = 0;
+          if (hasWeb && hasApp) status = 1;
+          else if (hasWeb) status = 2;
+          else if (hasApp) status = 3;
+
+          return {
+            permission_id: permission.id,
+            status: status,
+          };
+        }),
+      };
+
+      const response = await api.post(
+        "dashboard/company/change-user-permissions-status",
+        payload
+      );
+
+      if (response.data.IsSuccess === true) {
+        toast.success(
+          response.data.message || "Permissions updated successfully"
         );
 
-        setTempPermissions((prev) => {
-            const updated = new Set(prev[type]);
+        setData((prevData) => {
+          const newData = prevData.map((u) => {
+            if (u.id === selectedUserPermissions.id) {
+              const updatedPermissions = u.permissions.map((p) => {
+                const hasWeb = tempPermissions.web.has(p.id);
+                const hasApp = tempPermissions.app.has(p.id);
+                let status = 0;
+                if (hasWeb && hasApp) status = 1;
+                else if (hasWeb) status = 2;
+                else if (hasApp) status = 3;
 
-            if (allSelected) {
-                filteredPermissions.forEach((p) => updated.delete(p.id));
-            } else {
-                filteredPermissions.forEach((p) => updated.add(p.id));
+                return {
+                  ...p,
+                  status: status,
+                };
+              });
+              return {
+                ...u,
+                permissions: updatedPermissions,
+                permission_count: updatedPermissions.filter((p) => p.status > 0)
+                  .length,
+              };
             }
-
-            return { ...prev, [type]: updated };
+            return u;
+          });
+          return newData;
         });
-    };
 
-    const handleSavePermissions = async () => {
-        if (!selectedUserPermissions || !user.company_id) return;
-
-        try {
-            const payload = {
-                user_id: selectedUserPermissions.id,
-                company_id: user.company_id,
-                permissions: selectedUserPermissions.permissions.map((permission) => {
-                    const hasWeb = tempPermissions.web.has(permission.id);
-                    const hasApp = tempPermissions.app.has(permission.id);
-
-                    // Determine status: 1 = both, 2 = web only, 3 = app only, 0 = none
-                    let status = 0;
-                    if (hasWeb && hasApp) status = 1;
-                    else if (hasWeb) status = 2;
-                    else if (hasApp) status = 3;
-
-                    return {
-                        permission_id: permission.id,
-                        status: status,
-                    };
-                }),
-            };
-
-            const response = await api.post(
-                "dashboard/company/change-user-permissions-status",
-                payload
-            );
-
-            if (response.data.IsSuccess === true) {
-                toast.success(
-                    response.data.message || "Permissions updated successfully"
-                );
-
-                setData((prevData) => {
-                    const newData = prevData.map((u) => {
-                        if (u.id === selectedUserPermissions.id) {
-                            const updatedPermissions = u.permissions.map((p) => {
-                                const hasWeb = tempPermissions.web.has(p.id);
-                                const hasApp = tempPermissions.app.has(p.id);
-                                let status = 0;
-                                if (hasWeb && hasApp) status = 1;
-                                else if (hasWeb) status = 2;
-                                else if (hasApp) status = 3;
-
-                                return {
-                                    ...p,
-                                    status: status,
-                                };
-                            });
-                            return {
-                                ...u,
-                                permissions: updatedPermissions,
-                                permission_count: updatedPermissions.filter(
-                                    (p) => p.status > 0
-                                ).length,
-                            };
-                        }
-                        return u;
-                    });
-                    return newData;
-                });
-
-                setTimeout(() => {
-                    window.location.reload();
-                }, 100);
-                setPermissionsDrawerOpen(false);
-            }
-        } catch (error: any) {
-            console.error("Failed to update permissions", error);
-        }
-    };
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+        setPermissionsDrawerOpen(false);
+      }
+    } catch (error: any) {
+      console.error("Failed to update permissions", error);
+    }
+  };
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
@@ -425,7 +427,9 @@ const TablePagination = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchesTeam = filters.team ? item.team_name === filters.team : true;
-      const matchesTrade = filters.trade ? item.trade_name === filters.trade : true;
+      const matchesTrade = filters.trade
+        ? item.trade_name === filters.trade
+        : true;
       const matchesSupervisor = filters.supervisor
         ? item.supervisor_name === filters.supervisor
         : true;
@@ -468,14 +472,14 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<UserList>();
 
-    const allWebSelected =
-        filteredPermissions.length > 0 &&
-        filteredPermissions.every((p) => tempPermissions.web.has(p.id));
+  const allWebSelected =
+    filteredPermissions.length > 0 &&
+    filteredPermissions.every((p) => tempPermissions.web.has(p.id));
 
-    const allAppSelected =
-        filteredPermissions.length > 0 &&
-        filteredPermissions.every((p) => tempPermissions.app.has(p.id));
-    
+  const allAppSelected =
+    filteredPermissions.length > 0 &&
+    filteredPermissions.every((p) => tempPermissions.app.has(p.id));
+
   const columns = [
     columnHelper.accessor("name", {
       id: "name",
@@ -979,7 +983,13 @@ const TablePagination = () => {
 
   return (
     <PermissionGuard permission="Users">
-      <Box>
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Stack
           mr={2}
           ml={2}
@@ -1331,114 +1341,116 @@ const TablePagination = () => {
                 />
               </Box>
 
-                <Box
-                    sx={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr auto auto",
-                        px: 1,
-                        py: 1,
-                        fontWeight: 600,
-                        gap: 2,
-                    }}
-                >
-                    <Typography></Typography>
-                    {filteredPermissions.some(p => p.is_web !== false) && (
-                        <Typography align="center" sx={{ width: "100px" }}>Web</Typography>
-                    )}
-                    {filteredPermissions.some(p => p.is_app !== false) && (
-                        <Typography align="center" sx={{ width: "100px" }}>App</Typography>
-                    )}
-                </Box>
-                
-                
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto auto",
+                  px: 1,
+                  py: 1,
+                  fontWeight: 600,
+                  gap: 2,
+                }}
+              >
+                <Typography></Typography>
+                {filteredPermissions.some((p) => p.is_web !== false) && (
+                  <Typography align="center" sx={{ width: "100px" }}>
+                    Web
+                  </Typography>
+                )}
+                {filteredPermissions.some((p) => p.is_app !== false) && (
+                  <Typography align="center" sx={{ width: "100px" }}>
+                    App
+                  </Typography>
+                )}
+              </Box>
+
               {/* Select All Toggle Switch */}
-                <Box
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto auto",
+                  alignItems: "center",
+                  px: 1,
+                  py: 1,
+                  borderRadius: 1,
+                  gap: 2,
+                  "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+                }}
+              >
+                <Typography>Select All</Typography>
+
+                {filteredPermissions.some((p) => p.is_web !== false) && (
+                  <Box textAlign="center" sx={{ width: "100px" }}>
+                    <IOSSwitch
+                      checked={allWebSelected}
+                      onChange={() => handleSelectAll("web")}
+                      disabled={loading || !isPermission}
+                    />
+                  </Box>
+                )}
+
+                {filteredPermissions.some((p) => p.is_app !== false) && (
+                  <Box textAlign="center" sx={{ width: "100px" }}>
+                    <IOSSwitch
+                      checked={allAppSelected}
+                      onChange={() => handleSelectAll("app")}
+                      disabled={loading || !isPermission}
+                    />
+                  </Box>
+                )}
+              </Box>
+
+              <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
+                {filteredPermissions.map((permission) => (
+                  <Box
+                    key={permission.id}
                     sx={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr auto auto",
-                        alignItems: "center",
-                        px: 1,
-                        py: 1,
-                        borderRadius: 1,
-                        gap: 2,
-                        "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto auto",
+                      alignItems: "center",
+                      px: 1,
+                      py: 1,
+                      borderRadius: 1,
+                      gap: 2,
+                      "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
                     }}
-                >
-                    <Typography>Select All</Typography>
+                  >
+                    <Typography>{permission.name}</Typography>
 
-                    {filteredPermissions.some(p => p.is_web !== false) && (
-                        <Box textAlign="center" sx={{ width: "100px" }}>
-                            <IOSSwitch
-                                checked={allWebSelected}
-                                onChange={() => handleSelectAll("web")}
-                                disabled={loading || !isPermission}
-                            />
-                        </Box>
+                    {permission.is_web !== false ? (
+                      <Box textAlign="center" sx={{ width: "100px" }}>
+                        <IOSSwitch
+                          checked={tempPermissions.web.has(permission.id)}
+                          onChange={() =>
+                            handlePermissionToggle(permission.id, "web")
+                          }
+                          disabled={loading || !isPermission}
+                        />
+                      </Box>
+                    ) : (
+                      filteredPermissions.some((p) => p.is_web !== false) && (
+                        <Box sx={{ width: "100px" }} />
+                      )
                     )}
 
-                    {filteredPermissions.some(p => p.is_app !== false) && (
-                        <Box textAlign="center" sx={{ width: "100px" }}>
-                            <IOSSwitch
-                                checked={allAppSelected}
-                                onChange={() => handleSelectAll("app")}
-                                disabled={loading || !isPermission}
-                            />
-                        </Box>
+                    {permission.is_app !== false ? (
+                      <Box textAlign="center" sx={{ width: "100px" }}>
+                        <IOSSwitch
+                          checked={tempPermissions.app.has(permission.id)}
+                          onChange={() =>
+                            handlePermissionToggle(permission.id, "app")
+                          }
+                          disabled={loading || !isPermission}
+                        />
+                      </Box>
+                    ) : (
+                      filteredPermissions.some((p) => p.is_app !== false) && (
+                        <Box sx={{ width: "100px" }} />
+                      )
                     )}
-                </Box>
-
-
-                <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
-                    {filteredPermissions.map((permission) => (
-                        <Box
-                            key={permission.id}
-                            sx={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr auto auto",
-                                alignItems: "center",
-                                px: 1,
-                                py: 1,
-                                borderRadius: 1,
-                                gap: 2,
-                                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-                            }}
-                        >
-                            <Typography>{permission.name}</Typography>
-
-                            {permission.is_web !== false ? (
-                                <Box textAlign="center" sx={{ width: "100px" }}>
-                                    <IOSSwitch
-                                        checked={tempPermissions.web.has(permission.id)}
-                                        onChange={() =>
-                                            handlePermissionToggle(permission.id, "web")
-                                        }
-                                        disabled={loading || !isPermission}
-                                    />
-                                </Box>
-                            ) : (
-                                filteredPermissions.some(p => p.is_web !== false) && (
-                                    <Box sx={{ width: "100px" }} />
-                                )
-                            )}
-
-                            {permission.is_app !== false ? (
-                                <Box textAlign="center" sx={{ width: "100px" }}>
-                                    <IOSSwitch
-                                        checked={tempPermissions.app.has(permission.id)}
-                                        onChange={() =>
-                                            handlePermissionToggle(permission.id, "app")
-                                        }
-                                        disabled={loading || !isPermission}
-                                    />
-                                </Box>
-                            ) : (
-                                filteredPermissions.some(p => p.is_app !== false) && (
-                                    <Box sx={{ width: "100px" }} />
-                                )
-                            )}
-                        </Box>
-                    ))}
-                </Box>
+                  </Box>
+                ))}
+              </Box>
 
               {/* Drawer Actions */}
               {isPermission && (
@@ -1550,101 +1562,105 @@ const TablePagination = () => {
           </DialogActions>
         </Dialog>
 
-        <Grid container spacing={3}>
-          <Grid size={12}>
-            <Box>
-              <TableContainer>
-                <Table stickyHeader aria-label="sticky table">
-                  <TableHead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => {
-                          const isActive = header.column.getIsSorted();
-                          const isAsc = header.column.getIsSorted() === "asc";
-                          const isSortable = header.column.getCanSort();
+        <Box
+          display={"flex"}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
+          <TableContainer>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActive = header.column.getIsSorted();
+                      const isAsc = header.column.getIsSorted() === "asc";
+                      const isSortable = header.column.getCanSort();
 
-                          return (
-                            <TableCell
-                              key={header.id}
-                              align="center"
-                              sx={{
-                                paddingTop: "10px",
-                                paddingBottom: "10px",
-                                width:
-                                  header.column.id === "actions" ? 120 : "auto",
-                              }}
-                            >
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align="center"
+                          sx={{
+                            paddingTop: "10px",
+                            paddingBottom: "10px",
+                            width:
+                              header.column.id === "actions" ? 120 : "auto",
+                          }}
+                        >
+                          <Box
+                            onClick={header.column.getToggleSortingHandler()}
+                            p={0}
+                            sx={{
+                              cursor: isSortable ? "pointer" : "default",
+                              border: "2px solid transparent",
+                              borderRadius: "6px",
+                              display: "flex",
+                              justifyContent: "flex-start",
+                              "&:hover": { color: "#888" },
+                              "&:hover .hoverIcon": { opacity: 1 },
+                            }}
+                          >
+                            {/* <Typography variant="subtitle2"> */}
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            {/* </Typography> */}
+                            {isSortable && (
                               <Box
-                                onClick={header.column.getToggleSortingHandler()}
-                                p={0}
+                                component="span"
+                                className="hoverIcon"
+                                ml={0.5}
                                 sx={{
-                                  cursor: isSortable ? "pointer" : "default",
-                                  border: "2px solid transparent",
-                                  borderRadius: "6px",
+                                  transition: "opacity 0.2s",
+                                  opacity: isActive ? 1 : 0,
+                                  fontSize: "0.9rem",
+                                  color: isActive ? "#000" : "#888",
                                   display: "flex",
-                                  justifyContent: "flex-start",
-                                  "&:hover": { color: "#888" },
-                                  "&:hover .hoverIcon": { opacity: 1 },
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
                                 }}
                               >
-                                {/* <Typography variant="subtitle2"> */}
-                                {flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                                {/* </Typography> */}
-                                {isSortable && (
-                                  <Box
-                                    component="span"
-                                    className="hoverIcon"
-                                    ml={0.5}
-                                    sx={{
-                                      transition: "opacity 0.2s",
-                                      opacity: isActive ? 1 : 0,
-                                      fontSize: "0.9rem",
-                                      color: isActive ? "#000" : "#888",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                    }}
-                                  >
-                                    {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                                  </Box>
-                                )}
+                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
                               </Box>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableHead>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        hover
-                        sx={{
-                          cursor: "pointer",
-                        }}
-                        key={row.id}
-                        onMouseEnter={() => setHoveredRow(row.original.id)}
-                        onMouseLeave={() => setHoveredRow(null)}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
                             )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    hover
+                    sx={{
+                      cursor: "pointer",
+                    }}
+                    key={row.id}
+                    onMouseEnter={() => setHoveredRow(row.original.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
                     ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          </Grid>
-        </Grid>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Divider />
+        </Box>
 
         <Divider />
         <Stack
@@ -1716,6 +1732,7 @@ const TablePagination = () => {
             </Stack>
           </Box>
         </Stack>
+        <Divider />
 
         <Drawer
           anchor="right"

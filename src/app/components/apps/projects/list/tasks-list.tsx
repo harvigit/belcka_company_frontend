@@ -551,13 +551,26 @@ const TasksList = ({
     table.setPageIndex(0);
   }, [table]);
   return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12 }}>
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={10}>
-            <CircularProgress />
-          </Box>
-        ) : (
+    <Box
+      sx={{
+        height: "calc(95vh - 130px)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {loading ? (
+        <Box display="flex" justifyContent="center" py={10}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Box
+          display={"flex"}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
           <TableContainer>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
@@ -647,82 +660,81 @@ const TasksList = ({
               </TableBody>
             </Table>
           </TableContainer>
-        )}
+        </Box>
+      )}
 
-        <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={3}
+      <Divider />
+      <Stack
+        gap={1}
+        pr={3}
+        pt={1}
+        pl={3}
+        alignItems="center"
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+      >
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography color="textSecondary">
+            {table.getPrePaginationRowModel().rows.length} Rows
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: {
+              xs: "block",
+              sm: "flex",
+            },
+          }}
           alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
         >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary">
-              {table.getPrePaginationRowModel().rows.length} Rows
+          <Stack direction="row" alignItems="center">
+            <Typography color="textSecondary">Page</Typography>
+            <Typography color="textSecondary" fontWeight={600} ml={1}>
+              {table.getState().pagination.pageIndex + 1} of{" "}
+              {Math.max(1, table.getPageCount())}
             </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
+            <Typography color="textSecondary" ml={"3px"}>
+              {" "}
+              | Entries :{" "}
+            </Typography>
+          </Stack>
+          <Stack
+            ml={"5px"}
+            direction="row"
             alignItems="center"
+            color="textSecondary"
           >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600} ml={1}>
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {Math.max(1, table.getPageCount())}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"}>
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
+            <CustomSelect
+              value={table.getState().pagination.pageSize}
+              onChange={(e: { target: { value: any } }) => {
+                table.setPageSize(Number(e.target.value));
+              }}
             >
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
-      </Grid>
+              {[50, 100, 250, 500].map((pageSize) => (
+                <MenuItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </MenuItem>
+              ))}
+            </CustomSelect>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronRight />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Stack>
 
       {/* ✅ Drawer for Add/Edit */}
       <Drawer
@@ -883,7 +895,7 @@ const TasksList = ({
           </Button>
         </DialogActions>
       </Dialog>
-    </Grid>
+    </Box>
   );
 };
 

@@ -858,8 +858,24 @@ const TimeClock = () => {
   const isAnyRowSelected = selectedRowIds.size > 0;
 
   return (
-    <Box sx={{ position: "relative", overflow: "hidden" }}>
-      <Box sx={{ transition: "height 0.3s ease-in-out" }}>
+    <Box
+      sx={{
+        position: "relative",
+        overflow: "hidden",
+        height: "calc(93vh - 100px)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Box
+        display={"flex"}
+        sx={{
+          transition: "height 0.3s ease-in-out",
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+        }}
+      >
         <Box
           display={"flex"}
           justifyContent={"space-between"}
@@ -1155,80 +1171,81 @@ const TimeClock = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={3}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600} ml={1}>
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"}>
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <Divider />
       </Box>
+      <Divider />
+
+      <Stack
+        gap={1}
+        pr={3}
+        pt={2}
+        pl={3}
+        alignItems="center"
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+      >
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography color="textSecondary">
+            {table.getPrePaginationRowModel().rows.length} Rows
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: {
+              xs: "block",
+              sm: "flex",
+            },
+          }}
+          alignItems="center"
+        >
+          <Stack direction="row" alignItems="center">
+            <Typography color="textSecondary">Page</Typography>
+            <Typography color="textSecondary" fontWeight={600} ml={1}>
+              {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
+            </Typography>
+            <Typography color="textSecondary" ml={"3px"}>
+              {" "}
+              | Entries :{" "}
+            </Typography>
+          </Stack>
+          <Stack
+            ml={"5px"}
+            direction="row"
+            alignItems="center"
+            color="textSecondary"
+          >
+            <CustomSelect
+              value={table.getState().pagination.pageSize}
+              onChange={(e: { target: { value: any } }) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+            >
+              {[50, 100, 250, 500].map((pageSize) => (
+                <MenuItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </MenuItem>
+              ))}
+            </CustomSelect>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronRight />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Stack>
 
       <Drawer
         anchor="bottom"

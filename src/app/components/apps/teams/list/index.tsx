@@ -488,7 +488,13 @@ const TablePagination = () => {
 
   return (
     <PermissionGuard permission="Teams">
-      <Box>
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         {/* Render the search and table */}
         <Stack
           mr={2}
@@ -869,208 +875,212 @@ const TablePagination = () => {
           />
         )}
 
-        <Grid container spacing={3}>
-          <Grid size={12}>
-            <Box>
-              <TableContainer>
-                <Table stickyHeader aria-label="sticky table">
-                  <TableHead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => {
-                          const isActive = header.column.getIsSorted();
-                          const isAsc = header.column.getIsSorted() === "asc";
-                          const isSortable = header.column.getCanSort();
+        <Box
+          display={"flex"}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
+          <TableContainer>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActive = header.column.getIsSorted();
+                      const isAsc = header.column.getIsSorted() === "asc";
+                      const isSortable = header.column.getCanSort();
+
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align="center"
+                          sx={{
+                            paddingTop: "10px",
+                            paddingBottom: "10px",
+                            width:
+                              header.column.id === "actions" ? 120 : "auto",
+                          }}
+                        >
+                          <Box
+                            onClick={header.column.getToggleSortingHandler()}
+                            p={0}
+                            sx={{
+                              cursor: isSortable ? "pointer" : "default",
+                              border: "2px solid transparent",
+                              borderRadius: "6px",
+                              display: "flex",
+                              justifyContent: "flex-start",
+                              "&:hover": { color: "#888" },
+                              "&:hover .hoverIcon": { opacity: 1 },
+                            }}
+                          >
+                            <Typography variant="subtitle2">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            </Typography>
+                            {isSortable && (
+                              <Box
+                                component="span"
+                                className="hoverIcon"
+                                ml={0.5}
+                                sx={{
+                                  transition: "opacity 0.2s",
+                                  opacity: isActive ? 1 : 0,
+                                  fontSize: "0.9rem",
+                                  color: isActive ? "#000" : "#888",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {
+                  // table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const item = row.original;
+                    const isDisabled =
+                      item.is_subcontractor === true &&
+                      item.company_id !== item.subcontractor_company_id;
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        hover
+                        sx={{
+                          cursor: isDisabled ? "default" : "pointer",
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const isActionCell = cell.column.id === "actions";
+                          const isCheckboxCell = cell.column.id === "name";
 
                           return (
                             <TableCell
-                              key={header.id}
-                              align="center"
-                              sx={{
-                                paddingTop: "10px",
-                                paddingBottom: "10px",
-                                width:
-                                  header.column.id === "actions" ? 120 : "auto",
+                              key={cell.id}
+                              sx={{ padding: "10px" }}
+                              onClick={() => {
+                                if (
+                                  !isDisabled &&
+                                  !isActionCell &&
+                                  !isCheckboxCell
+                                ) {
+                                  router.push(
+                                    `/apps/teams/team?team_id=${row.original.team_id}`
+                                  );
+                                }
                               }}
                             >
-                              <Box
-                                onClick={header.column.getToggleSortingHandler()}
-                                p={0}
-                                sx={{
-                                  cursor: isSortable ? "pointer" : "default",
-                                  border: "2px solid transparent",
-                                  borderRadius: "6px",
-                                  display: "flex",
-                                  justifyContent: "flex-start",
-                                  "&:hover": { color: "#888" },
-                                  "&:hover .hoverIcon": { opacity: 1 },
-                                }}
-                              >
-                                <Typography variant="subtitle2">
-                                  {flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                                </Typography>
-                                {isSortable && (
-                                  <Box
-                                    component="span"
-                                    className="hoverIcon"
-                                    ml={0.5}
-                                    sx={{
-                                      transition: "opacity 0.2s",
-                                      opacity: isActive ? 1 : 0,
-                                      fontSize: "0.9rem",
-                                      color: isActive ? "#000" : "#888",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                    }}
-                                  >
-                                    {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                                  </Box>
-                                )}
-                              </Box>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
                             </TableCell>
                           );
                         })}
                       </TableRow>
-                    ))}
-                  </TableHead>
-                  <TableBody>
-                    {
-                      // table.getRowModel().rows.length ? (
-                      table.getRowModel().rows.map((row) => {
-                        const item = row.original;
-                        const isDisabled =
-                          item.is_subcontractor === true &&
-                          item.company_id !== item.subcontractor_company_id;
-
-                        return (
-                          <TableRow
-                            key={row.id}
-                            hover
-                            sx={{
-                              cursor: isDisabled ? "default" : "pointer",
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => {
-                              const isActionCell = cell.column.id === "actions";
-                              const isCheckboxCell = cell.column.id === "name";
-
-                              return (
-                                <TableCell
-                                  key={cell.id}
-                                  sx={{ padding: "10px" }}
-                                  onClick={() => {
-                                    if (
-                                      !isDisabled &&
-                                      !isActionCell &&
-                                      !isCheckboxCell
-                                    ) {
-                                      router.push(
-                                        `/apps/teams/team?team_id=${row.original.team_id}`
-                                      );
-                                    }
-                                  }}
-                                >
-                                  {flexRender(
-                                    cell.column.columnDef.cell,
-                                    cell.getContext()
-                                  )}
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
-                        );
-                      })
-                      // ) : (
-                      //   <TableRow>
-                      //     <TableCell colSpan={columns.length} align="center">
-                      //       No records found
-                      //     </TableCell>
-                      //   </TableRow>
-                      // )
-                    }
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-            <Divider />
-            <Stack
-              gap={1}
-              pr={3}
-              pt={1}
-              pl={3}
-              pb={3}
-              alignItems="center"
-              direction={{ xs: "column", sm: "row" }}
-              justifyContent="space-between"
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <Typography color="textSecondary">
-                  {table.getPrePaginationRowModel().rows.length} Rows
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: {
-                    xs: "block",
-                    sm: "flex",
-                  },
-                }}
-                alignItems="center"
-              >
-                <Stack direction="row" alignItems="center">
-                  <Typography color="textSecondary">Page</Typography>
-                  <Typography color="textSecondary" fontWeight={600} ml={1}>
-                    {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </Typography>
-                  <Typography color="textSecondary" ml={"3px"}>
-                    {" "}
-                    | Entries :{" "}
-                  </Typography>
-                </Stack>
-                <Stack
-                  ml={"5px"}
-                  direction="row"
-                  alignItems="center"
-                  color="textSecondary"
-                >
-                  <CustomSelect
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e: { target: { value: any } }) => {
-                      table.setPageSize(Number(e.target.value));
-                    }}
-                  >
-                    {[50, 100, 250, 500].map((pageSize) => (
-                      <MenuItem key={pageSize} value={pageSize}>
-                        {pageSize}
-                      </MenuItem>
-                    ))}
-                  </CustomSelect>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <IconChevronLeft />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <IconChevronRight />
-                  </IconButton>
-                </Stack>
-              </Box>
+                    );
+                  })
+                  // ) : (
+                  //   <TableRow>
+                  //     <TableCell colSpan={columns.length} align="center">
+                  //       No records found
+                  //     </TableCell>
+                  //   </TableRow>
+                  // )
+                }
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Divider />
+        </Box>
+        <Divider />
+        <Stack
+          gap={1}
+          pr={3}
+          pt={1}
+          pl={3}
+          pb={2}
+          alignItems="center"
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography color="textSecondary">
+              {table.getPrePaginationRowModel().rows.length} Rows
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: {
+                xs: "block",
+                sm: "flex",
+              },
+            }}
+            alignItems="center"
+          >
+            <Stack direction="row" alignItems="center">
+              <Typography color="textSecondary">Page</Typography>
+              <Typography color="textSecondary" fontWeight={600} ml={1}>
+                {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+              </Typography>
+              <Typography color="textSecondary" ml={"3px"}>
+                {" "}
+                | Entries :{" "}
+              </Typography>
             </Stack>
-          </Grid>
-        </Grid>
+            <Stack
+              ml={"5px"}
+              direction="row"
+              alignItems="center"
+              color="textSecondary"
+            >
+              <CustomSelect
+                value={table.getState().pagination.pageSize}
+                onChange={(e: { target: { value: any } }) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+              >
+                {[50, 100, 250, 500].map((pageSize) => (
+                  <MenuItem key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </MenuItem>
+                ))}
+              </CustomSelect>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <IconChevronLeft />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <IconChevronRight />
+              </IconButton>
+            </Stack>
+          </Box>
+        </Stack>
       </Box>
     </PermissionGuard>
   );
