@@ -177,7 +177,7 @@ export default function PermissionSettings() {
                 )}
             </Box>
 
-            <TableContainer component={Paper}  sx={{ p: 2, pt: 0}}>
+            <TableContainer component={Paper} sx={{ p: 2, pt: 0, height: "calc(95vh - 130px)"}}>
                 <Table stickyHeader>
                     <TableHead>
                         <TableRow sx={{ background: '#e5e8ed' }}>

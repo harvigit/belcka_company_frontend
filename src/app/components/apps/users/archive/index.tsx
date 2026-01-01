@@ -154,7 +154,7 @@ const ArchiveUserList = () => {
 
   const uniqueTeams = useMemo(
     () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
-    [data,teams]
+    [data, teams]
   );
 
   const uniqueSupervisors = useMemo(
@@ -235,25 +235,25 @@ const ArchiveUserList = () => {
               }}
             />
             {/* <Link href={`/apps/users/${user.id}`} passHref> */}
-              <Stack direction="row" alignItems="center" spacing={4}>
-                <Avatar
-                  src={user.user_image || defaultImage}
-                  alt={user.name}
-                  sx={{ width: 36, height: 36 }}
-                />
-                <Box>
-                  <Typography
-                    className="f-14"
-                    color="textPrimary"
-                    // sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-                  >
-                    {user.name ?? "-"}
-                  </Typography>
-                  <Typography color="textSecondary" variant="subtitle1">
-                    {user.trade_name}
-                  </Typography>
-                </Box>
-              </Stack>
+            <Stack direction="row" alignItems="center" spacing={4}>
+              <Avatar
+                src={user.user_image || defaultImage}
+                alt={user.name}
+                sx={{ width: 36, height: 36 }}
+              />
+              <Box>
+                <Typography
+                  className="f-14"
+                  color="textPrimary"
+                  // sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+                >
+                  {user.name ?? "-"}
+                </Typography>
+                <Typography color="textSecondary" variant="subtitle1">
+                  {user.trade_name}
+                </Typography>
+              </Box>
+            </Stack>
             {/* </Link> */}
           </Stack>
         );
@@ -322,7 +322,13 @@ const ArchiveUserList = () => {
 
   return (
     <PermissionGuard permission="Users">
-      <Box>
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Stack
           mr={2}
           ml={2}
@@ -532,93 +538,96 @@ const ArchiveUserList = () => {
           </DialogActions>
         </Dialog>
 
-        <Grid container spacing={3}>
-          <Grid size={12}>
-            <Box>
-              <TableContainer>
-                <Table stickyHeader aria-label="sticky table">
-                  <TableHead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => {
-                          const isActive = header.column.getIsSorted();
-                          const isAsc = header.column.getIsSorted() === "asc";
-                          const isSortable = header.column.getCanSort();
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
+          <TableContainer>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActive = header.column.getIsSorted();
+                      const isAsc = header.column.getIsSorted() === "asc";
+                      const isSortable = header.column.getCanSort();
 
-                          return (
-                            <TableCell
-                              key={header.id}
-                              align="center"
-                              sx={{
-                                paddingTop: "5px",
-                                paddingBottom: "5px",
-                                width:
-                                  header.column.id === "actions" ? 120 : "auto",
-                              }}
-                            >
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align="center"
+                          sx={{
+                            paddingTop: "5px",
+                            paddingBottom: "5px",
+                            width:
+                              header.column.id === "actions" ? 120 : "auto",
+                          }}
+                        >
+                          <Box
+                            onClick={header.column.getToggleSortingHandler()}
+                            p={0}
+                            sx={{
+                              cursor: isSortable ? "pointer" : "default",
+                              border: "2px solid transparent",
+                              borderRadius: "6px",
+                              display: "flex",
+                              justifyContent: "flex-start",
+                              "&:hover": { color: "#888" },
+                              "&:hover .hoverIcon": { opacity: 1 },
+                            }}
+                          >
+                            <Typography variant="subtitle2">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            </Typography>
+                            {isSortable && (
                               <Box
-                                onClick={header.column.getToggleSortingHandler()}
-                                p={0}
+                                component="span"
+                                className="hoverIcon"
+                                ml={0.5}
                                 sx={{
-                                  cursor: isSortable ? "pointer" : "default",
-                                  border: "2px solid transparent",
-                                  borderRadius: "6px",
+                                  transition: "opacity 0.2s",
+                                  opacity: isActive ? 1 : 0,
+                                  fontSize: "0.9rem",
+                                  color: isActive ? "#000" : "#888",
                                   display: "flex",
-                                  justifyContent: "flex-start",
-                                  "&:hover": { color: "#888" },
-                                  "&:hover .hoverIcon": { opacity: 1 },
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
                                 }}
                               >
-                                <Typography variant="subtitle2">
-                                  {flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                                </Typography>
-                                {isSortable && (
-                                  <Box
-                                    component="span"
-                                    className="hoverIcon"
-                                    ml={0.5}
-                                    sx={{
-                                      transition: "opacity 0.2s",
-                                      opacity: isActive ? 1 : 0,
-                                      fontSize: "0.9rem",
-                                      color: isActive ? "#000" : "#888",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                    }}
-                                  >
-                                    {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                                  </Box>
-                                )}
+                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
                               </Box>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableHead>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
                             )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
                     ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          </Grid>
-        </Grid>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Divider />
+        </Box>
 
         <Divider />
         <Stack

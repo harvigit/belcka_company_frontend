@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
-import IOSSwitch from '@/app/components/common/IOSSwitch';
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -41,7 +41,7 @@ interface NotificationCategory {
 const Notifications: React.FC<ProjectListingProps> = ({
   companyId,
   active,
-  userId
+  userId,
 }) => {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -60,11 +60,11 @@ const Notifications: React.FC<ProjectListingProps> = ({
     setLoading(false);
   };
   useEffect(() => {
-    if(!userId || !active) return
+    if (!userId || !active) return;
     if (companyId) {
       fetchNotifications();
     }
-  }, [companyId, active,userId]);
+  }, [companyId, active, userId]);
 
   const updateNotificationState = (
     categoryId: number,
@@ -145,8 +145,23 @@ const Notifications: React.FC<ProjectListingProps> = ({
     );
   }
   return (
-    <Box m={2} mt={0} ml={5}>
-      <Box display={"flex"} justifyContent={"space-between"} mb={1}>
+    <Box
+      mt={0}
+      ml={5}
+      sx={{
+        height: "calc(100vh - 100px)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Box
+        justifyContent={"space-between"}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+        }}
+      >
         <Typography fontWeight={500}></Typography>
         {categories.length > 0 && (
           <>
@@ -157,7 +172,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
         )}
       </Box>
       <TableContainer
-        sx={{boxShadow: (theme) => theme.shadows[2] }}
+        sx={{ boxShadow: (theme) => theme.shadows[2] }}
         component={Paper}
       >
         <Table stickyHeader aria-label="sticky table">

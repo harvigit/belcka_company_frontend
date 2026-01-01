@@ -502,7 +502,13 @@ const TablePagination = () => {
 
   return (
     <PermissionGuard permission="Clients">
-      <Box>
+      <Box
+        sx={{
+          height: "calc(100vh - 100px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         {/* Render the search and table */}
         <Stack
           mr={2}
@@ -687,346 +693,348 @@ const TablePagination = () => {
         />
 
         <Divider />
-        <Grid container spacing={3}>
-          <Grid size={12}>
-            <Box>
-              <TableContainer>
-                <Table stickyHeader aria-label="sticky table">
-                  <TableHead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => {
-                          const isActive = header.column.getIsSorted();
-                          const isAsc = header.column.getIsSorted() === "asc";
-                          const isSortable = header.column.getCanSort();
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
+          <TableContainer>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isActive = header.column.getIsSorted();
+                      const isAsc = header.column.getIsSorted() === "asc";
+                      const isSortable = header.column.getCanSort();
 
-                          return (
-                            <TableCell
-                              key={header.id}
-                              align="center"
-                              sx={{
-                                paddingTop: "10px",
-                                paddingBottom: "10px",
-                                width:
-                                  header.column.id === "actions" ? 210 : "auto",
-                              }}
-                            >
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align="center"
+                          sx={{
+                            paddingTop: "10px",
+                            paddingBottom: "10px",
+                            width:
+                              header.column.id === "actions" ? 210 : "auto",
+                          }}
+                        >
+                          <Box
+                            onClick={header.column.getToggleSortingHandler()}
+                            p={0}
+                            sx={{
+                              cursor: isSortable ? "pointer" : "default",
+                              border: "2px solid transparent",
+                              borderRadius: "6px",
+                              display: "flex",
+                              justifyContent: "flex-start",
+                              "&:hover": { color: "#888" },
+                              "&:hover .hoverIcon": { opacity: 1 },
+                            }}
+                          >
+                            <Typography variant="subtitle2">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            </Typography>
+                            {isSortable && (
                               <Box
-                                onClick={header.column.getToggleSortingHandler()}
-                                p={0}
+                                component="span"
+                                className="hoverIcon"
+                                ml={0.5}
                                 sx={{
-                                  cursor: isSortable ? "pointer" : "default",
-                                  border: "2px solid transparent",
-                                  borderRadius: "6px",
+                                  transition: "opacity 0.2s",
+                                  opacity: isActive ? 1 : 0,
+                                  fontSize: "0.9rem",
+                                  color: isActive ? "#000" : "#888",
                                   display: "flex",
-                                  justifyContent: "flex-start",
-                                  "&:hover": { color: "#888" },
-                                  "&:hover .hoverIcon": { opacity: 1 },
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
                                 }}
                               >
-                                <Typography variant="subtitle2">
-                                  {flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                                </Typography>
-                                {isSortable && (
-                                  <Box
-                                    component="span"
-                                    className="hoverIcon"
-                                    ml={0.5}
-                                    sx={{
-                                      transition: "opacity 0.2s",
-                                      opacity: isActive ? 1 : 0,
-                                      fontSize: "0.9rem",
-                                      color: isActive ? "#000" : "#888",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                    }}
-                                  >
-                                    {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                                  </Box>
-                                )}
+                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
                               </Box>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableHead>
-                  <TableBody>
-                    {
-                      // table.getRowModel().rows.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                      // ) : (
-                      //   <TableRow>
-                      //     <TableCell colSpan={columns.length} align="center">
-                      //       No records found
-                      //     </TableCell>
-                      //   </TableRow>
-                      // )
-                    }
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-            <Divider />
+                            )}
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {
+                  // table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                  // ) : (
+                  //   <TableRow>
+                  //     <TableCell colSpan={columns.length} align="center">
+                  //       No records found
+                  //     </TableCell>
+                  //   </TableRow>
+                  // )
+                }
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Divider />
+        </Box>
+        <Divider />
 
-            {/* add client */}
-            <Dialog
+        {/* add client */}
+        <Dialog
+          open={open}
+          onClose={() => setOpen(false)}
+          fullWidth
+          maxWidth="lg"
+        >
+          <DialogTitle>
+            <Typography color="GrayText" fontWeight={700}>
+              Add Client
+            </Typography>
+            <IconButton
+              onClick={() => setOpen(false)}
+              sx={{
+                position: "absolute",
+                right: 12,
+                top: 8,
+                backgroundColor: "transparent",
+              }}
+            >
+              <IconX size={40} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <AuthRegister
+              onWorkUpdated={fetchClients}
               open={open}
               onClose={() => setOpen(false)}
-              fullWidth
-              maxWidth="lg"
-            >
-              <DialogTitle>
-                <Typography color="GrayText" fontWeight={700}>
-                  Add Client
-                </Typography>
-                <IconButton
-                  onClick={() => setOpen(false)}
-                  sx={{
-                    position: "absolute",
-                    right: 12,
-                    top: 8,
-                    backgroundColor: "transparent",
-                  }}
-                >
-                  <IconX size={40} />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent>
-                <AuthRegister
-                  onWorkUpdated={fetchClients}
-                  open={open}
-                  onClose={() => setOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
+            />
+          </DialogContent>
+        </Dialog>
 
-            {/* edit client */}
-            <Dialog
-              open={openEdit}
+        {/* edit client */}
+        <Dialog
+          open={openEdit}
+          onClose={() => setOpenEdit(false)}
+          fullWidth
+          maxWidth="lg"
+        >
+          <DialogTitle>
+            <Typography color="GrayText" fontWeight={700}>
+              Edit Client
+            </Typography>
+            <IconButton
+              onClick={() => setOpenEdit(false)}
+              sx={{
+                position: "absolute",
+                right: 12,
+                top: 8,
+                backgroundColor: "transparent",
+              }}
+            >
+              <IconX size={40} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <EditClient
+              id={selectedTaskId}
+              onWorkUpdated={fetchClients}
+              open={open}
               onClose={() => setOpenEdit(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* archive client */}
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Confirm Archive</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              Are you sure you want to archive client from company?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenDialog(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const payload = {
+                    client_ids: usersToDelete.join(","),
+                  };
+                  const response: AxiosResponse<any> = await api.post(
+                    "company-clients/archive",
+                    payload
+                  );
+                  toast.success(response.data.message);
+                  setSelectedRowIds(new Set());
+                  await fetchClients();
+                } catch (error) {
+                  toast.error("Failed to archive client");
+                } finally {
+                  setOpenDialog(false);
+                }
+              }}
+              variant="outlined"
+              color="error"
+            >
+              Archive
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Re-active invitation link */}
+        <Dialog
+          open={openActiveDialog}
+          onClose={() => setOpenActiveDialog(false)}
+        >
+          <DialogTitle>Confirm Re-activation</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary" mb={2}>
+              Are you sure you want to Re-activation invitation for this client?
+            </Typography>
+
+            <Typography mb={1}>Login expires on</Typography>
+            <CustomTextField
+              type="date"
+              id="invite_date"
+              placeholder="Choose Expiry date"
               fullWidth
-              maxWidth="lg"
+              required
+              value={expireDate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const newDate = e.target.value;
+                setExpireDate(newDate);
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenActiveDialog(false)}
+              variant="outlined"
+              color="primary"
             >
-              <DialogTitle>
-                <Typography color="GrayText" fontWeight={700}>
-                  Edit Client
-                </Typography>
-                <IconButton
-                  onClick={() => setOpenEdit(false)}
-                  sx={{
-                    position: "absolute",
-                    right: 12,
-                    top: 8,
-                    backgroundColor: "transparent",
-                  }}
-                >
-                  <IconX size={40} />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent>
-                <EditClient
-                  id={selectedTaskId}
-                  onWorkUpdated={fetchClients}
-                  open={open}
-                  onClose={() => setOpenEdit(false)}
-                />
-              </DialogContent>
-            </Dialog>
-
-            {/* archive client */}
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-              <DialogTitle>Confirm Archive</DialogTitle>
-              <DialogContent>
-                <Typography color="textSecondary">
-                  Are you sure you want to archive client from company?
-                </Typography>
-              </DialogContent>
-              <DialogActions>
-                <Button
-                  onClick={() => setOpenDialog(false)}
-                  variant="outlined"
-                  color="primary"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      const payload = {
-                        client_ids: usersToDelete.join(","),
-                      };
-                      const response: AxiosResponse<any> = await api.post(
-                        "company-clients/archive",
-                        payload
-                      );
-                      toast.success(response.data.message);
-                      setSelectedRowIds(new Set());
-                      await fetchClients();
-                    } catch (error) {
-                      toast.error("Failed to archive client");
-                    } finally {
-                      setOpenDialog(false);
-                    }
-                  }}
-                  variant="outlined"
-                  color="error"
-                >
-                  Archive
-                </Button>
-              </DialogActions>
-            </Dialog>
-
-            {/* Re-active invitation link */}
-            <Dialog
-              open={openActiveDialog}
-              onClose={() => setOpenActiveDialog(false)}
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const payload = {
+                    id: selectedClientId,
+                    expire_date: expireDate,
+                  };
+                  const response: AxiosResponse<any> = await api.post(
+                    "company-clients/reactivate-invitation",
+                    payload
+                  );
+                  toast.success(response.data.message);
+                  setSelectedClientId(null);
+                  await fetchClients();
+                  setOpenActiveDialog(false);
+                } catch (error) {
+                  setOpenActiveDialog(true);
+                }
+              }}
+              variant="outlined"
+              color="error"
             >
-              <DialogTitle>Confirm Re-activation</DialogTitle>
-              <DialogContent>
-                <Typography color="textSecondary" mb={2}>
-                  Are you sure you want to Re-activation invitation for this
-                  client?
-                </Typography>
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-                <Typography mb={1}>Login expires on</Typography>
-                <CustomTextField
-                  type="date"
-                  id="invite_date"
-                  placeholder="Choose Expiry date"
-                  fullWidth
-                  required
-                  value={expireDate}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const newDate = e.target.value;
-                    setExpireDate(newDate);
-                  }}
-                />
-              </DialogContent>
-              <DialogActions>
-                <Button
-                  onClick={() => setOpenActiveDialog(false)}
-                  variant="outlined"
-                  color="primary"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      const payload = {
-                        id: selectedClientId,
-                        expire_date: expireDate,
-                      };
-                      const response: AxiosResponse<any> = await api.post(
-                        "company-clients/reactivate-invitation",
-                        payload
-                      );
-                      toast.success(response.data.message);
-                      setSelectedClientId(null);
-                      await fetchClients();
-                      setOpenActiveDialog(false);
-                    } catch (error) {
-                      setOpenActiveDialog(true);
-                    }
-                  }}
-                  variant="outlined"
-                  color="error"
-                >
-                  Confirm
-                </Button>
-              </DialogActions>
-            </Dialog>
-
-            <Stack
-              gap={1}
-              pr={3}
-              pt={1}
-              pl={3}
-              pb={3}
-              alignItems="center"
-              direction={{ xs: "column", sm: "row" }}
-              justifyContent="space-between"
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <Typography color="textSecondary">
-                  {table.getPrePaginationRowModel().rows.length} Rows
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: {
-                    xs: "block",
-                    sm: "flex",
-                  },
-                }}
-                alignItems="center"
-              >
-                <Stack direction="row" alignItems="center">
-                  <Typography color="textSecondary">Page</Typography>
-                  <Typography color="textSecondary" fontWeight={600} ml={1}>
-                    {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </Typography>
-                  <Typography color="textSecondary" ml={"3px"}>
-                    {" "}
-                    | Entries :{" "}
-                  </Typography>
-                </Stack>
-                <Stack
-                  ml={"5px"}
-                  direction="row"
-                  alignItems="center"
-                  color="textSecondary"
-                >
-                  <CustomSelect
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e: { target: { value: any } }) => {
-                      table.setPageSize(Number(e.target.value));
-                    }}
-                  >
-                    {[50, 100, 250, 500].map((pageSize) => (
-                      <MenuItem key={pageSize} value={pageSize}>
-                        {pageSize}
-                      </MenuItem>
-                    ))}
-                  </CustomSelect>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <IconChevronLeft />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <IconChevronRight />
-                  </IconButton>
-                </Stack>
-              </Box>
+        <Stack
+          gap={1}
+          pr={3}
+          pt={1}
+          pl={3}
+          pb={1}
+          alignItems="center"
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography color="textSecondary">
+              {table.getPrePaginationRowModel().rows.length} Rows
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: {
+                xs: "block",
+                sm: "flex",
+              },
+            }}
+            alignItems="center"
+          >
+            <Stack direction="row" alignItems="center">
+              <Typography color="textSecondary">Page</Typography>
+              <Typography color="textSecondary" fontWeight={600} ml={1}>
+                {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+              </Typography>
+              <Typography color="textSecondary" ml={"3px"}>
+                {" "}
+                | Entries :{" "}
+              </Typography>
             </Stack>
-          </Grid>
-        </Grid>
+            <Stack
+              ml={"5px"}
+              direction="row"
+              alignItems="center"
+              color="textSecondary"
+            >
+              <CustomSelect
+                value={table.getState().pagination.pageSize}
+                onChange={(e: { target: { value: any } }) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+              >
+                {[50, 100, 250, 500].map((pageSize) => (
+                  <MenuItem key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </MenuItem>
+                ))}
+              </CustomSelect>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <IconChevronLeft />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ width: "30px" }}
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <IconChevronRight />
+              </IconButton>
+            </Stack>
+          </Box>
+        </Stack>
       </Box>
     </PermissionGuard>
   );
