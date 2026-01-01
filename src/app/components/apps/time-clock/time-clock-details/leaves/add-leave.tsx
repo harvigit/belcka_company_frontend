@@ -357,6 +357,8 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
         setDateRange(range);
     };
 
+    const isInvalidRange = formData.isAllDay && dateRange?.from && dateRange?.to && differenceInCalendarDays(dateRange.to, dateRange.from) + 1 > MAX_RANGE_DAYS;
+
     const calculateTotalDays = () => {
         if (formData.isAllDay) {
             if (!dateRange?.from || !dateRange?.to) return '0.00';
@@ -1011,7 +1013,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                 <Button
                     variant="contained"
                     onClick={handleSubmit}
-                    disabled={!formData.userId || !formData.leaveId || loading || error}
+                    disabled={!formData.userId || !formData.leaveId || loading || isInvalidRange}
                     sx={{
                         textTransform: 'none',
                         fontWeight: 500,
