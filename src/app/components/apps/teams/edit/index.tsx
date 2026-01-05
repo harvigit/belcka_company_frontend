@@ -6,7 +6,6 @@ import {
   Button,
   Typography,
   Grid,
-  CircularProgress,
   Autocomplete,
   Drawer,
   IconButton,
@@ -21,7 +20,6 @@ interface User {
   id: number;
   name: string;
 }
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -179,16 +177,23 @@ const EditTeam: React.FC<Props> = ({
       }
     }
   };
-
   useEffect(() => {
-    fetchTeamData();
-  }, [teams, teamId, id?.company_id]);
-
-  useEffect(() => {
-    if (teamId) {
+    if (open || teamId) {
+      fetchTeamData();
       fetchUniqueUsers();
     }
-  }, [teamId]);
+  }, [open, teamId]);
+
+  const hanleClose = () => {
+    setFormData({
+      id: teamId,
+      name: "",
+      supervisor_id: 0,
+      team_member_ids: [],
+      team_members: [],
+    });
+    onClose();
+  };
 
   const handleSave = async () => {
     if (!formData) return;
@@ -222,7 +227,7 @@ const EditTeam: React.FC<Props> = ({
     <Drawer
       anchor="right"
       open={open}
-      onClose={onClose}
+      onClose={hanleClose}
       sx={{
         width: 400,
         flexShrink: 0,
@@ -246,7 +251,7 @@ const EditTeam: React.FC<Props> = ({
           <Grid container>
             <Grid size={{ xs: 12, lg: 12 }}>
               <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
-                <IconButton onClick={onClose}>
+                <IconButton onClick={hanleClose}>
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
@@ -367,7 +372,7 @@ const EditTeam: React.FC<Props> = ({
         </Button>
         <Button
           color="inherit"
-          onClick={onClose}
+          onClick={hanleClose}
           variant="contained"
           size="large"
           sx={{
