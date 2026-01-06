@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import {Box, Drawer, IconButton} from '@mui/material';
+import {Box, Drawer, IconButton, TableCell} from '@mui/material';
 import {
     useReactTable,
     getCoreRowModel,
@@ -168,7 +168,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         conflictDetails,
         leaveRequestCount,
         setLeaveRequestCount,
-        leaveRequestDetails,
         shifts,
         projects,
         fetchTimeClockData,
@@ -199,30 +198,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         } else {
             setConflictsByDate({});
         }
-
-        if (leaveRequestDetails && leaveRequestDetails.length > 0) {
-            const leaveRequests: { [key: string]: number } = {};
-
-            leaveRequestDetails.forEach((leave: any) => {
-                const dateStr = leave.start_date;
-                if (dateStr) {
-                    const [day, month, year] = dateStr.split('/');
-                    const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                    if (!isNaN(dateObj.getTime())) {
-                        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                        const dayName = daysOfWeek[dateObj.getDay()];
-                        const formattedKey = `${dayName} ${parseInt(day)}/${parseInt(month)}`;
-
-                        leaveRequests[formattedKey] = (leaveRequests[formattedKey] || 0) + 1;
-                    }
-                }
-            });
-
-            setLeaveRequestByDate(leaveRequests);
-        } else {
-            setLeaveRequestByDate({});
-        }
-    }, [conflictDetails, leaveRequestDetails]);
+    }, [conflictDetails]);
 
     const {
         editingWorklogs,
@@ -1526,7 +1502,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             >
                 <LeaveRequest
                     open
-                    leaveRequestDetails={leaveRequestDetails}
+                    startDate={startDate}
+                    endDate={endDate}
                     onClose={closeLeaveRequestSidebar}
                     companyId={companyId}
                     userId={user_id}

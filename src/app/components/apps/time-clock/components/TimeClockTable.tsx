@@ -359,7 +359,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         className="rowspan-cell"
                                                         sx={{
                                                             width: `${visibleColumnConfigs.select.width}px`,
-                                                            py: 0.5,
                                                             height: '45px',
                                                             verticalAlign: 'middle',
                                                         }}

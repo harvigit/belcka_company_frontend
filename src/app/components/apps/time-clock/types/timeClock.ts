@@ -111,6 +111,7 @@ export interface ConflictDetail {
 }
 
 export interface LeaveRequestDetail {
+    note: any;
     user_leave_id: number;
     leave_id: number;
     user_id: number;

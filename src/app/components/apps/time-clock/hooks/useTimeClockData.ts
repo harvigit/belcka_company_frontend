@@ -13,7 +13,6 @@ export const useTimeClockData = (user_id: any, currency: string) => {
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [leaveRequestCount, setLeaveRequestCount] = useState<number>(0);
-    const [leaveRequestDetails, setLeaveRequestDetails] = useState<LeaveRequestDetail[]>([]);
 
     const fetchTimeClockData = useCallback(async (start: Date, end: Date): Promise<void> => {
         try {
@@ -32,7 +31,6 @@ export const useTimeClockData = (user_id: any, currency: string) => {
                 setConflictDetails(response.data.conflicts || []);
                 fetchTimeClockResources(response.data.company_id);
                 setLeaveRequestCount(response.data.total_leave_requests || 0);
-                setLeaveRequestDetails(response.data.pending_leave_requests || []);
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
@@ -62,7 +60,6 @@ export const useTimeClockData = (user_id: any, currency: string) => {
         conflictDetails,
         leaveRequestCount,
         setLeaveRequestCount,
-        leaveRequestDetails,
         shifts,
         projects,
         fetchTimeClockData,

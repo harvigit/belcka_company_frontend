@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import {
     Box,
     Typography,
@@ -24,6 +24,8 @@ import {
 import { DateTime } from 'luxon';
 import api from '@/utils/axios';
 import AddLeave from '@/app/components/apps/time-clock/time-clock-details/leaves/add-leave';
+import {format} from 'date-fns';
+import {LeaveRequestDetail} from '@/app/components/apps/time-clock/types/timeClock';
 
 interface LeaveRequestDetails {
     user_leave_id: number;
@@ -48,32 +50,53 @@ interface LeaveRequestDetails {
 }
 
 interface LeaveRequestProps {
-    leaveRequestDetails: LeaveRequestDetails[];
     onClose: () => void;
     onRefresh?: () => void;
     open: boolean;
     userId: number;
     companyId: number;
+    startDate: Date | null;
+    endDate: Date | null;
 }
 
-const LeaveRequest: React.FC<LeaveRequestProps> = ({
-                                                       open,
-                                                       leaveRequestDetails,
-                                                       onClose,
-                                                       onRefresh,
-                                                       userId,
-                                                       companyId,
-                                                   }) => {
+const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, onClose, onRefresh, userId, companyId}) => {
     const [activeTab, setActiveTab] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const [responseNotes, setResponseNotes] = useState<{ [key: number]: string }>({});
     const [isLoading, setIsLoading] = useState(false);
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
     const [editLeaveRequest, setEditLeaveRequest] = useState<LeaveRequestDetails | undefined>();
+    const [leaveRequestDetails, setLeaveRequestDetails] = useState<LeaveRequestDetail[]>([]);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
     };
+
+    useEffect(() => {
+        const fetchLeaveRequests = async () => {
+            try {
+                if (!startDate || !endDate) return;
+                
+                const params: Record<string, string> = {
+                    user_id: String(userId),
+                    start_date: format(new Date(startDate), 'dd/MM/yyyy'),
+                    end_date: format(new Date(endDate), 'dd/MM/yyyy'),
+                };
+
+                const response = await api.get('/user-leaves/request-details', { params });
+
+                if (response.data?.IsSuccess) {
+                    setLeaveRequestDetails(response.data.info || []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch leave requests:', error);
+            }
+        };
+
+        if (open) {
+            fetchLeaveRequests();
+        }
+    }, [open, userId, startDate, endDate]);
 
     const handleNoteChange = (leave_id: number, value: string) => {
         setResponseNotes({ ...responseNotes, [leave_id]: value });
