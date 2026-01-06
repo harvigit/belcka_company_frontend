@@ -537,10 +537,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                     onChange={(e) => {
                       const value = e.target.value;
                       if (/^\d*\.?\d*$/.test(value)) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          rate: value,
-                        }));
+                        const numericValue = Number(value);
+                        if (numericValue <= 100000) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            rate: value,
+                          }));
+                        }
                       }
                     }}
                   />
@@ -660,10 +663,13 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         onChange={(e) => {
                           const value = e.target.value;
                           if (/^\d*\.?\d*$/.test(value)) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              rate: value,
-                            }));
+                            const numericValue = Number(value);
+                            if (numericValue <= 100000) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                rate: value,
+                              }));
+                            }
                           }
                         }}
                       />

@@ -327,7 +327,7 @@ export default function WorkDetailPage({
                     <input
                       type="range"
                       min={0}
-                      max={99}
+                      max={100}
                       value={editableProgress}
                       onChange={(e) =>
                         setEditableProgress(Number(e.target.value))

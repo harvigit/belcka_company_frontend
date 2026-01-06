@@ -213,7 +213,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             position: 'sticky',
                                             top: 0,
                                             zIndex: 999,
-                                            width: `${header.column.columnDef.size || 100}px`,
+                                            width: header.column.id === "date" ? 150 : "auto",
                                             minWidth: `${header.column.columnDef.size || 100}px`,
                                             maxWidth: `${header.column.columnDef.size || 100}px`,
                                             textAlign: 'center',
@@ -388,7 +388,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            width: `${visibleColumnConfigs.date.width}px`,
+                                                            width: `auto`,
                                                         }}
                                                     >
                                                         <Box sx={{
@@ -396,7 +396,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
                                                             height: '100%',
-                                                            position: 'relative'
+                                                            position: 'relative',
+                                                            gap: 10
                                                         }}>
                                                             <Typography variant="h6" sx={{ textAlign: 'center' }}>{rowData.date}</Typography>
                                                             {!isLogLocked && !hasRecords && (

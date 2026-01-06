@@ -645,19 +645,19 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                 bgcolor="#fafafa"
             >
                 <Button
-                    type="submit"
                     variant="contained"
-                        disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
-                        sx={{
-                        textTransform: "none",
-                        fontWeight: 500,
-                        bgcolor:"#1e4db7",
-                        color: "white",
-                        boxShadow: "none",
-                        px: 3,
-                            '&:hover': { bgcolor: '#173a8c' },
-                        '&:disabled': { bgcolor: '#e0e0e0' },
-                        }}
+                    onClick={handleSubmit}
+                    disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
+                    sx={{
+                    textTransform: "none",
+                    fontWeight: 500,
+                    bgcolor:"#1e4db7",
+                    color: "white",
+                    boxShadow: "none",
+                    px: 3,
+                        '&:hover': { bgcolor: '#173a8c' },
+                    '&:disabled': { bgcolor: '#e0e0e0' },
+                    }}
                     >
                         {loading ? <CircularProgress size={24} /> : "Add Expense"}
                 </Button>

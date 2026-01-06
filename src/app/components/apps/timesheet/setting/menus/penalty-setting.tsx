@@ -176,12 +176,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         penalty_time: value ? value.format("HH:mm") : null,
-        users: users
-          .filter((u) => u.selected)
-          .map((u) => ({
-            id: u.id,
-            is_outside_boundary_penalty: u.is_outside_boundary_penalty,
-          })),
+        users: users.map((u) => ({
+          id: u.id,
+          is_outside_boundary_penalty: u.is_outside_boundary_penalty,
+        })),
       };
 
       const res = await api.post(
@@ -201,12 +199,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         penalty_time: value ? value.format("HH:mm") : null,
-        teams: teams
-          .filter((t) => t.selected)
-          .map((t) => ({
-            id: t.id,
-            is_outside_boundary_penalty: t.is_outside_boundary_penalty,
-          })),
+        teams: teams.map((t) => ({
+          id: t.id,
+          is_outside_boundary_penalty: t.is_outside_boundary_penalty,
+        })),
       };
 
       const res = await api.post(
@@ -258,12 +254,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         stop_work_time: swValue ? swValue.format("HH:mm") : null,
-        teams: swTeams
-          .filter((t) => t.selected)
-          .map((t) => ({
-            id: t.id,
-            is_autostop_work_penalty: t.is_autostop_work_penalty,
-          })),
+        teams: swTeams.map((t) => ({
+          id: t.id,
+          is_autostop_work_penalty: t.is_autostop_work_penalty,
+        })),
       };
 
       const res = await api.post(
@@ -283,12 +277,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         stop_work_time: swValue ? swValue.format("HH:mm") : null,
-        users: swUsers
-          .filter((u) => u.selected)
-          .map((u) => ({
-            id: u.id,
-            is_autostop_work_penalty: u.is_autostop_work_penalty,
-          })),
+        users: swUsers.map((u) => ({
+          id: u.id,
+          is_autostop_work_penalty: u.is_autostop_work_penalty,
+        })),
       };
 
       const res = await api.post(

@@ -85,8 +85,18 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    registerData.user_image = file;
-    if (file) setImagePreview(URL.createObjectURL(file));
+
+    if (file) {
+      const MAX_SIZE = 2 * 1024 * 1024;
+
+      if (file.size > MAX_SIZE) {
+        toast.error("File size exceeds 2MB. Please upload a smaller image.");
+        return;
+      }
+
+      registerData.user_image = file;
+      setImagePreview(URL.createObjectURL(file));
+    }
   };
 
   const handleCompanyImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,18 +289,12 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       team_size_id,
     } = createData;
 
-    if (!name.trim()) return toast.error("Enter company name");
-    if (!email.trim()) {
-      return toast.error("Enter business email");
-    }
+    if (!company_image) return toast.error("Please select profile for your company !");
 
-    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
-      return toast.error("Enter a valid business email");
+    if(name && email && nationalPhone && step == 1){
+      handleNext(e);
+      return;
     }
-
-    if (!business_field_id) return toast.error("Select a business field");
-    if (!team_size_id) return toast.error("Select a team size");
 
     try {
       setLoading(true);
@@ -659,7 +663,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
             <>
               {/* basic info */}
               {step === 1 && (
-                <form onSubmit={handleNext}>
+                <form onSubmit={handleCreateCompany}>
                   <Typography fontWeight={500} mb={2}>
                     What&apos;s your comapany details?
                   </Typography>

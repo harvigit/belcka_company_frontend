@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import {Box, Drawer, IconButton, TableCell} from '@mui/material';
+import {Box, Drawer, IconButton, TableCell, Typography} from '@mui/material';
 import {
     useReactTable,
     getCoreRowModel,
@@ -29,6 +29,7 @@ import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
+import { Stack } from '@mui/system';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -1162,20 +1163,41 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     );
                 },
                 enableSorting: false,
-                size: 50,
+                // size: 50,
                 meta: {align: 'center'},
             },
-            {
+             {
                 id: 'date',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Date</span>,
-                cell: ({row}) => row.original.rowType === 'day' ? row.original.date : null,
+                cell: (info: any) => {
+                    const row = info.row.original;
+
+                    return (
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%' }}>
+                            <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                    className="f-14"
+                                    noWrap
+                                >
+                                    {row.original.date }
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    );
+                },
                 size: 150,
             },
+            // {
+            //     id: 'date',
+            //     header: () => <span style={{display: 'block', textAlign: 'center'}}>Date</span>,
+            //     cell: ({row}) => row.original.rowType === 'day' ? row.original.date : null,
+            //     size: 150,
+            // },
             {
                 id: 'conflicts',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}></span>,
                 cell: ({row}) => null,
-                size: 50,
+                // size: 50,
                 enableSorting: false,
                 enableHiding: false,
                 meta: {align: 'center'},
@@ -1184,7 +1206,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 id: 'exclamation',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}></span>,
                 meta: {label: 'Exclamation'},
-                size: 36,
+                // size: 36,
                 enableSorting: false,
                 cell: ({row}) => {
                     if (row.original.rowType !== 'day') return null;
@@ -1208,28 +1230,28 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 accessorKey: 'project',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Project</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.project : null,
-                size: 120,
+                // size: 120,
             },
             {
                 id: 'shift',
                 accessorKey: 'shift',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Shift</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.shift : null,
-                size: 120,
+                // size: 120,
             },
             {
                 id: 'start',
                 accessorKey: 'start',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Start</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.start : null,
-                size: 80,
+                // size: 80,
             },
             {
                 id: 'end',
                 accessorKey: 'end',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>End</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.end : null,
-                size: 80,
+                // size: 80,
             },
             {
                 id: 'totalHours',
@@ -1247,7 +1269,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         </span>
                     );
                 },
-                size: 150,
+                // size: 150,
             },
             {
                 id: 'penaltyHours',
@@ -1265,41 +1287,41 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         </span>
                     );
                 },
-                size: 150,
+                // size: 150,
             },
             {
                 id: 'priceWork',
                 accessorKey: 'priceWork',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Pricework</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.priceWork : null,
-                size: 150,
+                // size: 150,
             },
             {
                 id: 'expense',
                 accessorKey: 'expense',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Expense</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.expense : null,
-                size: 150,
+                // size: 150,
             },
             {
                 id: 'checkIns',
                 accessorKey: 'checkIns',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Check Ins</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.check_in : null,
-                size: 140,
+                // size: 140,
             },
             {
                 id: 'status',
                 accessorKey: 'checkIns',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Status</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.status_text : null,
-                size: 100,
+                // size: 100,
             },
             {
                 id: 'dailyTotal',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Daily total</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.dailyTotal : null,
-                size: 100,
+                // size: 100,
             },
             // {
             //     id: 'expenseAmount',
@@ -1313,19 +1335,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 accessorKey: 'payableAmount',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Payable Amount</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.payableAmount : null,
-                size: 140,
+                // size: 140,
             },
             {
                 id: 'employeeNotes',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Employee notes</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.employeeNotes : null,
-                size: 150,
+                // size: 150,
             },
             {
                 id: 'action',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Action</span>,
                 cell: ({row}) => null,
-                size: 100,
+                // size: 100,
             },
         ],
         [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect, leaveRequestByDate]

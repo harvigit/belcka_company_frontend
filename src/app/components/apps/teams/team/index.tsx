@@ -351,6 +351,7 @@ const TablePagination = () => {
           onClick={column.getToggleSortingHandler()}
         >
           <CustomCheckbox
+            className="header-checkbox"
             checked={
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
@@ -497,6 +498,23 @@ const TablePagination = () => {
     },
   });
 
+  const handleCopy = () => {
+    const extension = data[0]?.extension || "";
+    const supervisorPhone = data[0]?.supervisor_phone || "-";
+    const textToCopy = `${extension} ${supervisorPhone}`;
+
+    if (textToCopy) {
+      navigator.clipboard
+        .writeText(textToCopy)
+        .then(() => {
+          toast.success("Copied to clipboard!");
+        })
+        .catch((err) => {
+          toast.error("Failed to copy: ", err);
+        });
+    }
+  };
+
   useEffect(() => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
@@ -537,7 +555,10 @@ const TablePagination = () => {
               <Box>
                 <Typography variant="h6">Phone</Typography>
               </Box>
-              <Box sx={{ ml: "auto !important" }}>
+              <Box
+                sx={{ ml: "auto !important", cursor: "pointer" }}
+                onClick={handleCopy}
+              >
                 <Typography variant="h5" color="textSecondary">
                   {data[0]?.extension || ""} {data[0]?.supervisor_phone || "-"}
                 </Typography>
