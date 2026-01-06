@@ -1260,7 +1260,7 @@ const TimeClock = ({ queryParams }: Props) => {
       <Stack
         gap={1}
         pr={3}
-        pt={2}
+        pt={1}
         pl={3}
         alignItems="center"
         direction={{ xs: "column", sm: "row" }}

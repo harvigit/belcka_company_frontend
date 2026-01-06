@@ -623,9 +623,9 @@ const TimesheetList = () => {
             <Stack
                 gap={1}
                 pr={3}
-                pt={1}
+                // pt={1}
                 pl={3}
-                pb={3}
+                // pb={3}
                 alignItems="center"
                 direction={{xs: 'column', sm: 'row'}}
                 justifyContent="space-between"
