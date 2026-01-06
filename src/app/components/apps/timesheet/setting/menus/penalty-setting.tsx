@@ -14,12 +14,13 @@ import { Box, Grid } from "@mui/system";
 import dayjs, { Dayjs } from "dayjs";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 
 export default function PenaltySettings() {
   const [loading, setLoading] = useState<boolean>(true);
   const [value, setValue] = React.useState<Dayjs | null>(dayjs());
   const [temp, setTemp] = useState<string>(value?.format("HH:mm") ?? "");
-  const [enabled, setEnabled] = useState<boolean>(true);
+  const [enabled, setEnabled] = useState<boolean>(false);
   const [timeZone, setTimeZone] = useState<any>(39);
   const [teams, setTeams] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -63,7 +64,14 @@ export default function PenaltySettings() {
       setLoading(true);
       const res = await api.get("/setting/get-company-settings");
       if (res.data?.data) {
-        setEnabled(res.data.data.is_outside_boundary_penalty);
+        setEnabled(
+          res.data?.data ? res.data?.data?.is_outside_boundary_penalty : false
+        );
+        console.log(
+          res.data?.data?.is_outside_boundary_penalty
+            ? res.data?.data?.is_outside_boundary_penalty
+            : false
+        );
         setTimeZone(res.data.data.timezone_id);
         const dbTime = res.data.data.outside_boundary_penalty_minute
           ? dayjs(res.data.data.outside_boundary_penalty_minute, "HH:mm")
@@ -136,10 +144,11 @@ export default function PenaltySettings() {
     const finalTime =
       overrideTime ?? (value?.isValid() ? value.format("HH:mm") : null);
 
+    const isFirstTime = !value;
     const payload = {
       is_outside_boundary_penalty: newStatus,
       timeZone,
-      outside_penalty: finalTime,
+      outside_penalty: isFirstTime ? finalTime : null,
     };
 
     try {
@@ -225,12 +234,12 @@ export default function PenaltySettings() {
 
     const finalTime =
       overrideTime ?? (swValue?.isValid() ? swValue.format("HH:mm") : null);
-
+    const isFirstTime = !swValue;
     try {
       const payload = {
         is_autostop_work_penalty: newStatus,
         timeZone,
-        penalty_time: finalTime,
+        penalty_time: isFirstTime ? finalTime : null,
       };
 
       const res = await api.post("setting/save-general-setting", payload);
@@ -389,7 +398,7 @@ export default function PenaltySettings() {
         <CircularProgress />
       </Box>
     );
-
+  console.log(enabled);
   return (
     <Box display="flex" overflow="auto">
       <Box sx={{ p: 3 }} m="auto" width="60%">
@@ -458,7 +467,7 @@ export default function PenaltySettings() {
                     onBlur={() => {
                       const formatted = parseDigitsToTime(temp);
                       const fallback = value ? value.format("HH:mm") : "";
-                      setTemp(formatted || fallback);
+                      setTemp(formatted || fallback || "");
                       handleToggle(true, formatted || fallback || null);
                     }}
                     sx={{ width: "90px", "& input": { textAlign: "center" } }}
@@ -472,6 +481,9 @@ export default function PenaltySettings() {
                       setShowTeamsList(!showTeamsList);
                       setShowUsersList(false);
                     }}
+                    endIcon={
+                      showTeamsList ? <IconChevronUp /> : <IconChevronDown />
+                    }
                   >
                     Teams
                   </Button>
@@ -482,6 +494,9 @@ export default function PenaltySettings() {
                       setShowUsersList(!showUsersList);
                       setShowTeamsList(false);
                     }}
+                    endIcon={
+                      showUsersList ? <IconChevronUp /> : <IconChevronDown />
+                    }
                   >
                     Users
                   </Button>
@@ -490,7 +505,14 @@ export default function PenaltySettings() {
 
               {/* ---------------- TEAMS ---------------- */}
               {showTeamsList && (
-                <>
+                <Box
+                  sx={{
+                    border: "1px solid #ececec",
+                    background: "#fafafa",
+                    borderRadius: 2,
+                  }}
+                  m={2}
+                >
                   <Box
                     display="flex"
                     justifyContent="space-between"
@@ -514,15 +536,7 @@ export default function PenaltySettings() {
                     )}
                   </Box>
 
-                  <Box
-                    m={2}
-                    p={2.5}
-                    sx={{
-                      border: "1px solid #ececec",
-                      background: "#fafafa",
-                      borderRadius: 2,
-                    }}
-                  >
+                  <Box m={2} p={2.5}>
                     {/* SELECT ALL TEAMS */}
                     <Box
                       display="flex"
@@ -631,12 +645,19 @@ export default function PenaltySettings() {
                       </Box>
                     ))}
                   </Box>
-                </>
+                </Box>
               )}
 
               {/* ---------------- USERS ---------------- */}
               {showUsersList && (
-                <>
+                <Box
+                  sx={{
+                    border: "1px solid #ececec",
+                    background: "#fafafa",
+                    borderRadius: 2,
+                  }}
+                  m={2}
+                >
                   <Box
                     display="flex"
                     justifyContent="space-between"
@@ -644,7 +665,7 @@ export default function PenaltySettings() {
                     mx={2}
                   >
                     <TextField
-                      placeholder="Search name or team name"
+                      placeholder="Search"
                       value={searchUser}
                       onChange={(e) => setSerachUser(e.target.value)}
                       sx={{ width: "40%" }}
@@ -661,15 +682,7 @@ export default function PenaltySettings() {
                     )}
                   </Box>
 
-                  <Box
-                    m={2}
-                    p={2.5}
-                    sx={{
-                      border: "1px solid #ececec",
-                      background: "#fafafa",
-                      borderRadius: 2,
-                    }}
-                  >
+                  <Box m={2} p={2.5}>
                     {/* SELECT ALL USERS */}
                     <Box
                       display="flex"
@@ -780,7 +793,7 @@ export default function PenaltySettings() {
                       </Box>
                     ))}
                   </Box>
-                </>
+                </Box>
               )}
             </Box>
           )}
@@ -854,7 +867,7 @@ export default function PenaltySettings() {
                     onBlur={() => {
                       const formatted = parseDigitsToTime(swTemp);
                       const fallback = swValue ? swValue.format("HH:mm") : "";
-                      setSwTemp(formatted || fallback);
+                      setTemp(formatted || fallback || "");
                       handleToggleStopWork(
                         swEnabled,
                         formatted || fallback || null
@@ -871,6 +884,9 @@ export default function PenaltySettings() {
                       setShowSwTeamsList(!showSwTeamsList);
                       setShowSwUsersList(false);
                     }}
+                    endIcon={
+                      showSwTeamsList ? <IconChevronUp /> : <IconChevronDown />
+                    }
                   >
                     Teams
                   </Button>
@@ -881,6 +897,9 @@ export default function PenaltySettings() {
                       setShowSwUsersList(!showSwUsersList);
                       setShowSwTeamsList(false);
                     }}
+                    endIcon={
+                      showSwUsersList ? <IconChevronUp /> : <IconChevronDown />
+                    }
                   >
                     Users
                   </Button>
@@ -889,7 +908,14 @@ export default function PenaltySettings() {
 
               {/* ==================== TEAMS ==================== */}
               {showSwTeamsList && (
-                <>
+                <Box
+                  sx={{
+                    border: "1px solid #ececec",
+                    background: "#fafafa",
+                    borderRadius: 2,
+                  }}
+                  m={2}
+                >
                   <Box
                     display="flex"
                     justifyContent="space-between"
@@ -914,15 +940,7 @@ export default function PenaltySettings() {
                     )}
                   </Box>
 
-                  <Box
-                    m={2}
-                    p={2.5}
-                    sx={{
-                      border: "1px solid #ececec",
-                      background: "#fafafa",
-                      borderRadius: 2,
-                    }}
-                  >
+                  <Box m={2} p={2.5}>
                     {/* SELECT ALL TEAMS */}
                     <Box
                       display="flex"
@@ -1031,12 +1049,19 @@ export default function PenaltySettings() {
                       </Box>
                     ))}
                   </Box>
-                </>
+                </Box>
               )}
 
               {/* ==================== USERS ==================== */}
               {showSwUsersList && (
-                <>
+                <Box
+                  sx={{
+                    border: "1px solid #ececec",
+                    background: "#fafafa",
+                    borderRadius: 2,
+                  }}
+                  m={2}
+                >
                   <Box
                     display="flex"
                     justifyContent="space-between"
@@ -1044,7 +1069,7 @@ export default function PenaltySettings() {
                     mx={2}
                   >
                     <TextField
-                      placeholder="Search name or team name"
+                      placeholder="Search"
                       value={searchSwUser}
                       onChange={(e) => setSearchSwUser(e.target.value)}
                       sx={{ width: "40%" }}
@@ -1061,15 +1086,7 @@ export default function PenaltySettings() {
                     )}
                   </Box>
 
-                  <Box
-                    m={2}
-                    p={2.5}
-                    sx={{
-                      border: "1px solid #ececec",
-                      background: "#fafafa",
-                      borderRadius: 2,
-                    }}
-                  >
+                  <Box m={2} p={2.5}>
                     {/* SELECT ALL USERS */}
                     <Box
                       display="flex"
@@ -1180,7 +1197,7 @@ export default function PenaltySettings() {
                       </Box>
                     ))}
                   </Box>
-                </>
+                </Box>
               )}
             </Box>
           )}

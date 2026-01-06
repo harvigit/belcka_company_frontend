@@ -27,6 +27,7 @@ import {
   Button,
   Chip,
   Menu,
+  ListItemIcon,
 } from "@mui/material";
 import {
   IconSearch,
@@ -37,6 +38,8 @@ import {
   IconLockOpen,
   IconChevronUp,
   IconChevronDown,
+  IconDotsVertical,
+  IconNotes,
 } from "@tabler/icons-react";
 import {
   useReactTable,
@@ -66,6 +69,9 @@ import AddExpense from "./time-clock-details/expenses/add-expense";
 import AddWorklog from "./time-clock-details/worklog/add-worklog";
 import Image from "next/image";
 import SkeletonLoader from "../../SkeletonLoader";
+import Link from "next/link";
+import LeaveLists from "./time-clock-details/leaves";
+import { InferNonNullablePickerValue } from "@mui/x-date-pickers/internals";
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -164,8 +170,16 @@ type TimeClockResponse = {
   info: TimeClock[];
   currency: string;
 };
+interface Props {
+  queryParams?: {
+    user_id?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    open?: string | null;
+  };
+}
 
-const TimeClock = () => {
+const TimeClock = ({ queryParams }: Props) => {
   // Initialize default date range (current week)
   const today = new Date();
   const defaultStart = new Date(today);
@@ -211,10 +225,6 @@ const TimeClock = () => {
   const [companyId, setCompanyId] = useState<number | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const userIdParam = searchParams?.get("user_id");
-  const startParam = searchParams?.get("start_date");
-  const endParam = searchParams?.get("end_date");
-  const openParam = searchParams?.get("open");
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -223,12 +233,20 @@ const TimeClock = () => {
   const user = session.data?.user as User & { company_id: number } & {
     user_role_id: number;
   };
-
+  const openMenu = Boolean(anchorEl);
   const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
   const openAddleave = Boolean(addDropDown);
   const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
   const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
   const [addWorklogSidebar, setAddWorklogSidebar] = useState<boolean>(false);
+  const [openLeaves, setOpenLeaves] = useState(false);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
 
   const handleAddClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAddDropDown(event.currentTarget);
@@ -665,37 +683,6 @@ const TimeClock = () => {
     },
   });
 
-  useEffect(() => {
-    if (!userIdParam || !startParam || !endParam) return;
-    const startDateObj = new Date(startParam);
-    const endDateObj = new Date(endParam);
-
-    setStartDate(startDateObj);
-    setEndDate(endDateObj);
-
-    (async () => {
-      try {
-        const fetchedData = await fetchData(startDateObj, endDateObj);
-        const foundUser = fetchedData.find(
-          (item) => Number(item.user_id) === Number(userIdParam)
-        );
-        if (foundUser) {
-          saveDateToStorage(startDateObj, endDateObj);
-          setSelectedTimeClock(foundUser);
-          setDetailsOpen(true);
-          router.replace("/apps/timesheet/list", { scroll: false });
-        }
-
-        setTimeout(() => {
-          router.replace("/apps/timesheet/list", { scroll: false });
-        }, 500);
-      } catch (err) {
-        console.error("Failed to load data from query params:", err);
-      }
-      router.replace("/apps/timesheet/list", { scroll: false });
-    })();
-  }, [searchParams]);
-
   const handleLock = async () => {
     const timesheetIds: (number | string)[] = [];
 
@@ -713,6 +700,12 @@ const TimeClock = () => {
 
     await toggleWeeklyTimesheetStatus(timesheetIds, "approve");
   };
+
+  useEffect(() => {
+    if (queryParams?.open) {
+      setOpenLeaves(true);
+    }
+  }, [queryParams]);
 
   const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -1020,6 +1013,7 @@ const TimeClock = () => {
                 horizontal: "right",
               }}
             >
+              ``
               <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
               <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
               <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
@@ -1028,6 +1022,53 @@ const TimeClock = () => {
             <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)}>
               <IconTableColumn />
             </IconButton>
+
+            <IconButton
+              sx={{ margin: "0px", marginLeft: "0 !important" }}
+              id="basic-button"
+              aria-controls={openMenu ? "basic-menu" : undefined}
+              aria-haspopup="true"
+              aria-expanded={openMenu ? "true" : undefined}
+              onClick={handleClick}
+            >
+              <IconDotsVertical width={18} />
+            </IconButton>
+
+            <Menu
+              id="basic-menu"
+              anchorEl={anchorEl}
+              open={openMenu}
+              onClose={handleClose}
+              slotProps={{
+                list: {
+                  "aria-labelledby": "basic-button",
+                },
+              }}
+            >
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setOpenLeaves(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconNotes width={18} />
+                  </ListItemIcon>
+                  Leaves List
+                </Link>
+              </MenuItem>
+            </Menu>
           </Stack>
         </Box>
 
@@ -1312,11 +1353,6 @@ const TimeClock = () => {
           onClose={closeDetails}
           onUserChange={handleUserChange}
           onDataChange={handleDataChange}
-          queryParams={{
-            start_date: startParam,
-            end_date: endParam,
-            open: openParam,
-          }}
         />
       </Drawer>
 
@@ -1404,6 +1440,9 @@ const TimeClock = () => {
           companyId={user.company_id}
         />
       </Drawer>
+
+      {/*  Leave list */}
+      <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={queryParams} />
     </Box>
   );
 };

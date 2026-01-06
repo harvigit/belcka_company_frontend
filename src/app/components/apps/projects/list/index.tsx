@@ -201,6 +201,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   >({});
   const [update, setUpdate] = useState(0);
   const [currentTable, setCurrentTable] = useState<any>(null);
+  const circleRef = useRef<google.maps.Circle | null>(null);
+  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastRadiusRef = useRef<number | null>(null);
 
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -1290,16 +1293,99 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             marginTop: "20px",
                           }}
                         >
-                          <Marker position={selectedLocation} />
+                          <Marker
+                            position={selectedLocation}
+                            draggable
+                            onDragEnd={(e) => {
+                              const lat = e.latLng?.lat();
+                              const lng = e.latLng?.lng();
+
+                              if (!lat || !lng) return;
+
+                              setSelectedLocation({ lat, lng });
+
+                              setFormData((prev: any) => ({
+                                ...prev,
+                                lat,
+                                lng,
+                                boundary: JSON.stringify({
+                                  lat,
+                                  lng,
+                                  radius,
+                                }),
+                              }));
+                            }}
+                          />
+
                           <Circle
                             center={selectedLocation}
                             radius={radius}
                             options={{
-                              fillColor: `${formData.color || "#000000"}`,
+                              draggable: true,
+                              editable: true,
+                              fillColor: formData.color || "#000000",
                               fillOpacity: 0.3,
-                              strokeColor: `${formData.color || "#000000"}`,
+                              strokeColor: formData.color || "#000000",
                               strokeOpacity: 1,
                               strokeWeight: 1,
+                            }}
+                            onCenterChanged={() => {
+                              if (!circleRef.current) return;
+
+                              const center = circleRef.current.getCenter();
+                              if (!center) return;
+
+                              const lat = center.lat();
+                              const lng = center.lng();
+
+                              // ⛔ prevent infinite loop
+                              if (
+                                lastCenterRef.current &&
+                                lastCenterRef.current.lat === lat &&
+                                lastCenterRef.current.lng === lng
+                              ) {
+                                return;
+                              }
+
+                              lastCenterRef.current = { lat, lng };
+
+                              setSelectedLocation({ lat, lng });
+
+                              setFormData((prev: any) => ({
+                                ...prev,
+                                lat,
+                                lng,
+                                boundary: JSON.stringify({
+                                  lat,
+                                  lng,
+                                  radius,
+                                }),
+                              }));
+                            }}
+                            onRadiusChanged={() => {
+                              if (!circleRef.current) return;
+
+                              const newRadius = Math.round(
+                                circleRef.current.getRadius()
+                              );
+
+                              if (lastRadiusRef.current === newRadius) return;
+
+                              lastRadiusRef.current = newRadius;
+
+                              setRadius(newRadius);
+
+                              setFormData((prev: any) => ({
+                                ...prev,
+                                boundary: JSON.stringify({
+                                  lat: selectedLocation.lat,
+                                  lng: selectedLocation.lng,
+                                  radius: newRadius,
+                                }),
+                              }));
+                            }}
+                            onLoad={(circle) => {
+                              circleRef.current = circle;
                             }}
                           />
                         </GoogleMap>
@@ -1606,7 +1692,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       variant="subtitle1"
                       ml={2}
                       className="multi-ellipsis"
-                      maxWidth={"110px"}
+                      lineHeight={1.25}
+                      maxWidth={"180px"}
                     >
                       {project.name}
                     </Typography>

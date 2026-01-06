@@ -77,6 +77,7 @@ export interface TeamList {
   supervisor_image: string | null;
   supervisor_email: string | null;
   supervisor_phone: string | null;
+  extension: string | null;
   company_id: number;
   subcontractor_company_id?: number;
   is_subcontractor: boolean;
@@ -168,6 +169,7 @@ const TablePagination = () => {
                 supervisor_image: team.supervisor_image,
                 supervisor_email: team.supervisor_email,
                 supervisor_phone: team.supervisor_phone,
+                extension: team.extension,
                 company_id: team.company_id,
                 subcontractor_company_id: team.subcontractor_company_id,
                 is_subcontractor: team.is_subcontractor,
@@ -187,6 +189,7 @@ const TablePagination = () => {
             supervisor_image: team.supervisor_image,
             supervisor_email: team.supervisor_email,
             supervisor_phone: team.supervisor_phone,
+            extension: team.extension,
             team_name: team.team_name,
             id: user.id,
             name: user.name,
@@ -536,7 +539,7 @@ const TablePagination = () => {
               </Box>
               <Box sx={{ ml: "auto !important" }}>
                 <Typography variant="h5" color="textSecondary">
-                  {data[0]?.supervisor_phone || "-"}
+                  {data[0]?.extension || ""} {data[0]?.supervisor_phone || "-"}
                 </Typography>
               </Box>
             </Stack>

@@ -405,21 +405,26 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
         ) : (
           <Box></Box>
         )}
-        <Button
-          color="inherit"
-          startIcon={<IconHistory />}
-          variant="contained"
-          size="large"
-          sx={{
-            backgroundColor: "transparent",
-            borderRadius: 3,
-            color: "#047bff",
-            float: "inline-end",
-          }}
-          onClick={handleOpen}
-        >
-          Rate History
-        </Button>
+
+        {(user.user_role_id === 1 ||
+          payRate ||
+          user.id === comapny?.user_id) && (
+          <Button
+            color="inherit"
+            startIcon={<IconHistory />}
+            variant="contained"
+            size="large"
+            sx={{
+              backgroundColor: "transparent",
+              borderRadius: 3,
+              color: "#047bff",
+              float: "inline-end",
+            }}
+            onClick={handleOpen}
+          >
+            Rate History
+          </Button>
+        )}
       </Box>
       {ratePermisison ? (
         <>

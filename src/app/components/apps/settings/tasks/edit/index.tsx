@@ -73,33 +73,34 @@ const EditTask: React.FC<EditTaskProps> = ({
 
   const activeTab = formData.is_pricework ? 1 : 0;
 
+  const fetchTasks = async () => {
+    try {
+      const res = await api.get(`type-works/get-task-detail?id=${id}`);
+      if (res.data && res.data.info) {
+        const task = res.data.info;
+        setData(task);
+        setFormData({
+          id: task.id,
+          name: task.name || "",
+          trade_id: task.trade_id || null,
+          company_id: task.company_id || "",
+          duration: task.duration || 0,
+          rate: task.is_pricework ? task.rate : 0,
+          units: task.is_pricework ? task.units : null,
+          is_pricework: task.is_pricework || false,
+          repeatable_job: task.repeatable_job || false,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch task", err);
+    }
+  };
+
   useEffect(() => {
-    if (id) {
-      const fetchTasks = async () => {
-        try {
-          const res = await api.get(`type-works/get-task-detail?id=${id}`);
-          if (res.data && res.data.info) {
-            const task = res.data.info;
-            setData(task);
-            setFormData({
-              id: task.id,
-              name: task.name || "",
-              trade_id: task.trade_id || null,
-              company_id: task.company_id || "",
-              duration: task.duration || 0,
-              rate: task.is_pricework ? task.rate : 0,
-              units: task.is_pricework ? task.units : null,
-              is_pricework: task.is_pricework || false,
-              repeatable_job: task.repeatable_job || false,
-            });
-          }
-        } catch (err) {
-          console.error("Failed to fetch task", err);
-        }
-      };
+    if (open && id) {
       fetchTasks();
     }
-  }, [id]);
+  }, [id, open]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     if (newValue === 0) {

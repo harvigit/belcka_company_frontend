@@ -156,6 +156,9 @@ const AddressesList = ({
   useEffect(() => {
     onSelectionChange(Array.from(selectedRowIds));
   }, [selectedRowIds]);
+  const circleRef = useRef<google.maps.Circle | null>(null);
+  const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastRadiusRef = useRef<number | null>(null);
 
   const [typedAddress, setTypedAddress] = useState(false);
 
@@ -441,6 +444,7 @@ const AddressesList = ({
           project_id: Number(projectId),
           company_id: user.company_id,
           name: "",
+          radius: 0,
         });
         fetchAddresses();
       } else {
@@ -1387,16 +1391,96 @@ const AddressesList = ({
                           marginTop: "20px",
                         }}
                       >
-                        <Marker position={selectedLocation} />
+                        <Marker
+                          position={selectedLocation}
+                          draggable
+                          onDragEnd={(e) => {
+                            const lat = e.latLng?.lat();
+                            const lng = e.latLng?.lng();
+                            if (!lat || !lng) return;
+
+                            setSelectedLocation({ lat, lng });
+
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              lat,
+                              lng,
+                              boundary: JSON.stringify({
+                                lat,
+                                lng,
+                                radius: prev.radius,
+                              }),
+                            }));
+                          }}
+                        />
+
                         <Circle
                           center={selectedLocation}
                           radius={formData.radius}
                           options={{
-                            fillColor: ` ${formData?.color ?? "#FF0000"}`,
+                            draggable: true,
+                            editable: true,
+                            fillColor: formData.color ?? "#FF0000",
                             fillOpacity: 0.3,
-                            strokeColor: ` ${formData?.color ?? "#FF0000"}`,
+                            strokeColor: formData.color ?? "#FF0000",
                             strokeOpacity: 1,
                             strokeWeight: 1,
+                          }}
+                          onLoad={(circle) => {
+                            circleRef.current = circle;
+                          }}
+                          onCenterChanged={() => {
+                            if (!circleRef.current) return;
+
+                            const center = circleRef.current.getCenter();
+                            if (!center) return;
+
+                            const lat = center.lat();
+                            const lng = center.lng();
+
+                            if (
+                              lastCenterRef.current &&
+                              lastCenterRef.current.lat === lat &&
+                              lastCenterRef.current.lng === lng
+                            ) {
+                              return;
+                            }
+
+                            lastCenterRef.current = { lat, lng };
+
+                            setSelectedLocation({ lat, lng });
+
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              lat,
+                              lng,
+                              boundary: JSON.stringify({
+                                lat,
+                                lng,
+                                radius: prev.radius,
+                              }),
+                            }));
+                          }}
+                          onRadiusChanged={() => {
+                            if (!circleRef.current) return;
+
+                            const newRadius = Math.round(
+                              circleRef.current.getRadius()
+                            );
+
+                            if (lastRadiusRef.current === newRadius) return;
+
+                            lastRadiusRef.current = newRadius;
+
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              radius: newRadius,
+                              boundary: JSON.stringify({
+                                lat: selectedLocation.lat,
+                                lng: selectedLocation.lng,
+                                radius: newRadius,
+                              }),
+                            }));
                           }}
                         />
                       </GoogleMap>

@@ -280,7 +280,15 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     } = createData;
 
     if (!name.trim()) return toast.error("Enter company name");
-    if (!email.trim()) return toast.error("Enter bussiness email");
+    if (!email.trim()) {
+      return toast.error("Enter business email");
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      return toast.error("Enter a valid business email");
+    }
+
     if (!business_field_id) return toast.error("Select a business field");
     if (!team_size_id) return toast.error("Select a team size");
 

@@ -89,7 +89,9 @@ const EditProject: React.FC<EditProjectProps> = ({
         company_id: project.company_id || 0,
         shift_ids: (project.shifts || []).map((s: any) => s.id).join(","),
         team_ids: (project.teams || []).map((t: any) => t.id).join(","),
-        workzone_ids: (project.project_address || []).map((g: any) => g.workzone_id).join(","),
+        workzone_ids: (project.project_address || [])
+          .map((g: any) => g.workzone_id)
+          .join(","),
       });
     }
   }, [project]);
@@ -117,7 +119,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     if (open == true) {
       getShifts();
     }
-  }, [open,user?.company_id]);
+  }, [open, user?.company_id]);
 
   useEffect(() => {
     const getTeams = async () => {
@@ -135,7 +137,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     if (open == true) {
       getTeams();
     }
-  }, [open,user?.company_id]);
+  }, [open, user?.company_id]);
 
   useEffect(() => {
     const getGeofence = async () => {
@@ -179,7 +181,7 @@ const EditProject: React.FC<EditProjectProps> = ({
           <form onSubmit={handleSubmit} className="address-form">
             {" "}
             <Grid container>
-              <Grid size={{ lg: 12, xs: 12 }}>
+              <Grid size={{ xs: 12 }}>
                 <Box
                   display={"flex"}
                   alignContent={"center"}
@@ -353,6 +355,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                 display: "flex",
                 justifyContent: "start",
                 gap: 2,
+                marginTop: 3,
               }}
             >
               <Button

@@ -152,7 +152,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
               <CustomTextField
                 id="name"
                 name="name"
-                placeholder="Enter Team name.."
+                placeholder="Enter team name.."
                 value={formData.name}
                 onChange={handleChange}
                 fullWidth
@@ -161,25 +161,50 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                 Supervisor
               </Typography>
 
-              <Select
-                name="supervisor_id"
+              <Autocomplete
+                fullWidth
+                disableCloseOnSelect
+                options={data || []}
                 value={formData.supervisor_id}
-                onChange={(e) =>
+                onChange={(e: any) =>
                   setFormData({
                     ...formData,
                     supervisor_id: Number(e.target.value),
                   })
                 }
-                fullWidth
-                displayEmpty
-              >
-                <MenuItem value={0}>Select Supervisor</MenuItem>
-                {data.map((users) => (
-                  <MenuItem key={users.id} value={users.id}>
-                    {users.name}
-                  </MenuItem>
-                ))}
-              </Select>
+                getOptionLabel={(option) => option.name || ""}
+                isOptionEqualToValue={(option, value) =>
+                  Number(option.id) === Number(value.id)
+                }
+                filterSelectedOptions
+                renderInput={(params) => (
+                  <CustomTextField
+                    {...params}
+                    sx={{
+                      "& .MuiAutocomplete-inputRoot": {
+                        flexWrap: "wrap",
+                        alignItems: "flex-start",
+                        minHeight: 40,
+                        paddingTop: "10px",
+                        paddingBottom: "10px",
+                        paddingRight: "30px",
+                      },
+                      "& .MuiAutocomplete-tag": {
+                        margin: "4px",
+                        maxWidth: "100%",
+                      },
+                      "& .MuiAutocomplete-endAdornment": {
+                        right: "8px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      },
+                    }}
+                    placeholder="Select supervisor..."
+                    className="team_selection"
+                  />
+                )}
+              />
+
               <Typography variant="h5" mt={3}>
                 Team Member&apos;s
               </Typography>
@@ -210,7 +235,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                       "& .MuiAutocomplete-inputRoot": {
                         flexWrap: "wrap",
                         alignItems: "flex-start",
-                        minHeight: 56,
+                        minHeight: 40,
                         paddingTop: "10px",
                         paddingBottom: "10px",
                         paddingRight: "30px",

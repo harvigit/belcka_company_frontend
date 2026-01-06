@@ -801,6 +801,7 @@ const TablePagination = () => {
 
       {/* Edit task */}
       <EditTask
+        key={selectedTaskId} 
         open={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         id={selectedTaskId}

@@ -276,8 +276,8 @@ const EditTeam: React.FC<Props> = ({
               </Typography>
 
               <Autocomplete
-                id="supervisor_id"
                 fullWidth
+                disableCloseOnSelect
                 options={userList}
                 value={
                   userList.find((u) => u.id === formData?.supervisor_id) || null
@@ -287,12 +287,35 @@ const EditTeam: React.FC<Props> = ({
                     prev ? { ...prev, supervisor_id: newValue?.id ?? 0 } : prev
                   );
                 }}
-                getOptionLabel={(option) => option.name}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
+                getOptionLabel={(option) => option.name || ""}
+                isOptionEqualToValue={(option, value) =>
+                  Number(option.id) === Number(value.id)
+                }
+                filterSelectedOptions
                 renderInput={(params) => (
                   <CustomTextField
                     {...params}
+                    sx={{
+                      "& .MuiAutocomplete-inputRoot": {
+                        flexWrap: "wrap",
+                        alignItems: "flex-start",
+                        minHeight: 40,
+                        paddingTop: "10px",
+                        paddingBottom: "10px",
+                        paddingRight: "30px",
+                      },
+                      "& .MuiAutocomplete-tag": {
+                        margin: "4px",
+                        maxWidth: "100%",
+                      },
+                      "& .MuiAutocomplete-endAdornment": {
+                        right: "8px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      },
+                    }}
                     placeholder="Select supervisor..."
+                    className="team_selection"
                   />
                 )}
               />
@@ -326,7 +349,7 @@ const EditTeam: React.FC<Props> = ({
                       "& .MuiAutocomplete-inputRoot": {
                         flexWrap: "wrap",
                         alignItems: "flex-start",
-                        minHeight: 56,
+                        minHeight: 40,
                         paddingTop: "10px",
                         paddingBottom: "10px",
                         paddingRight: "30px",

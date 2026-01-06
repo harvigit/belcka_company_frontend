@@ -163,10 +163,10 @@ const CreateProject: React.FC<CreateProjectProps> = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 350,
+        width: 450,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: 350,
+          width: 450,
           padding: 2,
           backgroundColor: "#f9f9f9",
         },
@@ -352,6 +352,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                 display: "flex",
                 justifyContent: "start",
                 gap: 2,
+                marginTop: 3,
               }}
             >
               <Button
@@ -361,6 +362,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                 type="submit"
                 disabled={isSaving}
                 sx={{ borderRadius: 3 }}
+                className="drawer_buttons"
               >
                 {isSaving ? "Saving..." : "Save"}
               </Button>
