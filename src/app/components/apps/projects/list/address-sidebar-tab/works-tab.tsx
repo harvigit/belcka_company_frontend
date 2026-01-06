@@ -28,6 +28,8 @@ import {
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import WorkDetailPage from "@/app/components/works";
+import Image from "next/image";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 interface WorksTabProps {
   addressId: number;
@@ -49,8 +51,10 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
   const [openSidebar, setOpenSidebar] = useState(false);
   const [selectedWorkId, setSelectedWorkId] = useState(null);
+  const [fetchWork, setFetchWork] = useState(false);
 
   const fetchWorkTabData = async () => {
+    setFetchWork(true);
     try {
       const res = await api.get("/project/get-works", {
         params: { address_id: addressId, company_id: companyId },
@@ -64,11 +68,14 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     } catch {
       setTabData([]);
     }
+    setFetchWork(false);
   };
 
   const fetchFilterOptions = async () => {
     try {
-      const res = await api.get(`get-company-resources?flag=tradeList&company_id=${companyId}`);
+      const res = await api.get(
+        `get-company-resources?flag=tradeList&company_id=${companyId}`
+      );
       if (res.data?.IsSuccess) {
         setFilterOptions(res.data.info || []);
       } else {
@@ -259,7 +266,9 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
       />
 
       {/* List of works */}
-      {filteredData.length > 0 ? (
+      {fetchWork ? (
+        <SkeletonLoader columns={[{ name: "Id" }]} rowCount={1} />
+      ) : filteredData.length > 0 ? (
         filteredData.map((work, idx) => (
           <Box
             key={idx}
@@ -444,9 +453,25 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
           </Box>
         ))
       ) : (
-        <Typography variant="body2" color="text.secondary">
-          No works found for this address.
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "calc(50vh - 100px)",
+          }}
+        >
+          <Image
+            src="/images/svgs/no-data.webp"
+            alt="No data"
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+            }}
+            width={250}
+            height={250}
+          />
+        </Box>
       )}
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>

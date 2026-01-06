@@ -17,6 +17,8 @@ import {
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import Image from "next/image";
+import SkeletonLoader from "../../SkeletonLoader";
 
 interface ProjectListingProps {
   companyId: number | null;
@@ -44,9 +46,9 @@ const Notifications: React.FC<ProjectListingProps> = ({
   userId,
 }) => {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [fetchCategory, setFetchCategory] = useState<boolean>(true);
   const fetchNotifications = async () => {
-    setLoading(true);
+    setFetchCategory(true);
     try {
       const res = await api.get(
         `notifications/user-notifications?company_id=${companyId}&user_id=${userId}`
@@ -57,7 +59,7 @@ const Notifications: React.FC<ProjectListingProps> = ({
     } catch (err) {
       console.error("Failed to fetch notifications", err);
     }
-    setLoading(false);
+    setFetchCategory(false);
   };
   useEffect(() => {
     if (!userId || !active) return;
@@ -132,47 +134,26 @@ const Notifications: React.FC<ProjectListingProps> = ({
     return "indeterminate";
   };
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="370px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
   return (
-    <Box
-      mt={0}
-      ml={5}
-      sx={{
-        height: "calc(100vh - 100px)",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Box
-        justifyContent={"space-between"}
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "auto",
-        }}
-      >
+    <Box mt={0} ml={5}>
+      <Box display={"flex"} justifyContent={"space-between"} m={1}>
         <Typography fontWeight={500}></Typography>
         {categories.length > 0 && (
           <>
-            <Button onClick={saveNotifications} disabled={loading}>
-              {loading ? "Updating..." : "Update"}
+            <Button onClick={saveNotifications} disabled={fetchCategory}>
+              {fetchCategory ? "Updating..." : "Update"}
             </Button>
           </>
         )}
       </Box>
       <TableContainer
-        sx={{ boxShadow: (theme) => theme.shadows[2] }}
+        sx={{
+          boxShadow: (theme) => theme.shadows[2],
+          mb: 3,
+          p: 2,
+          pt: 0,
+          height: "calc(70vh - 100px)",
+        }}
         component={Paper}
       >
         <Table stickyHeader aria-label="sticky table">
@@ -208,11 +189,36 @@ const Notifications: React.FC<ProjectListingProps> = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {categories.length == 0 ? (
+            {fetchCategory ? (
+              <SkeletonLoader
+                columns={[{ name: "Title" }, { name: "Web" }, { name: "App" }]}
+                rowCount={3}
+              />
+            ) : categories.length == 0 ? (
               <>
-                <Typography m={3}>
-                  No notifications are found for this user!!
-                </Typography>
+                <TableRow>
+                  <TableCell colSpan={categories.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
               </>
             ) : (
               <>

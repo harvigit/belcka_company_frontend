@@ -70,9 +70,9 @@ export default function PermissionGuard({
         router,
     ]);
     
-    if (loading) {
-        return <PermissionSkeleton />;
-    }
+    // if (loading) {
+    //     return <PermissionSkeleton />;
+    // }
     
     if (!isAuthorized) {
         if (fallback) return <>{fallback}</>;
@@ -106,26 +106,26 @@ export default function PermissionGuard({
     return <>{children}</>;
 }
 
-function PermissionSkeleton() {
-    return (
-        <Box
-            sx={{
-                p: { xs: 2, sm: 3 },
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2.5,
-            }}
-        >
-            <Skeleton variant="text" width="40%" height={50} sx={{ maxWidth: 300 }} />
+// function PermissionSkeleton() {
+//     return (
+//         <Box
+//             sx={{
+//                 p: { xs: 2, sm: 3 },
+//                 width: "100%",
+//                 display: "flex",
+//                 flexDirection: "column",
+//                 gap: 2.5,
+//             }}
+//         >
+//             <Skeleton variant="text" width="40%" height={50} sx={{ maxWidth: 300 }} />
 
-            <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
+//             <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
 
-            <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rectangular" height={90} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rectangular" height={90} sx={{ borderRadius: 2 }} />
+//             <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+//             <Skeleton variant="rectangular" height={90} sx={{ borderRadius: 2 }} />
+//             <Skeleton variant="rectangular" height={90} sx={{ borderRadius: 2 }} />
 
-            <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 1, mt: 1 }} />
-        </Box>
-    );
-}
+//             <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 1, mt: 1 }} />
+//         </Box>
+//     );
+// }
