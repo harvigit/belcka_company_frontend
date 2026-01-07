@@ -536,9 +536,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                     disabled={comapny?.is_pending_request}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (/^\d*\.?\d*$/.test(value)) {
+                      if (/^\d*\.?\d{0,2}$/.test(value)) {
                         const numericValue = Number(value);
-                        if (numericValue <= 100000) {
+
+                        if (
+                          value === "" ||
+                          numericValue < 100000 ||
+                          (numericValue === 100000 && !value.includes("."))
+                        ) {
                           setFormData((prev) => ({
                             ...prev,
                             rate: value,
@@ -662,9 +667,14 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         }
                         onChange={(e) => {
                           const value = e.target.value;
-                          if (/^\d*\.?\d*$/.test(value)) {
+                          if (/^\d*\.?\d{0,2}$/.test(value)) {
                             const numericValue = Number(value);
-                            if (numericValue <= 100000) {
+
+                            if (
+                              value === "" ||
+                              numericValue < 100000 ||
+                              (numericValue === 100000 && !value.includes("."))
+                            ) {
                               setFormData((prev) => ({
                                 ...prev,
                                 rate: value,

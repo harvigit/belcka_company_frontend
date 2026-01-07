@@ -401,7 +401,7 @@ const TasksList = ({
         id: "addressName",
         header: () => "Address",
         cell: (info) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
+          <Typography className="f-14" sx={{ px: 1 }}>
             {info.getValue() ?? "-"}
           </Typography>
         ),

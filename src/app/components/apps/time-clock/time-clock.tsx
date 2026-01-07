@@ -1014,7 +1014,6 @@ const TimeClock = ({ queryParams }: Props) => {
                 horizontal: "right",
               }}
             >
-              ``
               <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
               <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
               <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>

@@ -185,7 +185,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     const getTruncatedName = (name: string) => {
         if (!name || name == '--') return '--';
         const firstWord = name.trim().split(' ')[0];
-        return firstWord.length > 10 ? firstWord.slice(0, 7) + '...' : firstWord + '...';
+        return firstWord.length > 10 ? firstWord.slice(0, 3) + '.' : firstWord + '.';
     };
 
     return (
@@ -213,11 +213,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             position: 'sticky',
                                             top: 0,
                                             zIndex: 999,
-                                            width: header.column.id === "date" ? 150 : "auto",
+                                            width: `${header.column.columnDef.size}px`,
                                             minWidth: `${header.column.columnDef.size || 100}px`,
                                             maxWidth: `${header.column.columnDef.size || 100}px`,
                                             textAlign: 'center',
                                             verticalAlign: 'middle',
+                                            p: 1
                                         }}
                                     >
                                         {header.id === 'conflicts' ? (
@@ -407,7 +408,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
                                                                     position: 'absolute',
-                                                                    right: '8px',
+                                                                    right: '2px',
                                                                 }}>
                                                                     <IconButton
                                                                         onClick={() => startAddingNewRecord(rowData.date as string, projects as any, shifts as any)}
@@ -526,7 +527,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     overflow: 'hidden',
                                                                     textOverflow: 'clip',
                                                                     maxWidth: '100%',
-                                                                    px: 1
                                                                 }}>
                                                                     {getTruncatedName(log.project_name)}
                                                                 </Box>

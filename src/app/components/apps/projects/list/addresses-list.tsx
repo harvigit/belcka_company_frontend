@@ -1228,7 +1228,7 @@ const AddressesList = ({
                       <IconArrowLeft />
                     </IconButton>
                     <Typography variant="h6" color="inherit" fontWeight={700}>
-                      Change Address progress
+                      Change Progress
                     </Typography>
                   </Box>
                 </Grid>

@@ -101,8 +101,17 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
   const handleCompanyImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    createData.company_image = file;
-    if (file) setPreview(URL.createObjectURL(file));
+    if (file) {
+      const MAX_SIZE = 2 * 1024 * 1024;
+
+      if (file.size > MAX_SIZE) {
+        toast.error("File size exceeds 2MB. Please upload a smaller image.");
+        return;
+      }
+
+      createData.company_image = file;
+      setPreview(URL.createObjectURL(file));
+    }
   };
 
   const handleCodeChange = (index: number, value: string) => {
@@ -289,11 +298,8 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       team_size_id,
     } = createData;
 
-    if (!company_image) return toast.error("Please select profile for your company !");
-
-    if(name && email && nationalPhone && step == 1){
-      handleNext(e);
-      return;
+    if (!company_image) {
+      return toast.error("Please select profile for your company !");
     }
 
     try {
@@ -304,8 +310,11 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       formData.append("phone", nationalPhone);
       formData.append("extension", extension);
       formData.append("created_by", user.id);
-      formData.append("business_id", business_field_id);
+      if (step == 3) {
+        formData.append("business_id", business_field_id);
+      }
       formData.append("team_size_id", team_size_id);
+      formData.append("is_web", "true");
       if (company_image) formData.append("company_image", company_image);
 
       const res = await api.post("company/company-app-registration", formData, {
@@ -315,11 +324,16 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
           is_web: "true",
         },
       });
-      if (res.data.IsSuccess) {
+      if (res.data.IsSuccess && Object.keys(res.data.info).length > 0) {
         toast.success(res.data.message);
-        setCanCloseModal(true);
+        setCanCloseModal(false);
         login();
       }
+      if (!res.data.IsSuccess && !res.data.info) {
+        return toast.error(res.data.message);
+      }
+
+      setStep(2);
     } catch (err) {
     } finally {
       setLoading(false);

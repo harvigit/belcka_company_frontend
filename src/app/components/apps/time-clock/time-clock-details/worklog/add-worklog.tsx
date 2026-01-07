@@ -379,14 +379,14 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   },
                 }}
                 MenuProps={{
-                  PaperProps: { style: { maxHeight: 400 } },
+                  PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
                   autoFocus: false,
                 }}
                 renderValue={(selected) => {
                   if (!selected)
                     return (
                       <Typography color="#999" component="span">
-                        Select user
+                        Select User
                       </Typography>
                     );
                   const user = users.find((u) => u.id === Number(selected));
@@ -416,7 +416,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="Search user"
+                    placeholder="Search User"
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
@@ -489,14 +489,14 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   },
                 }}
                 MenuProps={{
-                  PaperProps: { style: { maxHeight: 400 } },
+                  PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
                   autoFocus: false,
                 }}
                 renderValue={(selected) => {
                   if (!selected)
                     return (
                       <Typography color="#999" component="span">
-                        Select project
+                        Select Project
                       </Typography>
                     );
                   const project = projects.find(
@@ -522,7 +522,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="Search project"
+                    placeholder="Search Project"
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
@@ -587,14 +587,14 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   },
                 }}
                 MenuProps={{
-                  PaperProps: { style: { maxHeight: 400 } },
+                  PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
                   autoFocus: false,
                 }}
                 renderValue={(selected) => {
                   if (!selected)
                     return (
                       <Typography color="#999" component="span">
-                        Select shift
+                        Select Shift
                       </Typography>
                     );
                   const shift = shifts.find((u) => u.id === Number(selected));

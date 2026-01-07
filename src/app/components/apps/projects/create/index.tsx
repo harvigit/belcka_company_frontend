@@ -197,6 +197,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({
                   placeholder="Enter project name..."
                   value={formData.name}
                   onChange={handleChange}
+                  inputProps={{ maxLength: 50 }}
                   fullWidth
                 />
 

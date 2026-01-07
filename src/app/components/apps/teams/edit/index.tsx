@@ -269,6 +269,7 @@ const EditTeam: React.FC<Props> = ({
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                inputProps={{ maxLength: 50 }}
                 fullWidth
               />
               <Typography variant="h5" mt={3}>

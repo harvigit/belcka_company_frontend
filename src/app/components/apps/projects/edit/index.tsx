@@ -205,6 +205,7 @@ const EditProject: React.FC<EditProjectProps> = ({
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
+                  inputProps={{ maxLength: 50 }}
                   fullWidth
                 />
                 <Typography variant="h5" mt={2}>
