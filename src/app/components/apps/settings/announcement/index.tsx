@@ -686,13 +686,21 @@ export default function AnnouncementsList({
                       {announcementDetails.type}
                     </Typography>
                     <Typography
-                      variant="h6"
                       color="textSecondary"
+                      variant="h6"
                       className="f-14"
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        wordBreak: "break-word",
+                      }}
                     >
                       {announcementDetails.name || announcementDetails.title}
                     </Typography>
                     <Typography
+                      mt={1}
                       variant="body1"
                       color="textSecondary"
                       sx={{ fontSize: "12px !important" }}

@@ -456,12 +456,18 @@ const Company = () => {
                       sx={{ minWidth: 200, ml: 3 }}
                     >
                       <MenuItem value="all">All</MenuItem>
-                      <MenuItem value="Team">Team</MenuItem>
-                      <MenuItem value="Project">Project</MenuItem>
                       <MenuItem value="Timesheet">Timesheet</MenuItem>
-                      <MenuItem value="Comapny">Comapny</MenuItem>
-                      <MenuItem value="Company">Comapny Rate</MenuItem>
                       <MenuItem value="Shift">Worklog</MenuItem>
+                      <MenuItem value="Billing Info">Billing Info</MenuItem>
+                      <MenuItem value="User">User</MenuItem>
+                      <MenuItem value="Comapny">Comapny</MenuItem>
+                      <MenuItem value="Project">Project</MenuItem>
+                      <MenuItem value="Address">Address</MenuItem>
+                      <MenuItem value="Company">Comapny Rate</MenuItem>
+                      <MenuItem value="Team">Team</MenuItem>
+                      <MenuItem value="Leave">Leave</MenuItem>
+                      <MenuItem value="Expense">Expense</MenuItem>
+                      <MenuItem value="Zone">Zone</MenuItem>
                     </TextField>
                   </Box>
                   <Box
