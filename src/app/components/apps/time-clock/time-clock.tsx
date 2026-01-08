@@ -122,7 +122,6 @@ const loadDateRangeFromStorage = () => {
 };
 
 export type TimeClock = {
-    has_conflict: boolean;
     company_id: string;
     week_range: any;
     user_id: any;
