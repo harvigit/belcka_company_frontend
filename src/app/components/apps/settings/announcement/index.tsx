@@ -66,7 +66,7 @@ export default function AnnouncementsList({
   const [readDrawerOpen, setReadDrawerOpen] = useState(false);
   const [announcementDetails, setAnnouncementDetails] = useState<any>([]);
   const [announcementDrawerOpen, setAnnouncementDrawerOpen] = useState(false);
- const session = useSession();
+  const session = useSession();
   const user = session.data?.user as User & { id?: number | null };
   const limit = 20;
   const markAsRead = async () => {
@@ -232,9 +232,17 @@ export default function AnnouncementsList({
                           Announcement from {it.sender_name} • {it.type}
                         </Typography>
                         <Typography
-                          variant="h6"
                           color="textSecondary"
+                          variant="h6"
                           className="f-14"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 3,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            wordBreak: "break-word",
+                          }}
                         >
                           {it.name || it.title}
                         </Typography>

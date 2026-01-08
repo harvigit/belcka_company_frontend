@@ -158,9 +158,18 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                       <Typography
                         color="textSecondary"
                         variant="body1"
-                        fontSize={"14px !important"}
                         fontWeight={600}
-                        className="multi-ellipsis"
+                        className="f-14"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          lineHeight: 1.25,
+                          maxWidth: 180,
+                          wordBreak: "break-word",
+                        }}
                       >
                         {item.name}
                       </Typography>

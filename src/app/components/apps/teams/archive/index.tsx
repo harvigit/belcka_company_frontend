@@ -157,13 +157,29 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                     alignItems="center"
                     width="100%"
                   >
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight={600}
-                      className="multi-ellipsis"
-                    >
-                      Name: {item.name}
-                    </Typography>
+                    <Box display={"flex"} alignItems={"center"} gap={1}>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        Name:
+                      </Typography>
+                      <Typography
+                        color="textSecondary"
+                        variant="body1"
+                        fontWeight={600}
+                        className="f-14"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          lineHeight: 1.25,
+                          maxWidth: 180,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {item.name}
+                      </Typography>
+                    </Box>
                     <Box display={"flex"} fontSize="10px">
                       <IconButton
                         color="primary"

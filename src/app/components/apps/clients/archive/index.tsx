@@ -173,8 +173,17 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
                         color="textSecondary"
                         variant="body1"
                         fontWeight={600}
-                        className="multi-ellipsis"
-                        fontSize={"14px !important"}
+                        className="f-14"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          lineHeight: 1.15,
+                          maxWidth: 200,
+                          wordBreak: "break-word",
+                        }}
                       >
                         {item.name}
                       </Typography>

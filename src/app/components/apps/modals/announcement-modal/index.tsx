@@ -156,7 +156,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   useEffect(() => {
     const getTeams = async () => {
       try {
-        const res : AxiosResponse<any>= await api.get(
+        const res: AxiosResponse<any> = await api.get(
           `get-company-resources?flag=teamList&company_id=${user?.company_id}`
         );
         if (res.data?.info) setTeams(res.data.info);
@@ -171,7 +171,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res : AxiosResponse<any>= await api.get("user/get-user-lists");
+        const res: AxiosResponse<any> = await api.get("user/get-user-lists");
         if (res.data?.info) setUsers(res.data.info);
       } catch (err) {
         console.error("Failed to fetch users", err);
@@ -203,9 +203,13 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
 
     try {
       setLoading(true);
-      const res : AxiosResponse<any>= await api.post("announcements/create", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res: AxiosResponse<any> = await api.post(
+        "announcements/create",
+        fd,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -244,6 +248,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
           placeholder="Enter title..."
           fullWidth
           value={title}
+          inputProps={{ maxLength: 500 }}
           onChange={(e: any) => setTitle(e.target.value)}
         />
 
