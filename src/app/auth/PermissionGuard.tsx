@@ -6,12 +6,13 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission, hasAnyPermission } from "@/lib/permissions";
 import { Box, Button, Dialog, DialogContent, Typography } from "@mui/material";
 import api from "@/utils/axios";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { IconPlus } from "@tabler/icons-react";
 import CreateTrade from "../components/apps/settings/company-trades/create";
 import { AxiosResponse } from "axios";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { User } from "next-auth";
 
 export default function PermissionGuard({
   children,
@@ -24,13 +25,15 @@ export default function PermissionGuard({
   const router = useRouter();
   const pathname = usePathname();
   const { permissions, loading } = usePermissions();
-  const { data: session } = useSession();
-
-  const user = session?.user as any;
-
+  const session = useSession();
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+    id: number;
+    user_role_id: number;
+  };
   const [profile, setProfile] = useState<any>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [showTradePopup, setShowTradePopup] = useState(false);
+  const [showTradePopup, setShowTradePopup] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -119,21 +122,57 @@ export default function PermissionGuard({
     }
   };
 
+  const userLogout = async () => {
+    try {
+      const payload = {
+        user_id: user.id,
+      };
+      const result: AxiosResponse<any> = await api.post("logout", payload);
+
+      if (result.data.IsSuccess) {
+        toast.success(result.data.message);
+        await signOut({ callbackUrl: "/auth" });
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+    }
+  };
+
   return (
     <>
       <Dialog open={showTradePopup && !drawerOpen} disableEscapeKeyDown>
         <DialogContent>
           Your company doesn&apos;t have any trades yet. <br />
           Please add a trade to continue.
-          <Button
-            fullWidth
-            variant="contained"
-            sx={{ mt: 2 }}
-            onClick={() => setDrawerOpen(true)}
-            startIcon={<IconPlus size={18} />}
+          <Box
+            display={"flex"}
+            justifyItems={"center"}
+            alignContent={"space-between"}
+            gap={2}
           >
-            Add Trade
-          </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              sx={{ mt: 2 }}
+              onClick={() => setDrawerOpen(true)}
+              startIcon={<IconPlus size={18} />}
+            >
+              Add Trade
+            </Button>
+
+            <Button
+              fullWidth
+              color="error"
+              variant="outlined"
+              sx={{ mt: 2 }}
+              onClick={userLogout}
+            >
+              Logout
+            </Button>
+          </Box>
         </DialogContent>
       </Dialog>
 
