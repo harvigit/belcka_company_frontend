@@ -406,7 +406,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                 },
                             }}
                             MenuProps={{
-                                PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
+                                PaperProps: { style: { maxHeight: 400 } },
                                 autoFocus: false,
                             }}
                             renderValue={(selected) => {
@@ -490,7 +490,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                                     WebkitLineClamp: 1,
                                                     overflow: "hidden",
                                                     textOverflow: "ellipsis",
-                                                    maxWidth: 250,
+                                                    maxWidth: 450,
                                                     wordBreak: "break-word",
                                                 }}
                                                 >

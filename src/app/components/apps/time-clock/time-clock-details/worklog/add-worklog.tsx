@@ -475,7 +475,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                               WebkitLineClamp: 1,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
-                              maxWidth: 250,
+                              maxWidth: 450,
                               wordBreak: "break-word",
                           }}
                           >
@@ -601,7 +601,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                             WebkitLineClamp: 1,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                            maxWidth: 250,
+                            maxWidth: 450,
                             wordBreak: "break-word",
                           }}
                         >{project.name}</Typography>
@@ -723,7 +723,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                             WebkitLineClamp: 1,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                            maxWidth: 250,
+                            maxWidth: 450,
                             wordBreak: "break-word",
                           }}
                         >{shift.name}</Typography>
