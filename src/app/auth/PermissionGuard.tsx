@@ -33,7 +33,7 @@ export default function PermissionGuard({
   };
   const [profile, setProfile] = useState<any>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [showTradePopup, setShowTradePopup] = useState(true);
+  const [showTradePopup, setShowTradePopup] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
