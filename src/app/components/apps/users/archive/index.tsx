@@ -202,6 +202,7 @@ const ArchiveUserList = () => {
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
+            className="header-checkbox"
             checked={
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
@@ -682,7 +683,7 @@ const ArchiveUserList = () => {
           justifyContent="space-between"
         >
           <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary">
+            <Typography color="textSecondary" className="f-14">
               {table.getPrePaginationRowModel().rows.length} Rows
             </Typography>
           </Box>
@@ -693,12 +694,12 @@ const ArchiveUserList = () => {
             }}
           >
             <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary">Page</Typography>
-              <Typography color="textSecondary" fontWeight={600} ml={1}>
+              <Typography color="textSecondary" className="f-14">Page</Typography>
+              <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
                 {table.getState().pagination.pageIndex + 1} of{" "}
                 {table.getPageCount()}
               </Typography>
-              <Typography color="textSecondary" ml={"3px"}>
+              <Typography color="textSecondary" ml={"3px"} className="f-14">
                 {" "}
                 | Entries :{" "}
               </Typography>
@@ -710,6 +711,7 @@ const ArchiveUserList = () => {
               color="textSecondary"
             >
               <CustomSelect
+              className="custom-select"
                 value={table.getState().pagination.pageSize}
                 onChange={(e: { target: { value: any } }) => {
                   table.setPageSize(Number(e.target.value));

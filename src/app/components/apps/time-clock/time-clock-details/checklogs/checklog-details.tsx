@@ -305,7 +305,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                 <input
                                                 type="range"
                                                 min={0}
-                                                max={99}
+                                                max={100}
                                                 value={editableProgress[checklog.id] ?? 0}
                                                 onChange={(e) =>
                                                     setEditableProgress((prev) => ({

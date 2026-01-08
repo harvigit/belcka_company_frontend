@@ -537,7 +537,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                             color="#1a1a1a"
                             component="div"
                         >
-                            Select user
+                            Select User
                         </Typography>
                         <FormControl fullWidth>
                             <Select
@@ -557,14 +557,14 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                     },
                                 }}
                                 MenuProps={{
-                                    PaperProps: { style: { maxHeight: 400 } },
+                                    PaperProps: { style: { maxHeight: 400 ,maxWidth: 50 } },
                                     autoFocus: false,
                                 }}
                                 renderValue={(selected) => {
                                     if (!selected)
                                         return (
                                             <Typography color="#999" component="span">
-                                                Select user
+                                                Select User
                                             </Typography>
                                         );
                                     const user = users.find((u) => u.id === Number(selected));
@@ -594,7 +594,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        placeholder="Search user"
+                                        placeholder="Search User"
                                         onChange={(e) => handleSearchChange(e.target.value)}
                                         onClick={(e) => e.stopPropagation()}
                                         onKeyDown={(e) => e.stopPropagation()}
@@ -656,7 +656,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                             color="#1a1a1a"
                             component="div"
                         >
-                            Leave type
+                            Leave Type
                         </Typography>
                         <FormControl fullWidth>
                             <Select
@@ -675,14 +675,14 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                     },
                                 }}
                                 MenuProps={{
-                                    PaperProps: { style: { maxHeight: 400 } },
+                                    PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
                                     autoFocus: false,
                                 }}
                                 renderValue={(selected) => {
                                     if (!selected)
                                         return (
                                             <Typography color="#999" component="span">
-                                                Select leave
+                                                Select Leave
                                             </Typography>
                                         );
                                     const leave = leaves.find((u) => u.id === Number(selected));

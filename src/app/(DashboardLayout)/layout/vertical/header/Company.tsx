@@ -517,13 +517,25 @@ const Company = () => {
                                   : undefined;
                                 router.push(routeFn(item.user_id, start, end));
                               } else if (item.request_name === "Leave") {
-                                const start = startDate
-                                  ? format(startDate, "yyyy-MM-dd")
+                                const dateAdded = item.date_added
+                                  ? parse(
+                                      item.date_added,
+                                      "d MMMM yyyy HH:mm",
+                                      new Date()
+                                    )
                                   : undefined;
-                                const end = endDate
-                                  ? format(endDate, "yyyy-MM-dd")
+
+                                const formattedDate = dateAdded
+                                  ? format(dateAdded, "yyyy-MM-dd")
                                   : undefined;
-                                router.push(routeFn(item.user_id, start, end));
+
+                                router.push(
+                                  routeFn(
+                                    item.user_id,
+                                    formattedDate,
+                                    formattedDate
+                                  )
+                                );
                               } else if (item.request_name === "Team") {
                                 router.push(routeFn(item.team_id));
                               } else if (item.request_name === "Project") {

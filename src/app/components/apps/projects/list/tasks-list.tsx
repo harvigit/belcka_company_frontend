@@ -325,6 +325,7 @@ const TasksList = ({
         header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <CustomCheckbox
+              className="header-checkbox"
               checked={selectedRowIds.size === data.length && data.length > 0}
               indeterminate={
                 selectedRowIds.size > 0 && selectedRowIds.size < data.length
@@ -371,11 +372,15 @@ const TasksList = ({
               <CustomCheckbox
                 checked={isChecked}
                 onClick={(e) => e.stopPropagation()}
-                onChange={() => {
+                onChange={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
                   const newSelected = new Set(selectedRowIds);
-                  isChecked
-                    ? newSelected.delete(row.index)
-                    : newSelected.add(row.index);
+                  if (isChecked) {
+                    newSelected.delete(item.id);
+                  } else {
+                    newSelected.add(item.id);
+                  }
                   setSelectedRowIds(newSelected);
                 }}
                 sx={{
@@ -396,7 +401,7 @@ const TasksList = ({
         id: "addressName",
         header: () => "Address",
         cell: (info) => (
-          <Typography className="f-14" sx={{ px: 1.5 }}>
+          <Typography className="f-14" sx={{ px: 1 }}>
             {info.getValue() ?? "-"}
           </Typography>
         ),
@@ -699,7 +704,7 @@ const TasksList = ({
         justifyContent="space-between"
       >
         <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary">
+          <Typography color="textSecondary" className="f-14">
             {table.getPrePaginationRowModel().rows.length} Rows
           </Typography>
         </Box>
@@ -713,12 +718,19 @@ const TasksList = ({
           alignItems="center"
         >
           <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary">Page</Typography>
-            <Typography color="textSecondary" fontWeight={600} ml={1}>
+            <Typography color="textSecondary" className="f-14">
+              Page
+            </Typography>
+            <Typography
+              color="textSecondary"
+              className="f-14"
+              fontWeight={600}
+              ml={1}
+            >
               {table.getState().pagination.pageIndex + 1} of{" "}
               {Math.max(1, table.getPageCount())}
             </Typography>
-            <Typography color="textSecondary" ml={"3px"}>
+            <Typography color="textSecondary" ml={"3px"} className="f-14">
               {" "}
               | Entries :{" "}
             </Typography>
@@ -730,6 +742,7 @@ const TasksList = ({
             color="textSecondary"
           >
             <CustomSelect
+              className="custom-select"
               value={table.getState().pagination.pageSize}
               onChange={(e: { target: { value: any } }) => {
                 table.setPageSize(Number(e.target.value));

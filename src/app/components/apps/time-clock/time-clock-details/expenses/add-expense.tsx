@@ -20,6 +20,8 @@ import { IconX, IconUpload, IconFile, IconTrash, IconCalendar } from '@tabler/ic
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import api from '@/utils/axios';
+import { debounce } from 'lodash';
+import SearchIcon from '@mui/icons-material/Search';
 
 interface Project { id: number; name: string; }
 interface Address { id: number; name: string; project_id: number;}
@@ -45,6 +47,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [notes, setNotes] = useState<string>('');
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Date picker popover state
     const [dateAnchorEl, setDateAnchorEl] = useState<HTMLElement | null>(null);
@@ -89,11 +92,24 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
     }, [selecteUser == true]);
 
     const filteredAddresses = React.useMemo(() => {
-        if (!selectedProject) return [];
-        return addresses.filter(
-            (addr) => addr.project_id === Number(selectedProject)
-        );
-    }, [addresses, selectedProject]);
+    if (!selectedProject) return [];
+
+    return addresses.filter((addr) => {
+        const matchesProject = addr.project_id === Number(selectedProject);
+
+        const name = (addr.name || '').toLowerCase();
+        const matchesSearch = name.includes(searchTerm.toLowerCase());
+
+        return matchesProject && matchesSearch;
+    });
+    }, [addresses, selectedProject, searchTerm]);
+
+    const handleSearchChange = useCallback(
+        debounce((value: string) => {
+            setSearchTerm(value);
+        }, 300),
+        []
+    );
 
     // Cleanup preview URLs on unmount
     useEffect(() => {
@@ -160,7 +176,6 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         e.preventDefault();
         setError(null);
 
-        console.log('formDataformData')
         if(selecteUser == true && !selectedUser){
             setError('Please select user.');
             return;
@@ -187,7 +202,6 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             formData.append('files', item.file);
         });
 
-        console.log(formData, 'formDataformDataformDataformData')
         try {
             setLoading(true);
             const response = await api.post('/expense/add-expense', formData, {
@@ -334,9 +348,107 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                             </Select>
                         </FormControl>
                     </Box>
-
-                    {/* Address */}
+                    
                     <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                        
+                    {/* Address */}
+                    <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        color="#1a1a1a"
+                        component="div"
+                    >
+                        Select address
+                    </Typography>
+                    <FormControl fullWidth>
+                        <Select
+                            name="userId"
+                            value={selectedAddress}
+                            onChange={(e) => setSelectedAddress(e.target.value)}
+                            displayEmpty
+                            size="small"
+                            sx={{
+                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#bdbdbd',
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#50ABFF',
+                                },
+                            }}
+                            MenuProps={{
+                                PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
+                                autoFocus: false,
+                            }}
+                            renderValue={(selected) => {
+                                if (!selected)
+                                    return (
+                                        <Typography color="#999" component="span">
+                                            Select Address
+                                        </Typography>
+                                    );
+                                const address = filteredAddresses.find((u) => u.id === Number(selected));
+                                return (
+                                    <Box display="flex" alignItems="center" gap={1}>
+                                        <Typography sx={{ fontSize: '14px' }} component="span">
+                                            {address?.name}
+                                        </Typography>
+                                    </Box>
+                                );
+                            }}
+                        >
+                            <Box
+                                px={2}
+                                py={1.5}
+                                position="sticky"
+                                top={0}
+                                bgcolor="white"
+                                zIndex={1}
+                            >
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    placeholder="Search address"
+                                    onChange={(e) => handleSearchChange(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => e.stopPropagation()}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <SearchIcon sx={{ color: '#999', fontSize: 20 }} />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            '& fieldset': { borderColor: '#e0e0e0' },
+                                            '&:hover fieldset': { borderColor: '#bdbdbd' },
+                                            '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
+                                        },
+                                    }}
+                                />
+                            </Box>
+                            {filteredAddresses.length === 0 ? (
+                                <MenuItem disabled>
+                                    <Typography color="text.secondary" component="span">
+                                        No address found
+                                    </Typography>
+                                </MenuItem>
+                            ) : (
+                                filteredAddresses.map((adress) => (
+                                    <MenuItem key={adress.id} value={adress.id.toString()}>
+                                        <Box display="flex" alignItems="center" gap={1.5}>
+                                            <Typography component="span">
+                                                {adress.name}
+                                            </Typography>
+                                        </Box>
+                                    </MenuItem>
+                                ))
+                            )}
+                        </Select>
+                    </FormControl>
+                    </Box>
+                    {/* <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
                         <Typography variant="body2" fontWeight={600} color="#1a1a1a">
                             Address
                         </Typography>
@@ -363,7 +475,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                 ))}
                             </Select>
                         </FormControl>
-                    </Box>
+                    </Box> */}
 
                     {/* Category */}
                     <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
@@ -647,21 +759,21 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                 bgcolor="#fafafa"
             >
                 <Button
-                    type="submit"
                     variant="contained"
-                        disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
-                        sx={{
-                            textTransform: "none",
-                            fontWeight: 500,
-                            bgcolor:"#1e4db7",
-                            color: "white",
-                            boxShadow: "none",
-                            px: 3,
-                            '&:hover': { bgcolor: '#173a8c' }, 
-                            '&:disabled': { bgcolor: '#e0e0e0' },
-                        }}
-                    >
-                        {loading ? <CircularProgress size={24} /> : "Add Expense"}
+                    onClick={handleSubmit}
+                    disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
+                    sx={{
+                        textTransform: "none",
+                        fontWeight: 500,
+                        bgcolor:"#1e4db7",
+                        color: "white",
+                        boxShadow: "none",
+                        px: 3,
+                            '&:hover': { bgcolor: '#173a8c' },
+                        '&:disabled': { bgcolor: '#e0e0e0' },
+                    }}
+                >
+                    {loading ? <CircularProgress size={24} /> : "Add Expense"}
                 </Button>
                 <Button
                     variant="outlined"

@@ -1337,8 +1337,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
                               const lat = center.lat();
                               const lng = center.lng();
-
-                              // ⛔ prevent infinite loop
                               if (
                                 lastCenterRef.current &&
                                 lastCenterRef.current.lat === lat &&

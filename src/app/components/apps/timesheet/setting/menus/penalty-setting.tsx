@@ -67,11 +67,6 @@ export default function PenaltySettings() {
         setEnabled(
           res.data?.data ? res.data?.data?.is_outside_boundary_penalty : false
         );
-        console.log(
-          res.data?.data?.is_outside_boundary_penalty
-            ? res.data?.data?.is_outside_boundary_penalty
-            : false
-        );
         setTimeZone(res.data.data.timezone_id);
         const dbTime = res.data.data.outside_boundary_penalty_minute
           ? dayjs(res.data.data.outside_boundary_penalty_minute, "HH:mm")
@@ -144,11 +139,10 @@ export default function PenaltySettings() {
     const finalTime =
       overrideTime ?? (value?.isValid() ? value.format("HH:mm") : null);
 
-    const isFirstTime = !value;
     const payload = {
       is_outside_boundary_penalty: newStatus,
       timeZone,
-      outside_penalty: isFirstTime ? finalTime : null,
+      outside_penalty: enabled ? finalTime : null,
     };
 
     try {
@@ -176,12 +170,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         penalty_time: value ? value.format("HH:mm") : null,
-        users: users
-          .filter((u) => u.selected)
-          .map((u) => ({
-            id: u.id,
-            is_outside_boundary_penalty: u.is_outside_boundary_penalty,
-          })),
+        users: users.map((u) => ({
+          id: u.id,
+          is_outside_boundary_penalty: u.is_outside_boundary_penalty,
+        })),
       };
 
       const res = await api.post(
@@ -201,12 +193,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         penalty_time: value ? value.format("HH:mm") : null,
-        teams: teams
-          .filter((t) => t.selected)
-          .map((t) => ({
-            id: t.id,
-            is_outside_boundary_penalty: t.is_outside_boundary_penalty,
-          })),
+        teams: teams.map((t) => ({
+          id: t.id,
+          is_outside_boundary_penalty: t.is_outside_boundary_penalty,
+        })),
       };
 
       const res = await api.post(
@@ -234,12 +224,11 @@ export default function PenaltySettings() {
 
     const finalTime =
       overrideTime ?? (swValue?.isValid() ? swValue.format("HH:mm") : null);
-    const isFirstTime = !swValue;
     try {
       const payload = {
         is_autostop_work_penalty: newStatus,
         timeZone,
-        penalty_time: isFirstTime ? finalTime : null,
+        penalty_time: swEnabled ? finalTime : null,
       };
 
       const res = await api.post("setting/save-general-setting", payload);
@@ -258,12 +247,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         stop_work_time: swValue ? swValue.format("HH:mm") : null,
-        teams: swTeams
-          .filter((t) => t.selected)
-          .map((t) => ({
-            id: t.id,
-            is_autostop_work_penalty: t.is_autostop_work_penalty,
-          })),
+        teams: swTeams.map((t) => ({
+          id: t.id,
+          is_autostop_work_penalty: t.is_autostop_work_penalty,
+        })),
       };
 
       const res = await api.post(
@@ -283,12 +270,10 @@ export default function PenaltySettings() {
       const payload = {
         company_id: user.company_id,
         stop_work_time: swValue ? swValue.format("HH:mm") : null,
-        users: swUsers
-          .filter((u) => u.selected)
-          .map((u) => ({
-            id: u.id,
-            is_autostop_work_penalty: u.is_autostop_work_penalty,
-          })),
+        users: swUsers.map((u) => ({
+          id: u.id,
+          is_autostop_work_penalty: u.is_autostop_work_penalty,
+        })),
       };
 
       const res = await api.post(
@@ -387,7 +372,7 @@ export default function PenaltySettings() {
     return formatted;
   };
 
-  if (loading)
+  if (loading) {
     return (
       <Box
         display="flex"
@@ -398,7 +383,8 @@ export default function PenaltySettings() {
         <CircularProgress />
       </Box>
     );
-  console.log(enabled);
+  }
+
   return (
     <Box display="flex" overflow="auto">
       <Box sx={{ p: 3 }} m="auto" width="60%">

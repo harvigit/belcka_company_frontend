@@ -435,24 +435,25 @@ const TimeClock = ({queryParams}: Props) => {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-    const columns = [
-        {
-            id: 'select',
-            header: ({table}: any) => (
-                <Stack direction="row" alignItems="center" ml={0.5}>
-                    <CustomCheckbox
-                        checked={
-                            selectedRowIds.size === filteredData.length &&
-                            filteredData.length > 0
-                        }
-                        indeterminate={
-                            selectedRowIds.size > 0 &&
-                            selectedRowIds.size < filteredData.length
-                        }
-                        onChange={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            const isChecked = e.target.checked;
+  const columns = [
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center" ml={0.5}>
+          <CustomCheckbox
+            className="header-checkbox"
+            checked={
+              selectedRowIds.size === filteredData.length &&
+              filteredData.length > 0
+            }
+            indeterminate={
+              selectedRowIds.size > 0 &&
+              selectedRowIds.size < filteredData.length
+            }
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const isChecked = e.target.checked;
 
                             if (isChecked) {
                                 setSelectedRowIds(
@@ -1029,51 +1030,50 @@ const TimeClock = ({queryParams}: Props) => {
                                     Unlock
                                 </Button>
 
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    size="small"
-                                    onClick={handleMarkAsPaid}
-                                    sx={{textTransform: 'none', fontWeight: 600}}
-                                >
-                                    Paid
-                                </Button>
-                            </>
-                        )}
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            sx={{textTransform: 'none', fontWeight: 600}}
-                            onClick={handleAddClick}
-                            endIcon={
-                                openAddleave ? (
-                                    <IconChevronUp size={20}/>
-                                ) : (
-                                    <IconChevronDown size={20}/>
-                                )
-                            }
-                        >
-                            <Typography sx={{fontWeight: 600}}>Add</Typography>
-                        </Button>
-                        <Menu
-                            anchorEl={addDropDown}
-                            open={openAddleave}
-                            onClose={handleAddClose}
-                            anchorOrigin={{
-                                vertical: 'bottom',
-                                horizontal: 'right',
-                            }}
-                            transformOrigin={{
-                                vertical: 'top',
-                                horizontal: 'right',
-                            }}
-                        >
-                            ``
-                            <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
-                            <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
-                            <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
-                        </Menu>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={handleMarkAsPaid}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Paid
+                </Button>
+              </>
+            )}
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              sx={{ textTransform: "none", fontWeight: 600 }}
+              onClick={handleAddClick}
+              endIcon={
+                openAddleave ? (
+                  <IconChevronUp size={20} />
+                ) : (
+                  <IconChevronDown size={20} />
+                )
+              }
+            >
+              <Typography sx={{ fontWeight: 600 }}>Add</Typography>
+            </Button>
+            <Menu
+              anchorEl={addDropDown}
+              open={openAddleave}
+              onClose={handleAddClose}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+            >
+              <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
+              <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
+              <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
+            </Menu>
 
                         {hasAnyConflicts && (
                             <Button
@@ -1349,77 +1349,78 @@ const TimeClock = ({queryParams}: Props) => {
             </Box>
             <Divider/>
 
-            <Stack
-                gap={1}
-                pr={3}
-                pt={2}
-                pl={3}
-                alignItems="center"
-                direction={{xs: 'column', sm: 'row'}}
-                justifyContent="space-between"
+      <Stack
+        gap={1}
+        pr={3}
+        pt={1}
+        pl={3}
+        alignItems="center"
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+      >
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography color="textSecondary" className="f-14">
+            {table.getPrePaginationRowModel().rows.length} Rows
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: {
+              xs: "block",
+              sm: "flex",
+            },
+          }}
+          alignItems="center"
+        >
+          <Stack direction="row" alignItems="center">
+            <Typography color="textSecondary" className="f-14">Page</Typography>
+            <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
+              {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
+            </Typography>
+            <Typography color="textSecondary" ml={"3px"} className="f-14">
+              {" "}
+              | Entries :{" "}
+            </Typography>
+          </Stack>
+          <Stack
+            ml={"5px"}
+            direction="row"
+            alignItems="center"
+            color="textSecondary"
+          >
+            <CustomSelect
+            className="custom-select"
+              value={table.getState().pagination.pageSize}
+              onChange={(e: { target: { value: any } }) => {
+                table.setPageSize(Number(e.target.value));
+              }}
             >
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Typography color="textSecondary">
-                        {table.getPrePaginationRowModel().rows.length} Rows
-                    </Typography>
-                </Box>
-                <Box
-                    sx={{
-                        display: {
-                            xs: 'block',
-                            sm: 'flex',
-                        },
-                    }}
-                    alignItems="center"
-                >
-                    <Stack direction="row" alignItems="center">
-                        <Typography color="textSecondary">Page</Typography>
-                        <Typography color="textSecondary" fontWeight={600} ml={1}>
-                            {table.getState().pagination.pageIndex + 1} of{' '}
-                            {table.getPageCount()}
-                        </Typography>
-                        <Typography color="textSecondary" ml={'3px'}>
-                            {' '}
-                            | Entries :{' '}
-                        </Typography>
-                    </Stack>
-                    <Stack
-                        ml={'5px'}
-                        direction="row"
-                        alignItems="center"
-                        color="textSecondary"
-                    >
-                        <CustomSelect
-                            value={table.getState().pagination.pageSize}
-                            onChange={(e: { target: { value: any } }) => {
-                                table.setPageSize(Number(e.target.value));
-                            }}
-                        >
-                            {[50, 100, 250, 500].map((pageSize) => (
-                                <MenuItem key={pageSize} value={pageSize}>
-                                    {pageSize}
-                                </MenuItem>
-                            ))}
-                        </CustomSelect>
-                        <IconButton
-                            size="small"
-                            sx={{width: '30px'}}
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <IconChevronLeft/>
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            sx={{width: '30px'}}
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <IconChevronRight/>
-                        </IconButton>
-                    </Stack>
-                </Box>
-            </Stack>
+              {[50, 100, 250, 500].map((pageSize) => (
+                <MenuItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </MenuItem>
+              ))}
+            </CustomSelect>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronRight />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Stack>
 
             <Drawer
                 anchor="bottom"

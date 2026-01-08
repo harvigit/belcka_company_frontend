@@ -37,7 +37,7 @@ const EditableShiftCell: React.FC<EditableShiftCellProps> = ({
     const getTruncatedName = (name: string) => {
         if (!name) return '--';
         const maxLength = 12;
-        return name.length > maxLength ? name.slice(0, maxLength - 3) + '...' : name;
+        return name.length > maxLength ? name.slice(0, maxLength - 3) + '..' : name;
     };
     
     if (isEditing && !isLocked) {

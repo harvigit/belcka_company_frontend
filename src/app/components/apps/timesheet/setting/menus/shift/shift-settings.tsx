@@ -527,6 +527,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
                             value={shiftDetail.shift_name}
                             onChange={(e) => handleInputChange('shift_name')(e.target.value)}
                             fullWidth
+                            inputProps={{ maxLength: 50 }}
                             variant="outlined"
                             size="small"
                             sx={{

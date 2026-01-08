@@ -76,6 +76,12 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
   useEffect(() => {
     if (open == true) {
       fetchUsers();
+      setFormData({
+        id: 0,
+        name: "",
+        supervisor_id: 0,
+        team_member_ids: [],
+      });
     }
   }, [user.id, open]);
 
@@ -155,6 +161,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                 placeholder="Enter team name.."
                 value={formData.name}
                 onChange={handleChange}
+                inputProps={{ maxLength: 50 }}
                 fullWidth
               />
               <Typography variant="h5" mt={3}>
@@ -165,13 +172,17 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                 fullWidth
                 disableCloseOnSelect
                 options={data || []}
-                value={formData.supervisor_id}
-                onChange={(e: any) =>
+                value={
+                  data?.find(
+                    (item: any) => item.id === formData.supervisor_id
+                  ) || null
+                }
+                onChange={(event, newValue) => {
                   setFormData({
                     ...formData,
-                    supervisor_id: Number(e.target.value),
-                  })
-                }
+                    supervisor_id: newValue ? newValue.id : null,
+                  });
+                }}
                 getOptionLabel={(option) => option.name || ""}
                 isOptionEqualToValue={(option, value) =>
                   Number(option.id) === Number(value.id)

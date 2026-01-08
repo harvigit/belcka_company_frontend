@@ -149,7 +149,6 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
                     justifyContent="space-between"
                     alignItems="center"
                     width="100%"
-                    height="20px"
                   >
                     <Box display={"flex"} alignItems={"center"} gap={1}>
                       <Typography variant="subtitle1" fontWeight={600}>
@@ -159,8 +158,17 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
                         color="textSecondary"
                         variant="body1"
                         fontWeight={600}
-                        className="multi-ellipsis"
-                        fontSize={"14px !important"}
+                        className="f-14"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          lineHeight: 1.25,
+                          maxWidth: 180,
+                          wordBreak: "break-word",
+                        }}
                       >
                         {item.name}
                       </Typography>

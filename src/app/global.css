@@ -435,3 +435,15 @@ input[type="range"]::-moz-range-thumb {
   background: #214cd8;
   cursor: pointer;
 }
+
+.custom-select {
+    height: 35px;
+}
+
+.header-checkbox {
+    height:  34px;
+    width: 38px;
+}
+.header-checkbox svg {
+    width: 20px !important;
+}

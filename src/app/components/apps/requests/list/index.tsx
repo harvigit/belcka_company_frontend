@@ -315,15 +315,20 @@ export default function UserRequests({
                           : undefined;
                         router.push(routeFn(work.user_id, start, end));
                       } else if (work.type_name === "Leave") {
-                        const start = startDate
-                          ? format(startDate, "yyyy-MM-dd")
+                        const dateAdded = work.date_added
+                          ? parse(
+                              work.date_added,
+                              "d MMMM yyyy HH:mm",
+                              new Date()
+                            )
                           : undefined;
-                        const end = endDate
-                          ? format(endDate, "yyyy-MM-dd")
+
+                        const formattedDate = dateAdded
+                          ? format(dateAdded, "yyyy-MM-dd")
                           : undefined;
 
                         router.push(
-                          routeFn(work.user_id, start, end)
+                          routeFn(work.user_id, formattedDate, formattedDate)
                         );
                       } else {
                         router.push(routeFn(work.user_id));
