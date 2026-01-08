@@ -201,15 +201,6 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
     fetchDropdownData();
   }, []);
 
-  const handleNext = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!createData.name || !createData.email) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-    setStep(2);
-  };
-
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -223,36 +214,33 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       team_size_id,
     } = createData;
 
-    if (!name.trim()) return toast.error("Enter company name");
-    if (!email.trim()) return toast.error("Enter business email");
-    if (!business_id) return toast.error("Select a business field");
-    if (!team_size_id) return toast.error("Select a team size");
+    if (!company_image) {
+      return toast.error("Please select profile for your company !");
+    }
 
     try {
       setLoading(true);
-
       const formData = new FormData();
       formData.append("name", name);
       formData.append("email", email);
-      formData.append("phone", createData.nationalPhone);
-      formData.append("extension", createData.extension);
+      formData.append("phone", nationalPhone);
+      formData.append("extension", extension);
       formData.append("created_by", String(id));
-      formData.append("business_id", business_id);
-      formData.append("team_size_id", team_size_id);
-
-      if (company_image) {
-        formData.append("company_image", company_image);
+      if (step == 3) {
+        formData.append("business_id", business_id);
       }
+      formData.append("team_size_id", team_size_id);
+      formData.append("is_web", "true");
+      if (company_image) formData.append("company_image", company_image);
 
       const res = await api.post("company/company-app-registration", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          is_web: "true",
           Authorization: `Bearer ${token}`,
+          is_web: "true",
         },
       });
-
-      if (res.data.IsSuccess) {
+      if (res.data.IsSuccess && Object.keys(res.data.info).length > 0) {
         const updated = res.data.info;
 
         await update({
@@ -267,8 +255,12 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         setCanCloseModal(false);
         login();
       }
+      if (!res.data.IsSuccess && !res.data.info) {
+        return toast.error(res.data.message);
+      }
+
+      setStep(2);
     } catch (err) {
-      console.log(err);
     } finally {
       setLoading(false);
     }
@@ -450,7 +442,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
           <>
             {/* basic info */}
             {step === 1 && (
-              <form onSubmit={handleNext}>
+              <form onSubmit={handleCreateCompany}>
                 <Typography fontWeight={500} mb={2}>
                   What&apos;s your comapany details?
                 </Typography>

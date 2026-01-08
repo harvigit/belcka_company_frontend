@@ -53,6 +53,16 @@ const EditTeam: React.FC<Props> = ({
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
 
+  const getUniqueUsersById = (users: any[]) => {
+    const map = new Map();
+    users.forEach((user) => {
+      if (user?.id) {
+        map.set(user.id, user);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   const fetchUniqueUsers = async () => {
     try {
       if (!teamId || !id?.company_id) return;
@@ -61,127 +71,91 @@ const EditTeam: React.FC<Props> = ({
         `team/user-list?team_id=${teamId}&company_id=${id.company_id}`
       );
 
-      if (res.data) {
-        const users = res.data.info;
-        setFormData((prev: any) => {
-          if (!prev) {
-            return {
-              team_members: users,
-              team_member_ids: [],
-              supervisor_id: 0,
-              name: "",
-              id: teamId,
-            };
-          }
-          return {
-            ...prev,
-            team_members: users,
-          };
-        });
-      }
+      if (!res.data?.info) return;
+
+      setFormData((prev: any) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          team_members: getUniqueUsersById([
+            ...prev.team_members,
+            ...res.data.info,
+          ]),
+        };
+      });
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
   };
 
   // Fetch all users list for supervisor dropdown
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(`user/get-user-lists`);
-        if (res.data) {
-          setUserList(res.data.info);
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get(`user/get-user-lists`);
+      if (res.data?.info) {
+        setUserList(res.data.info);
       }
-    };
-    fetchTrades();
-  }, []);
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [open]);
 
   // Fetch team data and members info
   const fetchTeamData = async () => {
-    if (!teamId) return;
-    if (teams.length > 0 && teamId) {
-      try {
-        const res = await api.get(
-          `team/get-team-member-list?team_id=${teamId}`
-        );
+    if (!teamId || teams.length === 0) return;
 
-        if (res.data?.info) {
-          const flattened = res.data.info.flatMap((team: any) => {
-            if (team.users.length === 0) {
-              return [
-                {
-                  supervisor_id: team.supervisor_id,
-                  supervisor_name: team.supervisor_name,
-                  supervisor_image: team.supervisor_image,
-                  supervisor_email: team.supervisor_email,
-                  supervisor_phone: team.supervisor_phone,
-                  company_id: team.company_id,
-                  subcontractor_company_id: team.subcontractor_company_id,
-                  is_subcontractor: team.is_subcontractor,
-                  team_id: team.team_id,
-                  team_name: team.team_name,
-                  id: null,
-                  name: null,
-                  image: null,
-                  is_active: null,
-                  trade_id: null,
-                  trade_name: null,
-                },
-              ];
-            }
+    try {
+      const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
 
-            return team.users.map((user: any) => ({
-              supervisor_id: team.supervisor_id,
-              supervisor_name: team.supervisor_name,
-              supervisor_image: team.supervisor_image,
-              supervisor_email: team.supervisor_email,
-              supervisor_phone: team.supervisor_phone,
-              team_id: team.team_id,
-              team_name: team.team_name,
-              id: user.id,
-              name: user.name,
-              image: user.image,
-              is_active: user.is_active,
-              trade_id: user.trade_id,
-              trade_name: user.trade_name,
-              is_subcontractor: team.is_subcontractor,
-              company_id: team.company_id,
-              subcontractor_company_id: team.subcontractor_company_id,
-            }));
-          });
+      if (!res.data?.info) return;
 
-          // Use string comparison to avoid type mismatch
-          const team = flattened.find(
-            (item: any) => String(item.team_id) === String(teamId)
-          );
+      const flattened = res.data.info.flatMap(
+        (team: any) =>
+          team.users?.map((user: any) => ({
+            supervisor_id: team.supervisor_id,
+            team_id: team.team_id,
+            team_name: team.team_name,
+            id: user.id,
+            name: user.name,
+            image: user.image,
+          })) || []
+      );
 
-          if (team) {
-            const memberIds = flattened
-              .filter((u: any) => String(u.team_id) === String(teamId) && u.id)
-              .map((u: any) => u.id);
+      const uniqueMembers = getUniqueUsersById(flattened);
 
-            setFormData({
-              id: team.team_id,
-              name: team.team_name,
-              supervisor_id: team.supervisor_id,
-              team_member_ids: memberIds,
-              team_members: flattened.filter((u: any) => u.id),
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching team data:", error);
-      }
+      const team = flattened.find(
+        (item: any) => String(item.team_id) === String(teamId)
+      );
+
+      if (!team) return;
+
+      setFormData((prev: any) => ({
+        ...prev,
+        id: team.team_id,
+        name: team.team_name,
+        supervisor_id: team.supervisor_id,
+        team_member_ids: uniqueMembers.map((u) => u.id),
+        team_members: uniqueMembers,
+      }));
+    } catch (error) {
+      console.error("Error fetching team data:", error);
     }
   };
+
   useEffect(() => {
-    if (open || teamId) {
-      fetchTeamData();
-      fetchUniqueUsers();
-    }
+    if (!open || !teamId) return;
+
+    const loadData = async () => {
+      await fetchTeamData();
+      await fetchUniqueUsers();
+    };
+
+    loadData();
   }, [open, teamId]);
 
   const hanleClose = () => {

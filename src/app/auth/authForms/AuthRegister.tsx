@@ -397,15 +397,6 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     }
   }, [isCodeVerified]);
 
-  const handleNext = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!createData.name || !createData.email) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-    setStep(2);
-  };
-
   return (
     <>
       <form onSubmit={handleRegister} style={{ width: "100%" }}>
