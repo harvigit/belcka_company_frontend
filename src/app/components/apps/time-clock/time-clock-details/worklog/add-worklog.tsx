@@ -398,7 +398,20 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                       >
                         {user?.first_name?.[0]?.toUpperCase()}
                       </Avatar>
-                      <Typography sx={{ fontSize: "14px" }} component="span">
+                      <Typography
+                        component={"span"}
+                        variant="body1"
+                        className="f-14"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: 250,
+                          wordBreak: "break-word",
+                        }}
+                      >
                         {getUserName(user || ({} as User))}
                       </Typography>
                     </Box>
@@ -452,7 +465,20 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                         >
                           {user.first_name?.[0]?.toUpperCase()}
                         </Avatar>
-                        <Typography component="span">
+                        <Typography
+                          component={"span"}
+                          variant="body1"
+                          className="f-14"
+                          sx={{
+                              display: "-webkit-box",
+                              WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              maxWidth: 250,
+                              wordBreak: "break-word",
+                          }}
+                          >
                           {getUserName(user)}
                         </Typography>
                       </Box>
@@ -504,7 +530,20 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   );
                   return (
                     <Box display="flex" alignItems="center" gap={1}>
-                      <Typography sx={{ fontSize: "14px" }} component="span">
+                      <Typography
+                        component={"span"}
+                        variant="body1"
+                        className="f-14"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: 250,
+                          wordBreak: "break-word",
+                        }}
+                      >
                         {project?.name}
                       </Typography>
                     </Box>
@@ -552,7 +591,20 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   filteredProject.map((project) => (
                     <MenuItem key={project.id} value={project.id.toString()}>
                       <Box display="flex" alignItems="center" gap={1.5}>
-                        <Typography component="span">{project.name}</Typography>
+                        <Typography
+                          component={"span"}
+                          variant="body1"
+                          className="f-14"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 250,
+                            wordBreak: "break-word",
+                          }}
+                        >{project.name}</Typography>
                       </Box>
                     </MenuItem>
                   ))
@@ -600,7 +652,20 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   const shift = shifts.find((u) => u.id === Number(selected));
                   return (
                     <Box display="flex" alignItems="center" gap={1}>
-                      <Typography sx={{ fontSize: "14px" }} component="span">
+                     <Typography
+                        component={"span"}
+                        variant="body1"
+                        className="f-14"
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: 250,
+                          wordBreak: "break-word",
+                        }}
+                      >
                         {shift?.name}
                       </Typography>
                     </Box>
@@ -648,7 +713,20 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   filteredShifts.map((shift) => (
                     <MenuItem key={shift.id} value={shift.id.toString()}>
                       <Box display="flex" alignItems="center" gap={1.5}>
-                        <Typography component="span">{shift.name}</Typography>
+                        <Typography
+                          component={"span"}
+                          variant="body1"
+                          className="f-14"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 250,
+                            wordBreak: "break-word",
+                          }}
+                        >{shift.name}</Typography>
                       </Box>
                     </MenuItem>
                   ))

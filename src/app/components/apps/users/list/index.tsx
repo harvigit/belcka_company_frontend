@@ -1763,8 +1763,15 @@ const TablePagination = () => {
               }}
             >
               <Stack direction="row" alignItems="center">
-                <Typography color="textSecondary" className="f-14">Page</Typography>
-                <Typography color="textSecondary"  className="f-14" fontWeight={600} ml={1}>
+                <Typography color="textSecondary" className="f-14">
+                  Page
+                </Typography>
+                <Typography
+                  color="textSecondary"
+                  className="f-14"
+                  fontWeight={600}
+                  ml={1}
+                >
                   {table.getState().pagination.pageIndex + 1} of{" "}
                   {table.getPageCount()}
                 </Typography>
@@ -1780,7 +1787,7 @@ const TablePagination = () => {
                 color="textSecondary"
               >
                 <CustomSelect
-                className="custom-select"
+                  className="custom-select"
                   value={table.getState().pagination.pageSize}
                   onChange={(e: { target: { value: any } }) => {
                     table.setPageSize(Number(e.target.value));
@@ -1863,7 +1870,7 @@ const TablePagination = () => {
               <form onSubmit={handleRegister} className="address-form">
                 <Grid container spacing={2} mt={1}>
                   <Grid size={{ lg: 12, xs: 12 }}>
-                    <Typography variant="caption" mt={2}>
+                    <Typography variant="body1" mt={2}>
                       First Name
                     </Typography>
                     <CustomTextField
@@ -1871,12 +1878,11 @@ const TablePagination = () => {
                       variant="outlined"
                       fullWidth
                       value={firstName}
-                      sx={{ mb: 1 }}
                       onChange={(e: {
                         target: { value: SetStateAction<string> };
                       }) => setfirstName(e.target.value)}
                     />
-                    <Typography variant="caption" mt={2}>
+                    <Typography variant="body1" mt={2}>
                       Last Name
                     </Typography>
                     <CustomTextField
@@ -1884,12 +1890,11 @@ const TablePagination = () => {
                       variant="outlined"
                       fullWidth
                       value={lastName}
-                      sx={{ mb: 1 }}
                       onChange={(e: {
                         target: { value: SetStateAction<string> };
                       }) => setlastName(e.target.value)}
                     />
-                    <Typography variant="caption" mt={2}>
+                    <Typography variant="body1" mt={2}>
                       Email Address
                     </Typography>
                     <CustomTextField
@@ -1912,17 +1917,16 @@ const TablePagination = () => {
                         const numberOnly = value.replace(country.dialCode, "");
                         setNationalPhone(numberOnly);
                       }}
-                      inputStyle={{ width: "100%", marginBottom: 4 }}
+                      inputStyle={{ width: "100%", height: "47px" }}
                       enableSearch
                       inputProps={{ required: true }}
                     />
-                    <Typography variant="caption" mt={6}>
+                    <Typography variant="body1" mt={2}>
                       Select Teams
                     </Typography>
                     <Autocomplete
                       fullWidth
                       id="team_id"
-                      sx={{ mb: 2 }}
                       options={teams}
                       value={
                         teams.find((p: any) => p.id === selectedTeam.id) || null
@@ -1942,13 +1946,12 @@ const TablePagination = () => {
                         />
                       )}
                     />
-                    <Typography variant="caption" mt={2}>
+                    <Typography variant="body1" mt={2}>
                       Select Trades
                     </Typography>
                     <Autocomplete
                       fullWidth
                       id="trade_id"
-                      sx={{ mb: 2 }}
                       options={trade}
                       value={
                         trade.find((p: any) => p.id === selectedTrade.id) ||

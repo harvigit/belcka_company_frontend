@@ -15,6 +15,7 @@ import {
     Popover,
     Avatar,
     CircularProgress,
+    Tooltip,
 } from '@mui/material';
 import { IconX, IconUpload, IconFile, IconTrash, IconCalendar } from '@tabler/icons-react';
 import { DayPicker } from "react-day-picker";
@@ -310,7 +311,20 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                             >
                                                 {user?.first_name?.[0]?.toUpperCase()}
                                             </Avatar>
-                                            <Typography sx={{ fontSize: '14px' }} component="span">
+                                            <Typography
+                                                component={"span"}
+                                                variant="body1"
+                                                className="f-14"
+                                                sx={{
+                                                    display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 1,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: 250,
+                                                    wordBreak: "break-word",
+                                                }}
+                                            >
                                                 {user?.first_name} {user?.last_name}
                                             </Typography>
                                         </Box>
@@ -342,7 +356,22 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                 </MenuItem>
                                 {projects.map((proj) => (
                                     <MenuItem key={proj.id} value={proj.id.toString()}>
+                                        <Typography
+                                            component={"span"}
+                                            variant="body1"
+                                            className="f-14"
+                                            sx={{
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 1,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                maxWidth: 250,
+                                                wordBreak: "break-word",
+                                            }}
+                                        >
                                         {proj.name}
+                                        </Typography>
                                     </MenuItem>
                                 ))}
                             </Select>
@@ -390,7 +419,20 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                 const address = filteredAddresses.find((u) => u.id === Number(selected));
                                 return (
                                     <Box display="flex" alignItems="center" gap={1}>
-                                        <Typography sx={{ fontSize: '14px' }} component="span">
+                                        <Typography
+                                            component={"span"}
+                                            variant="body1"
+                                            className="f-14"
+                                            sx={{
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 1,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                maxWidth: 250,
+                                                wordBreak: "break-word",
+                                            }}
+                                        >
                                             {address?.name}
                                         </Typography>
                                     </Box>
@@ -438,7 +480,20 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                 filteredAddresses.map((adress) => (
                                     <MenuItem key={adress.id} value={adress.id.toString()}>
                                         <Box display="flex" alignItems="center" gap={1.5}>
-                                            <Typography component="span">
+                                            <Typography
+                                                component={"span"}
+                                                variant="body1"
+                                                className="f-14"
+                                                sx={{
+                                                    display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 1,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: 250,
+                                                    wordBreak: "break-word",
+                                                }}
+                                                >
                                                 {adress.name}
                                             </Typography>
                                         </Box>
@@ -448,34 +503,6 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                         </Select>
                     </FormControl>
                     </Box>
-                    {/* <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
-                        <Typography variant="body2" fontWeight={600} color="#1a1a1a">
-                            Address
-                        </Typography>
-                        <FormControl fullWidth size="small" disabled={!selectedProject}>
-                            <Select
-                                value={selectedAddress}
-                                onChange={(e) => setSelectedAddress(e.target.value)}
-                                displayEmpty
-                                sx={{
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
-                                }}
-                            >
-                                <MenuItem value="" disabled>
-                                    <span style={{ color: '#999' }}>
-                                        {selectedProject ? 'Select Address' : 'Select Project first'}
-                                    </span>
-                                </MenuItem>
-                                {filteredAddresses.map((addr) => (
-                                    <MenuItem key={addr.id} value={addr.id.toString()}>
-                                        {addr.name}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box> */}
 
                     {/* Category */}
                     <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
@@ -498,7 +525,22 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                 </MenuItem>
                                 {categories.map((cat) => (
                                     <MenuItem key={cat.id} value={cat.id.toString()}>
+                                        <Typography
+                                            component={"span"}
+                                            variant="body1"
+                                            className="f-14"
+                                            sx={{
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 1,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                maxWidth: 250,
+                                                wordBreak: "break-word",
+                                            }}
+                                        >
                                         {cat.name}
+                                        </Typography>
                                     </MenuItem>
                                 ))}
                             </Select>

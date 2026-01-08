@@ -576,7 +576,20 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                             >
                                                 {user?.first_name?.[0]?.toUpperCase()}
                                             </Avatar>
-                                            <Typography sx={{ fontSize: '14px' }} component="span">
+                                            <Typography
+                                                component={"span"}
+                                                variant="body1"
+                                                className="f-14"
+                                                sx={{
+                                                    display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 1,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: 250,
+                                                    wordBreak: "break-word",
+                                                }}
+                                            >
                                                 {getUserName(user || ({} as User))}
                                             </Typography>
                                         </Box>
@@ -630,7 +643,20 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                                 >
                                                     {user.first_name?.[0]?.toUpperCase()}
                                                 </Avatar>
-                                                <Typography component="span">
+                                                <Typography
+                                                    component={"span"}
+                                                    variant="body1"
+                                                    className="f-14"
+                                                    sx={{
+                                                        display: "-webkit-box",
+                                                        WebkitBoxOrient: "vertical",
+                                                        WebkitLineClamp: 1,
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        maxWidth: 250,
+                                                        wordBreak: "break-word",
+                                                    }}
+                                                >
                                                     {getUserName(user)}
                                                 </Typography>
                                             </Box>
@@ -705,7 +731,20 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                     leaves.map((leave) => (
                                         <MenuItem key={leave.id} value={leave.id.toString()}>
                                             <Box display="flex" alignItems="center" gap={1.5}>
-                                                <Typography component="span">
+                                                <Typography
+                                                    component={"span"}
+                                                    variant="body1"
+                                                    className="f-14"
+                                                    sx={{
+                                                        display: "-webkit-box",
+                                                        WebkitBoxOrient: "vertical",
+                                                        WebkitLineClamp: 1,
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        maxWidth: 250,
+                                                        wordBreak: "break-word",
+                                                    }}
+                                                >
                                                     {leave.name}
                                                 </Typography>
                                             </Box>
