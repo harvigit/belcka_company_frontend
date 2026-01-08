@@ -25,9 +25,9 @@ import { DateTime } from "luxon";
 interface CutDeleteConflictsProps {
     conflict: Conflict;
     index: number;
-    fetchTimeClockData: (start: string, end: string) => Promise<void>;
     startDate: string; 
-    endDate: string;   
+    endDate: string;
+    onClose: () => void;
 }
 
 interface CutPreviewRow {
@@ -89,7 +89,6 @@ const useMenuState = () => {
 const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                                                                    conflict,
                                                                    index,
-                                                                   fetchTimeClockData,
                                                                    startDate,
                                                                    endDate,
                                                                }) => {
@@ -296,9 +295,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
             }
 
             await api.post("/time-clock/cut-worklog", { cut_data: cutData });
-
-            await fetchTimeClockData(startDate, endDate);
-
+            
             setCutPreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
@@ -311,7 +308,6 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
     }, [
         selectedItem,
         prepareCutData,
-        fetchTimeClockData,
         startDate,
         endDate,
         handleMenuClose,
@@ -332,8 +328,6 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                 worklog_id: selectedItem.worklog_id,
             });
             
-            await fetchTimeClockData(startDate, endDate);
-            
             setDeletePreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
@@ -345,7 +339,6 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
         }
     }, [
         selectedItem,
-        fetchTimeClockData,
         startDate,
         endDate,
         handleMenuClose,

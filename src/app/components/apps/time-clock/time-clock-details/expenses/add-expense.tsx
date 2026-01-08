@@ -160,6 +160,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         e.preventDefault();
         setError(null);
 
+        console.log('formDataformData')
         if(selecteUser == true && !selectedUser){
             setError('Please select user.');
             return;
@@ -186,6 +187,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             formData.append('files', item.file);
         });
 
+        console.log(formData, 'formDataformDataformDataformData')
         try {
             setLoading(true);
             const response = await api.post('/expense/add-expense', formData, {
@@ -649,14 +651,14 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                     variant="contained"
                         disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
                         sx={{
-                        textTransform: "none",
-                        fontWeight: 500,
-                        bgcolor:"#1e4db7",
-                        color: "white",
-                        boxShadow: "none",
-                        px: 3,
-                            '&:hover': { bgcolor: '#173a8c' },
-                        '&:disabled': { bgcolor: '#e0e0e0' },
+                            textTransform: "none",
+                            fontWeight: 500,
+                            bgcolor:"#1e4db7",
+                            color: "white",
+                            boxShadow: "none",
+                            px: 3,
+                            '&:hover': { bgcolor: '#173a8c' }, 
+                            '&:disabled': { bgcolor: '#e0e0e0' },
                         }}
                     >
                         {loading ? <CircularProgress size={24} /> : "Add Expense"}

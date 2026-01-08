@@ -24,28 +24,9 @@ import {
 interface SplitDeleteCaseProps {
     conflict: Conflict;
     index: number;
-    fetchTimeClockData: (start: string, end: string) => Promise<void>;
     startDate: string;
     endDate: string;
-}
-
-interface SplitPreviewRow {
-    user_id: number;
-    worklog_id: number;
-    shift_name: string;
-    shift_id: number;
-    formatted_date: string;
-    date: string;
-    start: string;
-    end: string;
-    total: string;
-}
-
-interface DeletePreviewRow {
-    type: string;
-    start: string;
-    end: string;
-    total: string;
+    onClose: () => void;
 }
 
 const useMenuState = () => {
@@ -90,7 +71,6 @@ const useMenuState = () => {
 const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                                                             conflict,
                                                             index,
-                                                            fetchTimeClockData,
                                                             startDate,  
                                                             endDate
                                                          }) => {
@@ -268,7 +248,6 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                 split_data: splitPreview,
             });
             
-            await fetchTimeClockData(startDate, endDate);
             
             if (!response.data.IsSuccess) {
                 console.error('Failed to split worklog:', response.data.message);
@@ -279,7 +258,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
             console.error('Error saving split action:', error);
             handleMenuClose();
         }
-    }, [splitPreview, selectedItem, fetchTimeClockData, handleMenuClose]);
+    }, [splitPreview, selectedItem, handleMenuClose]);
 
     const handleCancelSplit = useCallback(() => {
         setSplitPreviewOpen(false);
@@ -296,13 +275,13 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
             await api.post('/time-clock/delete-worklog', {
                 worklog_id: selectedItem.worklog_id,
             });
-            await fetchTimeClockData(startDate, endDate);
+
             handleMenuClose();
         } catch (error) {
             console.error('Error saving delete action:', error);
             handleMenuClose();
         }
-    }, [selectedItem, fetchTimeClockData, handleMenuClose]);
+    }, [selectedItem, handleMenuClose]);
 
     const handleCancelDelete = useCallback(() => {
         setDeletePreviewOpen(false);

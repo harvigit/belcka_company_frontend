@@ -105,6 +105,9 @@ export interface ConflictItem {
 }
 
 export interface ConflictDetail {
+    user_id: number;
+    user_name: string;
+    user_thumb_image: string;
     formatted_date: string;
     date: string;
     items: ConflictItem[];

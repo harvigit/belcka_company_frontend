@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import api from '@/utils/axios';
-import {ConflictDetail, Shift, Project, TimeClockDetailResponse, LeaveRequestDetail} from '@/app/components/apps/time-clock/types/timeClock';
+import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
 import { TimeClock } from '@/app/components/apps/time-clock/time-clock';
 
 export const useTimeClockData = (user_id: any, currency: string) => {
@@ -27,15 +27,39 @@ export const useTimeClockData = (user_id: any, currency: string) => {
                 setData(response.data.info || []);
                 setHeaderDetail(response.data);
                 setPendingRequestCount(response.data.pending_request_count || 0);
-                setTotalConflicts(response.data.total_conflicts || 0);
-                setConflictDetails(response.data.conflicts || []);
-                fetchTimeClockResources(response.data.company_id);
                 setLeaveRequestCount(response.data.total_leave_requests || 0);
+
+                await fetchConflicts(start, end, user_id);
+
+                fetchTimeClockResources(response.data.company_id);
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
         }
     }, [user_id]);
+
+    const fetchConflicts = useCallback(async (start: Date, end: Date, userId?: any): Promise<void> => {
+        try {
+            const params: Record<string, string> = {
+                start_date: format(start, 'dd/MM/yyyy'),
+                end_date: format(end, 'dd/MM/yyyy'),
+            };
+            if (userId) {
+                params.user_id = userId;
+            }
+
+            const response = await api.get('/time-clock/conflicts', {params});
+
+            if (response.data.IsSuccess) {
+                setConflictDetails(response.data.conflicts || []);
+                setTotalConflicts(response.data.total_conflicts || 0);
+            }
+        } catch (error) {
+            console.error('Error fetching conflicts:', error);
+            setConflictDetails([]);
+            setTotalConflicts(0);
+        }
+    }, []);
 
     const fetchTimeClockResources = async (companyId: number): Promise<void> => {
         try {
@@ -63,5 +87,6 @@ export const useTimeClockData = (user_id: any, currency: string) => {
         shifts,
         projects,
         fetchTimeClockData,
+        fetchConflicts,
     };
 };

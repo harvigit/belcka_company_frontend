@@ -1479,7 +1479,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     conflictDetails={conflictDetails}
                     totalConflicts={totalConflicts}
                     onClose={closeConflictSidebar}
-                    fetchTimeClockData={() => fetchTimeClockData(startDate || defaultStart, endDate || defaultEnd)}
                     startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
                 />
