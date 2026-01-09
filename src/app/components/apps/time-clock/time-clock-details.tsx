@@ -31,6 +31,8 @@ import AddExpense from './time-clock-details/expenses/add-expense';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import { Stack } from '@mui/system';
 
+import ConfirmationDialog from './components/ConfirmationDialog';
+
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
 
@@ -152,6 +154,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
 
+    const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; actionType: 'lock' | 'unlock' | 'delete'; conflictCount: number; } | null>(null);
+    
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
@@ -984,6 +988,25 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
+    const getConflictsInSelectedRows = () => {
+        let conflictCount = 0;
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
+            return parseInt(rowId.replace('row-', ''));
+        });
+
+        selectedRowIndices.forEach((rowIndex) => {
+            const rowData = dailyData[rowIndex];
+            if (rowData && rowData.rowType === 'day') {
+                const dateKey: string | undefined = rowData.date ;
+                if (dateKey && conflictsByDate[dateKey]) {
+                    conflictCount += conflictsByDate[dateKey];
+                }
+            }
+        });
+
+        return conflictCount;
+    };
+
     const handleLockClick = () => {
         const timesheetIds: (string | number)[] = [];
         const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
@@ -1005,7 +1028,17 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
         });
 
-        if (timesheetIds.length > 0) {
+        if (timesheetIds.length === 0) return;
+
+        const conflictCount = getConflictsInSelectedRows();
+
+        if (conflictCount > 0) {
+            setConfirmDialog({
+                open: true,
+                actionType: 'lock',
+                conflictCount,
+            });
+        } else {
             toggleTimesheetStatus(timesheetIds, 'approve');
         }
     };
@@ -1031,8 +1064,148 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
         });
 
-        if (timesheetIds.length > 0) {
+        if (timesheetIds.length === 0) return;
+
+        const conflictCount = getConflictsInSelectedRows();
+
+        if (conflictCount > 0) {
+            setConfirmDialog({
+                open: true,
+                actionType: 'unlock',
+                conflictCount,
+            });
+        } else {
             toggleTimesheetStatus(timesheetIds, 'unapprove');
+        }
+    };
+
+    const handleDeleteWorklogs = async () => {
+        const worklogIds: string[] = [];
+
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
+            return parseInt(rowId.replace('row-', ''));
+        });
+
+        selectedRowIndices.forEach((rowIndex) => {
+            const rowData = dailyData[rowIndex];
+            if (rowData && rowData.rowType === 'day') {
+                if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
+                    rowData.rowsData.forEach((worklog: any) => {
+                        if (worklog.worklog_id) {
+                            worklogIds.push(worklog.worklog_id);
+                        }
+                    });
+                }
+            }
+        });
+
+        if (worklogIds.length === 0) return;
+
+        const conflictCount = getConflictsInSelectedRows();
+
+        if (conflictCount > 0) {
+            setConfirmDialog({
+                open: true,
+                actionType: 'delete',
+                conflictCount,
+            });
+        } else {
+            await proceedWithDelete(worklogIds);
+        }
+    };
+
+    const proceedWithDelete = async (worklogIds: string[]) => {
+        try {
+            const ids = worklogIds.join(',');
+            const response: AxiosResponse<{
+                IsSuccess: boolean
+            }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
+
+            if (response.data.IsSuccess) {
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                setSelectedRows(new Set());
+                onDataChange?.();
+            } else {
+                console.error(`Error deleting timesheets`);
+            }
+        } catch (error) {
+            console.error(`Error deleting timesheets:`, error);
+        }
+    };
+
+    const handleConfirmAction = async () => {
+        if (!confirmDialog) return;
+
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
+            return parseInt(rowId.replace('row-', ''));
+        });
+
+        setConfirmDialog(null);
+
+        switch (confirmDialog.actionType) {
+            case 'lock': {
+                const timesheetIds: (string | number)[] = [];
+                selectedRowIndices.forEach((rowIndex) => {
+                    const rowData = dailyData[rowIndex];
+                    if (rowData && rowData.rowType === 'day') {
+                        if (!rowData.rowsData && rowData.timesheet_light_id != null) {
+                            timesheetIds.push(rowData.timesheet_light_id);
+                        } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
+                            rowData.rowsData.forEach((worklog: any) => {
+                                if (worklog.timesheet_light_id) {
+                                    timesheetIds.push(worklog.timesheet_light_id);
+                                }
+                            });
+                        }
+                    }
+                });
+                if (timesheetIds.length > 0) {
+                    await toggleTimesheetStatus(timesheetIds, 'approve');
+                }
+                break;
+            }
+            case 'unlock': {
+                const timesheetIds: (string | number)[] = [];
+                selectedRowIndices.forEach((rowIndex) => {
+                    const rowData = dailyData[rowIndex];
+                    if (rowData && rowData.rowType === 'day') {
+                        if (!rowData.rowsData && rowData.timesheet_light_id) {
+                            timesheetIds.push(rowData.timesheet_light_id);
+                        } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
+                            rowData.rowsData.forEach((worklog: any) => {
+                                if (worklog.timesheet_light_id) {
+                                    timesheetIds.push(worklog.timesheet_light_id);
+                                }
+                            });
+                        }
+                    }
+                });
+                if (timesheetIds.length > 0) {
+                    await toggleTimesheetStatus(timesheetIds, 'unapprove');
+                }
+                break;
+            }
+            case 'delete': {
+                const worklogIds: string[] = [];
+                selectedRowIndices.forEach((rowIndex) => {
+                    const rowData = dailyData[rowIndex];
+                    if (rowData && rowData.rowType === 'day') {
+                        if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
+                            rowData.rowsData.forEach((worklog: any) => {
+                                if (worklog.worklog_id) {
+                                    worklogIds.push(worklog.worklog_id);
+                                }
+                            });
+                        }
+                    }
+                });
+                if (worklogIds.length > 0) {
+                    await proceedWithDelete(worklogIds);
+                }
+                break;
+            }
         }
     };
 
@@ -1059,48 +1232,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         });
 
         return {hasWorklogs};
-    };
-
-    const handleDeleteWorklogs = async () => {
-        const worklogIds: string[] = [];
-
-        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
-            return parseInt(rowId.replace('row-', ''));
-        });
-
-        selectedRowIndices.forEach((rowIndex) => {
-            const rowData = dailyData[rowIndex];
-            if (rowData && rowData.rowType === 'day') {
-                if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
-                    rowData.rowsData.forEach((worklog: any) => {
-                        if (worklog.worklog_id) {
-                            worklogIds.push(worklog.worklog_id);
-                        }
-                    });
-                }
-            }
-        });
-
-        if (worklogIds.length > 0) {
-            try {
-                const ids = worklogIds.join(',');
-                const response: AxiosResponse<{
-                    IsSuccess: boolean
-                }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
-
-                if (response.data.IsSuccess) {
-                    const defaultStartDate = startDate || defaultStart;
-                    const defaultEndDate = endDate || defaultEnd;
-                    await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                    setSelectedRows(new Set());
-                    onDataChange?.();
-                } else {
-                    console.error(`Error deleting timesheets`);
-                }
-            } catch (error) {
-                console.error(`Error deleting timesheets:`, error);
-            }
-        }
     };
     
     const handleDeleteRecord = async (id: string, type: RecordType) => {
@@ -1622,6 +1753,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     onUserChange={onUserChange}
                 />
             </Drawer>
+
+            {confirmDialog && (
+                <ConfirmationDialog
+                    open={confirmDialog.open}
+                    onClose={() => setConfirmDialog(null)}
+                    onConfirm={handleConfirmAction}
+                    title={confirmDialog.actionType === 'lock' ? 'Lock Records' : confirmDialog.actionType === 'unlock' ? 'Unlock Records' : 'Delete Records'}
+                    message={confirmDialog.actionType === 'lock' ? 'Are you sure you want to lock the selected records?' : confirmDialog.actionType === 'unlock' ? 'Are you sure you want to unlock the selected records?' : 'Are you sure you want to delete the selected records? This action cannot be undone.'}
+                    conflictCount={confirmDialog.conflictCount}
+                    actionType={confirmDialog.actionType}
+                />
+            )}
         </Box>
     );
 };

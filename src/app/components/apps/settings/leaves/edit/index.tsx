@@ -132,6 +132,7 @@ const EditLeave: React.FC<EditLeaveProps> = ({
                                 onChange={handleChange}
                                 variant="outlined"
                                 fullWidth
+                                inputProps={{ maxLength: 40 }}
                             />
 
                             <Stack mt={2}>

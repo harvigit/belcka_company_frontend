@@ -9,9 +9,7 @@ function IDCardContent() {
     const searchParams = useSearchParams();
     const userId = searchParams?.get('user_id');
     const token = searchParams?.get('token');
-
-    console.log('IDCardContent rendering:', { userId, token });
-
+    
     if (!userId) {
         return (
             <Box

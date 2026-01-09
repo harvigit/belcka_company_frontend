@@ -105,6 +105,7 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
                                 variant="outlined"
                                 fullWidth
                                 required
+                                inputProps={{ maxLength: 40 }}
                             />
 
                             <Stack mt={2}>

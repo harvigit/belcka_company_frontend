@@ -124,7 +124,6 @@ export default function PermissionSettings() {
     const savePermissions = async () => {
         setLoading(true);
         try {
-            console.log(permissions, 'permissionspermissionspermissions');
             const payload = {
                 permissions: permissions
                     .filter(perm => perm.is_web || perm.is_app)

@@ -10,6 +10,8 @@ import {
     Stack,
     Typography,
     CircularProgress,
+    useTheme,
+    useMediaQuery,
 } from '@mui/material';
 import axios from 'axios';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -50,6 +52,10 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
     const [error, setError] = useState<string | null>(null);
     const cardRef = useRef<HTMLDivElement | null>(null);
 
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isExtraSmall = useMediaQuery('(max-width:375px)');
+
     useEffect(() => {
         if (!userId) {
             setError('User ID is required');
@@ -67,7 +73,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
 
                 if (isPublicView && token) {
                     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-                    
+
                     res = await axios.get(`${apiUrl}user/view-digital-card`, {
                         params: { user_id: userId, token },
                     });
@@ -98,14 +104,25 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
 
     if (error) {
         return (
-            <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-                <DialogContent>
-                    <Box textAlign="center" py={4}>
-                        <CancelIcon sx={{ fontSize: 60, color: 'error.main', mb: 2 }} />
-                        <Typography color="error" variant="h6">
+            <Dialog
+                open={open}
+                onClose={onClose}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        margin: isMobile ? '16px' : '32px',
+                        width: isMobile ? 'calc(100% - 32px)' : '100%',
+                    }
+                }}
+            >
+                <DialogContent sx={{ padding: isMobile ? '16px' : '24px' }}>
+                    <Box textAlign="center" py={isMobile ? 2 : 4}>
+                        <CancelIcon sx={{ fontSize: isMobile ? 48 : 60, color: 'error.main', mb: 2 }} />
+                        <Typography color="error" variant={isMobile ? 'body1' : 'h6'} fontWeight={600}>
                             {error}
                         </Typography>
-                        <Typography color="text.secondary" variant="body2" mt={1}>
+                        <Typography color="text.secondary" variant="body2" mt={1} fontSize={isMobile ? '0.875rem' : '0.9rem'}>
                             The ID card link may be invalid or expired.
                         </Typography>
                     </Box>
@@ -116,11 +133,22 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
 
     if (loading || !cardData) {
         return (
-            <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-                <DialogContent>
-                    <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-                        <CircularProgress />
-                        <Typography ml={2}>Loading card...</Typography>
+            <Dialog
+                open={open}
+                onClose={onClose}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        margin: isMobile ? '16px' : '32px',
+                        width: isMobile ? 'calc(100% - 32px)' : '100%',
+                    }
+                }}
+            >
+                <DialogContent sx={{ padding: isMobile ? '16px' : '24px' }}>
+                    <Box display="flex" justifyContent="center" alignItems="center" p={isMobile ? 2 : 4}>
+                        <CircularProgress size={isMobile ? 32 : 40} />
+                        <Typography ml={2} fontSize={isMobile ? '0.9rem' : '1rem'}>Loading card...</Typography>
                     </Box>
                 </DialogContent>
             </Dialog>
@@ -128,16 +156,32 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
     }
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle>{cardData.name}&apos;s ID Card</DialogTitle>
-            <DialogContent>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="xs"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    margin: isMobile ? '8px' : '32px',
+                    width: isMobile ? 'calc(100% - 16px)' : '100%',
+                }
+            }}
+        >
+            <DialogTitle sx={{
+                padding: isMobile ? '12px 16px' : '16px 24px',
+                fontSize: isMobile ? '1.1rem' : '1.25rem'
+            }}>
+                {cardData.name}&apos;s ID Card
+            </DialogTitle>
+            <DialogContent sx={{ padding: isMobile ? '8px 16px 16px' : '16px 24px 24px' }}>
                 <Box
                     ref={cardRef}
                     sx={{
                         backgroundColor: '#d4ebf7',
-                        borderRadius: '16px',
-                        padding: '24px',
-                        border: '3px solid #4DA1FF',
+                        borderRadius: isMobile ? '12px' : '16px',
+                        padding: isMobile ? '16px' : '24px',
+                        border: isMobile ? '2px solid #4DA1FF' : '3px solid #4DA1FF',
                         maxWidth: '360px',
                         margin: '0 auto',
                         fontFamily: 'Inter, sans-serif',
@@ -150,79 +194,136 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
                                 component="img"
                                 src="/belcka.svg"
                                 alt="Belcka Logo"
-                                height={35}
+                                height={isMobile ? 28 : 35}
                             />
                         </Stack>
                     </Stack>
 
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
-                        <Box textAlign="left">
-                            <Typography color="#25384b" lineHeight={1} fontSize="35px" fontWeight={700}>
+                    <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        mt={isMobile ? 1.5 : 2}
+                        spacing={isMobile ? 1 : 2}
+                    >
+                        <Box textAlign="left" flex={1} minWidth={0}>
+                            <Typography
+                                color="#25384b"
+                                lineHeight={1.1}
+                                fontSize={isExtraSmall ? '24px' : isMobile ? '28px' : '35px'}
+                                fontWeight={700}
+                                sx={{ wordBreak: 'break-word' }}
+                            >
                                 {cardData.first_name}
                             </Typography>
-                            <Typography color="#25384b" lineHeight={1} fontSize="35px" fontWeight={700} my={1}>
+                            <Typography
+                                color="#25384b"
+                                lineHeight={1.1}
+                                fontSize={isExtraSmall ? '24px' : isMobile ? '28px' : '35px'}
+                                fontWeight={700}
+                                my={isMobile ? 0.5 : 1}
+                                sx={{ wordBreak: 'break-word' }}
+                            >
                                 {cardData.last_name}
                             </Typography>
                             {cardData.user_code && (
-                                <Typography my={1} fontSize="16px" color="#25384b" fontWeight={300}>
+                                <Typography
+                                    my={isMobile ? 0.5 : 1}
+                                    fontSize={isMobile ? '12px' : '16px'}
+                                    color="#25384b"
+                                    fontWeight={300}
+                                >
                                     USER CODE: {String(cardData.user_code)}
                                 </Typography>
                             )}
-                            <Typography fontSize="22px" color="#25384b" fontWeight={600}>
+                            <Typography
+                                fontSize={isExtraSmall ? '16px' : isMobile ? '18px' : '22px'}
+                                color="#25384b"
+                                fontWeight={600}
+                                sx={{ wordBreak: 'break-word' }}
+                            >
                                 {cardData.trade_name}
                             </Typography>
                         </Box>
 
                         <Avatar
                             src={cardData.user_image || '/images/users/user.png'}
-                            sx={{ width: '40%', height: '130px' }}
+                            sx={{
+                                width: isExtraSmall ? '80px' : isMobile ? '100px' : '130px',
+                                height: isExtraSmall ? '80px' : isMobile ? '100px' : '130px',
+                                flexShrink: 0
+                            }}
                         />
                     </Stack>
 
-                    <Stack direction="row" justifyContent="space-between" my={1}>
+                    <Stack direction="row" justifyContent="space-between" my={isMobile ? 0.5 : 1}>
                         <Box>
-                            <Typography fontSize="11px" color="#25384b" fontWeight={300}>
+                            <Typography
+                                fontSize={isMobile ? '10px' : '11px'}
+                                color="#25384b"
+                                fontWeight={300}
+                            >
                                 JOINED
                             </Typography>
-                            <Typography fontSize="14px">{cardData.joined_on}</Typography>
+                            <Typography fontSize={isMobile ? '12px' : '14px'}>
+                                {cardData.joined_on}
+                            </Typography>
                         </Box>
                     </Stack>
 
-                    <Typography my={1} fontWeight={700} color="#25384b" fontSize="22px" textAlign="left">
+                    <Typography
+                        my={isMobile ? 0.5 : 1}
+                        fontWeight={700}
+                        color="#25384b"
+                        fontSize={isExtraSmall ? '16px' : isMobile ? '18px' : '22px'}
+                        textAlign="left"
+                        sx={{ wordBreak: 'break-word' }}
+                    >
                         {cardData.company_name}
                     </Typography>
 
-                    <Box mt={2} display="flex" justifyContent="center">
+                    <Box mt={isMobile ? 1.5 : 2} display="flex" justifyContent="center">
                         <img
                             src={cardData.qr_code_url}
                             alt="QR Code"
-                            width={120}
-                            height={120}
+                            width={isMobile ? 100 : 120}
+                            height={isMobile ? 100 : 120}
                             style={{ objectFit: 'contain', borderRadius: 10 }}
                         />
                     </Box>
 
-                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" mt={2}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        justifyContent="center"
+                        alignItems="center"
+                        mt={isMobile ? 1.5 : 2}
+                    >
                         {!cardData.is_expired ? (
                             <>
-                                <CheckCircleIcon sx={{ color: 'green', fontSize: 25 }} />
-                                <Typography fontWeight={500}>Active</Typography>
+                                <CheckCircleIcon sx={{ color: 'green', fontSize: isMobile ? 20 : 25 }} />
+                                <Typography fontWeight={500} fontSize={isMobile ? '0.9rem' : '1rem'}>
+                                    Active
+                                </Typography>
                             </>
                         ) : (
                             <>
-                                <CancelIcon sx={{ color: 'red', fontSize: 25 }} />
-                                <Typography color="red" fontWeight={500}>Inactive</Typography>
+                                <CancelIcon sx={{ color: 'red', fontSize: isMobile ? 20 : 25 }} />
+                                <Typography color="red" fontWeight={500} fontSize={isMobile ? '0.9rem' : '1rem'}>
+                                    Inactive
+                                </Typography>
                             </>
                         )}
                     </Stack>
 
                     <Typography
                         variant="caption"
-                        mt={2}
+                        mt={isMobile ? 1.5 : 2}
                         textAlign="center"
                         display="block"
                         color="#25384b"
-                        fontSize="15px"
+                        fontSize={isMobile ? '12px' : '15px'}
+                        fontWeight={500}
                     >
                         TIME IS MONEY. CONTROL IT.
                     </Typography>

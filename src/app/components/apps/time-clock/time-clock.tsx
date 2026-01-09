@@ -73,6 +73,7 @@ import Link from 'next/link';
 import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
+import ConfirmationDialog from './components/ConfirmationDialog';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -230,10 +231,16 @@ const TimeClock = ({queryParams}: Props) => {
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
 
+    const [confirmDialog, setConfirmDialog] = useState<{
+        open: boolean;
+        actionType: 'lock' | 'unlock' | 'paid';
+        conflictCount: number;
+    } | null>(null);
+
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl(event.currentTarget);
     };
-    
+
     const handleClose = () => {
         setAnchorEl(null);
     };
@@ -282,7 +289,7 @@ const TimeClock = ({queryParams}: Props) => {
             console.error('Error fetching time clock data after closing add leave sidebar:', error);
         }
     };
-    
+
     const closeAddExpenseSidebar = async () => {
         setAddExpenseSidebar(false);
         try {
@@ -371,7 +378,7 @@ const TimeClock = ({queryParams}: Props) => {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }
     };
-    
+
     const handleDateRangeChange = (range: {
         from: Date | null;
         to: Date | null;
@@ -434,25 +441,25 @@ const TimeClock = ({queryParams}: Props) => {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-  const columns = [
-    {
-      id: "select",
-      header: ({ table }: any) => (
-        <Stack direction="row" alignItems="center" ml={0.5}>
-          <CustomCheckbox
-            className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
-            }
-            indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
-            }
-            onChange={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              const isChecked = e.target.checked;
+    const columns = [
+        {
+            id: 'select',
+            header: ({table}: any) => (
+                <Stack direction="row" alignItems="center" ml={0.5}>
+                    <CustomCheckbox
+                        className="header-checkbox"
+                        checked={
+                            selectedRowIds.size === filteredData.length &&
+                            filteredData.length > 0
+                        }
+                        indeterminate={
+                            selectedRowIds.size > 0 &&
+                            selectedRowIds.size < filteredData.length
+                        }
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const isChecked = e.target.checked;
 
                             if (isChecked) {
                                 setSelectedRowIds(
@@ -502,9 +509,9 @@ const TimeClock = ({queryParams}: Props) => {
         columnHelper.accessor('conflicts', {
             id: 'conflicts',
             header: () => (
-                <span style={{ display: 'block', textAlign: 'center' }} />
+                <span style={{display: 'block', textAlign: 'center'}}/>
             ),
-            cell: ({ row }) => {
+            cell: ({row}) => {
                 const userId = row.original.user_id;
 
                 const rowConflicts = (conflictDetails || []).filter(
@@ -541,7 +548,7 @@ const TimeClock = ({queryParams}: Props) => {
                                     },
                                 }}
                             >
-                                <IconExclamationCircle size={20} />
+                                <IconExclamationCircle size={20}/>
                             </IconButton>
                         </Tooltip>
                     </Stack>
@@ -550,7 +557,7 @@ const TimeClock = ({queryParams}: Props) => {
             size: 10,
             enableSorting: false,
             enableHiding: false,
-            meta: { align: 'center' },
+            meta: {align: 'center'},
         }),
 
         columnHelper.accessor('user_name', {
@@ -745,24 +752,6 @@ const TimeClock = ({queryParams}: Props) => {
         },
     });
 
-    const handleLock = async () => {
-        const timesheetIds: (number | string)[] = [];
-
-        // Only get timesheet IDs for SELECTED rows
-        filteredData.forEach((item) => {
-            if (selectedRowIds.has(item.user_id)) {
-                timesheetIds.push(item.timesheet_light_ids);
-            }
-        });
-
-        if (timesheetIds.length === 0) {
-            setErrorMessage('No valid timesheets selected for locking.');
-            return;
-        }
-
-        await toggleWeeklyTimesheetStatus(timesheetIds, 'approve');
-    };
-
     useEffect(() => {
         if (queryParams?.open) {
             setOpenLeaves(true);
@@ -834,10 +823,74 @@ const TimeClock = ({queryParams}: Props) => {
         }
     };
 
+    const handleConfirmAction = async () => {
+        if (!confirmDialog) return;
+
+        const timesheetIds: (number | string)[] = [];
+        filteredData.forEach((item) => {
+            if (selectedRowIds.has(item.user_id)) {
+                timesheetIds.push(item.timesheet_light_ids);
+            }
+        });
+
+        setConfirmDialog(null);
+
+        switch (confirmDialog.actionType) {
+            case 'lock':
+                await toggleWeeklyTimesheetStatus(timesheetIds, 'approve');
+                break;
+            case 'unlock':
+                await toggleWeeklyTimesheetStatus(timesheetIds, 'unapprove');
+                break;
+            case 'paid':
+                await proceedWithMarkAsPaid(timesheetIds);
+                break;
+        }
+    };
+
+    const getConflictsInSelectedRows = () => {
+        let conflictCount = 0;
+        filteredData.forEach((item) => {
+            if (selectedRowIds.has(item.user_id)) {
+                const userConflicts = (conflictDetails || []).filter(
+                    (conflict) => conflict.user_id === item.user_id
+                );
+                conflictCount += userConflicts.length;
+            }
+        });
+        return conflictCount;
+    };
+
+    const handleLock = async () => {
+        const timesheetIds: (number | string)[] = [];
+
+        filteredData.forEach((item) => {
+            if (selectedRowIds.has(item.user_id)) {
+                timesheetIds.push(item.timesheet_light_ids);
+            }
+        });
+
+        if (timesheetIds.length === 0) {
+            setErrorMessage('No valid timesheets selected for locking.');
+            return;
+        }
+
+        const conflictCount = getConflictsInSelectedRows();
+
+        if (conflictCount > 0) {
+            setConfirmDialog({
+                open: true,
+                actionType: 'lock',
+                conflictCount,
+            });
+        } else {
+            await toggleWeeklyTimesheetStatus(timesheetIds, 'approve');
+        }
+    };
+
     const handleUnlock = async () => {
         const timesheetIds: (number | string)[] = [];
 
-        // Only get timesheet IDs for SELECTED rows
         filteredData.forEach((item) => {
             if (selectedRowIds.has(item.user_id)) {
                 timesheetIds.push(item.timesheet_light_ids);
@@ -849,13 +902,22 @@ const TimeClock = ({queryParams}: Props) => {
             return;
         }
 
-        await toggleWeeklyTimesheetStatus(timesheetIds, 'unapprove');
+        const conflictCount = getConflictsInSelectedRows();
+
+        if (conflictCount > 0) {
+            setConfirmDialog({
+                open: true,
+                actionType: 'unlock',
+                conflictCount,
+            });
+        } else {
+            await toggleWeeklyTimesheetStatus(timesheetIds, 'unapprove');
+        }
     };
 
     const handleMarkAsPaid = async () => {
         const timesheetIds: (number | string)[] = [];
 
-        // Only get timesheet IDs for SELECTED rows
         filteredData.forEach((item) => {
             if (selectedRowIds.has(item.user_id)) {
                 timesheetIds.push(item.timesheet_light_ids);
@@ -867,12 +929,25 @@ const TimeClock = ({queryParams}: Props) => {
             return;
         }
 
+        const conflictCount = getConflictsInSelectedRows();
+
+        if (conflictCount > 0) {
+            setConfirmDialog({
+                open: true,
+                actionType: 'paid',
+                conflictCount,
+            });
+        } else {
+            await proceedWithMarkAsPaid(timesheetIds);
+        }
+    };
+
+    const proceedWithMarkAsPaid = async (timesheetIds: (number | string)[]) => {
         try {
             const ids = timesheetIds.join(',');
             const response = await api.post('/timesheet/paid', {ids});
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-
                 if (startDate && endDate) {
                     await fetchData(startDate, endDate);
                 }
@@ -880,7 +955,7 @@ const TimeClock = ({queryParams}: Props) => {
                 setHasDataChanged(true);
             }
         } catch (error) {
-            // setErrorMessage('Failed to mark timesheets as paid.');
+            setErrorMessage('Failed to mark timesheets as paid.');
         }
     };
 
@@ -1029,50 +1104,50 @@ const TimeClock = ({queryParams}: Props) => {
                                     Unlock
                                 </Button>
 
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  onClick={handleMarkAsPaid}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Paid
-                </Button>
-              </>
-            )}
-            <Button
-              size="small"
-              variant="outlined"
-              color="primary"
-              sx={{ textTransform: "none", fontWeight: 600 }}
-              onClick={handleAddClick}
-              endIcon={
-                openAddleave ? (
-                  <IconChevronUp size={20} />
-                ) : (
-                  <IconChevronDown size={20} />
-                )
-              }
-            >
-              <Typography sx={{ fontWeight: 600 }}>Add</Typography>
-            </Button>
-            <Menu
-              anchorEl={addDropDown}
-              open={openAddleave}
-              onClose={handleAddClose}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-            >
-              <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
-              <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
-              <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
-            </Menu>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="small"
+                                    onClick={handleMarkAsPaid}
+                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                >
+                                    Paid
+                                </Button>
+                            </>
+                        )}
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            sx={{textTransform: 'none', fontWeight: 600}}
+                            onClick={handleAddClick}
+                            endIcon={
+                                openAddleave ? (
+                                    <IconChevronUp size={20}/>
+                                ) : (
+                                    <IconChevronDown size={20}/>
+                                )
+                            }
+                        >
+                            <Typography sx={{fontWeight: 600}}>Add</Typography>
+                        </Button>
+                        <Menu
+                            anchorEl={addDropDown}
+                            open={openAddleave}
+                            onClose={handleAddClose}
+                            anchorOrigin={{
+                                vertical: 'bottom',
+                                horizontal: 'right',
+                            }}
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'right',
+                            }}
+                        >
+                            <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
+                            <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
+                            <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
+                        </Menu>
 
                         {hasAnyConflicts && (
                             <Button
@@ -1348,78 +1423,78 @@ const TimeClock = ({queryParams}: Props) => {
             </Box>
             <Divider/>
 
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">Page</Typography>
-            <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-            className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
+            <Stack
+                gap={1}
+                pr={3}
+                pt={1}
+                pl={3}
+                alignItems="center"
+                direction={{xs: 'column', sm: 'row'}}
+                justifyContent="space-between"
             >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Typography color="textSecondary" className="f-14">
+                        {table.getPrePaginationRowModel().rows.length} Rows
+                    </Typography>
+                </Box>
+                <Box
+                    sx={{
+                        display: {
+                            xs: 'block',
+                            sm: 'flex',
+                        },
+                    }}
+                    alignItems="center"
+                >
+                    <Stack direction="row" alignItems="center">
+                        <Typography color="textSecondary" className="f-14">Page</Typography>
+                        <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
+                            {table.getState().pagination.pageIndex + 1} of{' '}
+                            {table.getPageCount()}
+                        </Typography>
+                        <Typography color="textSecondary" ml={'3px'} className="f-14">
+                            {' '}
+                            | Entries :{' '}
+                        </Typography>
+                    </Stack>
+                    <Stack
+                        ml={'5px'}
+                        direction="row"
+                        alignItems="center"
+                        color="textSecondary"
+                    >
+                        <CustomSelect
+                            className="custom-select"
+                            value={table.getState().pagination.pageSize}
+                            onChange={(e: { target: { value: any } }) => {
+                                table.setPageSize(Number(e.target.value));
+                            }}
+                        >
+                            {[50, 100, 250, 500].map((pageSize) => (
+                                <MenuItem key={pageSize} value={pageSize}>
+                                    {pageSize}
+                                </MenuItem>
+                            ))}
+                        </CustomSelect>
+                        <IconButton
+                            size="small"
+                            sx={{width: '30px'}}
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            <IconChevronLeft/>
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            sx={{width: '30px'}}
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <IconChevronRight/>
+                        </IconButton>
+                    </Stack>
+                </Box>
+            </Stack>
 
             <Drawer
                 anchor="bottom"
@@ -1452,7 +1527,7 @@ const TimeClock = ({queryParams}: Props) => {
             <Snackbar
                 open={Boolean(successMessage || errorMessage)}
                 autoHideDuration={4000}
-                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                anchorOrigin={{vertical: 'top', horizontal: 'center'}}
                 onClose={(_, reason) => {
                     if (reason === 'clickaway') return;
                     setSuccessMessage(null);
@@ -1481,9 +1556,9 @@ const TimeClock = ({queryParams}: Props) => {
                             setSuccessMessage(null);
                             setErrorMessage(null);
                         }}
-                        sx={{ color: 'inherit' }}
+                        sx={{color: 'inherit'}}
                     >
-                        <IconX size={14} />
+                        <IconX size={14}/>
                     </IconButton>
                 </Box>
             </Snackbar>
@@ -1560,7 +1635,7 @@ const TimeClock = ({queryParams}: Props) => {
 
             {/*  Leave list */}
             <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={queryParams}/>
-            
+
             {/* Conflicts */}
             <Drawer
                 anchor="right"
@@ -1585,6 +1660,18 @@ const TimeClock = ({queryParams}: Props) => {
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
                 />
             </Drawer>
+
+            {confirmDialog && (
+                <ConfirmationDialog
+                    open={confirmDialog.open}
+                    onClose={() => setConfirmDialog(null)}
+                    onConfirm={handleConfirmAction}
+                    title={confirmDialog.actionType === 'lock' ? 'Lock Timesheets' : confirmDialog.actionType === 'unlock' ? 'Unlock Timesheets' : 'Mark as Paid'}
+                    message={confirmDialog.actionType === 'lock' ? 'Are you sure you want to lock the selected timesheets?' : confirmDialog.actionType === 'unlock' ? 'Are you sure you want to unlock the selected timesheets?' : 'Are you sure you want to mark the selected timesheets as paid?'}
+                    conflictCount={confirmDialog.conflictCount}
+                    actionType={confirmDialog.actionType}
+                />
+            )}
         </Box>
     );
 };
