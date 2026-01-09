@@ -71,20 +71,26 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     setFetchWork(false);
   };
 
-  const fetchFilterOptions = async () => {
-    try {
-      const res = await api.get(
-        `get-company-resources?flag=tradeList&company_id=${companyId}`
-      );
-      if (res.data?.IsSuccess) {
-        setFilterOptions(res.data.info || []);
-      } else {
-        setFilterOptions([]);
-      }
-    } catch {
-      setFilterOptions([]);
+useEffect(() => {
+  if (!tabData || tabData.length === 0) {
+    setFilterOptions([]);
+    return;
+  }
+
+  const uniqueTradesMap = new Map<number, any>();
+
+  tabData.forEach((item: any) => {
+    if (item.trade_id && !uniqueTradesMap.has(item.trade_id)) {
+      uniqueTradesMap.set(item.trade_id, {
+        id: item.trade_id,
+        name: item.trade_name,
+      });
     }
-  };
+  });
+
+  setFilterOptions(Array.from(uniqueTradesMap.values()));
+}, [tabData]);
+
   const formatHour = (val: string | number | null | undefined): string => {
     if (val === null || val === undefined) return "-";
     const num = parseFloat(val.toString());
@@ -105,7 +111,6 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
   useEffect(() => {
     if (addressId) {
       fetchWorkTabData();
-      fetchFilterOptions();
     }
   }, [addressId]);
 

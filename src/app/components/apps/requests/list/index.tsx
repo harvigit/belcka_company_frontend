@@ -386,7 +386,7 @@ export default function UserRequests({
                     >
                       <Box>
                         <Typography variant="h1" fontSize={"16px !important"}>
-                          {work.user_name}
+                          {work.user_name}:
                         </Typography>
                         <Typography variant="subtitle1">
                           {capitalize(work.message)}

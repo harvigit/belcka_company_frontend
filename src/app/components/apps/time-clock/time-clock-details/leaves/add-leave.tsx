@@ -653,7 +653,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                                         WebkitLineClamp: 1,
                                                         overflow: "hidden",
                                                         textOverflow: "ellipsis",
-                                                        maxWidth: 250,
+                                                        maxWidth: 450,
                                                         wordBreak: "break-word",
                                                     }}
                                                 >
