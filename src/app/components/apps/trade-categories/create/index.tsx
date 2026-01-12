@@ -89,6 +89,7 @@ const CreateTradeCategory: React.FC<CreateTradeCategoryProps> = ({
                   placeholder="Enter address name.."
                   value={formData.name}
                   onChange={handleChange}
+                  inputProps={{ maxLength: 30 }}
                   variant="outlined"
                   fullWidth
                 />

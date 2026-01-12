@@ -74,7 +74,16 @@ const Profile = () => {
           <Typography
             variant="h5"
             fontWeight="700"
+            className="f-14"
             sx={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 3,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              lineHeight: 1.25,
+              maxWidth: 150,
+              wordBreak: "break-word",
               ml: 1,
             }}
           >
@@ -111,7 +120,21 @@ const Profile = () => {
             sx={{ width: 95, height: 95 }}
           />
           <Box>
-            <Typography variant="h4" color="textPrimary">
+            <Typography
+              variant="h4"
+              color="textPrimary"
+              className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 3,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: 1.25,
+                maxWidth: 180,
+                wordBreak: "break-word",
+              }}
+            >
               {user?.first_name} {user?.last_name}
             </Typography>
             <Typography

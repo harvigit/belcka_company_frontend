@@ -32,6 +32,7 @@ import {
   List,
   ListItem,
   ListItemButton,
+  Tooltip,
 } from "@mui/material";
 import {
   flexRender,
@@ -49,6 +50,7 @@ import {
   IconChevronRight,
   IconDotsVertical,
   IconEdit,
+  IconPointFilled,
   IconProgress,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -141,6 +143,8 @@ const AddressesList = ({
   const [address, setAddress] = useState<any>(null);
   const [radius, setRadius] = useState(0);
   const fetched = useRef(false);
+  const [isIconHovered, setIsIconHovered] = useState(false);
+
   const isIEPostcode = (value: string) =>
     /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
 
@@ -174,6 +178,9 @@ const AddressesList = ({
   const [isSaving, setIsSaving] = useState(false);
   const [trade, setTrade] = useState<TradeList[]>([]);
 
+  const tooltipStyles = {
+    "& .MuiTooltip-arrow": { color: "#1a1f29" },
+  };
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -692,6 +699,7 @@ const AddressesList = ({
         id: "progress",
         header: () => "Progress",
         cell: (info) => {
+          const item = info.row.original;
           const statusInt = info.row.original.status_int;
           let color = "textPrimary";
           if (statusInt === 13) color = "#999999";
@@ -699,14 +707,56 @@ const AddressesList = ({
           else if (statusInt === 3) color = "#FF7F00";
 
           return (
-            <Typography
-              className="f-14"
-              color={color}
-              fontWeight={700}
-              sx={{ px: 1.5 }}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "fit-content",
+                minHeight: "32px",
+                px: "8px",
+                position: "relative",
+              }}
             >
-              {info.getValue() ?? "-"}
-            </Typography>
+              {item.edited_by && (
+                <Tooltip
+                  title={`Modified by ${item.editedBy} on ${dayjs(
+                    item.edited_at
+                  ).format("DD/MM/YYYY HH:mm")}`}
+                  arrow
+                  placement="top"
+                  sx={tooltipStyles}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      position: "absolute",
+                      left: "-10px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      display: "flex",
+                      alignItems: "center",
+                      zIndex: 1,
+                      "&:hover": {
+                        cursor: "pointer",
+                      },
+                    }}
+                    onMouseEnter={() => setIsIconHovered(true)}
+                    onMouseLeave={() => setIsIconHovered(false)}
+                  >
+                    <IconPointFilled size={18} style={{ color: "#ff9800" }} />
+                  </Box>
+                </Tooltip>
+              )}
+              <Typography
+                className="f-14"
+                color={color}
+                fontWeight={700}
+                sx={{ px: 1.5 }}
+              >
+                {info.getValue() ?? "-"}
+              </Typography>
+            </Box>
           );
         },
       }),

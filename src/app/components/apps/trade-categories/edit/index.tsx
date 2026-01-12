@@ -105,6 +105,7 @@ const EditTradeCategory: React.FC<EditTradeCategoryProps> = ({
                   placeholder="Enter address name.."
                   value={formData.name}
                   onChange={handleChange}
+                  inputProps={{ maxLength: 30 }}
                   variant="outlined"
                   fullWidth
                 />

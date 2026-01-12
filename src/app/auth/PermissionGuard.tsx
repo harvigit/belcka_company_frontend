@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Box, Button, Dialog, DialogContent, Typography } from "@mui/material";
+import { IconPlus } from "@tabler/icons-react";
+import { signOut, useSession } from "next-auth/react";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import { AxiosResponse } from "axios";
+
+import api from "@/utils/axios";
 import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission, hasAnyPermission } from "@/lib/permissions";
-import { Box, Button, Dialog, DialogContent, Typography } from "@mui/material";
-import api from "@/utils/axios";
-import { signOut, useSession } from "next-auth/react";
-import { IconPlus } from "@tabler/icons-react";
 import CreateTrade from "../components/apps/settings/company-trades/create";
-import { AxiosResponse } from "axios";
-import toast from "react-hot-toast";
-import Link from "next/link";
 import { User } from "next-auth";
 
 export default function PermissionGuard({
@@ -26,16 +27,18 @@ export default function PermissionGuard({
   const pathname = usePathname();
   const { permissions, loading } = usePermissions();
   const session = useSession();
+
   const user = session.data?.user as User & {
     company_id?: number | null;
     id: number;
     user_role_id: number;
   };
+
   const [profile, setProfile] = useState<any>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [showTradePopup, setShowTradePopup] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState<any>({
     id: 0,
@@ -57,15 +60,17 @@ export default function PermissionGuard({
   };
 
   useEffect(() => {
-    if (!user?.id || !user?.company_id) return;
-    getProfile();
+    if (user?.id && user?.company_id) {
+      getProfile();
+    }
   }, [user?.id, user?.company_id]);
 
   useEffect(() => {
     if (loading || !profile) return;
 
     const webPermissions = permissions.filter((p) => p.is_web);
-    if (webPermissions.length === 0) {
+
+    if (!webPermissions.length) {
       router.push("/");
       return;
     }
@@ -88,8 +93,8 @@ export default function PermissionGuard({
         : hasAnyPermission(permissions, requiredPermissions);
     }
 
-    if (!authorized && redirectTo) {
-      router.push(redirectTo);
+    if (!authorized) {
+      redirectTo && router.push(redirectTo);
       return;
     }
 
@@ -101,22 +106,22 @@ export default function PermissionGuard({
     setIsSaving(true);
 
     try {
-      const result: AxiosResponse<any> = await api.post(
+      const res: AxiosResponse<any> = await api.post(
         "trade/create-trade",
         formData
       );
 
-      if (result.data.IsSuccess) {
-        toast.success(result.data.message);
-        setFormData({ id: 0, name: "", trade_category_id: 0 });
-        getProfile();
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        setFormData({ id: 0, name: "", trade_category_id: "" });
         setShowTradePopup(false);
         setDrawerOpen(false);
+        getProfile();
       } else {
-        toast.error(result.data.message);
+        toast.error(res.data.message);
       }
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsSaving(false);
     }
@@ -124,41 +129,65 @@ export default function PermissionGuard({
 
   const userLogout = async () => {
     try {
-      const payload = {
-        user_id: user.id,
-      };
-      const result: AxiosResponse<any> = await api.post("logout", payload);
+      const res = await api.post("logout", { user_id: user.id });
 
-      if (result.data.IsSuccess) {
-        toast.success(result.data.message);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
         await signOut({ callbackUrl: "/auth" });
       } else {
-        toast.error(result.data.message);
+        toast.error(res.data.message);
       }
-    } catch (error) {
-      console.error(error);
-    } finally {
+    } catch (err) {
+      console.error(err);
     }
   };
+
+  if (loading) {
+    return <PermissionSkeleton />;
+  }
+
+  if (!isAuthorized) {
+    if (fallback) return <>{fallback}</>;
+  
+    return (
+      <Box
+        sx={{
+          minHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="h4" fontWeight={600}>
+          Access Denied
+        </Typography>
+        <Typography color="text.secondary">
+          You don&apos;t have permission to access this page.
+        </Typography>
+        <Button component={Link} href="/dashboard" variant="contained">
+          Go to Dashboard
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <>
       <Dialog open={showTradePopup && !drawerOpen} disableEscapeKeyDown>
         <DialogContent>
-          Your company doesn&apos;t have any trades yet. <br />
-          Please add a trade to continue.
-          <Box
-            display={"flex"}
-            justifyItems={"center"}
-            alignContent={"space-between"}
-            gap={2}
-          >
+          <Typography>
+            Your company doesn&apos;t have any trades yet.
+          </Typography>
+
+          <Box display="flex" gap={2} mt={2}>
             <Button
               fullWidth
               variant="outlined"
-              sx={{ mt: 2 }}
-              onClick={() => setDrawerOpen(true)}
               startIcon={<IconPlus size={18} />}
+              onClick={() => setDrawerOpen(true)}
             >
               Add Trade
             </Button>
@@ -167,7 +196,6 @@ export default function PermissionGuard({
               fullWidth
               color="error"
               variant="outlined"
-              sx={{ mt: 2 }}
               onClick={userLogout}
             >
               Logout
@@ -188,35 +216,7 @@ export default function PermissionGuard({
         />
       )}
 
-      {!isAuthorized ? (
-        fallback ?? (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "60vh",
-              textAlign: "center",
-              gap: 2,
-            }}
-          >
-            <Typography variant="h4" fontWeight={600}>
-              Access Denied
-            </Typography>
-            <Typography color="text.secondary">
-              You don&apos;t have permission to access this page.
-            </Typography>
-            <Button component={Link} href="/dashboard" variant="contained">
-              Go to Dashboard
-            </Button>
-          </Box>
-        )
-      ) : loading ? (
-        <PermissionSkeleton />
-      ) : (
-        children
-      )}
+      {children}
     </>
   );
 }
