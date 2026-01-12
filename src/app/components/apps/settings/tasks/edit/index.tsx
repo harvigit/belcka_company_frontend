@@ -206,6 +206,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
+                  inputProps={{ maxLength: 60 }}
                   fullWidth
                 />
 

@@ -113,6 +113,7 @@ const CreateTrade: React.FC<CreateTradeProps> = ({
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
+                  inputProps={{ maxLength: 50 }}
                   fullWidth
                 />
 

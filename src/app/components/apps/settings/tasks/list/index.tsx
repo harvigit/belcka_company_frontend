@@ -358,7 +358,21 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-14">{item.name ?? "-"}</Typography>
+              <Typography
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.15,
+                  wordBreak: "break-word",
+                  maxWidth: 250,
+                }}
+              >
+                {item.name ?? "-"}
+              </Typography>
             </Stack>
           </Stack>
         );
@@ -802,7 +816,7 @@ const TablePagination = () => {
 
       {/* Edit task */}
       <EditTask
-        key={selectedTaskId} 
+        key={selectedTaskId}
         open={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         id={selectedTaskId}
@@ -966,8 +980,15 @@ const TablePagination = () => {
           alignItems="center"
         >
           <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">Page</Typography>
-            <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
+            <Typography color="textSecondary" className="f-14">
+              Page
+            </Typography>
+            <Typography
+              color="textSecondary"
+              className="f-14"
+              fontWeight={600}
+              ml={1}
+            >
               {table.getState().pagination.pageIndex + 1} of{" "}
               {table.getPageCount()}
             </Typography>
@@ -983,7 +1004,7 @@ const TablePagination = () => {
             color="textSecondary"
           >
             <CustomSelect
-            className="custom-select"
+              className="custom-select"
               value={table.getState().pagination.pageSize}
               onChange={(e: { target: { value: any } }) => {
                 table.setPageSize(Number(e.target.value));
