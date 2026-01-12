@@ -828,7 +828,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
-                                                {/* Status Column */}
                                                 {visibleColumnConfigs.status?.visible && (
                                                     <TableCell
                                                         align="center"
@@ -843,52 +842,60 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             const statusText = log.status_text;
                                                             const statusColorFromApi = log.status_color;
 
+                                                            const statusUpdatedBy = log.status_updated_by_name || '--';
+                                                            const statusUpdatedAt = log.status_updated_at
+                                                                ? new Date(log.status_updated_at).toLocaleString('en-IN', {
+                                                                    dateStyle: 'medium',
+                                                                    timeStyle: 'short',
+                                                                })
+                                                                : '—';
+
+                                                            const tooltipStyles = {
+                                                                '& .MuiTooltip-arrow': { color: '#1a1f29' },
+                                                            };
+                                                            
+                                                            const tooltipTitle = `Status updated by ${statusUpdatedBy} on ${statusUpdatedAt}`;
+
                                                             if (!statusText || !statusColorFromApi) {
                                                                 return (
-                                                                    <Typography color="text.secondary" variant="body2">
-                                                                        -
-                                                                    </Typography>
+                                                                    <Tooltip title={tooltipTitle} arrow placement="top" sx={tooltipStyles}>
+                                                                        <Typography color="text.secondary" variant="body2">
+                                                                            —
+                                                                        </Typography>
+                                                                    </Tooltip>
                                                                 );
                                                             }
 
-                                                            const muiColors = [
-                                                                'success',
-                                                                'error',
-                                                                'warning',
-                                                                'primary',
-                                                                'info',
-                                                                'secondary',
-                                                            ] as const;
+                                                            const muiColors = ['success', 'error', 'warning', 'primary', 'info', 'secondary'] as const;
 
-                                                            if (muiColors.includes(statusColorFromApi as any)) {
-                                                                return (
-                                                                    <Chip
-                                                                        label={statusText}
-                                                                        color={statusColorFromApi as any}
-                                                                        size="small"
-                                                                        sx={{
-                                                                            height: 28,
-                                                                            fontWeight: 600,
-                                                                            fontSize: '0.75rem',
-                                                                            textTransform: 'capitalize',
-                                                                        }}
-                                                                    />
-                                                                );
-                                                            }
+                                                            const chipProps = {
+                                                                label: statusText,
+                                                                size: 'small' as const,
+                                                                sx: {
+                                                                    height: 28,
+                                                                    fontWeight: 600,
+                                                                    fontSize: '0.75rem',
+                                                                    textTransform: 'capitalize',
+                                                                },
+                                                            };
+
+                                                            const isMuiColor = muiColors.includes(statusColorFromApi as any);
 
                                                             return (
-                                                                <Chip
-                                                                    label={statusText}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        height: 28,
-                                                                        fontWeight: 600,
-                                                                        fontSize: '0.75rem',
-                                                                        backgroundColor: statusColorFromApi,
-                                                                        color: '#fff',
-                                                                        textTransform: 'capitalize',
-                                                                    }}
-                                                                />
+                                                                <Tooltip title={tooltipTitle} arrow placement="top" sx={tooltipStyles}>
+                                                                    {isMuiColor ? (
+                                                                        <Chip {...chipProps} color={statusColorFromApi as any} />
+                                                                    ) : (
+                                                                        <Chip
+                                                                            {...chipProps}
+                                                                            sx={{
+                                                                                ...chipProps.sx,
+                                                                                backgroundColor: statusColorFromApi,
+                                                                                color: '#fff',
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                </Tooltip>
                                                             );
                                                         })()}
                                                     </TableCell>

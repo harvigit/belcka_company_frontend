@@ -10,12 +10,15 @@ import {
     Stack,
     Typography,
     CircularProgress,
-    useTheme,
-    useMediaQuery,
+    Button,
 } from '@mui/material';
 import axios from 'axios';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
+/* ================= TYPES ================= */
 
 interface ApiDigitalCardInfo {
     is_expired: boolean;
@@ -40,21 +43,27 @@ interface DigitalIDCardProps {
     isPublicView?: boolean;
 }
 
+/* ================= CONSTANTS ================= */
+
+const CARD_WIDTH = 360;
+const CARD_HEIGHT = 560;
+
+/* ================= COMPONENT ================= */
+
 const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
                                                          open,
                                                          onClose,
                                                          userId,
                                                          token,
-                                                         isPublicView = false
+                                                         isPublicView = false,
                                                      }) => {
     const [cardData, setCardData] = useState<ApiDigitalCardInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
     const cardRef = useRef<HTMLDivElement | null>(null);
 
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isExtraSmall = useMediaQuery('(max-width:375px)');
+    /* ================= FETCH CARD ================= */
 
     useEffect(() => {
         if (!userId) {
@@ -64,7 +73,6 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
         }
 
         const fetchCardData = async () => {
-            console.log('Fetching card data...', { userId, token, isPublicView });
             setLoading(true);
             setError(null);
 
@@ -72,9 +80,9 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
                 let res;
 
                 if (isPublicView && token) {
-                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
-                    res = await axios.get(`${apiUrl}user/view-digital-card`, {
+                    const apiUrl =
+                        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+                    res = await axios.get(`${apiUrl}/user/view-digital-card`, {
                         params: { user_id: userId, token },
                     });
                 } else {
@@ -90,8 +98,11 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
                     setError(res.data?.message || 'Failed to load card');
                 }
             } catch (err: any) {
-                const errorMessage = err.response?.data?.message || err.message || 'Failed to load card';
-                setError(errorMessage);
+                setError(
+                    err.response?.data?.message ||
+                    err.message ||
+                    'Failed to load card',
+                );
             } finally {
                 setLoading(false);
             }
@@ -100,29 +111,102 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
         fetchCardData();
     }, [userId, token, isPublicView]);
 
+    /* ================= CONVERT IMAGES TO BASE64 ================= */
+
+    const convertImageToBase64 = (url: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => resolve(url); // Fallback to original URL
+            img.src = url;
+        });
+    };
+
+    /* ================= PDF DOWNLOAD ================= */
+
+    const handleDownloadPdf = async () => {
+        if (!cardRef.current || !cardData) return;
+
+        try {
+            // Pre-load and convert all images to base64
+            const logoImg = await convertImageToBase64('/belcka.svg');
+            const userImg = await convertImageToBase64(cardData.user_image || '/images/users/user.png');
+            const qrImg = await convertImageToBase64(cardData.qr_code_url);
+
+            // Temporarily replace images with base64
+            const cardElement = cardRef.current;
+            const logoElement = cardElement.querySelector('img[alt="Belcka Logo"]') as HTMLImageElement;
+            const avatarElement = cardElement.querySelector('.MuiAvatar-img') as HTMLImageElement;
+            const qrElement = cardElement.querySelector('img[alt="QR Code"]') as HTMLImageElement;
+
+            const originalLogoSrc = logoElement?.src;
+            const originalAvatarSrc = avatarElement?.src;
+            const originalQrSrc = qrElement?.src;
+
+            if (logoElement) logoElement.src = logoImg;
+            if (avatarElement) avatarElement.src = userImg;
+            if (qrElement) qrElement.src = qrImg;
+
+            // Wait for images to be applied
+            await new Promise((res) => setTimeout(res, 300));
+
+            // Capture with html2canvas
+            const canvas = await html2canvas(cardElement, {
+                scale: 3,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#d4ebf7',
+                logging: false,
+                imageTimeout: 0,
+                width: CARD_WIDTH,
+                height: CARD_HEIGHT,
+                windowWidth: CARD_WIDTH,
+                windowHeight: CARD_HEIGHT,
+            });
+
+            // Restore original images
+            if (logoElement && originalLogoSrc) logoElement.src = originalLogoSrc;
+            if (avatarElement && originalAvatarSrc) avatarElement.src = originalAvatarSrc;
+            if (qrElement && originalQrSrc) qrElement.src = originalQrSrc;
+
+            // Generate PDF
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [CARD_WIDTH, CARD_HEIGHT],
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, CARD_WIDTH, CARD_HEIGHT);
+            pdf.save(`${cardData.first_name}_${cardData.last_name}_ID_Card.pdf`);
+        } catch (err) {
+            console.error('PDF generation error:', err);
+            alert('Failed to generate PDF. Please try again.');
+        }
+    };
+
     if (!open) return null;
+
+    /* ================= ERROR ================= */
 
     if (error) {
         return (
-            <Dialog
-                open={open}
-                onClose={onClose}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        margin: isMobile ? '16px' : '32px',
-                        width: isMobile ? 'calc(100% - 32px)' : '100%',
-                    }
-                }}
-            >
-                <DialogContent sx={{ padding: isMobile ? '16px' : '24px' }}>
-                    <Box textAlign="center" py={isMobile ? 2 : 4}>
-                        <CancelIcon sx={{ fontSize: isMobile ? 48 : 60, color: 'error.main', mb: 2 }} />
-                        <Typography color="error" variant={isMobile ? 'body1' : 'h6'} fontWeight={600}>
+            <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+                <DialogContent>
+                    <Box textAlign="center" py={4}>
+                        <CancelIcon sx={{ fontSize: 60, color: 'error.main', mb: 2 }} />
+                        <Typography color="error" variant="h6" fontWeight={600}>
                             {error}
                         </Typography>
-                        <Typography color="text.secondary" variant="body2" mt={1} fontSize={isMobile ? '0.875rem' : '0.9rem'}>
+                        <Typography color="text.secondary" variant="body2" mt={1}>
                             The ID card link may be invalid or expired.
                         </Typography>
                     </Box>
@@ -131,202 +215,188 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
         );
     }
 
+    /* ================= LOADING ================= */
+
     if (loading || !cardData) {
         return (
-            <Dialog
-                open={open}
-                onClose={onClose}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        margin: isMobile ? '16px' : '32px',
-                        width: isMobile ? 'calc(100% - 32px)' : '100%',
-                    }
-                }}
-            >
-                <DialogContent sx={{ padding: isMobile ? '16px' : '24px' }}>
-                    <Box display="flex" justifyContent="center" alignItems="center" p={isMobile ? 2 : 4}>
-                        <CircularProgress size={isMobile ? 32 : 40} />
-                        <Typography ml={2} fontSize={isMobile ? '0.9rem' : '1rem'}>Loading card...</Typography>
+            <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+                <DialogContent>
+                    <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+                        <CircularProgress />
+                        <Typography ml={2}>Loading card...</Typography>
                     </Box>
                 </DialogContent>
             </Dialog>
         );
     }
 
+    /* ================= MAIN VIEW ================= */
+
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="xs"
-            fullWidth
-            PaperProps={{
-                sx: {
-                    margin: isMobile ? '8px' : '32px',
-                    width: isMobile ? 'calc(100% - 16px)' : '100%',
-                }
-            }}
-        >
-            <DialogTitle sx={{
-                padding: isMobile ? '12px 16px' : '16px 24px',
-                fontSize: isMobile ? '1.1rem' : '1.25rem'
-            }}>
-                {cardData.name}&apos;s ID Card
-            </DialogTitle>
-            <DialogContent sx={{ padding: isMobile ? '8px 16px 16px' : '16px 24px 24px' }}>
+        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+            <DialogTitle>{cardData.name}&apos;s ID Card</DialogTitle>
+
+            <DialogContent>
+                {/* ================= CARD ================= */}
                 <Box
                     ref={cardRef}
                     sx={{
+                        width: `${CARD_WIDTH}px`,
+                        height: `${CARD_HEIGHT}px`,
                         backgroundColor: '#d4ebf7',
-                        borderRadius: isMobile ? '12px' : '16px',
-                        padding: isMobile ? '16px' : '24px',
-                        border: isMobile ? '2px solid #4DA1FF' : '3px solid #4DA1FF',
-                        maxWidth: '360px',
+                        borderRadius: '12px',
+                        padding: '24px',
+                        border: '3px solid #4DA1FF',
                         margin: '0 auto',
                         fontFamily: 'Inter, sans-serif',
-                        boxShadow: 'inset 0 0 30px #abcbdb',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        boxSizing: 'border-box',
                     }}
                 >
-                    <Stack>
-                        <Stack direction="row" justifyContent="center" spacing={1}>
-                            <Box
-                                component="img"
-                                src="/belcka.svg"
-                                alt="Belcka Logo"
-                                height={isMobile ? 28 : 35}
-                            />
-                        </Stack>
-                    </Stack>
-
-                    <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        mt={isMobile ? 1.5 : 2}
-                        spacing={isMobile ? 1 : 2}
+                    {/* Logo */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            minHeight: '32px',
+                        }}
                     >
-                        <Box textAlign="left" flex={1} minWidth={0}>
-                            <Typography
-                                color="#25384b"
-                                lineHeight={1.1}
-                                fontSize={isExtraSmall ? '24px' : isMobile ? '28px' : '35px'}
-                                fontWeight={700}
-                                sx={{ wordBreak: 'break-word' }}
-                            >
+                        <img
+                            src="/belcka.svg"
+                            alt="Belcka Logo"
+                            style={{
+                                height: '32px',
+                                width: 'auto',
+                                objectFit: 'contain',
+                                display: 'block',
+                            }}
+                        />
+                    </Box>
+
+                    {/* User Info */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            gap: '16px',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <Box sx={{ flex: 1 }}>
+                            <Typography sx={{ fontSize: '26px', fontWeight: 700, lineHeight: 1.2 }}>
                                 {cardData.first_name}
                             </Typography>
-                            <Typography
-                                color="#25384b"
-                                lineHeight={1.1}
-                                fontSize={isExtraSmall ? '24px' : isMobile ? '28px' : '35px'}
-                                fontWeight={700}
-                                my={isMobile ? 0.5 : 1}
-                                sx={{ wordBreak: 'break-word' }}
-                            >
+                            <Typography sx={{ fontSize: '26px', fontWeight: 700, lineHeight: 1.2 }}>
                                 {cardData.last_name}
                             </Typography>
-                            {cardData.user_code && (
-                                <Typography
-                                    my={isMobile ? 0.5 : 1}
-                                    fontSize={isMobile ? '12px' : '16px'}
-                                    color="#25384b"
-                                    fontWeight={300}
-                                >
-                                    USER CODE: {String(cardData.user_code)}
-                                </Typography>
-                            )}
-                            <Typography
-                                fontSize={isExtraSmall ? '16px' : isMobile ? '18px' : '22px'}
-                                color="#25384b"
-                                fontWeight={600}
-                                sx={{ wordBreak: 'break-word' }}
-                            >
+
+                            <Typography sx={{ fontSize: '12px', marginTop: '8px' }}>
+                                USER CODE: {cardData.user_code}
+                            </Typography>
+
+                            <Typography sx={{ fontSize: '16px', fontWeight: 600 }}>
                                 {cardData.trade_name}
                             </Typography>
                         </Box>
 
-                        <Avatar
-                            src={cardData.user_image || '/images/users/user.png'}
+                        <Box
                             sx={{
-                                width: isExtraSmall ? '80px' : isMobile ? '100px' : '130px',
-                                height: isExtraSmall ? '80px' : isMobile ? '100px' : '130px',
-                                flexShrink: 0
+                                width: '90px',
+                                height: '90px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
+                                flexShrink: 0,
                             }}
-                        />
-                    </Stack>
-
-                    <Stack direction="row" justifyContent="space-between" my={isMobile ? 0.5 : 1}>
-                        <Box>
-                            <Typography
-                                fontSize={isMobile ? '10px' : '11px'}
-                                color="#25384b"
-                                fontWeight={300}
-                            >
-                                JOINED
-                            </Typography>
-                            <Typography fontSize={isMobile ? '12px' : '14px'}>
-                                {cardData.joined_on}
-                            </Typography>
+                        >
+                            <img
+                                className="MuiAvatar-img"
+                                src={cardData.user_image || '/images/users/user.png'}
+                                alt="User"
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                }}
+                            />
                         </Box>
-                    </Stack>
+                    </Box>
 
-                    <Typography
-                        my={isMobile ? 0.5 : 1}
-                        fontWeight={700}
-                        color="#25384b"
-                        fontSize={isExtraSmall ? '16px' : isMobile ? '18px' : '22px'}
-                        textAlign="left"
-                        sx={{ wordBreak: 'break-word' }}
-                    >
+                    {/* Company */}
+                    <Typography sx={{ fontWeight: 700, fontSize: '14px' }}>
                         {cardData.company_name}
                     </Typography>
 
-                    <Box mt={isMobile ? 1.5 : 2} display="flex" justifyContent="center">
-                        <img
-                            src={cardData.qr_code_url}
-                            alt="QR Code"
-                            width={isMobile ? 100 : 120}
-                            height={isMobile ? 100 : 120}
-                            style={{ objectFit: 'contain', borderRadius: 10 }}
-                        />
+                    {/* QR */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <Box
+                            sx={{
+                                background: '#fff',
+                                padding: '8px',
+                                borderRadius: '4px',
+                            }}
+                        >
+                            <img
+                                src={cardData.qr_code_url}
+                                alt="QR Code"
+                                style={{
+                                    width: '120px',
+                                    height: '120px',
+                                    display: 'block',
+                                }}
+                            />
+                        </Box>
                     </Box>
 
-                    <Stack
-                        direction="row"
-                        spacing={1}
-                        justifyContent="center"
-                        alignItems="center"
-                        mt={isMobile ? 1.5 : 2}
+                    {/* Status */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            alignItems: 'center',
+                        }}
                     >
                         {!cardData.is_expired ? (
                             <>
-                                <CheckCircleIcon sx={{ color: 'green', fontSize: isMobile ? 20 : 25 }} />
-                                <Typography fontWeight={500} fontSize={isMobile ? '0.9rem' : '1rem'}>
-                                    Active
-                                </Typography>
+                                <CheckCircleIcon sx={{ fontSize: '20px', color: '#4caf50' }} />
+                                <Typography sx={{ fontSize: '14px' }}>Active</Typography>
                             </>
                         ) : (
                             <>
-                                <CancelIcon sx={{ color: 'red', fontSize: isMobile ? 20 : 25 }} />
-                                <Typography color="red" fontWeight={500} fontSize={isMobile ? '0.9rem' : '1rem'}>
+                                <CancelIcon sx={{ fontSize: '20px', color: '#f44336' }} />
+                                <Typography sx={{ fontSize: '14px', color: '#f44336' }}>
                                     Inactive
                                 </Typography>
                             </>
                         )}
-                    </Stack>
+                    </Box>
 
+                    {/* Footer */}
                     <Typography
-                        variant="caption"
-                        mt={isMobile ? 1.5 : 2}
-                        textAlign="center"
-                        display="block"
-                        color="#25384b"
-                        fontSize={isMobile ? '12px' : '15px'}
-                        fontWeight={500}
+                        sx={{
+                            textAlign: 'center',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
                     >
                         TIME IS MONEY. CONTROL IT.
                     </Typography>
+                </Box>
+
+                {/* Download */}
+                <Box mt={3} display="flex" justifyContent="flex-end">
+                    <Button
+                        onClick={handleDownloadPdf}
+                        variant="contained"
+                        color="primary"
+                    >
+                        Save PDF
+                    </Button>
                 </Box>
             </DialogContent>
         </Dialog>

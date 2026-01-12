@@ -733,16 +733,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             });
         }
     };
-    
+
     const dailyData = useMemo<DailyBreakdown[]>(() => {
         if (!data || data.length === 0) {
             return [];
         }
 
         return data.flatMap((week: any) => {
-            const weekRows: DailyBreakdown[] = [];
-
-            weekRows.push({
+            const weekRows: DailyBreakdown[] = [{
                 isMoreThanWork: false,
                 isLessThanWork: false,
                 is_requested: false,
@@ -755,39 +753,33 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 weekLabel: week.week_range,
                 weeklyTotalHours: formatHour(week.weekly_total_hours),
                 weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`
-            });
+            }];
 
-            const dayRows = (week.days || []).flatMap((day: any) => {
-                let filteredWorklogs = (day.worklogs || []);
+            const filteredDayRows = (week.days || []).flatMap((day: any) => {
+                let worklogs = day.worklogs || [];
 
+                // Apply filter
                 if (filterValue === 'lock') {
-                    filteredWorklogs = filteredWorklogs.filter(
-                        (log: any) => log.status === '6' || log.status === 6
-                    );
+                    worklogs = worklogs.filter((log: any) => log.status === '6' || log.status === 6);
                 } else if (filterValue === 'unlock') {
-                    filteredWorklogs = filteredWorklogs.filter(
-                        (log: any) => log.status === '7' || log.status === 7
-                    );
+                    worklogs = worklogs.filter((log: any) => log.status === '7' || log.status === 7);
                 } else if (filterValue === 'paid') {
-                    filteredWorklogs = filteredWorklogs.filter(
-                        (log: any) => log.status === '9' || log.status === 9
-                    );
+                    worklogs = worklogs.filter((log: any) => log.status === '9' || log.status === 9);
                 } else if (filterValue === 'leave') {
-                    filteredWorklogs = filteredWorklogs.filter(
-                        (log: any) => log.type === 'leave'
-                    );
+                    worklogs = worklogs.filter((log: any) => log.type === 'leave');
                 }
 
-                const hasWorklogs = filteredWorklogs.length > 0;
+                const isFilterActive = ['lock', 'unlock', 'paid', 'leave'].includes(filterValue);
+                if (isFilterActive && worklogs.length === 0) {
+                    return [];
+                }
+
+                const hasWorklogs = worklogs.length > 0;
 
                 if (hasWorklogs) {
-                    const totalPayableAmount = filteredWorklogs.reduce((sum: number, log: any) => {
+                    const totalPayableAmount = worklogs.reduce((sum: number, log: any) => {
                         return sum + (parseFloat(log.payable_amount) || 0);
                     }, 0);
-
-                    // const totalExpenseAmount = filteredWorklogs.reduce((sum: number, log: any) => {
-                    //     return sum + (parseFloat(log.total_expense_amount) || 0);
-                    // }, 0);
 
                     return [{
                         rowType: 'day' as const,
@@ -803,8 +795,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         totalHours: '--',
                         penaltyHours: '--',
                         dailyTotal: formatHour(day.daily_total),
-                        // expenseAmount: `${currency}${totalExpenseAmount.toFixed(2)}`,
-                        payableAmount: `${currency}${totalPayableAmount.toFixed(2)}`,
+                        payableAmount: `${currency}${day.daily_payyable_amount}`,
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
                         managerNotes: day.manager_notes || '--',
@@ -816,7 +807,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         parsedDate: parseDate(day.date),
                         address: '--',
                         check_out: '--',
-                        rowsData: filteredWorklogs,
+                        rowsData: worklogs,          
                         rowSpan: 1,
                         status: day.status,
                         is_requested: false,
@@ -838,7 +829,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     totalHours: '--',
                     penaltyHours: '--',
                     dailyTotal: '--',
-                    // expenseAmount: '--',
                     payableAmount: '--',
                     regular: '--',
                     employeeNotes: '--',
@@ -860,7 +850,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 }];
             });
 
-            weekRows.push(...dayRows);
+            weekRows.push(...filteredDayRows);
             return weekRows;
         });
     }, [data, currency, filterValue]);
