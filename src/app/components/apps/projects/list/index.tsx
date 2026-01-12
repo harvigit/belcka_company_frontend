@@ -93,6 +93,9 @@ export type ProjectList = {
   status_text: string;
   check_ins: number;
   image_count: number;
+  edited_by?: string | null;
+  edited_at?: string | null;
+  editedBy?: string | null;
 };
 
 interface ProjectListingProps {
