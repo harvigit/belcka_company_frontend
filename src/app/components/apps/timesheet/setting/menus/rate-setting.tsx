@@ -6,7 +6,6 @@ import {
   Divider,
   MenuItem,
   Select,
-  Switch,
   Typography,
   Dialog,
   DialogActions,
@@ -379,7 +378,7 @@ const RateSetting = () => {
                     <MenuItem value="view">View only</MenuItem>
                     <MenuItem value="view_edit">View & Edit</MenuItem>
                   </Select>
-                  {user?.id && (
+                  {!loading && (
                     <IconButton
                       edge="end"
                       disabled={loading}
