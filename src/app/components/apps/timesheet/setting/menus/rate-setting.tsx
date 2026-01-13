@@ -65,6 +65,7 @@ const RateSetting = () => {
 
   // Fetch users with pay rates
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const res = await api.get(
         `setting/payrate-users?company_id=${user.company_id}`
@@ -78,6 +79,7 @@ const RateSetting = () => {
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
+    setLoading(false);
   };
 
   useEffect(() => {

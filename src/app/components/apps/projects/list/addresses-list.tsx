@@ -103,6 +103,14 @@ interface Boundary {
   radius: number;
 }
 
+interface ClickToEditProgressProps {
+  value: string | number | null | undefined;
+  rowId: number;
+  statusInt: number;
+  editedBy?: string | null;
+  editedAt?: string | null;
+}
+
 type PostcoderAddress = {
   summaryline: string;
   addressline1: string;
@@ -603,22 +611,18 @@ const AddressesList = ({
     return Number(value.replace("%", ""));
   };
 
-  const ClickToEditProgress = ({
+  const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
     value,
     rowId,
     statusInt,
     editedBy,
     editedAt,
-  }: {
-    value: string | null | undefined;
-    rowId: number;
-    statusInt: number;
-    editedBy?: string | null;
-    editedAt?: string | null;
   }) => {
-    const numericValue = parseProgress(value);
+    const numericValue = value ? parseProgress(value) : 0;
+
     const [localValue, setLocalValue] = React.useState(numericValue);
     const [isEditing, setIsEditing] = React.useState(false);
+    const [isHoveringValue, setIsHoveringValue] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
 
     let color = "textPrimary";
@@ -626,19 +630,19 @@ const AddressesList = ({
     else if (statusInt === 4) color = "#32A852";
     else if (statusInt === 3) color = "#FF7F00";
 
+    const canEdit = user.user_role_id === 1;
+
     const saveProgress = async () => {
       const clampedValue = Math.min(100, Math.max(0, localValue));
 
       if (clampedValue === numericValue) {
         setIsEditing(false);
-        setLocalValue(numericValue);
         return;
       }
 
       try {
         setLoading(true);
         const payload = { id: rowId, progress: clampedValue };
-
         const response = await api.put(
           "address/change-address-progress",
           payload
@@ -654,112 +658,74 @@ const AddressesList = ({
       } finally {
         setLoading(false);
         setIsEditing(false);
+        setIsHoveringValue(false);
       }
     };
 
-    if (user.user_role_id === 1) {
-      return isEditing ? (
-        <TextField
-          type="number"
-          size="small"
-          value={localValue}
-          disabled={loading}
-          inputProps={{ min: 0, max: 100 }}
-          onChange={(e) => {
-            let val = Number(e.target.value);
-            if (isNaN(val)) val = 0;
-            setLocalValue(val);
-          }}
-          onBlur={saveProgress}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") saveProgress();
-          }}
-          sx={{ width: 70, "& input": { textAlign: "center" } }}
-          autoFocus
-        />
-      ) : (
-        <Box
-          sx={{ display: "flex", alignItems: "center", position: "relative" }}
+    const Badge = () =>
+      editedBy && editedAt ? (
+        <Tooltip
+          title={`Modified by ${editedBy} on ${dayjs(editedAt).format(
+            "DD/MM/YYYY HH:mm"
+          )}`}
+          arrow
+          placement="top"
         >
-          {editedBy && editedAt && (
-            <Tooltip
-              title={`Modified by ${editedBy} on ${dayjs(editedAt).format(
-                "DD/MM/YYYY HH:mm"
-              )}`}
-              arrow
-              placement="top"
-              sx={tooltipStyles}
-            >
-              <Box
-                component="span"
-                sx={{
-                  position: "absolute",
-                  left: "-10px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  display: "flex",
-                  alignItems: "center",
-                  "&:hover": { cursor: "pointer" },
-                }}
-              >
-                <IconPointFilled size={18} style={{ color: "#ff9800" }} />
-              </Box>
-            </Tooltip>
-          )}
+          <Box
+            component="span"
+            sx={{
+              position: "absolute",
+              left: "-10px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <IconPointFilled size={16} style={{ color: "#ff9800" }} />
+          </Box>
+        </Tooltip>
+      ) : null;
 
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", position: "relative" }}>
+        <Badge />
+
+        {canEdit && (isHoveringValue || isEditing) ? (
+          <TextField
+            type="number"
+            size="small"
+            value={localValue}
+            disabled={loading}
+            inputProps={{ min: 0, max: 100 }}
+            onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
+            onFocus={() => setIsEditing(true)}
+            onBlur={saveProgress}
+            onKeyDown={(e) => e.key === "Enter" && saveProgress()}
+            sx={{
+              width: 60,
+              "& .MuiInputBase-input": {
+                textAlign: "center",
+                p: "6px",
+              },
+            }}
+            autoFocus
+          />
+        ) : (
           <Typography
             className="f-14"
             fontWeight={700}
             color={color}
-            sx={{ px: 1.5, cursor: "pointer" }}
-            onClick={() => setIsEditing(true)}
+            sx={{ px: 1.5, cursor: canEdit ? "pointer" : "default" }}
+            onMouseEnter={() => canEdit && setIsHoveringValue(true)}
+            onMouseLeave={() => !isEditing && setIsHoveringValue(false)}
+            onClick={() => canEdit && setIsEditing(true)}
           >
-            {Math.min(100, Math.max(0, localValue))}%
+            {value}
           </Typography>
-        </Box>
-      );
-    } else {
-      return (
-        <Box
-          sx={{ display: "flex", alignItems: "center", position: "relative" }}
-        >
-          {editedBy && editedAt && (
-            <Tooltip
-              title={`Modified by ${editedBy} on ${dayjs(editedAt).format(
-                "DD/MM/YYYY HH:mm"
-              )}`}
-              arrow
-              placement="top"
-              sx={tooltipStyles}
-            >
-              <Box
-                component="span"
-                sx={{
-                  position: "absolute",
-                  left: "-10px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  display: "flex",
-                  alignItems: "center",
-                  "&:hover": { cursor: "pointer" },
-                }}
-              >
-                <IconPointFilled size={18} style={{ color: "#ff9800" }} />
-              </Box>
-            </Tooltip>
-          )}
-
-          <Typography
-            className="f-14"
-            fontWeight={700}
-            color={color}
-            sx={{ px: 1.5 }}
-          >
-            {Math.min(100, Math.max(0, localValue))}%
-          </Typography>
-        </Box>
-      );
-    }
+        )}
+      </Box>
+    );
   };
 
   const columnHelper = createColumnHelper<ProjectList>();
