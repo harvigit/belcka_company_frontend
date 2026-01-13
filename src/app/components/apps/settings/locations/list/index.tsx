@@ -283,7 +283,21 @@ const TablePagination = () => {
               }}
             />
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-14">{item.name ?? "-"}</Typography>
+              <Typography
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.15,
+                  wordBreak: "break-word",
+                  maxWidth: 300,
+                }}
+              >
+                {item.name ?? "-"}
+              </Typography>
             </Stack>
           </Stack>
         );
@@ -335,11 +349,10 @@ const TablePagination = () => {
     table.setPageIndex(0);
   }, [searchTerm, table]);
 
-    const simpleColumns = columns.map((column) => ({
+  const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
     width: "auto",
   }));
-
 
   return (
     <Box
@@ -742,8 +755,15 @@ const TablePagination = () => {
           alignItems="center"
         >
           <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">Page</Typography>
-            <Typography color="textSecondary" fontWeight={600} ml={1} className="f-14">
+            <Typography color="textSecondary" className="f-14">
+              Page
+            </Typography>
+            <Typography
+              color="textSecondary"
+              fontWeight={600}
+              ml={1}
+              className="f-14"
+            >
               {table.getState().pagination.pageIndex + 1} of{" "}
               {table.getPageCount()}
             </Typography>
@@ -759,7 +779,7 @@ const TablePagination = () => {
             color="textSecondary"
           >
             <CustomSelect
-            className="custom-select"
+              className="custom-select"
               value={table.getState().pagination.pageSize}
               onChange={(e: { target: { value: any } }) => {
                 table.setPageSize(Number(e.target.value));

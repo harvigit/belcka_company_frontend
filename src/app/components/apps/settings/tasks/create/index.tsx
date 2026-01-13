@@ -169,6 +169,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
+                  inputProps={{ maxLength: 60 }}
                   fullWidth
                 />
 

@@ -87,6 +87,7 @@ const CreateLocation: React.FC<CreateLocationProps> = ({
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
+                  inputProps={{ maxLength: 50 }}
                   fullWidth
                 />
               </Grid>

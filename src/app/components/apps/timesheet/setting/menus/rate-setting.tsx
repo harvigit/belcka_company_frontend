@@ -27,7 +27,7 @@ import { User } from "next-auth";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import IOSSwitch from '@/app/components/common/IOSSwitch';
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 const RateSetting = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -48,7 +48,9 @@ const RateSetting = () => {
   // Get all users
   const fetchCompanyUsers = async () => {
     try {
-      const res = await api.get(`get-company-resources?company_id=${user.company_id}&flag=usersList`);
+      const res = await api.get(
+        `get-company-resources?company_id=${user.company_id}&flag=usersList`
+      );
       if (res.data) {
         setUsers(res.data.info);
       }
@@ -63,6 +65,7 @@ const RateSetting = () => {
 
   // Fetch users with pay rates
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const res = await api.get(
         `setting/payrate-users?company_id=${user.company_id}`
@@ -76,6 +79,7 @@ const RateSetting = () => {
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -142,6 +146,7 @@ const RateSetting = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
+    setLoading(true);
     try {
       const payload = {
         id: id,
@@ -154,6 +159,7 @@ const RateSetting = () => {
     } catch (err) {
       console.error("Error deleting user", err);
     }
+    setLoading(false);
   };
 
   const handleCurrencyChange = async (
@@ -230,7 +236,7 @@ const RateSetting = () => {
           );
           if (res.data.IsSuccess && res.data.info.currency_id) {
             setCurrency(Number(res.data.info.currency_id));
-          } 
+          }
         } catch (err) {
           console.error("Failed to fetch company currency", err);
         }
@@ -375,6 +381,7 @@ const RateSetting = () => {
                   </Select>
                   <IconButton
                     edge="end"
+                    disabled={loading}
                     aria-label="delete"
                     onClick={() => handleDeleteUser(user.id)}
                   >

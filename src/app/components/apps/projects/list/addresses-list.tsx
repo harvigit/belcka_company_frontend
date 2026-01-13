@@ -103,6 +103,14 @@ interface Boundary {
   radius: number;
 }
 
+interface ClickToEditProgressProps {
+  value: string | number | null | undefined;
+  rowId: number;
+  statusInt: number;
+  editedBy?: string | null;
+  editedAt?: string | null;
+}
+
 type PostcoderAddress = {
   summaryline: string;
   addressline1: string;
@@ -597,6 +605,129 @@ const AddressesList = ({
     }));
   };
 
+  const parseProgress = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === "number") return value;
+    return Number(value.replace("%", ""));
+  };
+
+  const ClickToEditProgress: React.FC<ClickToEditProgressProps> = ({
+    value,
+    rowId,
+    statusInt,
+    editedBy,
+    editedAt,
+  }) => {
+    const numericValue = value ? parseProgress(value) : 0;
+
+    const [localValue, setLocalValue] = React.useState(numericValue);
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [isHoveringValue, setIsHoveringValue] = React.useState(false);
+    const [loading, setLoading] = React.useState(false);
+
+    let color = "textPrimary";
+    if (statusInt === 13) color = "#999999";
+    else if (statusInt === 4) color = "#32A852";
+    else if (statusInt === 3) color = "#FF7F00";
+
+    const canEdit = user.user_role_id === 1;
+
+    const saveProgress = async () => {
+      const clampedValue = Math.min(100, Math.max(0, localValue));
+
+      if (clampedValue === numericValue) {
+        setIsEditing(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const payload = { id: rowId, progress: clampedValue };
+        const response = await api.put(
+          "address/change-address-progress",
+          payload
+        );
+
+        if (response.data.IsSuccess) {
+          toast.success(response.data.message);
+          fetchAddresses();
+        }
+      } catch (err) {
+        toast.error("Failed to update progress");
+        setLocalValue(numericValue);
+      } finally {
+        setLoading(false);
+        setIsEditing(false);
+        setIsHoveringValue(false);
+      }
+    };
+
+    const Badge = () =>
+      editedBy && editedAt ? (
+        <Tooltip
+          title={`Modified by ${editedBy} on ${dayjs(editedAt).format(
+            "DD/MM/YYYY HH:mm"
+          )}`}
+          arrow
+          placement="top"
+        >
+          <Box
+            component="span"
+            sx={{
+              position: "absolute",
+              left: "-10px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <IconPointFilled size={16} style={{ color: "#ff9800" }} />
+          </Box>
+        </Tooltip>
+      ) : null;
+
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", position: "relative" }}>
+        <Badge />
+
+        {canEdit && (isHoveringValue || isEditing) ? (
+          <TextField
+            type="number"
+            size="small"
+            value={localValue}
+            disabled={loading}
+            inputProps={{ min: 0, max: 100 }}
+            onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
+            onFocus={() => setIsEditing(true)}
+            onBlur={saveProgress}
+            onKeyDown={(e) => e.key === "Enter" && saveProgress()}
+            sx={{
+              width: 60,
+              "& .MuiInputBase-input": {
+                textAlign: "center",
+                p: "6px",
+              },
+            }}
+            autoFocus
+          />
+        ) : (
+          <Typography
+            className="f-14"
+            fontWeight={700}
+            color={color}
+            sx={{ px: 1.5, cursor: canEdit ? "pointer" : "default" }}
+            onMouseEnter={() => canEdit && setIsHoveringValue(true)}
+            onMouseLeave={() => !isEditing && setIsHoveringValue(false)}
+            onClick={() => canEdit && setIsEditing(true)}
+          >
+            {value}
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
   const columnHelper = createColumnHelper<ProjectList>();
 
   const columns = useMemo(
@@ -700,66 +831,19 @@ const AddressesList = ({
         header: () => "Progress",
         cell: (info) => {
           const item = info.row.original;
-          const statusInt = info.row.original.status_int;
-          let color = "textPrimary";
-          if (statusInt === 13) color = "#999999";
-          else if (statusInt === 4) color = "#32A852";
-          else if (statusInt === 3) color = "#FF7F00";
 
           return (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "fit-content",
-                minHeight: "32px",
-                px: "8px",
-                position: "relative",
-              }}
-            >
-              {item.edited_by && (
-                <Tooltip
-                  title={`Modified by ${item.editedBy} on ${dayjs(
-                    item.edited_at
-                  ).format("DD/MM/YYYY HH:mm")}`}
-                  arrow
-                  placement="top"
-                  sx={tooltipStyles}
-                >
-                  <Box
-                    component="span"
-                    sx={{
-                      position: "absolute",
-                      left: "-10px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      display: "flex",
-                      alignItems: "center",
-                      zIndex: 1,
-                      "&:hover": {
-                        cursor: "pointer",
-                      },
-                    }}
-                    onMouseEnter={() => setIsIconHovered(true)}
-                    onMouseLeave={() => setIsIconHovered(false)}
-                  >
-                    <IconPointFilled size={18} style={{ color: "#ff9800" }} />
-                  </Box>
-                </Tooltip>
-              )}
-              <Typography
-                className="f-14"
-                color={color}
-                fontWeight={700}
-                sx={{ px: 1.5 }}
-              >
-                {info.getValue() ?? "-"}
-              </Typography>
-            </Box>
+            <ClickToEditProgress
+              value={info.getValue() as string}
+              rowId={item.id}
+              statusInt={item.status_int}
+              editedBy={item.editedBy ?? undefined}
+              editedAt={item.edited_at ?? undefined}
+            />
           );
         },
       }),
+
       columnHelper.accessor("check_ins", {
         id: "checkIns",
         header: () => "Check-ins",
@@ -774,6 +858,7 @@ const AddressesList = ({
           </Typography>
         ),
       }),
+
       columnHelper.accessor("start_date", {
         id: "startDate",
         header: () => "Start date",
@@ -783,6 +868,7 @@ const AddressesList = ({
           </Typography>
         ),
       }),
+
       columnHelper.accessor("end_date", {
         id: "endDate",
         header: () => "End date",

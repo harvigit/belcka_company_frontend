@@ -68,7 +68,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
         status: record.status,
       });
     }
-  }, [id, open, data,companyId,setFormData]);
+  }, [id, open, data, companyId, setFormData]);
 
   // Fetch data
   const fetchCategories = async () => {
@@ -134,6 +134,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
+                  inputProps={{ maxLength: 50 }}
                   fullWidth
                 />
 

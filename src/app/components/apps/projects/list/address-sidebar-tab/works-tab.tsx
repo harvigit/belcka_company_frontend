@@ -427,7 +427,7 @@ useEffect(() => {
                   </Typography>
                 </Box>
 
-                {work.is_checklog === false && work.is_completed == false && (
+                {work.is_checklog === false && work.status_int == 1 && (
                   <IconButton
                     color="error"
                     onClick={(e) => {

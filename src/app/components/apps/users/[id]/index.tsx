@@ -296,7 +296,17 @@ const TablePagination = () => {
                   color="textSecondary"
                   fontWeight={600}
                   ml={2}
+                  mr={2}
                   fontSize={"20px !important"}
+                  sx={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 3,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    lineHeight: 1.15,
+                    wordBreak: "break-word",
+                  }}
                 >
                   {data?.name ?? null}
                 </Typography>
@@ -370,6 +380,7 @@ const TablePagination = () => {
                   onChange={(e: any) =>
                     handleFieldChange("first_name", e.target.value)
                   }
+                  inputProps={{ maxLength: 25 }}
                   fullWidth
                 />
 
@@ -385,6 +396,7 @@ const TablePagination = () => {
                   onChange={(e: any) =>
                     handleFieldChange("last_name", e.target.value)
                   }
+                  inputProps={{ maxLength: 25 }}
                   fullWidth
                 />
 
