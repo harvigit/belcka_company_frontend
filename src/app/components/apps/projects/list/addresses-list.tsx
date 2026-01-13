@@ -667,15 +667,25 @@ const AddressesList = ({
       >
         {editedBy && editedAt && (
           <Tooltip
-            title={`Modified by ${editedBy} on ${editedAt.slice(0,16)}`}
+            title={`Modified by ${editedBy} on ${editedAt.slice(0, 16)}`}
             arrow
+            placement="top"
           >
             <Box
+              onMouseEnter={() => {
+                if (!isEditing) setIsHovering(false);
+              }}
+              onMouseLeave={() => {
+                if (!isEditing) setIsHovering(false);
+              }}
               sx={{
                 position: "absolute",
-                left: "-10px",
+                left: "-15px",
                 top: "50%",
                 transform: "translateY(-50%)",
+                display: "flex",
+                alignItems: "center",
+                cursor: "pointer",
               }}
             >
               <IconPointFilled size={16} style={{ color: "#ff9800" }} />
@@ -685,12 +695,18 @@ const AddressesList = ({
 
         {canEdit && (isHovering || isEditing) ? (
           <TextField
-            type="number"
+            type="text"
             size="small"
+            inputProps={{
+              maxLength: 3,
+              min: 0,
+              max: 100,
+              inputMode: "numeric",
+              pattern: "[0-9]*",
+            }}
             value={localValue}
             autoFocus={isEditing}
             disabled={loading}
-            inputProps={{ min: 0, max: 100 }}
             onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
             onFocus={() => setIsEditing(true)}
             onBlur={saveProgress}
@@ -710,7 +726,14 @@ const AddressesList = ({
             }}
           />
         ) : (
-          <Typography fontWeight={700} color={color} sx={{ px: 1.5 }}>
+          <Typography
+            fontWeight={700}
+            color={color}
+            sx={{ px: 1.5, cursor: canEdit ? "pointer" : "default" }}
+            onMouseEnter={() => canEdit && setIsHovering(true)}
+            onMouseLeave={() => !isEditing && setIsHovering(false)}
+            onClick={() => canEdit && setIsEditing(true)}
+          >
             {value}
           </Typography>
         )}
