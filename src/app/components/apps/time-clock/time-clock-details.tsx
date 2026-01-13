@@ -55,6 +55,7 @@ interface ExportResponse {
 const DELETE_ENDPOINTS: Record<RecordType, string> = {
     worklog: '/time-clock/worklogs-bulk-delete',
     expense: '/expense/bulk-delete',
+    leave: '/user-leaves/delete-leave',
 };
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
@@ -1238,13 +1239,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return;
             }
 
-            const response: AxiosResponse<{
-                IsSuccess: boolean
-            }> = await api.post(endpoint, { ids: id });
+            let response: AxiosResponse<{ IsSuccess: boolean }>;
+
+            if (type === 'leave') {
+                response = await api.post(endpoint, { user_leave_id: id });
+            } else {
+                response = await api.post(endpoint, { ids: id });
+            }
 
             if (response.data.IsSuccess) {
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
+
                 await fetchTimeClockData(defaultStartDate, defaultEndDate);
                 setSelectedRows(new Set());
                 onDataChange?.();
