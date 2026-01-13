@@ -18,8 +18,6 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-/* ================= TYPES ================= */
-
 interface ApiDigitalCardInfo {
     is_expired: boolean;
     user_id: number;
@@ -43,20 +41,10 @@ interface DigitalIDCardProps {
     isPublicView?: boolean;
 }
 
-/* ================= CONSTANTS ================= */
-
 const CARD_WIDTH = 360;
 const CARD_HEIGHT = 560;
 
-/* ================= COMPONENT ================= */
-
-const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
-                                                         open,
-                                                         onClose,
-                                                         userId,
-                                                         token,
-                                                         isPublicView = false,
-                                                     }) => {
+const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, token, isPublicView = false}) => {
     const [cardData, setCardData] = useState<ApiDigitalCardInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -80,9 +68,8 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
                 let res;
 
                 if (isPublicView && token) {
-                    const apiUrl =
-                        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-                    res = await axios.get(`${apiUrl}/user/view-digital-card`, {
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/';
+                    res = await axios.get(`${apiUrl}user/view-digital-card`, {
                         params: { user_id: userId, token },
                     });
                 } else {
@@ -110,9 +97,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
 
         fetchCardData();
     }, [userId, token, isPublicView]);
-
-    /* ================= CONVERT IMAGES TO BASE64 ================= */
-
+    
     const convertImageToBase64 = (url: string): Promise<string> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -129,9 +114,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
             img.src = url;
         });
     };
-
-    /* ================= PDF DOWNLOAD ================= */
-
+    
     const handleDownloadPdf = async () => {
         if (!cardRef.current || !cardData) return;
 
@@ -155,10 +138,8 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
             if (avatarElement) avatarElement.src = userImg;
             if (qrElement) qrElement.src = qrImg;
 
-            // Wait for images to be applied
             await new Promise((res) => setTimeout(res, 300));
 
-            // Capture with html2canvas
             const canvas = await html2canvas(cardElement, {
                 scale: 3,
                 useCORS: true,
@@ -194,9 +175,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
     };
 
     if (!open) return null;
-
-    /* ================= ERROR ================= */
-
+    
     if (error) {
         return (
             <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -214,9 +193,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
             </Dialog>
         );
     }
-
-    /* ================= LOADING ================= */
-
+    
     if (loading || !cardData) {
         return (
             <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -229,15 +206,12 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
             </Dialog>
         );
     }
-
-    /* ================= MAIN VIEW ================= */
-
+    
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
             <DialogTitle>{cardData.name}&apos;s ID Card</DialogTitle>
 
             <DialogContent>
-                {/* ================= CARD ================= */}
                 <Box
                     ref={cardRef}
                     sx={{
@@ -389,15 +363,18 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
                 </Box>
 
                 {/* Download */}
-                <Box mt={3} display="flex" justifyContent="flex-end">
-                    <Button
-                        onClick={handleDownloadPdf}
-                        variant="contained"
-                        color="primary"
-                    >
-                        Save PDF
-                    </Button>
-                </Box>
+
+                { !isPublicView &&
+                    <Box mt={3} display="flex" justifyContent="flex-end">
+                        <Button
+                            onClick={handleDownloadPdf}
+                            variant="contained"
+                            color="primary"
+                        >
+                            Save PDF
+                        </Button>
+                    </Box>   
+                }
             </DialogContent>
         </Dialog>
     );
