@@ -843,12 +843,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             const statusColorFromApi = log.status_color;
 
                                                             const statusUpdatedBy = log.status_updated_by_name || '--';
-                                                            const statusUpdatedAt = log.status_updated_at
-                                                                ? new Date(log.status_updated_at).toLocaleString('en-IN', {
-                                                                    dateStyle: 'medium',
-                                                                    timeStyle: 'short',
-                                                                })
-                                                                : '—';
+                                                            const statusUpdatedAt = log.status_updated_at || '—';
 
                                                             const tooltipStyles = {
                                                                 '& .MuiTooltip-arrow': { color: '#1a1f29' },
@@ -969,7 +964,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             position: 'relative',
                                                         }}
                                                     >
-                                                        {!isRowLocked && !log.is_leave && !log.is_working && (
+                                                        {!isRowLocked && !log.is_working && (
                                                             <Button
                                                                 size="small"
                                                                 className="action-icon"
@@ -988,6 +983,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 onClick={() => {
                                                                     if (log.is_expense) {
                                                                         onDeleteClick(log.expense_id, 'expense');
+                                                                    } else if (log.is_leave) {
+                                                                        onDeleteClick(log.user_leave_id, 'leave');
                                                                     } else {
                                                                         onDeleteClick(log.worklog_id, 'worklog');
                                                                     }

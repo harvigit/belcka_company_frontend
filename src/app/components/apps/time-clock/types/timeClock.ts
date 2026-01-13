@@ -164,5 +164,5 @@ export type NewRecord = {
     end: string;
 };
 
-export type RecordType = 'worklog' | 'expense';
+export type RecordType = 'worklog' | 'expense' | 'leave';
 
