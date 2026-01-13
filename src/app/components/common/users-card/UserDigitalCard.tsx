@@ -50,9 +50,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
     const [error, setError] = useState<string | null>(null);
 
     const cardRef = useRef<HTMLDivElement | null>(null);
-
-    /* ================= FETCH CARD ================= */
-
+    
     useEffect(() => {
         if (!userId) {
             setError('User ID is required');
@@ -97,7 +95,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
 
         fetchCardData();
     }, [userId, token, isPublicView]);
-    
+
     const convertImageToBase64 = (url: string): Promise<string> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -114,7 +112,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
             img.src = url;
         });
     };
-    
+
     const handleDownloadPdf = async () => {
         if (!cardRef.current || !cardData) return;
 
@@ -175,7 +173,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
     };
 
     if (!open) return null;
-    
+
     if (error) {
         return (
             <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -193,7 +191,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
             </Dialog>
         );
     }
-    
+
     if (loading || !cardData) {
         return (
             <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -206,174 +204,222 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
             </Dialog>
         );
     }
-    
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle>{cardData.name}&apos;s ID Card</DialogTitle>
 
-            <DialogContent>
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    margin: { xs: '16px', sm: '32px' },
+                    maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
+                }
+            }}
+        >
+            <DialogTitle sx={{ pb: 1 }}>{cardData.name}&apos;s ID Card</DialogTitle>
+
+            <DialogContent sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                p: { xs: 2, sm: 3 }
+            }}>
                 <Box
-                    ref={cardRef}
                     sx={{
-                        width: `${CARD_WIDTH}px`,
-                        height: `${CARD_HEIGHT}px`,
-                        backgroundColor: '#d4ebf7',
-                        borderRadius: '12px',
-                        padding: '24px',
-                        border: '3px solid #4DA1FF',
-                        margin: '0 auto',
-                        fontFamily: 'Inter, sans-serif',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                         display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        boxSizing: 'border-box',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        flex: 1,
+                        overflow: 'hidden',
+                        mb: 2
                     }}
                 >
-                    {/* Logo */}
                     <Box
+                        ref={cardRef}
                         sx={{
+                            width: '100%',
+                            maxWidth: `${CARD_WIDTH}px`,
+                            aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                            backgroundColor: '#d4ebf7',
+                            borderRadius: '12px',
+                            padding: { xs: '16px', sm: '24px' },
+                            border: '3px solid #4DA1FF',
+                            fontFamily: 'Inter, sans-serif',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                             display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            minHeight: '32px',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            boxSizing: 'border-box',
                         }}
                     >
-                        <img
-                            src="/belcka.svg"
-                            alt="Belcka Logo"
-                            style={{
-                                height: '32px',
-                                width: 'auto',
-                                objectFit: 'contain',
-                                display: 'block',
-                            }}
-                        />
-                    </Box>
-
-                    {/* User Info */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'row',
-                            gap: '16px',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Box sx={{ flex: 1 }}>
-                            <Typography sx={{ fontSize: '26px', fontWeight: 700, lineHeight: 1.2 }}>
-                                {cardData.first_name}
-                            </Typography>
-                            <Typography sx={{ fontSize: '26px', fontWeight: 700, lineHeight: 1.2 }}>
-                                {cardData.last_name}
-                            </Typography>
-
-                            <Typography sx={{ fontSize: '12px', marginTop: '8px' }}>
-                                USER CODE: {cardData.user_code}
-                            </Typography>
-
-                            <Typography sx={{ fontSize: '16px', fontWeight: 600 }}>
-                                {cardData.trade_name}
-                            </Typography>
-                        </Box>
-
+                        {/* Logo */}
                         <Box
                             sx={{
-                                width: '90px',
-                                height: '90px',
-                                borderRadius: '50%',
-                                overflow: 'hidden',
-                                flexShrink: 0,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                minHeight: { xs: '24px', sm: '32px' },
                             }}
                         >
                             <img
-                                className="MuiAvatar-img"
-                                src={cardData.user_image || '/images/users/user.png'}
-                                alt="User"
+                                src="/belcka.svg"
+                                alt="Belcka Logo"
                                 style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                }}
-                            />
-                        </Box>
-                    </Box>
-
-                    {/* Company */}
-                    <Typography sx={{ fontWeight: 700, fontSize: '14px' }}>
-                        {cardData.company_name}
-                    </Typography>
-
-                    {/* QR */}
-                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Box
-                            sx={{
-                                background: '#fff',
-                                padding: '8px',
-                                borderRadius: '4px',
-                            }}
-                        >
-                            <img
-                                src={cardData.qr_code_url}
-                                alt="QR Code"
-                                style={{
-                                    width: '120px',
-                                    height: '120px',
+                                    height: 'clamp(24px, 5vw, 32px)',
+                                    width: 'auto',
+                                    objectFit: 'contain',
                                     display: 'block',
                                 }}
                             />
                         </Box>
-                    </Box>
 
-                    {/* Status */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            alignItems: 'center',
-                        }}
-                    >
-                        {!cardData.is_expired ? (
-                            <>
-                                <CheckCircleIcon sx={{ fontSize: '20px', color: '#4caf50' }} />
-                                <Typography sx={{ fontSize: '14px' }}>Active</Typography>
-                            </>
-                        ) : (
-                            <>
-                                <CancelIcon sx={{ fontSize: '20px', color: '#f44336' }} />
-                                <Typography sx={{ fontSize: '14px', color: '#f44336' }}>
-                                    Inactive
+                        {/* User Info */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'row',
+                                gap: { xs: '12px', sm: '16px' },
+                                alignItems: 'center',
+                            }}
+                        >
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{
+                                    fontSize: { xs: '20px', sm: '26px' },
+                                    fontWeight: 700,
+                                    lineHeight: 1.2,
+                                    wordBreak: 'break-word'
+                                }}>
+                                    {cardData.first_name}
                                 </Typography>
-                            </>
-                        )}
-                    </Box>
+                                <Typography sx={{
+                                    fontSize: { xs: '20px', sm: '26px' },
+                                    fontWeight: 700,
+                                    lineHeight: 1.2,
+                                    wordBreak: 'break-word'
+                                }}>
+                                    {cardData.last_name}
+                                </Typography>
 
-                    {/* Footer */}
-                    <Typography
-                        sx={{
-                            textAlign: 'center',
-                            fontWeight: 600,
-                            fontSize: '13px',
-                        }}
-                    >
-                        TIME IS MONEY. CONTROL IT.
-                    </Typography>
+                                <Typography sx={{
+                                    fontSize: { xs: '10px', sm: '12px' },
+                                    marginTop: '8px'
+                                }}>
+                                    USER CODE: {cardData.user_code}
+                                </Typography>
+
+                                <Typography sx={{
+                                    fontSize: { xs: '14px', sm: '16px' },
+                                    fontWeight: 600,
+                                    wordBreak: 'break-word'
+                                }}>
+                                    {cardData.trade_name}
+                                </Typography>
+                            </Box>
+
+                            <Box
+                                sx={{
+                                    width: { xs: '70px', sm: '90px' },
+                                    height: { xs: '70px', sm: '90px' },
+                                    borderRadius: '50%',
+                                    overflow: 'hidden',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <img
+                                    className="MuiAvatar-img"
+                                    src={cardData.user_image || '/images/users/user.png'}
+                                    alt="User"
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+
+                        {/* Company */}
+                        <Typography sx={{
+                            fontWeight: 700,
+                            fontSize: { xs: '12px', sm: '14px' },
+                            wordBreak: 'break-word'
+                        }}>
+                            {cardData.company_name}
+                        </Typography>
+
+                        {/* QR */}
+                        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                            <Box
+                                sx={{
+                                    background: '#fff',
+                                    padding: { xs: '6px', sm: '8px' },
+                                    borderRadius: '4px',
+                                }}
+                            >
+                                <img
+                                    src={cardData.qr_code_url}
+                                    alt="QR Code"
+                                    style={{
+                                        width: 'clamp(100px, 20vw, 120px)',
+                                        height: 'clamp(100px, 20vw, 120px)',
+                                        display: 'block',
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+
+                        {/* Status */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                alignItems: 'center',
+                            }}
+                        >
+                            {!cardData.is_expired ? (
+                                <>
+                                    <CheckCircleIcon sx={{ fontSize: { xs: '18px', sm: '20px' }, color: '#4caf50' }} />
+                                    <Typography sx={{ fontSize: { xs: '12px', sm: '14px' } }}>Active</Typography>
+                                </>
+                            ) : (
+                                <>
+                                    <CancelIcon sx={{ fontSize: { xs: '18px', sm: '20px' }, color: '#f44336' }} />
+                                    <Typography sx={{ fontSize: { xs: '12px', sm: '14px' }, color: '#f44336' }}>
+                                        Inactive
+                                    </Typography>
+                                </>
+                            )}
+                        </Box>
+
+                        {/* Footer */}
+                        <Typography
+                            sx={{
+                                textAlign: 'center',
+                                fontWeight: 600,
+                                fontSize: { xs: '11px', sm: '13px' },
+                            }}
+                        >
+                            TIME IS MONEY. CONTROL IT.
+                        </Typography>
+                    </Box>
                 </Box>
 
                 {/* Download */}
-
                 { !isPublicView &&
-                    <Box mt={3} display="flex" justifyContent="flex-end">
+                    <Box display="flex" justifyContent="flex-end">
                         <Button
                             onClick={handleDownloadPdf}
                             variant="contained"
                             color="primary"
+                            size="medium"
                         >
                             Save PDF
                         </Button>
-                    </Box>   
+                    </Box>
                 }
             </DialogContent>
         </Dialog>
