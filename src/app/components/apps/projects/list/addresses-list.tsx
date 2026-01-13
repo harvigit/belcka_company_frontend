@@ -622,80 +622,73 @@ const AddressesList = ({
 
     const [localValue, setLocalValue] = React.useState(numericValue);
     const [isEditing, setIsEditing] = React.useState(false);
-    const [isHoveringValue, setIsHoveringValue] = React.useState(false);
+    const [isHovering, setIsHovering] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
+
+    const canEdit = user.user_role_id === 1;
 
     let color = "textPrimary";
     if (statusInt === 13) color = "#999999";
     else if (statusInt === 4) color = "#32A852";
     else if (statusInt === 3) color = "#FF7F00";
 
-    const canEdit = user.user_role_id === 1;
-
     const saveProgress = async () => {
       const clampedValue = Math.min(100, Math.max(0, localValue));
 
       if (clampedValue === numericValue) {
         setIsEditing(false);
+        setIsHovering(false);
         return;
       }
 
       try {
         setLoading(true);
-        const payload = { id: rowId, progress: clampedValue };
-        const response = await api.put(
-          "address/change-address-progress",
-          payload
-        );
-
-        if (response.data.IsSuccess) {
-          toast.success(response.data.message);
-          fetchAddresses();
-        }
-      } catch (err) {
-        toast.error("Failed to update progress");
+        await api.put("address/change-address-progress", {
+          id: rowId,
+          progress: clampedValue,
+        });
+        fetchAddresses();
+      } catch {
         setLocalValue(numericValue);
       } finally {
         setLoading(false);
         setIsEditing(false);
-        setIsHoveringValue(false);
+        setIsHovering(false);
       }
     };
 
-    const Badge = () =>
-      editedBy && editedAt ? (
-        <Tooltip
-          title={`Modified by ${editedBy} on ${dayjs(editedAt).format(
-            "DD/MM/YYYY HH:mm"
-          )}`}
-          arrow
-          placement="top"
-        >
-          <Box
-            component="span"
-            sx={{
-              position: "absolute",
-              left: "-10px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <IconPointFilled size={16} style={{ color: "#ff9800" }} />
-          </Box>
-        </Tooltip>
-      ) : null;
-
     return (
-      <Box sx={{ display: "flex", alignItems: "center", position: "relative" }}>
-        <Badge />
+      <Box
+        sx={{ display: "flex", alignItems: "center", position: "relative" }}
+        onMouseEnter={() => canEdit && setIsHovering(true)}
+        onMouseLeave={() => {
+          if (!isEditing) setIsHovering(false);
+        }}
+      >
+        {editedBy && editedAt && (
+          <Tooltip
+            title={`Modified by ${editedBy} on ${editedAt.slice(0,16)}`}
+            arrow
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                left: "-10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
+            >
+              <IconPointFilled size={16} style={{ color: "#ff9800" }} />
+            </Box>
+          </Tooltip>
+        )}
 
-        {canEdit && (isHoveringValue || isEditing) ? (
+        {canEdit && (isHovering || isEditing) ? (
           <TextField
             type="number"
             size="small"
             value={localValue}
+            autoFocus={isEditing}
             disabled={loading}
             inputProps={{ min: 0, max: 100 }}
             onChange={(e) => setLocalValue(Number(e.target.value) || 0)}
@@ -703,24 +696,21 @@ const AddressesList = ({
             onBlur={saveProgress}
             onKeyDown={(e) => e.key === "Enter" && saveProgress()}
             sx={{
-              width: 60,
+              width: 56,
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: isEditing ? "#1976d2" : "transparent",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#1976d2",
+              },
               "& .MuiInputBase-input": {
                 textAlign: "center",
                 p: "6px",
               },
             }}
-            autoFocus
           />
         ) : (
-          <Typography
-            className="f-14"
-            fontWeight={700}
-            color={color}
-            sx={{ px: 1.5, cursor: canEdit ? "pointer" : "default" }}
-            onMouseEnter={() => canEdit && setIsHoveringValue(true)}
-            onMouseLeave={() => !isEditing && setIsHoveringValue(false)}
-            onClick={() => canEdit && setIsEditing(true)}
-          >
+          <Typography fontWeight={700} color={color} sx={{ px: 1.5 }}>
             {value}
           </Typography>
         )}

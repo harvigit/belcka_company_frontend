@@ -379,14 +379,16 @@ const RateSetting = () => {
                     <MenuItem value="view">View only</MenuItem>
                     <MenuItem value="view_edit">View & Edit</MenuItem>
                   </Select>
-                  <IconButton
-                    edge="end"
-                    disabled={loading}
-                    aria-label="delete"
-                    onClick={() => handleDeleteUser(user.id)}
-                  >
-                    <IconTrash />
-                  </IconButton>
+                  {user?.id && (
+                    <IconButton
+                      edge="end"
+                      disabled={loading}
+                      aria-label="delete"
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
+                      <IconTrash />
+                    </IconButton>
+                  )}
                 </ListItemSecondaryAction>
               </ListItem>
               <Divider sx={{ borderWidth: 1 }} />
