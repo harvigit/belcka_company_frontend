@@ -201,7 +201,7 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
                     isAutoClock: response.data.isAutoClock ?? getDefaultSettings().isAutoClock,
                     payRatePermission: response.data.pay_rate_permission || 'view',
                     exportFormat: response.data.export_format || 'time',
-                    leave_limit: response.data.data.leave_limit || 0
+                    leave_limit: response.data?.data?.leave_limit ?? 0
                 };
                 setSettings(apiSettings);
             } else {
