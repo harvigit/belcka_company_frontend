@@ -55,6 +55,7 @@ interface CompanySettings {
     isAutoClock: boolean;
     payRatePermission: boolean;
     exportFormat: string;
+    leave_limit: number;
 }
 
 interface GeneralSettingProps {
@@ -105,6 +106,7 @@ const getDefaultSettings = (): Omit<SettingsState, 'isSaving'> => ({
     isAutoClock: false,
     payRatePermission: true,
     exportFormat: 'time',
+    leave_limit: 0
 });
 
 const useSettingsState = (defaultSettings: Partial<CompanySettings> = {}): [SettingsState, (updates: Partial<SettingsState>) => void] => {
@@ -199,6 +201,7 @@ const useCompanySettings = (): { settings: CompanySettings | null; loading: bool
                     isAutoClock: response.data.isAutoClock ?? getDefaultSettings().isAutoClock,
                     payRatePermission: response.data.pay_rate_permission || 'view',
                     exportFormat: response.data.export_format || 'time',
+                    leave_limit: response.data.data.leave_limit || 0
                 };
                 setSettings(apiSettings);
             } else {
@@ -286,6 +289,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         payRatePermission: true,
                         exportFormat: fetchedSettings.export_format || 'time',
                         isSaving: false,
+                        leave_limit: fetchedSettings.leave_limit ?? null
                     });
                 } else {
                     updateSettings(getDefaultSettings());
@@ -398,6 +402,43 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
         }
     }, [settings.autoClockOut, updateSettings]);
 
+    const handleLeaveLimitChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+        const inputValue = event.target.value;
+
+        if (inputValue === "") {
+        updateSettings({ leave_limit: 0 as any });
+        return;
+        }
+
+        const numValue = parseInt(inputValue, 10);
+
+        if (isNaN(numValue)) return;
+
+        let clampedValue = numValue;
+
+        if (numValue < 0) {
+        clampedValue = 0;
+        } else if (numValue > 365) {
+        clampedValue = 365;
+        }
+
+        updateSettings({ leave_limit: clampedValue });
+    },
+    [updateSettings]
+    );
+
+    const handleLeaveLimitBlur = useCallback(() => {
+    const currentValue = Number(settings.leave_limit);
+
+    if (isNaN(currentValue) || currentValue < 0) {
+        updateSettings({ leave_limit: 0 });
+    } else if (currentValue > 365) {
+        updateSettings({ leave_limit: 365 });
+    }
+    }, [settings.leave_limit, updateSettings]);
+
+
     const createSelectHandler = useCallback((field: keyof SettingsState) =>
         (event: SelectChangeEvent<any>) => {
             updateSettings({ [field]: event.target.value });
@@ -423,6 +464,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 users: settings.users,
                 pay_rate_permission: true,
                 export_format: settings.exportFormat,
+                leave_limit: settings.leave_limit
             };
 
             const response = await api.post('/setting/save-general-setting', payload);
@@ -774,6 +816,27 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                         </MenuItem>
                                     )}
                                 </Select>
+                            </Box>
+
+                            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                                <Typography variant="body2" mb={1}>
+                                    Maximum leaves allowed per year
+                                </Typography>
+                    
+                                <TextField
+                                type="text"
+                                value={settings.leave_limit}
+                                onChange={handleLeaveLimitChange}
+                                onBlur={handleLeaveLimitBlur}
+                                inputProps={{
+                                    min: 0,
+                                    max: 365,
+                                    step: 1,
+                                    inputMode: "numeric",
+                                }}
+                                sx={{ width: "22%" }}
+                                placeholder="Enter leave limit (max 365)"
+                                />
                             </Box>
                         </Box>
                     </Box>
