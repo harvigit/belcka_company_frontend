@@ -1,6 +1,7 @@
 import {TimeClock} from '../time-clock';
 
 export type DailyBreakdown = {
+    timesheet_ids: string;
     isMoreThanWork: boolean;
     isLessThanWork: boolean;
     is_requested: boolean;

@@ -753,7 +753,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 rowType: 'week',
                 weekLabel: week.week_range,
                 weeklyTotalHours: formatHour(week.weekly_total_hours),
-                weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`
+                weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
+                timesheet_ids: ''
             }];
 
             const filteredDayRows = (week.days || []).flatMap((day: any) => {
@@ -778,14 +779,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const hasWorklogs = worklogs.length > 0;
 
                 if (hasWorklogs) {
-                    const totalPayableAmount = worklogs.reduce((sum: number, log: any) => {
-                        return sum + (parseFloat(log.payable_amount) || 0);
-                    }, 0);
+                    // const totalPayableAmount = worklogs.reduce((sum: number, log: any) => {
+                    //     return sum + (parseFloat(log.payable_amount) || 0);
+                    // }, 0);
 
                     return [{
                         rowType: 'day' as const,
                         date: day.date ?? '--',
-                        timesheet_id: day.timesheet_id ?? '--',
+                        timesheet_ids: day.timesheet_ids ?? '--',
                         shift: '--',
                         project: '--',
                         start: '--',
@@ -820,7 +821,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return [{
                     rowType: 'day' as const,
                     date: day.date ?? '--',
-                    timesheet_id: day.timesheet_id ?? null,
+                    timesheet_ids: day.timesheet_ids ?? null,
                     shift: '--',
                     project: '--',
                     start: '--',
@@ -1007,15 +1008,17 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
-                if (!rowData.rowsData && rowData.timesheet_light_id != null) {
-                    timesheetIds.push(rowData.timesheet_light_id);
-                } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                    rowData.rowsData.forEach((worklog: any) => {
-                        if (worklog.timesheet_light_id) {
-                            timesheetIds.push(worklog.timesheet_light_id);
-                        }
-                    });
-                }
+                // if (!rowData.rowsData && rowData.timesheet_light_id != null) {
+                //     timesheetIds.push(rowData.timesheet_light_id);
+                // } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
+                //     rowData.rowsData.forEach((worklog: any) => {
+                //         if (worklog.timesheet_light_id) {
+                //             timesheetIds.push(worklog.timesheet_light_id);
+                //         }
+                //     });
+                // }
+
+                timesheetIds.push(rowData.timesheet_ids);
             }
         });
 
@@ -1043,15 +1046,17 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
-                if (!rowData.rowsData && rowData.timesheet_light_id) {
-                    timesheetIds.push(rowData.timesheet_light_id);
-                } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                    rowData.rowsData.forEach((worklog: any) => {
-                        if (worklog.timesheet_light_id) {
-                            timesheetIds.push(worklog.timesheet_light_id);
-                        }
-                    });
-                }
+                // if (!rowData.rowsData && rowData.timesheet_light_id) {
+                //     timesheetIds.push(rowData.timesheet_light_id);
+                // } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
+                //     rowData.rowsData.forEach((worklog: any) => {
+                //         if (worklog.timesheet_light_id) {
+                //             timesheetIds.push(worklog.timesheet_light_id);
+                //         }
+                //     });
+                // }
+
+                timesheetIds.push(rowData.timesheet_ids);
             }
         });
 
@@ -1140,17 +1145,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const timesheetIds: (string | number)[] = [];
                 selectedRowIndices.forEach((rowIndex) => {
                     const rowData = dailyData[rowIndex];
-                    if (rowData && rowData.rowType === 'day') {
-                        if (!rowData.rowsData && rowData.timesheet_light_id != null) {
-                            timesheetIds.push(rowData.timesheet_light_id);
-                        } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                            rowData.rowsData.forEach((worklog: any) => {
-                                if (worklog.timesheet_light_id) {
-                                    timesheetIds.push(worklog.timesheet_light_id);
-                                }
-                            });
-                        }
-                    }
+                    // if (rowData && rowData.rowType === 'day') {
+                    //     if (!rowData.rowsData && rowData.timesheet_light_id != null) {
+                    //         timesheetIds.push(rowData.timesheet_light_id);
+                    //     } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
+                    //         rowData.rowsData.forEach((worklog: any) => {
+                    //             if (worklog.timesheet_light_id) {
+                    //                 timesheetIds.push(worklog.timesheet_light_id);
+                    //             }
+                    //         });
+                    //     }
+                    // }
+
+                    timesheetIds.push(rowData.timesheet_ids);
                 });
                 if (timesheetIds.length > 0) {
                     await toggleTimesheetStatus(timesheetIds, 'approve');
@@ -1161,17 +1168,19 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const timesheetIds: (string | number)[] = [];
                 selectedRowIndices.forEach((rowIndex) => {
                     const rowData = dailyData[rowIndex];
-                    if (rowData && rowData.rowType === 'day') {
-                        if (!rowData.rowsData && rowData.timesheet_light_id) {
-                            timesheetIds.push(rowData.timesheet_light_id);
-                        } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                            rowData.rowsData.forEach((worklog: any) => {
-                                if (worklog.timesheet_light_id) {
-                                    timesheetIds.push(worklog.timesheet_light_id);
-                                }
-                            });
-                        }
-                    }
+                    // if (rowData && rowData.rowType === 'day') {
+                    //     if (!rowData.rowsData && rowData.timesheet_light_id) {
+                    //         timesheetIds.push(rowData.timesheet_light_id);
+                    //     } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
+                    //         rowData.rowsData.forEach((worklog: any) => {
+                    //             if (worklog.timesheet_light_id) {
+                    //                 timesheetIds.push(worklog.timesheet_light_id);
+                    //             }
+                    //         });
+                    //     }
+                    // }
+
+                    timesheetIds.push(rowData.timesheet_ids);
                 });
                 if (timesheetIds.length > 0) {
                     await toggleTimesheetStatus(timesheetIds, 'unapprove');
