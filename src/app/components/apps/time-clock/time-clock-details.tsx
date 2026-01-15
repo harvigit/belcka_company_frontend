@@ -796,7 +796,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         totalHours: '--',
                         penaltyHours: '--',
                         dailyTotal: formatHour(day.daily_total),
-                        payableAmount: `${currency}${day.daily_payyable_amount}`,
+                        payableAmount: `${currency}${day.daily_payable_amount}`,
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
                         managerNotes: day.manager_notes || '--',
