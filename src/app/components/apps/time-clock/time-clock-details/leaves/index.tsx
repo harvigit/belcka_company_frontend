@@ -15,12 +15,13 @@ import {
   TextField,
   Avatar,
 } from "@mui/material";
-import { IconArrowLeft, IconX } from "@tabler/icons-react";
+import { IconArrowLeft, IconSettings, IconX } from "@tabler/icons-react";
 import { format } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
 import { capitalize } from "lodash";
 import { useSearchParams } from "next/navigation";
+import LeavesSetting from "../../../timesheet/setting/menus/leaves";
 
 dayjs.extend(customParseFormat);
 
@@ -117,10 +118,10 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
   const session = useSession();
+  const [openLeaves, setOpenLeaves] = useState(false);
+
   const user = session.data?.user as User & {
     company_id?: string | null;
-    company_name?: string | null;
-    company_image?: number | null;
     id: number;
     user_role_id: number;
   };
@@ -259,9 +260,15 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
             Leaves
           </Typography>
         </Stack>
-        <IconButton onClick={onClose}>
-          <IconX />
-        </IconButton>
+        {user.user_role_id == 1 ? (
+          <IconButton onClick={() => setOpenLeaves(true)}>
+            <IconSettings />
+          </IconButton>
+        ) : (
+          <IconButton onClick={onClose}>
+            <IconX />
+          </IconButton>
+        )}
       </Box>
 
       {/* Search */}
@@ -337,7 +344,8 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
                         borderRadius: "12px",
                         borderColor:
                           work.leave_type == "paid" ? "#39af43ff" : "orange",
-                        bgcolor: work.leave_type == "paid" ? "#39af43ff" : "orange",
+                        bgcolor:
+                          work.leave_type == "paid" ? "#39af43ff" : "orange",
                         color: "#fff",
                         fontSize: "0.75rem",
                         fontWeight: 500,
@@ -433,6 +441,9 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
           </Typography>
         )}
       </Box>
+
+      {/*  Leave setting */}
+      <LeavesSetting open={openLeaves} onClose={() => setOpenLeaves(false)} />
     </Drawer>
   );
 }
