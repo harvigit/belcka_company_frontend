@@ -835,7 +835,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                     inputMode: "numeric",
                                 }}
                                 sx={{ width: "22%" }}
-                                placeholder="Enter leave limit (max 365)"
+                                placeholder="Enter leave limit"
                                 />
                             </Box>
                         </Box>

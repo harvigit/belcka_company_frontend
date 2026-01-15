@@ -1,6 +1,6 @@
 "use client";
 
-import React, {  useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -15,6 +15,8 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 interface ProjectListingProps {
   userId: number;
@@ -66,6 +68,10 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   >([]);
   const [hasExistingInfo, setHasExistingInfo] = useState(false);
   const [phone, setPhone] = useState("");
+  const session = useSession();
+  const user = session.data?.user as User & { user_role_id?: number | null } & {
+    id: number;
+  };
 
   useEffect(() => {
     const fetchHealthInfo = async () => {
@@ -294,161 +300,167 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
   if (!healthInfo) return <Typography>Health Info not found!</Typography>;
 
   return (
-    <Box ml={5} p={2} className="health_info_wrapper">
-      <Typography color="#487bb3ff" fontSize="16px !important" sx={{ mb: 2 }}>
-        Emergency Contact
-      </Typography>
-      <Grid container spacing={2} mb={2}>
-        {["first_name", "last_name", "email", "address", "post_code"].map(
-          (key) => (
-            <Grid size={{ xs: 12, sm: 6 }} key={key}>
-              <Tooltip title={(healthInfo.emergency_contact as any)[key] || ""}>
-                <TextField
-                  fullWidth
-                  className="custom_color"
-                  label={key
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase())}
-                  value={(healthInfo.emergency_contact as any)[key] || ""}
-                  onChange={(e) =>
-                    handleFieldChange(
-                      key as keyof EmergencyContact,
-                      e.target.value
-                    )
-                  }
-                />
-              </Tooltip>
+    <Box m={2} p={2} pt={0} mt={2} ml={5}>
+      {user.id === userId || user.user_role_id === 1 ? (
+        <Box ml={5} p={2} className="health_info_wrapper">
+          <Typography
+            color="#487bb3ff"
+            fontSize="16px !important"
+            sx={{ mb: 2 }}
+          >
+            Emergency Contact
+          </Typography>
+
+          <Grid container spacing={2} mb={2}>
+            {["first_name", "last_name", "email", "address", "post_code"].map(
+              (key) => (
+                <Grid size={{ xs: 12, sm: 6 }} key={key}>
+                  <Tooltip
+                    title={(healthInfo.emergency_contact as any)[key] || ""}
+                  >
+                    <TextField
+                      fullWidth
+                      className="custom_color"
+                      label={key
+                        .replace(/_/g, " ")
+                        .replace(/\b\w/g, (c) => c.toUpperCase())}
+                      value={(healthInfo.emergency_contact as any)[key] || ""}
+                      onChange={(e) =>
+                        handleFieldChange(
+                          key as keyof EmergencyContact,
+                          e.target.value
+                        )
+                      }
+                    />
+                  </Tooltip>
+                </Grid>
+              )
+            )}
+
+            <Grid>
+              <PhoneInput
+                inputClass="phone-input"
+                country="gb"
+                value={phone}
+                onChange={handlePhoneInputChange}
+                inputStyle={{
+                  width: "100%",
+                  borderColor: "#c0d1dc9c",
+                }}
+                enableSearch
+                inputProps={{ required: true }}
+              />
             </Grid>
-          )
-        )}
-
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <PhoneInput
-            inputClass="phone-input"
-            country={"gb"}
-            value={phone}
-            onChange={handlePhoneInputChange}
-            inputStyle={{
-              width: "100%",
-              borderColor: "#c0d1dc9c",
-            }}
-            enableSearch
-            inputProps={{ required: true }}
-          />
-        </Grid>
-      </Grid>
-
-      <Divider />
-
-      <Typography
-        color="#487bb3ff"
-        fontSize="16px !important"
-        sx={{ mt: 4, mb: 2 }}
-      >
-        Health Info
-      </Typography>
-      <Grid container spacing={2} mb={4}>
-        <Grid sx={{ xs: 12, sm: 6 }}>
-          <TextField
-            className="custom_color"
-            fullWidth
-            label="Height (cm)"
-            value={healthInfo.height}
-            inputProps={{
-              inputMode: "numeric",
-              pattern: "[0-9]*",
-            }}
-            onChange={(e) => handleOtherInfoChange("height", e.target.value)}
-          />
-        </Grid>
-        <Grid sx={{ xs: 12, sm: 6 }}>
-          <TextField
-            fullWidth
-            className="custom_color"
-            label="Weight (kg)"
-            value={healthInfo.weight}
-            inputProps={{
-              inputMode: "numeric",
-              pattern: "[0-9]*",
-            }}
-            onChange={(e) => handleOtherInfoChange("weight", e.target.value)}
-          />
-        </Grid>
-      </Grid>
-
-      <Divider />
-
-      <Typography
-        color="#487bb3ff"
-        fontSize="16px !important"
-        sx={{ mt: 4, mb: 2 }}
-      >
-        Questions
-      </Typography>
-      <Box mb={2}>
-        {healthInfo.health_issues.map((issue, index) => (
-          <Grid sx={{ xs: 12 }} key={issue.health_issue_id}>
-            <Box>
-              <Typography sx={{ mb: 1 }} color="textSecondary">
-                {issue.name}
-              </Typography>
-              <Box display="flex" alignItems="center" gap={3} mb={2}>
-                <label className="custom_color">
-                  <input
-                    type="radio"
-                    name={`health-issue-${index}`}
-                    value="yes"
-                    checked={issue.is_check === true}
-                    onChange={() =>
-                      handleHealthIssueChange(index, "is_check", true)
-                    }
-                  />{" "}
-                  Yes
-                </label>
-
-                <label className="custom_color">
-                  <input
-                    type="radio"
-                    name={`health-issue-${index}`}
-                    value="no"
-                    checked={issue.is_check === false}
-                    onChange={() =>
-                      handleHealthIssueChange(index, "is_check", false)
-                    }
-                  />{" "}
-                  No
-                </label>
-              </Box>
-
-              {issue.is_check && (
-                <TextField
-                  fullWidth
-                  className="custom_color"
-                  rows={2}
-                  label="Detail"
-                  value={issue.comment || ""}
-                  required
-                  onChange={(e) =>
-                    handleHealthIssueChange(index, "comment", e.target.value)
-                  }
-                  sx={{ mt: 1, mb: 1 }}
-                />
-              )}
-            </Box>
           </Grid>
-        ))}
-        <Divider />
-      </Box>
 
-      <Box mt={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSaveOrUpdate}
-        >
-          {hasExistingInfo ? "Update" : "Save"}
-        </Button>
-      </Box>
+          <Divider />
+
+          <Typography
+            color="#487bb3ff"
+            fontSize="16px !important"
+            sx={{ mt: 4, mb: 2 }}
+          >
+            Health Info
+          </Typography>
+
+          <Grid container spacing={2} mb={4}>
+            <Grid>
+              <TextField
+                className="custom_color"
+                fullWidth
+                label="Height (cm)"
+                value={healthInfo.height}
+                inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                onChange={(e) =>
+                  handleOtherInfoChange("height", e.target.value)
+                }
+              />
+            </Grid>
+
+            <Grid>
+              <TextField
+                fullWidth
+                className="custom_color"
+                label="Weight (kg)"
+                value={healthInfo.weight}
+                inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                onChange={(e) =>
+                  handleOtherInfoChange("weight", e.target.value)
+                }
+              />
+            </Grid>
+          </Grid>
+
+          <Divider />
+
+          <Typography
+            color="#487bb3ff"
+            fontSize="16px !important"
+            sx={{ mt: 4, mb: 2 }}
+          >
+            Questions
+          </Typography>
+
+          <Box mb={2}>
+            {healthInfo.health_issues.map((issue, index) => (
+              <Grid size={{ xs: 12 }} key={issue.health_issue_id}>
+                <Typography sx={{ mb: 1 }} color="textSecondary">
+                  {issue.name}
+                </Typography>
+
+                <Box display="flex" gap={3} mb={2}>
+                  <label>
+                    <input
+                      type="radio"
+                      checked={issue.is_check === true}
+                      onChange={() =>
+                        handleHealthIssueChange(index, "is_check", true)
+                      }
+                    />{" "}
+                    Yes
+                  </label>
+
+                  <label>
+                    <input
+                      type="radio"
+                      checked={issue.is_check === false}
+                      onChange={() =>
+                        handleHealthIssueChange(index, "is_check", false)
+                      }
+                    />{" "}
+                    No
+                  </label>
+                </Box>
+
+                {issue.is_check && (
+                  <TextField
+                    fullWidth
+                    className="custom_color"
+                    rows={2}
+                    label="Detail"
+                    value={issue.comment || ""}
+                    required
+                    onChange={(e) =>
+                      handleHealthIssueChange(index, "comment", e.target.value)
+                    }
+                  />
+                )}
+                <Divider sx={{ my: 2 }} />
+              </Grid>
+            ))}
+          </Box>
+
+          <Button variant="contained" onClick={handleSaveOrUpdate}>
+            {hasExistingInfo ? "Update" : "Save"}
+          </Button>
+        </Box>
+      ) : (
+        <Box mt={4} display={"flex"} height={'450px'} justifyContent={"center"}>
+          <Typography color="textSecondary" className="f-18">
+            You do not have permission to view this information.
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 };
