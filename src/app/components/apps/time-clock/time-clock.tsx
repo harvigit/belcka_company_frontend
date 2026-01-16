@@ -170,6 +170,19 @@ interface Props {
     };
 }
 
+const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
+  try {
+    const dateRange = {
+      startDate: startDate ? startDate.toDateString() : null,
+      endDate: endDate ? endDate.toDateString() : null,
+      columnVisibility: {},
+    };
+    localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
+  } catch (error) {
+    console.log("Error saving date range to localStorage:", error);
+  }
+};
+
 const TimeClock = ({queryParams}: Props) => {
     // Initialize default date range (current week)
     const today = new Date();
@@ -226,7 +239,10 @@ const TimeClock = ({queryParams}: Props) => {
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState<boolean>(false);
     const [openLeaves, setOpenLeaves] = useState(false);
-
+    const userIdParam = searchParams?.get("user_id");
+    const startParam = searchParams?.get("start_date");
+    const endParam = searchParams?.get("end_date");
+    const openParam = searchParams?.get("open");
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
@@ -329,6 +345,37 @@ const TimeClock = ({queryParams}: Props) => {
         }
         return [];
     };
+
+    useEffect(() => {
+    if (!userIdParam || !startParam || !endParam) return;
+    const startDateObj = new Date(startParam);
+    const endDateObj = new Date(endParam);
+
+    setStartDate(startDateObj);
+    setEndDate(endDateObj);
+
+    (async () => {
+      try {
+        const fetchedData = await fetchData(startDateObj, endDateObj);
+        const foundUser = fetchedData.find(
+          (item) => Number(item.user_id) === Number(userIdParam)
+        );
+        if (foundUser) {
+          saveDateToStorage(startDateObj, endDateObj);
+          setSelectedTimeClock(foundUser);
+          setDetailsOpen(true);
+          router.replace("/apps/timesheet/list", { scroll: false });
+        }
+
+        setTimeout(() => {
+          router.replace("/apps/timesheet/list", { scroll: false });
+        }, 500);
+      } catch (err) {
+        console.error("Failed to load data from query params:", err);
+      }
+      router.replace("/apps/timesheet/list", { scroll: false });
+    })();
+  }, [searchParams]);
 
     const fetchConflictsData = async (start: Date, end: Date) => {
         try {

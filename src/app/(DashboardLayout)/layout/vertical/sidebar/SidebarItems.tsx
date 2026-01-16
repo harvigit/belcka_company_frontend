@@ -67,16 +67,17 @@ const SidebarItems = () => {
     };
 
     const filteredMenuItems = MenuItems.filter((item: any) => {
-        if (item.title === 'Settings' && user?.user_role_id === 1) {
-            return true;
-        }
-
-        if (item.children && item.children.length > 0) {
-            return item.children.some((child: any) =>
-                hasWebPermission(child.title)
-            );
-        }
-
+      if (item.title === 'Settings' && user?.user_role_id === 1) {
+        return true;
+      }
+      
+      if (item.children && item.children.length > 0) {
+        return item.children.some((child: any) =>
+          hasWebPermission(child.title)
+      );
+    }
+    
+        if (item.subheader) return true;
         return hasWebPermission(item.title);
     });
 
