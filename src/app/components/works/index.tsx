@@ -115,32 +115,39 @@ export default function WorkDetailPage({
 
   const handleUpload = async () => {
     const formData = new FormData();
-    const checklogId =
-      work?.checklog_id || work?.images?.[0]?.record_id || null;
+
+    const checklogId = work?.checklogs?.[0]?.id || work?.images?.[0]?.record_id;
+
+    if (!checklogId) {
+      toast.error("Checklog not found");
+      return;
+    }
 
     formData.append("checklog_id", checklogId);
     formData.append("company_task_id", work.id);
 
-    if (removeBeforeIds.length > 0)
+    if (removeBeforeIds.length > 0) {
       formData.append(
         "before_attachment_remove_ids",
         removeBeforeIds.join(",")
       );
-    if (removeAfterIds.length > 0)
+    }
+
+    if (removeAfterIds.length > 0) {
       formData.append("after_attachment_remove_ids", removeAfterIds.join(","));
+    }
 
     newBeforeFiles.forEach((file) => {
       formData.append(`before_company_task_attachments[${work.id}]`, file);
     });
+
     newAfterFiles.forEach((file) => {
       formData.append(`after_company_task_attachments[${work.id}]`, file);
     });
 
     try {
       setLoading(true);
-      const res = await api.post("user-checklog/add-attachments", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await api.post("user-checklog/add-attachments", formData);
 
       if (res.data?.IsSuccess) {
         toast.success("Attachments updated successfully!");
@@ -155,9 +162,11 @@ export default function WorkDetailPage({
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
   const handleUpdateProgress = async () => {
     try {
       setUpdatingProgress(true);
@@ -454,6 +463,16 @@ export default function WorkDetailPage({
               )}
             </Box>
           )}
+          {work?.checklogs[0]?.comment && (
+            <Box display={"flex"} justifyItems={"center"} gap={1} ml={3}>
+              <Typography variant="h6" fontWeight={500}>
+                Checkin Note:
+              </Typography>
+              <Typography color="textSecondary" className="f-14">
+                {work?.checklogs[0]?.comment}
+              </Typography>
+            </Box>
+          )}
 
           {/* Photos After */}
           {work?.images.length > 0 && (
@@ -568,6 +587,17 @@ export default function WorkDetailPage({
                   />
                 </Box>
               )}
+            </Box>
+          )}
+
+          {work?.checklogs[0]?.checkout_note && (
+            <Box display={"flex"} justifyItems={"center"} gap={1} ml={3} mt={1}>
+              <Typography variant="h6" fontWeight={500}>
+                Checkout Note:
+              </Typography>
+              <Typography color="textSecondary" className="f-14">
+                {work?.checklogs[0]?.checkout_note}
+              </Typography>
             </Box>
           )}
         </>
