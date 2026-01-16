@@ -205,7 +205,7 @@ input#project_id::placeholder {
 .team_selection .MuiAutocomplete-endAdornment button svg{
     font-size: 18px !important;
 }
-.address-form ,.task-form{
+.address-form ,.task-form , .category-form{
     display: flex;
     height: 100%;
     flex-direction: column;

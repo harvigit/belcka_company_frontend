@@ -56,6 +56,7 @@ export interface TeamList {
   extension: string | null;
   is_working: boolean;
   user_role_id: number;
+  user_code: string | null;
 }
 
 export interface TradeList {
@@ -104,6 +105,7 @@ const TablePagination = () => {
     email: "",
     extension: "+44",
     phone: "",
+    user_code: "",
     expired_at: "",
   });
 
@@ -128,6 +130,7 @@ const TablePagination = () => {
           email: userInfo.email || "",
           extension: ext,
           phone: number,
+          user_code: userInfo.user_code,
           expired_at: userInfo.expired_at
             ? userInfo.expired_at.split("T")[0]
             : "",
@@ -315,7 +318,7 @@ const TablePagination = () => {
                   color="textSecondary"
                   ml={2}
                 >
-                  {data?.trade_name ?? null}
+                  {data?.trade_name ?? null} {data?.user_code ? `| ${data.user_code}` :""}
                 </Typography>
               </Box>
             </Box>
@@ -429,6 +432,23 @@ const TablePagination = () => {
                   }
                   fullWidth
                 />
+
+                 <Typography color="textSecondary" variant="h5" mt={2}>
+                  User Code
+                </Typography>
+                <CustomTextField
+                  id="user_code"
+                  name="user_code"
+                  className="custom_color"
+                  placeholder="Enter user code.."
+                  value={formData.user_code}
+                  onChange={(e: any) =>
+                    handleFieldChange("user_code", e.target.value)
+                  }
+                  inputProps={{ maxLength: 6 }}
+                  fullWidth
+                />
+
                 <Typography color="textSecondary" variant="h5" mt={2}>
                   Expired At
                 </Typography>

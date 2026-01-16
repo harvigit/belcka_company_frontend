@@ -117,6 +117,7 @@ export interface UserList {
   address: string;
   nin_number: string;
   utr_number: string;
+  user_code: string | null;
 }
 
 export interface TradeList {
@@ -654,6 +655,27 @@ const TablePagination = () => {
             noWrap
           >
             {info.getValue() ?? "-"}
+          </Typography>
+        </Tooltip>
+      ),
+    }),
+
+    columnHelper.accessor((row) => row.user_code, {
+      id: "userCode",
+      header: () => (
+        <Typography variant="subtitle2" noWrap>
+          User Code
+        </Typography>
+      ),
+      cell: (info) => (
+        <Tooltip title={info.getValue() ?? ""} placement="top" arrow>
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{ width: 100 ,ml: 2}}
+            noWrap
+          >
+            {info.getValue() ? info.getValue() : "-"}
           </Typography>
         </Tooltip>
       ),

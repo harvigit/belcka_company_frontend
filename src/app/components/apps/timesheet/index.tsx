@@ -33,7 +33,7 @@ const TimesheetPage = () => {
   };
 
   return (
-    <PermissionGuard permission="Time Tracking">
+    <PermissionGuard permission="Bookkeeper">
       <Box p={2} pt={0}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Tabs

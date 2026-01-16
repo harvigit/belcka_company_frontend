@@ -1,11 +1,28 @@
 import { uniqueId } from "lodash";
 
-import { IconFiles, IconInfoCircle, IconShieldCheck, IconUser, IconUserPlus, IconUsers } from "@tabler/icons-react";
+import {
+  IconBasket,
+  IconCategory,
+  IconDatabase,
+  IconFiles,
+  IconInfoCircle,
+  IconKeyframes,
+  IconShieldCheck,
+  IconSql,
+  IconUser,
+  IconUserPlus,
+  IconUsers,
+} from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
+import { IconBox } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
+  {
+    navlabel: true,
+    subheader: "Management",
+  },
   // {
   //   id: uniqueId(),
   //   title: "Dashboard",
@@ -15,38 +32,43 @@ const MenuItems: NavGroup[] = [
   // },
   {
     id: uniqueId(),
-    title: "Users", 
+    title: "Users",
     slug: "users",
     icon: IconUsers,
     href: "/apps/users/list",
   },
   {
     id: uniqueId(),
-    title: "Teams", 
+    title: "Teams",
     slug: "teams",
     icon: IconUserPlus,
     href: "/apps/teams/list",
   },
   {
     id: uniqueId(),
-    title: "Time Tracking", 
-    slug: "time_tracking",
+    title: "Bookkeeper",
+    slug: "bookkeper",
     icon: IconTicket,
     href: "/apps/timesheet/list",
   },
   {
     id: uniqueId(),
-    title: "Projects", 
+    title: "Projects",
     slug: "projects",
     icon: IconFiles,
     href: "/apps/projects/index",
   },
   {
     id: uniqueId(),
-    title: "Clients", 
+    title: "Clients",
     slug: "clients",
     icon: IconUsers,
     href: "/apps/clients/list",
+  },
+
+  {
+    navlabel: true,
+    subheader: "Inventory",
   },
   // {
   //   id: uniqueId(),
@@ -60,9 +82,41 @@ const MenuItems: NavGroup[] = [
   //   icon: IconInfoCircle,
   //   href: "/app-info",
   // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Products",
+  //   slug: "products",
+  //   icon: IconDatabase,
+  //   href: "/apps/products/list",
+  // },
+
+  // {
+  //   id: uniqueId(),
+  //   title: "Stores",
+  //   slug: "stores",
+  //   icon: IconCategory,
+  //   href: "/apps/stores/list",
+  // },
+
+  // {
+  //   id: uniqueId(),
+  //   title: "Categories",
+  //   slug: "categories",
+  //   icon: IconKeyframes,
+  //   href: "/apps/categories/list",
+  // },
+
+  // {
+  //   id: uniqueId(),
+  //   title: "Suppliers",
+  //   slug: "suppliers",
+  //   icon: IconBox,
+  //   href: "/apps/suppliers/list",
+  // },
+
   {
     id: uniqueId(),
-    title: "Settings", 
+    title: "Settings",
     slug: "settings",
     icon: IconSettings,
     href: "/admin-settings",

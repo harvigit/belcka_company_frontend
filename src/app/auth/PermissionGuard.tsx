@@ -94,7 +94,7 @@ export default function PermissionGuard({
     }
 
     if (!authorized) {
-      redirectTo && router.push(redirectTo);
+      setIsAuthorized(false);
       return;
     }
 
@@ -146,9 +146,53 @@ export default function PermissionGuard({
     return <PermissionSkeleton />;
   }
 
+  if (showTradePopup) {
+    return (
+      <>
+        <Dialog open={showTradePopup && !drawerOpen} disableEscapeKeyDown>
+          <DialogContent>
+            <Typography>
+              Your company doesn&apos;t have any trades yet.
+            </Typography>
+
+            <Box display="flex" gap={2} mt={2}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<IconPlus size={18} />}
+                onClick={() => setDrawerOpen(true)}
+              >
+                Add Trade
+              </Button>
+
+              <Button
+                fullWidth
+                color="error"
+                variant="outlined"
+                onClick={userLogout}
+              >
+                Logout
+              </Button>
+            </Box>
+          </DialogContent>
+        </Dialog>
+
+        <CreateTrade
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleSubmit}
+          companyId={user?.company_id ?? null}
+          isSaving={isSaving}
+        />
+      </>
+    );
+  }
+
   if (!isAuthorized) {
     if (fallback) return <>{fallback}</>;
-  
+
     return (
       <Box
         sx={{
@@ -174,52 +218,9 @@ export default function PermissionGuard({
     );
   }
 
-  return (
-    <>
-      <Dialog open={showTradePopup && !drawerOpen} disableEscapeKeyDown>
-        <DialogContent>
-          <Typography>
-            Your company doesn&apos;t have any trades yet.
-          </Typography>
-
-          <Box display="flex" gap={2} mt={2}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<IconPlus size={18} />}
-              onClick={() => setDrawerOpen(true)}
-            >
-              Add Trade
-            </Button>
-
-            <Button
-              fullWidth
-              color="error"
-              variant="outlined"
-              onClick={userLogout}
-            >
-              Logout
-            </Button>
-          </Box>
-        </DialogContent>
-      </Dialog>
-
-      {showTradePopup && (
-        <CreateTrade
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          formData={formData}
-          setFormData={setFormData}
-          handleSubmit={handleSubmit}
-          companyId={user?.company_id ?? null}
-          isSaving={isSaving}
-        />
-      )}
-
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
+
 function PermissionSkeleton() {
   return (
     <Box
