@@ -253,7 +253,16 @@ const RequestCard = React.memo<{
                                     <Typography variant="caption" color="text.secondary" fontWeight={500}>
                                         Request Note
                                     </Typography>
-                                    <Typography variant="body2" color="primary.main">
+                                    <Typography variant="body2" color="primary.main" 
+                                    sx={{
+                                        display: "-webkit-box",
+                                        WebkitBoxOrient: "vertical",
+                                        WebkitLineClamp: 6,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        lineHeight: 1.15,
+                                        wordBreak: "break-word",
+                                    }}>
                                         {request.note}
                                     </Typography>
                                 </Box>
@@ -323,7 +332,17 @@ const RequestCard = React.memo<{
                                         <Typography variant="caption" color="text.secondary" fontWeight={500}>
                                             Reject Reason
                                         </Typography>
-                                        <Typography variant="body2" color="primary.main">
+                                        <Typography variant="body2" color="primary.main"
+                                            sx={{
+                                            display: "-webkit-box",
+                                            WebkitBoxOrient: "vertical",
+                                            WebkitLineClamp: 6,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            lineHeight: 1.15,
+                                            maxWidth:500,
+                                            wordBreak: "break-word",
+                                        }}>
                                             {request.reject_reason}
                                         </Typography>
                                     </Box>
@@ -539,7 +558,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 await api.post(endpoint, payload);
 
             if (response.data.IsSuccess) {
-                showAlert(`All requests ${action}d successfully`, 'success');
+                showAlert(`All requests ${action}ed successfully`, 'success');
 
                 await delay(2000);
 
