@@ -364,7 +364,7 @@ const TimeClock = ({queryParams}: Props) => {
         if (foundUser) {
           saveDateToStorage(startDateObj, endDateObj);
           setSelectedTimeClock(foundUser);
-          if(queryParams?.type !== null){
+          if(queryParams?.type){
             setDetailsOpen(true);
           }
           router.replace("/apps/timesheet/list", { scroll: false });
@@ -376,7 +376,7 @@ const TimeClock = ({queryParams}: Props) => {
       } catch (err) {
         console.error("Failed to load data from query params:", err);
       }
-      router.replace("/apps/timesheet/list", { scroll: false });
+    //   router.replace("/apps/timesheet/list", { scroll: false });
     })();
   }, [searchParams]);
 
