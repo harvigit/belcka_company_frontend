@@ -11,6 +11,7 @@ import {
   IconButton,
   Drawer,
   Button,
+  Tooltip,
 } from "@mui/material";
 import Image from "next/image";
 import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react";
@@ -22,6 +23,7 @@ interface WorkDetailPageProps {
   companyId: number | null;
   addressId: number;
   onClose: () => void;
+  onSubmit: () => void;
 }
 
 export default function WorkDetailPage({
@@ -30,6 +32,7 @@ export default function WorkDetailPage({
   workId,
   companyId,
   addressId,
+  onSubmit,
 }: WorkDetailPageProps) {
   const [loading, setLoading] = useState(false);
   const [work, setWork] = useState<any>(null);
@@ -58,7 +61,7 @@ export default function WorkDetailPage({
     setLoading(true);
     try {
       const res = await api.get(
-        `project/get-work-detail?company_id=${companyId}&address_id=${addressId}&work_id=${workId}`
+        `project/get-work-detail?company_id=${companyId}&address_id=${addressId}&work_id=${workId}`,
       );
       if (res.data?.IsSuccess) {
         if (res.data?.IsSuccess) {
@@ -96,7 +99,7 @@ export default function WorkDetailPage({
 
   const handleAddFiles = (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: "before" | "after"
+    type: "before" | "after",
   ) => {
     const files = Array.from(e.target.files || []);
     if (type === "before") setNewBeforeFiles((prev) => [...prev, ...files]);
@@ -129,7 +132,7 @@ export default function WorkDetailPage({
     if (removeBeforeIds.length > 0) {
       formData.append(
         "before_attachment_remove_ids",
-        removeBeforeIds.join(",")
+        removeBeforeIds.join(","),
       );
     }
 
@@ -180,6 +183,7 @@ export default function WorkDetailPage({
       if (res.data?.IsSuccess) {
         toast.success(res.data.message);
         await fetchWorkDetail();
+        onSubmit?.();
         onClose?.();
       }
     } catch (err) {
@@ -319,9 +323,22 @@ export default function WorkDetailPage({
               <Typography
                 variant="h6"
                 mb={1}
-                sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+                sx={{
+                  boxShadow: 3,
+                  p: 2,
+                  borderRadius: 2,
+                  display: "flex",
+                  gap: 1,
+                }}
               >
-                Estimated duration: ~{work.duration}
+                Estimated duration: ~{work.duration}{" "}
+                {work?.total_checklog_minutes > 0 && (
+                  <Tooltip title="user spend time" placement="top">
+                    <Typography color="primary.main" className="f-14">
+                      ({work.total_checklog_minutes} min)
+                    </Typography>
+                  </Tooltip>
+                )}
               </Typography>
             )}
 
@@ -468,7 +485,19 @@ export default function WorkDetailPage({
               <Typography variant="h6" fontWeight={500}>
                 Checkin Note:
               </Typography>
-              <Typography color="textSecondary" className="f-14">
+              <Typography
+                color="textSecondary"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 6,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.15,
+                  wordBreak: "break-word",
+                }}
+              >
                 {work?.checklogs[0]?.comment}
               </Typography>
             </Box>
@@ -595,7 +624,19 @@ export default function WorkDetailPage({
               <Typography variant="h6" fontWeight={500}>
                 Checkout Note:
               </Typography>
-              <Typography color="textSecondary" className="f-14">
+              <Typography
+                color="textSecondary"
+                className="f-14"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 6,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.15,
+                  wordBreak: "break-word",
+                }}
+              >
                 {work?.checklogs[0]?.checkout_note}
               </Typography>
             </Box>

@@ -268,6 +268,7 @@ useEffect(() => {
         workId={selectedWorkId}
         companyId={companyId}
         addressId={addressId}
+        onSubmit={fetchWorkTabData}
       />
 
       {/* List of works */}

@@ -269,12 +269,32 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                     sx={{width: '100%', mt: 1}}
                                 >
                                     <Typography
-                                        variant="h6"
+                                        variant="body1"
                                         mb={1}
-                                        className="f-18"
                                     >
                                         {checklog.name || "Untitled Task"}
                                     </Typography>
+
+                                    {checklog.duration && (
+                                        <Typography
+                                        variant="body1"
+                                        mb={1}
+                                        sx={{
+                                            borderRadius: 2,
+                                            display: "flex",
+                                            gap: 1,
+                                        }}
+                                        >
+                                        Estimated duration: ~{checklog.duration}{" "}
+                                        {data?.total_checklog_minutes > 0 && (
+                                            <Tooltip title="user spend time" placement="top">
+                                            <Typography color="primary.main" variant="body1">
+                                                ({data.total_checklog_minutes} min)
+                                            </Typography>
+                                            </Tooltip>
+                                        )}
+                                        </Typography>
+                                    )}
 
                                     {/* Progress bar with expand button */}
                                     {checklog.progress !== undefined && (
@@ -282,7 +302,6 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.5}>
                                                 <Typography
                                                     variant="body1"
-                                                    className="f-16"
                                                 >
                                                     Progress: {editableProgress[checklog.id] ?? 0}%
                                                 </Typography>
@@ -397,7 +416,19 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                         <Typography variant="h6" fontWeight={500}>
                                         Checkin Note:
                                         </Typography>
-                                        <Typography color="textSecondary" className="f-14">
+                                        <Typography
+                                            color="textSecondary"
+                                            className="f-14"
+                                            sx={{
+                                            display: "-webkit-box",
+                                            WebkitBoxOrient: "vertical",
+                                            WebkitLineClamp: 6,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            lineHeight: 1.15,
+                                            wordBreak: "break-word",
+                                            }}
+                                        >
                                         {data?.checkin_note}
                                         </Typography>
                                     </Box>
@@ -446,7 +477,19 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                         <Typography variant="h6" fontWeight={500}>
                                         Checkout Note:
                                         </Typography>
-                                        <Typography color="textSecondary" className="f-14">
+                                        <Typography
+                                            color="textSecondary"
+                                            className="f-14"
+                                            sx={{
+                                            display: "-webkit-box",
+                                            WebkitBoxOrient: "vertical",
+                                            WebkitLineClamp: 6,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            lineHeight: 1.15,
+                                            wordBreak: "break-word",
+                                            }}
+                                        >
                                         {data?.checkout_note}
                                         </Typography>
                                     </Box>
