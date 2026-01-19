@@ -370,13 +370,13 @@ const TimeClock = ({queryParams}: Props) => {
           router.replace("/apps/timesheet/list", { scroll: false });
         }
 
-        setTimeout(() => {
-          router.replace("/apps/timesheet/list", { scroll: false });
-        }, 500);
+        // setTimeout(() => {
+        //   router.replace("/apps/timesheet/list", { scroll: false });
+        // }, 500);
       } catch (err) {
         console.error("Failed to load data from query params:", err);
       }
-    //   router.replace("/apps/timesheet/list", { scroll: false });
+      router.replace("/apps/timesheet/list", { scroll: false });
     })();
   }, [searchParams]);
 
