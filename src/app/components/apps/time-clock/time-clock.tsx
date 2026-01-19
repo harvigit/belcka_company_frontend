@@ -356,29 +356,34 @@ const TimeClock = ({queryParams}: Props) => {
     setEndDate(endDateObj);
 
     (async () => {
-      try {
+        try {
         const fetchedData = await fetchData(startDateObj, endDateObj);
+
         const foundUser = fetchedData.find(
-          (item) => Number(item.user_id) === Number(userIdParam)
+            (item) => Number(item.user_id) === Number(userIdParam)
         );
-        if (foundUser) {
-          saveDateToStorage(startDateObj, endDateObj);
-          setSelectedTimeClock(foundUser);
-          if(openParam && queryParams?.type){
+
+        if (!foundUser) return;
+
+        saveDateToStorage(startDateObj, endDateObj);
+        setSelectedTimeClock(foundUser);
+
+        if (queryParams?.type) {
             setDetailsOpen(true);
+
+            setTimeout(() => {
             router.replace("/apps/timesheet/list", { scroll: false });
-          }
+            }, 0);
+        } else {
+            router.replace("/apps/timesheet/list", { scroll: false });
         }
 
-        // setTimeout(() => {
-        //   router.replace("/apps/timesheet/list", { scroll: false });
-        // }, 500);
-      } catch (err) {
+        } catch (err) {
         console.error("Failed to load data from query params:", err);
-      }
-    //   router.replace("/apps/timesheet/list", { scroll: false });
+        }
     })();
-  }, [searchParams]);
+    }, [searchParams]);
+
 
     const fetchConflictsData = async (start: Date, end: Date) => {
         try {
