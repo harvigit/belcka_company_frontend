@@ -167,6 +167,7 @@ interface Props {
         start_date?: string | null;
         end_date?: string | null;
         open?: string | null;
+        type?: string | null;
     };
 }
 
@@ -363,7 +364,9 @@ const TimeClock = ({queryParams}: Props) => {
         if (foundUser) {
           saveDateToStorage(startDateObj, endDateObj);
           setSelectedTimeClock(foundUser);
-          setDetailsOpen(true);
+          if(queryParams?.type !== null){
+            setDetailsOpen(true);
+          }
           router.replace("/apps/timesheet/list", { scroll: false });
         }
 
@@ -373,7 +376,7 @@ const TimeClock = ({queryParams}: Props) => {
       } catch (err) {
         console.error("Failed to load data from query params:", err);
       }
-      router.replace("/apps/timesheet/list", { scroll: false });
+    //   router.replace("/apps/timesheet/list", { scroll: false });
     })();
   }, [searchParams]);
 
@@ -800,7 +803,7 @@ const TimeClock = ({queryParams}: Props) => {
     });
 
     useEffect(() => {
-        if (queryParams?.open) {
+        if (queryParams?.open && queryParams.type == null) {
             setOpenLeaves(true);
         }
     }, [queryParams]);
@@ -1568,6 +1571,7 @@ const TimeClock = ({queryParams}: Props) => {
                     onClose={closeDetails}
                     onUserChange={handleUserChange}
                     onDataChange={handleDataChange}
+                    queryParams={queryParams}
                 />
             </Drawer>
 

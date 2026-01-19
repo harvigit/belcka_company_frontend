@@ -46,6 +46,7 @@ interface ChecklogTask {
 export default function ChecklogDetailPage({checklogId, open, onClose}: ChecklogDetailPageProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [checklogTasks, setChecklogTasks] = useState<ChecklogTask[]>([]);
+    const [data, setData] = useState<any>([]);
     const [hoveredImage, setHoveredImage] = useState<string | null>(null);
     const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
     const [editableProgress, setEditableProgress] = useState<Record<number, number>>({});
@@ -68,6 +69,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
         try {
             const res = await api.get(`user-checklog/details?checklog_id=${checklogId}`);
             if (res.data?.IsSuccess && Array.isArray(res.data.info.task_list)) {
+                setData(res.data.info)
                 setChecklogTasks(res.data.info.task_list);
             } else {
                 setChecklogTasks([]);
@@ -390,6 +392,17 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                         </Box>
                                     )}
 
+                                    {data?.checkin_note && (
+                                    <Box display={"flex"} justifyItems={"center"} gap={1} ml={2} mb={2}>
+                                        <Typography variant="h6" fontWeight={500}>
+                                        Checkin Note:
+                                        </Typography>
+                                        <Typography color="textSecondary" className="f-14">
+                                        {data?.checkin_note}
+                                        </Typography>
+                                    </Box>
+                                    )}
+                                              
                                     {/* Photos After */}
                                     {checklog.after_attachments && checklog.after_attachments.length > 0 && (
                                         <Box mb={2} p={2} sx={{ backgroundColor: '#fff', borderRadius: 2 }}>
@@ -427,6 +440,16 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                                 ))}
                                             </Stack>
                                         </Box>
+                                    )}
+                                    {data?.checkout_note && (
+                                    <Box display={"flex"} justifyItems={"center"} gap={1} ml={2} mb={2}>
+                                        <Typography variant="h6" fontWeight={500}>
+                                        Checkout Note:
+                                        </Typography>
+                                        <Typography color="textSecondary" className="f-14">
+                                        {data?.checkout_note}
+                                        </Typography>
+                                    </Box>
                                     )}
                                 </Box>
                             </Collapse>

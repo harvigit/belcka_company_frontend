@@ -95,6 +95,7 @@ interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
         start_date?: string | null;
         end_date?: string | null;
         open?: string | null;
+        type?: string | null;
     };
 }
 
@@ -459,11 +460,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestSidebar(true);
     };
 
-    useEffect(() => {
-        if (queryParams?.open) {
-            setLeaveRequestSidebar(true);
-        }
+   useEffect(() => {
+    if (!queryParams?.open) return;
+
+    if (queryParams?.type !== null) {
+        setRequestListOpen(true);
+        // setLeaveRequestSidebar(false);
+    } else {
+        // setLeaveRequestSidebar(true);
+        setRequestListOpen(false);
+    }
     }, [queryParams]);
+
     const closeLeaveRequestSidebar = async () => {
         try {
             const defaultStartDate = startDate || defaultStart;

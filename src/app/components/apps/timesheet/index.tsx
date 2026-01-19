@@ -20,6 +20,7 @@ const TimesheetPage = () => {
   const startParam = searchParams?.get("start_date");
   const endParam = searchParams?.get("end_date");
   const openParam = searchParams?.get("open");
+  const type = searchParams?.get("type");
   const handleTabChange = (event: any, newValue: any) => {
     setValue(newValue);
   };
@@ -81,7 +82,7 @@ const TimesheetPage = () => {
                         }}
                     />*/}
             <Tab
-              label="Time Tracking"
+              label="Bookkeeper"
               sx={{
                 textTransform: "none",
                 borderRadius: "10px",
@@ -125,6 +126,7 @@ const TimesheetPage = () => {
               start_date: startParam,
               end_date: endParam,
               open: openParam,
+              type: type,
             }}
           />
         )}

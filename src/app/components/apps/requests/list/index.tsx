@@ -180,6 +180,8 @@ export default function UserRequests({
       if (recordId) params.push(`user_id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=shift");
+      params.push(`open=true`);
 
       if (params.length > 0) {
         url += `?${params.join("&")}`;
