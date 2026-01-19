@@ -62,7 +62,7 @@ const loadDateRangeFromStorage = () => {
 };
 const saveDateRangeToStorage = (
   startDate: Date | null,
-  endDate: Date | null
+  endDate: Date | null,
 ) => {
   try {
     const dateRange = {
@@ -108,7 +108,7 @@ export default function UserRequests({
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<Date | null>(
-    initialDates.startDate
+    initialDates.startDate,
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
   const [requestCount, setRequestCount] = useState<number>(0);
@@ -219,7 +219,9 @@ export default function UserRequests({
         item.type_name,
       ]
         .filter(Boolean)
-        .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+        .some((field) =>
+          field.toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
     );
   }, [data, searchTerm]);
 
@@ -307,19 +309,11 @@ export default function UserRequests({
                     const routeFn = REQUEST_ROUTE_MAP[work.type_name];
                     if (routeFn) {
                       if (work.type_name === "Shift") {
-                        const start = startDate
-                          ? format(startDate, "yyyy-MM-dd")
-                          : undefined;
-                        const end = endDate
-                          ? format(endDate, "yyyy-MM-dd")
-                          : undefined;
-                        router.push(routeFn(work.user_id, start, end));
-                      } else if (work.type_name === "Leave") {
                         const dateAdded = work.date_added
                           ? parse(
                               work.date_added,
                               "d MMMM yyyy HH:mm",
-                              new Date()
+                              new Date(),
                             )
                           : undefined;
 
@@ -328,7 +322,23 @@ export default function UserRequests({
                           : undefined;
 
                         router.push(
-                          routeFn(work.user_id, formattedDate, formattedDate)
+                          routeFn(work.user_id, formattedDate, formattedDate),
+                        );
+                      } else if (work.type_name === "Leave") {
+                        const dateAdded = work.date_added
+                          ? parse(
+                              work.date_added,
+                              "d MMMM yyyy HH:mm",
+                              new Date(),
+                            )
+                          : undefined;
+
+                        const formattedDate = dateAdded
+                          ? format(dateAdded, "yyyy-MM-dd")
+                          : undefined;
+
+                        router.push(
+                          routeFn(work.user_id, formattedDate, formattedDate),
                         );
                       } else {
                         router.push(routeFn(work.user_id));
