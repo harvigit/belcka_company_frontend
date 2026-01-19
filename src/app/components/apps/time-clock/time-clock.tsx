@@ -364,10 +364,10 @@ const TimeClock = ({queryParams}: Props) => {
         if (foundUser) {
           saveDateToStorage(startDateObj, endDateObj);
           setSelectedTimeClock(foundUser);
-          if(queryParams?.type){
+          if(openParam && queryParams?.type){
             setDetailsOpen(true);
+            router.replace("/apps/timesheet/list", { scroll: false });
           }
-          router.replace("/apps/timesheet/list", { scroll: false });
         }
 
         // setTimeout(() => {
