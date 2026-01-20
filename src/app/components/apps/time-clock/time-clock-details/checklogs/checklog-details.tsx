@@ -157,6 +157,19 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
             (checklog.after_attachments && checklog.after_attachments.length > 0);
     };
 
+
+    const formatSeconds = (seconds: number) => {
+        const totalMinutes = Math.floor(seconds / 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+
+        const formattedHours = String(hours).padStart(2, "0");
+        const formattedMinutes = String(minutes).padStart(2, "0");
+
+        return `${formattedHours}:${formattedMinutes} h`;
+    };
+
+
     return (
         <Drawer
             anchor="right"
@@ -275,26 +288,6 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                         {checklog.name || "Untitled Task"}
                                     </Typography>
 
-                                    {checklog.duration && (
-                                        <Typography
-                                        variant="body1"
-                                        mb={1}
-                                        sx={{
-                                            borderRadius: 2,
-                                            display: "flex",
-                                            gap: 1,
-                                        }}
-                                        >
-                                        Estimated duration: ~{checklog.duration}{" "}
-                                        {data?.total_checklog_minutes > 0 && (
-                                            <Tooltip title="user spend time" placement="top">
-                                            <Typography color="primary.main" variant="body1">
-                                                ({data.total_checklog_minutes} min)
-                                            </Typography>
-                                            </Tooltip>
-                                        )}
-                                        </Typography>
-                                    )}
 
                                     {/* Progress bar with expand button */}
                                     {checklog.progress !== undefined && (
@@ -366,6 +359,29 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                             )}
                                         </Box>
                                     )}
+
+                                    <Box
+                                        key={index}
+                                        sx={{
+                                            mt: 1,
+                                            mb:2,
+                                            borderRadius: 2,
+                                            gap: 1,
+                                        }}
+                                        >
+                                        <Typography variant="body1" mb={1} fontWeight={600}>
+                                        Checking summary : {formatSeconds(data?.task_list[0]?.total_payable_seconds ?? 0)}
+                                        </Typography>
+                                        {data?.task_list[0]?.checklog_summary.map((item: any, index: any) => (
+                                        <Box key={index}>
+                                            <Typography variant="body1" fontWeight={600}>
+                                            ({item.checkin_date}) {item.start_time} 
+                                            {item.end_time ? `- ${item.end_time}` : ""} ={" "}
+                                            {formatSeconds(item.payable_seconds)}
+                                            </Typography>
+                                        </Box>
+                                    ))}
+                                    </Box>
                                 </Stack>
                             </Box>
 
@@ -410,29 +426,6 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                             </Stack>
                                         </Box>
                                     )}
-
-                                    {data?.checkin_note && (
-                                    <Box display={"flex"} justifyItems={"center"} gap={1} ml={2} mb={2}>
-                                        <Typography variant="h6" fontWeight={500}>
-                                        Checkin Note:
-                                        </Typography>
-                                        <Typography
-                                            color="textSecondary"
-                                            className="f-14"
-                                            sx={{
-                                            display: "-webkit-box",
-                                            WebkitBoxOrient: "vertical",
-                                            WebkitLineClamp: 6,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            lineHeight: 1.15,
-                                            wordBreak: "break-word",
-                                            }}
-                                        >
-                                        {data?.checkin_note}
-                                        </Typography>
-                                    </Box>
-                                    )}
                                               
                                     {/* Photos After */}
                                     {checklog.after_attachments && checklog.after_attachments.length > 0 && (
@@ -472,30 +465,54 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                             </Stack>
                                         </Box>
                                     )}
-                                    {data?.checkout_note && (
-                                    <Box display={"flex"} justifyItems={"center"} gap={1} ml={2} mb={2}>
-                                        <Typography variant="h6" fontWeight={500}>
-                                        Checkout Note:
-                                        </Typography>
-                                        <Typography
-                                            color="textSecondary"
-                                            className="f-14"
-                                            sx={{
-                                            display: "-webkit-box",
-                                            WebkitBoxOrient: "vertical",
-                                            WebkitLineClamp: 6,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            lineHeight: 1.15,
-                                            wordBreak: "break-word",
-                                            }}
-                                        >
-                                        {data?.checkout_note}
-                                        </Typography>
-                                    </Box>
-                                    )}
                                 </Box>
                             </Collapse>
+                            
+                            {data?.checkin_note && (
+                                <Box display={"flex"} justifyItems={"center"} gap={1} ml={2} mb={2} mt={2}>
+                                    <Typography variant="h6" fontWeight={500}>
+                                    Checkin Note:
+                                    </Typography>
+                                    <Typography
+                                        color="textSecondary"
+                                        className="f-14"
+                                        sx={{
+                                        display: "-webkit-box",
+                                        WebkitBoxOrient: "vertical",
+                                        WebkitLineClamp: 6,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        lineHeight: 1.15,
+                                        wordBreak: "break-word",
+                                        }}
+                                    >
+                                    {data?.checkin_note}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {data?.checkout_note && (
+                                <Box display={"flex"} justifyItems={"center"} gap={1} ml={2} mb={2}>
+                                    <Typography variant="h6" fontWeight={500}>
+                                    Checkout Note:
+                                    </Typography>
+                                    <Typography
+                                        color="textSecondary"
+                                        className="f-14"
+                                        sx={{
+                                        display: "-webkit-box",
+                                        WebkitBoxOrient: "vertical",
+                                        WebkitLineClamp: 6,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        lineHeight: 1.15,
+                                        wordBreak: "break-word",
+                                        }}
+                                    >
+                                    {data?.checkout_note}
+                                    </Typography>
+                                </Box>
+                            )}
 
                             {hasProgressChanged(checklog.id) && (
                             <Button  color="primary" variant="contained" size="large" onClick={() => handleUpdateProgress(checklog.id)} sx={{ mt: 2 ,borderRadius: 3, width: "50%"}}>

@@ -193,6 +193,17 @@ export default function WorkDetailPage({
     }
   };
 
+  const formatSeconds = (seconds: number) => {
+    const totalMinutes = Math.floor(seconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    const formattedHours = String(hours).padStart(2, "0");
+    const formattedMinutes = String(minutes).padStart(2, "0");
+
+    return `${formattedHours}:${formattedMinutes} h`;
+  };
+
   return (
     <Drawer
       anchor="right"
@@ -208,457 +219,534 @@ export default function WorkDetailPage({
         },
       }}
     >
-      {!work || Object.keys(work).length === 0 ? (
-        <>
-          <Box p={3} textAlign="center">
-            <Typography>No detail found for this work!</Typography>
-          </Box>
-        </>
-      ) : (
-        <>
-          <Box mb={2}>
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <IconButton onClick={onClose}>
-                  <IconArrowLeft />
-                </IconButton>
-                <Typography variant="h6" fontWeight={700}>
-                  Work details
-                </Typography>
-              </Box>
-              {work.images.length > 0 && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleUpload}
-                >
-                  Save
-                </Button>
-              )}
-            </Box>
-          </Box>
+      <Box display="flex" flexDirection="column" height="100%">
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            paddingRight: 1,
+          }}
+        >
+          <Box className="task-form">
+            {!work || Object.keys(work).length === 0 ? (
+              <>
+                <Box p={3} textAlign="center">
+                  <Typography>No detail found for this work!</Typography>
+                </Box>
+              </>
+            ) : (
+              <Box>
+                <Box mb={2}>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <IconButton onClick={onClose}>
+                        <IconArrowLeft />
+                      </IconButton>
+                      <Typography variant="h6" fontWeight={700}>
+                        Work details
+                      </Typography>
+                    </Box>
+                    {work.images.length > 0 && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        onClick={handleUpload}
+                      >
+                        Save
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
 
-          {/* Work Info */}
-          <Box p={2}>
-            <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-              <Box
-                sx={{
-                  backgroundColor: "#FF7A00",
-                  border: "1px solid #FF7A00",
-                  color: "#fff",
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  px: 1,
-                  py: 0.2,
-                  borderRadius: "999px",
-                }}
-              >
-                {work.trade_name}
-              </Box>
-              <Box
-                sx={{
-                  backgroundColor:
-                    work.repeatable_job === "Task" ? "#32A852" : "#FF008C",
-                  border:
-                    work.repeatable_job === "Task"
-                      ? "1px solid #32A852"
-                      : "1px solid #FF008C",
-                  color: "#fff",
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  px: 1,
-                  py: 0.2,
-                  borderRadius: "999px",
-                }}
-              >
-                {work.repeatable_job === "Task" ? work.rate : "Job"}
-              </Box>
-              <Box
-                sx={{
-                  backgroundColor: work.status_color,
-                  border: `1px solid ${work.status_color}`,
-                  color: "#fff",
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  px: 1,
-                  py: 0.2,
-                  borderRadius: "999px",
-                }}
-              >
-                {work.status_text}
-              </Box>
-            </Box>
+                {/* Work Info */}
+                <Box p={2} pt={0}>
+                  <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+                    <Box
+                      sx={{
+                        backgroundColor: "#FF7A00",
+                        border: "1px solid #FF7A00",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: "999px",
+                        textTransform: "lowercase",
+                      }}
+                    >
+                      {work.trade_name}
+                    </Box>
+                    <Box
+                      sx={{
+                        backgroundColor:
+                          work.repeatable_job === "Task"
+                            ? "#32A852"
+                            : "#FF008C",
+                        border:
+                          work.repeatable_job === "Task"
+                            ? "1px solid #32A852"
+                            : "1px solid #FF008C",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: "999px",
+                        textTransform: "lowercase",
+                      }}
+                    >
+                      {work.repeatable_job === "Task" ? work.rate : "Job"}
+                    </Box>
+                    <Box
+                      sx={{
+                        backgroundColor: work.status_color,
+                        border: `1px solid ${work.status_color}`,
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: "999px",
+                        textTransform: "lowercase",
+                      }}
+                    >
+                      {work.status_text}
+                    </Box>
+                  </Box>
 
-            {/* Basic info */}
-            <Typography
-              variant="h6"
-              mb={1}
-              sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-            >
-              {work.name}
-            </Typography>
-            {work.location && (
-              <Typography
-                variant="h6"
-                mb={1}
-                sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-              >
-                Location: {work.location}
-              </Typography>
-            )}
-            {work.units && (
-              <Typography
-                variant="h6"
-                mb={1}
-                sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
-              >
-                Units: {work.units}
-              </Typography>
-            )}
-            {work.duration && (
-              <Typography
-                variant="h6"
-                mb={1}
-                sx={{
-                  boxShadow: 3,
-                  p: 2,
-                  borderRadius: 2,
-                  display: "flex",
-                  gap: 1,
-                }}
-              >
-                Estimated duration: ~{work.duration}{" "}
-                {work?.total_checklog_minutes > 0 && (
-                  <Tooltip title="user spend time" placement="top">
-                    <Typography color="primary.main" className="f-14">
-                      ({work.total_checklog_minutes} min)
+                  {/* Basic info */}
+                  <Typography
+                    variant="h6"
+                    mb={1}
+                    sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+                  >
+                    {work.name}
+                  </Typography>
+                  {work.location && (
+                    <Typography
+                      variant="h6"
+                      mb={1}
+                      sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+                    >
+                      Location: {work.location}
                     </Typography>
-                  </Tooltip>
-                )}
-              </Typography>
-            )}
+                  )}
+                  {work.units && (
+                    <Typography
+                      variant="h6"
+                      mb={1}
+                      sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}
+                    >
+                      Units: {work.units}
+                    </Typography>
+                  )}
+                  {work.duration && (
+                    <Typography
+                      variant="h6"
+                      mb={1}
+                      sx={{
+                        boxShadow: 3,
+                        p: 2,
+                        borderRadius: 2,
+                        display: "flex",
+                        gap: 1,
+                      }}
+                    >
+                      Estimated duration: ~{work.duration}{" "}
+                      {work?.total_checklog_minutes > 0 && (
+                        <Tooltip title="user spend time" placement="top">
+                          <Typography color="primary.main" className="f-14">
+                            ({work.total_checklog_minutes} min)
+                          </Typography>
+                        </Tooltip>
+                      )}
+                    </Typography>
+                  )}
 
-            {work.progress !== undefined && (
-              <Box sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}>
-                <Typography variant="h6" mb={1}>
-                  Progress: {editableProgress}%
-                </Typography>
+                  {work.progress !== undefined && (
+                    <Box sx={{ boxShadow: 3, p: 2, borderRadius: 2 }}>
+                      <Typography variant="h6" mb={1}>
+                        Progress: {editableProgress}%
+                      </Typography>
 
-                {work.status_text !== "Completed" ? (
-                  <>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={editableProgress}
-                      onChange={(e) =>
-                        setEditableProgress(Number(e.target.value))
-                      }
-                      style={{
-                        width: "100%",
-                        height: "10px",
-                        appearance: "none",
-                        background: `linear-gradient(
+                      {work.status_text !== "Completed" ? (
+                        <>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={editableProgress}
+                            onChange={(e) =>
+                              setEditableProgress(Number(e.target.value))
+                            }
+                            style={{
+                              width: "100%",
+                              height: "10px",
+                              appearance: "none",
+                              background: `linear-gradient(
       to right,
       ${getProgressColor(editableProgress)} ${editableProgress}%,
       #eee ${editableProgress}%
     )`,
-                        borderRadius: "5px",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    />
-                  </>
-                ) : (
-                  <LinearProgress
-                    variant="determinate"
-                    value={work.progress}
+                              borderRadius: "5px",
+                              outline: "none",
+                              cursor: "pointer",
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <LinearProgress
+                          variant="determinate"
+                          value={work.progress}
+                          sx={{
+                            height: 10,
+                            borderRadius: 5,
+                            "& .MuiLinearProgress-bar": {
+                              backgroundColor: getProgressColor(work.progress),
+                            },
+                            backgroundColor: "#eee",
+                          }}
+                        />
+                      )}
+                    </Box>
+                  )}
+
+                  <Box
                     sx={{
-                      height: 10,
-                      borderRadius: 5,
-                      "& .MuiLinearProgress-bar": {
-                        backgroundColor: getProgressColor(work.progress),
-                      },
-                      backgroundColor: "#eee",
+                      mt: 1,
+                      boxShadow: 3,
+                      p: 2,
+                      borderRadius: 2,
+                      gap: 1,
                     }}
-                  />
+                  >
+                    <Typography variant="h6" mb={1} fontWeight={600}>
+                      Checking summary :{" "}
+                      {formatSeconds(work?.total_payable_seconds)}
+                    </Typography>
+                    {work?.checklog_summary.map((checklog: any, index: any) => (
+                      <Box key={index}>
+                        <Typography
+                          variant="h6"
+                          className="f-14"
+                          fontWeight={600}
+                        >
+                          ({checklog.checkin_date}) {checklog.start_time}
+                          {checklog.end_time
+                            ? `- ${checklog.end_time}`
+                            : ""} = {formatSeconds(checklog.payable_seconds)}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+
+                {/* Photos Before */}
+                {work?.images.length > 0 && (
+                  <Box p={2}>
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      mb={2}
+                    >
+                      <Typography fontWeight="bold" mb={1}>
+                        Photos Before
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<IconPlus />}
+                        component="label"
+                        size="small"
+                      >
+                        Add Photos
+                        <input
+                          type="file"
+                          hidden
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => handleAddFiles(e, "before")}
+                        />
+                      </Button>
+                    </Box>
+                    <Grid container spacing={2}>
+                      {work.images
+                        ?.filter((i: any) => i.is_before)
+                        .map((img: any) => (
+                          <Grid
+                            size={{ xs: 6 }}
+                            key={img.id}
+                            sx={{
+                              position: "relative",
+                              transition: "transform .2s",
+                              overflow: "visible",
+                              cursor: "pointer",
+                              "&:hover img": {
+                                transform: "scale(1.2)",
+                              },
+                            }}
+                          >
+                            <Image
+                              width={170}
+                              height={170}
+                              src={img.image_url}
+                              alt="before"
+                              style={{
+                                borderRadius: 8,
+                                objectFit: "cover",
+                              }}
+                              onMouseEnter={(e) => {
+                                setHoveredImage(img.image_url);
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+                                setHoverPosition({
+                                  x: rect.right + 10,
+                                  y: rect.top,
+                                });
+                              }}
+                              onMouseLeave={() => setHoveredImage(null)}
+                            />
+                            <IconButton
+                              color="error"
+                              size="small"
+                              sx={{
+                                position: "absolute",
+                                top: 4,
+                                right: 4,
+                                background: "#fff",
+                              }}
+                              onClick={() =>
+                                handleRemoveExisting(img.id, "before")
+                              }
+                            >
+                              <IconTrash size={16} />
+                            </IconButton>
+                          </Grid>
+                        ))}
+                    </Grid>
+
+                    {work?.images.length > 0 && (
+                      <Box mt={2}>
+                        <Box mt={1} display="flex" gap={1} flexWrap="wrap">
+                          {newBeforeFiles.map((file, idx) => (
+                            <Typography key={idx} variant="body2">
+                              {file.name}
+                            </Typography>
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+                {work?.checklog_summary[0]?.comment && (
+                  <Box display={"flex"} justifyItems={"center"} gap={1} ml={3}>
+                    <Typography variant="h6" fontWeight={500}>
+                      Checkin Note:
+                    </Typography>
+                    <Typography
+                      color="textSecondary"
+                      className="f-14"
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 6,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        lineHeight: 1.15,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {work?.checklog_summary[0]?.comment}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Photos After */}
+                {work?.images.length > 0 && (
+                  <Box p={2}>
+                    <Box
+                      display={"flex"}
+                      justifyContent={"space-between"}
+                      mb={2}
+                    >
+                      <Typography fontWeight="bold" mb={1}>
+                        Photos After
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<IconPlus />}
+                        component="label"
+                        size="small"
+                      >
+                        Add Photos
+                        <input
+                          type="file"
+                          hidden
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => handleAddFiles(e, "after")}
+                        />
+                      </Button>
+                    </Box>
+                    <Grid container spacing={2}>
+                      {work.images
+                        ?.filter((i: any) => !i.is_before)
+                        .map((img: any) => (
+                          <Grid
+                            size={{ xs: 6 }}
+                            key={img.id}
+                            sx={{
+                              position: "relative",
+                              transition: "transform .2s",
+                              overflow: "visible",
+                              cursor: "pointer",
+                              "&:hover img": {
+                                transform: "scale(1.2)",
+                              },
+                            }}
+                          >
+                            <Image
+                              width={170}
+                              height={170}
+                              src={img.image_url}
+                              alt="after"
+                              style={{
+                                borderRadius: 8,
+                                objectFit: "cover",
+                              }}
+                              onMouseEnter={(e) => {
+                                setHoveredImage(img.image_url);
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+                                setHoverPosition({
+                                  x: rect.right + 10,
+                                  y: rect.top,
+                                });
+                              }}
+                              onMouseLeave={() => setHoveredImage(null)}
+                            />
+                            <IconButton
+                              color="error"
+                              size="small"
+                              sx={{
+                                position: "absolute",
+                                top: 4,
+                                right: 4,
+                                background: "#fff",
+                              }}
+                              onClick={() =>
+                                handleRemoveExisting(img.id, "after")
+                              }
+                            >
+                              <IconTrash size={16} />
+                            </IconButton>
+                          </Grid>
+                        ))}
+                    </Grid>
+
+                    {work?.images.length > 0 && (
+                      <Box mt={2}>
+                        <Box mt={1} display="flex" gap={1} flexWrap="wrap">
+                          {newAfterFiles.map((file, idx) => (
+                            <Typography key={idx} variant="body2">
+                              {file.name}
+                            </Typography>
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Hover Preview */}
+                    {hoveredImage && (
+                      <Box
+                        sx={{
+                          position: "fixed",
+                          top: "20%",
+                          left: "35%",
+                          width: "25%",
+                          maxHeight: "80vh",
+                          zIndex: 2000,
+                          border: "1px solid #ccc",
+                          borderRadius: 2,
+                          overflow: "hidden",
+                          backgroundColor: "#fff",
+                          boxShadow: 3,
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={hoveredImage}
+                          alt="Preview"
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
+                {work?.checklog_summary[0]?.checkout_note && (
+                  <Box
+                    display={"flex"}
+                    justifyItems={"center"}
+                    gap={1}
+                    ml={3}
+                    mt={1}
+                  >
+                    <Typography variant="h6" fontWeight={500}>
+                      Checkout Note:
+                    </Typography>
+                    <Typography
+                      color="textSecondary"
+                      className="f-14"
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 6,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        lineHeight: 1.15,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {work?.checklog_summary[0]?.checkout_note}
+                    </Typography>
+                  </Box>
                 )}
               </Box>
             )}
           </Box>
-
-          {/* Photos Before */}
-          {work?.images.length > 0 && (
-            <Box p={2}>
-              <Box display={"flex"} justifyContent={"space-between"} mb={2}>
-                <Typography fontWeight="bold" mb={1}>
-                  Photos Before
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<IconPlus />}
-                  component="label"
-                  size="small"
-                >
-                  Add Photos
-                  <input
-                    type="file"
-                    hidden
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => handleAddFiles(e, "before")}
-                  />
-                </Button>
-              </Box>
-              <Grid container spacing={2}>
-                {work.images
-                  ?.filter((i: any) => i.is_before)
-                  .map((img: any) => (
-                    <Grid
-                      size={{ xs: 6 }}
-                      key={img.id}
-                      sx={{
-                        position: "relative",
-                        transition: "transform .2s",
-                        overflow: "visible",
-                        cursor: "pointer",
-                        "&:hover img": {
-                          transform: "scale(1.2)",
-                        },
-                      }}
-                    >
-                      <Image
-                        width={170}
-                        height={170}
-                        src={img.image_url}
-                        alt="before"
-                        style={{
-                          borderRadius: 8,
-                          objectFit: "cover",
-                        }}
-                        onMouseEnter={(e) => {
-                          setHoveredImage(img.image_url);
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setHoverPosition({
-                            x: rect.right + 10,
-                            y: rect.top,
-                          });
-                        }}
-                        onMouseLeave={() => setHoveredImage(null)}
-                      />
-                      <IconButton
-                        color="error"
-                        size="small"
-                        sx={{
-                          position: "absolute",
-                          top: 4,
-                          right: 4,
-                          background: "#fff",
-                        }}
-                        onClick={() => handleRemoveExisting(img.id, "before")}
-                      >
-                        <IconTrash size={16} />
-                      </IconButton>
-                    </Grid>
-                  ))}
-              </Grid>
-
-              {work?.images.length > 0 && (
-                <Box mt={2}>
-                  <Box mt={1} display="flex" gap={1} flexWrap="wrap">
-                    {newBeforeFiles.map((file, idx) => (
-                      <Typography key={idx} variant="body2">
-                        {file.name}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          )}
-          {work?.checklogs[0]?.comment && (
-            <Box display={"flex"} justifyItems={"center"} gap={1} ml={3}>
-              <Typography variant="h6" fontWeight={500}>
-                Checkin Note:
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                sx={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 6,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: 1.15,
-                  wordBreak: "break-word",
-                }}
-              >
-                {work?.checklogs[0]?.comment}
-              </Typography>
-            </Box>
-          )}
-
-          {/* Photos After */}
-          {work?.images.length > 0 && (
-            <Box p={2}>
-              <Box display={"flex"} justifyContent={"space-between"} mb={2}>
-                <Typography fontWeight="bold" mb={1}>
-                  Photos After
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<IconPlus />}
-                  component="label"
-                  size="small"
-                >
-                  Add Photos
-                  <input
-                    type="file"
-                    hidden
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => handleAddFiles(e, "after")}
-                  />
-                </Button>
-              </Box>
-              <Grid container spacing={2}>
-                {work.images
-                  ?.filter((i: any) => !i.is_before)
-                  .map((img: any) => (
-                    <Grid
-                      size={{ xs: 6 }}
-                      key={img.id}
-                      sx={{
-                        position: "relative",
-                        transition: "transform .2s",
-                        overflow: "visible",
-                        cursor: "pointer",
-                        "&:hover img": {
-                          transform: "scale(1.2)",
-                        },
-                      }}
-                    >
-                      <Image
-                        width={170}
-                        height={170}
-                        src={img.image_url}
-                        alt="after"
-                        style={{
-                          borderRadius: 8,
-                          objectFit: "cover",
-                        }}
-                        onMouseEnter={(e) => {
-                          setHoveredImage(img.image_url);
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setHoverPosition({
-                            x: rect.right + 10,
-                            y: rect.top,
-                          });
-                        }}
-                        onMouseLeave={() => setHoveredImage(null)}
-                      />
-                      <IconButton
-                        color="error"
-                        size="small"
-                        sx={{
-                          position: "absolute",
-                          top: 4,
-                          right: 4,
-                          background: "#fff",
-                        }}
-                        onClick={() => handleRemoveExisting(img.id, "after")}
-                      >
-                        <IconTrash size={16} />
-                      </IconButton>
-                    </Grid>
-                  ))}
-              </Grid>
-
-              {work?.images.length > 0 && (
-                <Box mt={2}>
-                  <Box mt={1} display="flex" gap={1} flexWrap="wrap">
-                    {newAfterFiles.map((file, idx) => (
-                      <Typography key={idx} variant="body2">
-                        {file.name}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-
-              {/* Hover Preview */}
-              {hoveredImage && (
-                <Box
-                  sx={{
-                    position: "fixed",
-                    top: "20%",
-                    left: "35%",
-                    width: "25%",
-                    maxHeight: "80vh",
-                    zIndex: 2000,
-                    border: "1px solid #ccc",
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    backgroundColor: "#fff",
-                    boxShadow: 3,
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={hoveredImage}
-                    alt="Preview"
-                    sx={{ width: "100%", height: "100%", objectFit: "contain" }}
-                  />
-                </Box>
-              )}
-            </Box>
-          )}
-
-          {work?.checklogs[0]?.checkout_note && (
-            <Box display={"flex"} justifyItems={"center"} gap={1} ml={3} mt={1}>
-              <Typography variant="h6" fontWeight={500}>
-                Checkout Note:
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                sx={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 6,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: 1.15,
-                  wordBreak: "break-word",
-                }}
-              >
-                {work?.checklogs[0]?.checkout_note}
-              </Typography>
-            </Box>
-          )}
-        </>
-      )}
-      {work?.status_int !== 4 && editableProgress !== originalProgress && (
-        <Box p={2}>
-          <Button
-            color="primary"
-            variant="contained"
-            size="large"
-            type="submit"
-            fullWidth
-            sx={{ borderRadius: 3, width: "50%" }}
-            disabled={updatingProgress}
-            onClick={handleUpdateProgress}
-          >
-            {updatingProgress ? "Updating..." : "Update Progress"}
-          </Button>
         </Box>
-      )}
+        {work?.status_int !== 4 && editableProgress !== originalProgress && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "start",
+              gap: 2,
+              mt: 2,
+            }}
+          >
+            <Button
+              color="primary"
+              variant="contained"
+              size="large"
+              type="submit"
+              fullWidth
+              sx={{ borderRadius: 3, width: "50%" }}
+              disabled={updatingProgress}
+              onClick={handleUpdateProgress}
+            >
+              {updatingProgress ? "Updating..." : "Update Progress"}
+            </Button>
+          </Box>
+        )}
+      </Box>
     </Drawer>
   );
 }

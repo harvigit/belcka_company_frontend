@@ -18,6 +18,7 @@ import {
     DialogContent,
     DialogActions,
     TextField,
+    Tooltip,
 } from '@mui/material';
 import {
     IconX,
@@ -170,7 +171,7 @@ const RequestCard = React.memo<{
             }}
         >
             <CardContent sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
                     {/* Left side - Avatar and user info */}
                     <Box sx={{
                         display: 'flex',
@@ -214,7 +215,7 @@ const RequestCard = React.memo<{
                                 {formatDate(request.date)}
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Typography variant="h6" fontWeight={600}>
+                                <Typography variant="h6" fontWeight={600} color="error.main">
                                     {formatHour(request.old_data?.start_time)}
                                 </Typography>
                                 <Typography variant="body2">→</Typography>
@@ -236,7 +237,7 @@ const RequestCard = React.memo<{
                                 {formatDate(request.date)}
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Typography variant="h6" fontWeight={600}>
+                                <Typography variant="h6" fontWeight={600} color="success.main">
                                     {formatHour(request.new_data?.start_time)}
                                 </Typography>
                                 <Typography variant="body2">→</Typography>
@@ -253,18 +254,20 @@ const RequestCard = React.memo<{
                                     <Typography variant="caption" color="text.secondary" fontWeight={500}>
                                         Request Note
                                     </Typography>
-                                    <Typography variant="body2" color="primary.main" 
-                                    sx={{
-                                        display: "-webkit-box",
-                                        WebkitBoxOrient: "vertical",
-                                        WebkitLineClamp: 6,
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        lineHeight: 1.15,
-                                        wordBreak: "break-word",
-                                    }}>
-                                        {request.note}
-                                    </Typography>
+                                    <Tooltip title={request.note} placement='top'>
+                                        <Typography variant="body2" color="primary.main" 
+                                        sx={{
+                                            display: "-webkit-box",
+                                            WebkitBoxOrient: "vertical",
+                                            WebkitLineClamp: 2,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            lineHeight: 1.15,
+                                            wordBreak: "break-word",
+                                        }}>
+                                            {request.note}
+                                        </Typography>
+                                    </Tooltip>
                                 </Box>
                             )}
                         </Box>
@@ -328,23 +331,25 @@ const RequestCard = React.memo<{
                                 />
 
                                 {request.reject_reason && (
-                                    <Box sx={{ mt: 1 }}>
+                                    <Box>
                                         <Typography variant="caption" color="text.secondary" fontWeight={500}>
                                             Reject Reason
                                         </Typography>
-                                        <Typography variant="body2" color="primary.main"
+                                        <Tooltip title={request.reject_reason} placement='top'>
+                                            <Typography variant="body2" color="primary.main"
                                             sx={{
-                                            display: "-webkit-box",
-                                            WebkitBoxOrient: "vertical",
-                                            WebkitLineClamp: 6,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            lineHeight: 1.15,
-                                            maxWidth:500,
-                                            wordBreak: "break-word",
-                                        }}>
-                                            {request.reject_reason}
-                                        </Typography>
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 2,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                lineHeight: 1.15,
+                                                maxWidth:500,
+                                                wordBreak: "break-word",
+                                            }}>
+                                                {request.reject_reason}
+                                            </Typography>
+                                        </Tooltip>
                                     </Box>
                                 )}
                             </>

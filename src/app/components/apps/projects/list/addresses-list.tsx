@@ -200,7 +200,7 @@ const AddressesList = ({
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -232,7 +232,7 @@ const AddressesList = ({
     setFetchAddress(true);
     try {
       const res = await api.get(
-        `address/get?project_id=${projectId}&company_id=${user.company_id}`
+        `address/get?project_id=${projectId}&company_id=${user.company_id}`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -330,7 +330,7 @@ const AddressesList = ({
     // remove processed IDs from selectedRowIds
     setSelectedRowIds((prev) => {
       const updated = new Set(
-        [...prev].filter((id) => !processedIds.includes(id))
+        [...prev].filter((id) => !processedIds.includes(id)),
       );
       return updated;
     });
@@ -342,7 +342,7 @@ const AddressesList = ({
         `address/download-tasks-zip/${addressId}`,
         {
           responseType: "blob",
-        }
+        },
       );
 
       const blob = new Blob([response.data], { type: "application/zip" });
@@ -361,12 +361,12 @@ const AddressesList = ({
   const getAddressDetail = async () => {
     try {
       const response = await api.get(
-        `address/address-detail?address_id=${sidebarData?.addressId}`
+        `address/address-detail?address_id=${sidebarData?.addressId}`,
       );
       if (response.data.IsSuccess) {
         setAddress(response.data.info);
         const numericValue = Number(
-          response.data.info.progress.replace("%", "")
+          response.data.info.progress.replace("%", ""),
         );
         setRadius(numericValue ?? 0);
       }
@@ -384,7 +384,7 @@ const AddressesList = ({
       };
       const response = await api.put(
         "address/change-address-progress",
-        payload
+        payload,
       );
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
@@ -496,7 +496,7 @@ const AddressesList = ({
       const res = await fetch(
         `https://ws.postcoder.com/pcw/${
           process.env.NEXT_PUBLIC_POSTCODER_KEY
-        }/address/${country}/${encodeURIComponent(query)}?format=json`
+        }/address/${country}/${encodeURIComponent(query)}?format=json`,
       );
 
       const data = await res.json();
@@ -514,7 +514,7 @@ const AddressesList = ({
           results.map((r) => ({
             ...r,
             source: "google",
-          }))
+          })),
         );
       } else {
         setPredictions([]);
@@ -523,10 +523,10 @@ const AddressesList = ({
   };
 
   const selectGooglePrediction = (
-    item: { source: "google" } & google.maps.places.AutocompletePrediction
+    item: { source: "google" } & google.maps.places.AutocompletePrediction,
   ) => {
     const service = new google.maps.places.PlacesService(
-      document.createElement("div")
+      document.createElement("div"),
     );
 
     service.getDetails({ placeId: item.place_id }, (place, status) => {
@@ -558,7 +558,7 @@ const AddressesList = ({
   };
 
   const selectPostcoderPrediction = (
-    item: { source: "postcoder" } & PostcoderAddress
+    item: { source: "postcoder" } & PostcoderAddress,
   ) => {
     const geocoder = new google.maps.Geocoder();
 
@@ -741,6 +741,13 @@ const AddressesList = ({
     );
   };
 
+  const getProgressColor = (progress: number) => {
+    if (progress < 25) return "#FF0000";
+    if (progress < 50) return "#FF7A00";
+    if (progress < 75) return "#FFD700";
+    return "#32A852";
+  };
+
   const columnHelper = createColumnHelper<ProjectList>();
 
   const columns = useMemo(
@@ -767,7 +774,7 @@ const AddressesList = ({
 
                 if (isChecked) {
                   setSelectedRowIds(
-                    new Set(currentFilteredData.map((r) => r.id))
+                    new Set(currentFilteredData.map((r) => r.id)),
                   );
                 } else {
                   setSelectedRowIds(new Set());
@@ -923,7 +930,7 @@ const AddressesList = ({
         },
       }),
     ],
-    [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds]
+    [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds],
   );
 
   const table = useReactTable({
@@ -1000,7 +1007,7 @@ const AddressesList = ({
                           <Typography variant="subtitle2">
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                           </Typography>
                           {isSortable && (
@@ -1065,7 +1072,7 @@ const AddressesList = ({
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}
@@ -1386,12 +1393,27 @@ const AddressesList = ({
                     Progress
                   </Typography>
                   <Box display={"flex"} gap={2}>
-                    <Slider
+                    <input
+                      type="range"
                       min={0}
                       max={100}
                       value={radius}
-                      onChange={(e, v) => setRadius(v as number)}
-                      sx={{ mb: 2, ml: 1 }}
+                      onChange={(e) => setRadius(Number(e.target.value))}
+                      style={{
+                        width: "100%",
+                        height: "10px",
+                        appearance: "none",
+                        background: `linear-gradient(
+                                      to right,
+                                      ${getProgressColor(radius ?? 0)} ${radius ?? 0}%,
+                                      #eee ${radius ?? 0}%
+                                      )`,
+                        borderRadius: "5px",
+                        outline: "none",
+                        cursor: "pointer",
+                        marginBottom: 2,
+                        marginLeft: 1,
+                      }}
                     />
                     <Typography>{radius}%</Typography>
                   </Box>
@@ -1623,7 +1645,7 @@ const AddressesList = ({
                             if (!circleRef.current) return;
 
                             const newRadius = Math.round(
-                              circleRef.current.getRadius()
+                              circleRef.current.getRadius(),
                             );
 
                             if (lastRadiusRef.current === newRadius) return;
