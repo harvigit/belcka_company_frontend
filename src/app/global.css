@@ -180,7 +180,7 @@ input#project_id::placeholder {
     color: unset !important;
 }
 
-.project-selection .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator:hover{
+.project-selection .mui-1vsmqk7-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator:hover, .project-selection button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.MuiAutocomplete-popupIndicator.mui-tcwnsx{
     background-color: unset !important;
     color: white !important;
     .mui-1umw9bq-MuiSvgIcon-root{
@@ -188,6 +188,7 @@ input#project_id::placeholder {
         color: unset !important;
     }
 }
+
 .project-selection .mui-3q9hdc-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-clearIndicator, .project-selection button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.MuiAutocomplete-clearIndicator.mui-lp6drn{
     display: none;
 }
