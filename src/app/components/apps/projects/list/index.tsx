@@ -1679,7 +1679,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     sx={{
                       boxShadow: "0px 1px 4px 0px #00000040",
                       borderRadius: "9px",
-                      height: "42px",
+                      height: "45px",
                       width: "100%",
                       "&:hover": {
                         cursor: "pointer",
@@ -1691,7 +1691,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   >
                     <Typography
                       variant="subtitle1"
-                      ml={2}
+                      ml={1}
                       className="multi-ellipsis"
                       lineHeight={1.25}
                       maxWidth={"180px"}

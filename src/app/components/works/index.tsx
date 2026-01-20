@@ -49,6 +49,9 @@ export default function WorkDetailPage({
   const [editableProgress, setEditableProgress] = useState<number>(0);
   const [originalProgress, setOriginalProgress] = useState<number>(0);
   const [updatingProgress, setUpdatingProgress] = useState(false);
+  const [newBeforePreviews, setNewBeforePreviews] = useState<string[]>([]);
+  const [newAfterPreviews, setNewAfterPreviews] = useState<string[]>([]);
+
   useEffect(() => {
     setEditing(false);
     setNewBeforeFiles([]);
@@ -87,7 +90,12 @@ export default function WorkDetailPage({
   }, [open, work]);
 
   useEffect(() => {
-    if (workId && companyId && addressId) fetchWorkDetail();
+    if (workId && companyId && addressId){
+      fetchWorkDetail();
+[...newBeforePreviews, ...newAfterPreviews].forEach((url) =>
+        URL.revokeObjectURL(url),
+      );
+    } 
   }, [workId, companyId, addressId]);
 
   const getProgressColor = (progress: number) => {
@@ -102,9 +110,28 @@ export default function WorkDetailPage({
     type: "before" | "after",
   ) => {
     const files = Array.from(e.target.files || []);
-    if (type === "before") setNewBeforeFiles((prev) => [...prev, ...files]);
-    else setNewAfterFiles((prev) => [...prev, ...files]);
+    if (!files.length) return;
+
+    const previews = files.map((file) => URL.createObjectURL(file));
+
+    if (type === "before") {
+      setNewBeforeFiles((prev) => [...prev, ...files]);
+      setNewBeforePreviews((prev) => [...prev, ...previews]);
+    } else {
+      setNewAfterFiles((prev) => [...prev, ...files]);
+      setNewAfterPreviews((prev) => [...prev, ...previews]);
+    }
+
+    e.target.value = "";
   };
+
+  useEffect(() => {
+    return () => {
+      [...newBeforePreviews, ...newAfterPreviews].forEach((url) =>
+        URL.revokeObjectURL(url),
+      );
+    };
+  }, [newBeforePreviews, newAfterPreviews]);
 
   const handleRemoveExisting = (id: number, type: "before" | "after") => {
     if (type === "before") setRemoveBeforeIds((prev) => [...prev, id]);
@@ -160,6 +187,8 @@ export default function WorkDetailPage({
         setNewAfterFiles([]);
         setRemoveBeforeIds([]);
         setRemoveAfterIds([]);
+        setNewAfterPreviews([]);
+        setNewBeforePreviews([]);
       } else {
         toast.error(res.data.message || "Error updating attachments");
       }
@@ -528,20 +557,52 @@ export default function WorkDetailPage({
                         ))}
                     </Grid>
 
-                    {work?.images.length > 0 && (
-                      <Box mt={2}>
-                        <Box mt={1} display="flex" gap={1} flexWrap="wrap">
-                          {newBeforeFiles.map((file, idx) => (
-                            <Typography key={idx} variant="body2">
-                              {file.name}
-                            </Typography>
-                          ))}
-                        </Box>
-                      </Box>
+                    {newBeforePreviews.length > 0 && (
+                      <Grid container spacing={2} mt={1}>
+                        {newBeforePreviews.map((src, index) => (
+                          <Grid
+                            size={{ xs: 6 }}
+                            key={index}
+                            sx={{ position: "relative" }}
+                          >
+                            <Image
+                              src={src}
+                              alt="before-preview"
+                              width={170}
+                              height={170}
+                              style={{
+                                borderRadius: 8,
+                                objectFit: "cover",
+                                border: "2px dashed #1976d2",
+                              }}
+                            />
+                            <IconButton
+                              size="small"
+                              color="error"
+                              sx={{
+                                position: "absolute",
+                                top: 4,
+                                right: 4,
+                                background: "#fff",
+                              }}
+                              onClick={() => {
+                                setNewBeforeFiles((prev) =>
+                                  prev.filter((_, i) => i !== index),
+                                );
+                                setNewBeforePreviews((prev) =>
+                                  prev.filter((_, i) => i !== index),
+                                );
+                              }}
+                            >
+                              <IconTrash size={16} />
+                            </IconButton>
+                          </Grid>
+                        ))}
+                      </Grid>
                     )}
                   </Box>
                 )}
-                {work?.checklog_summary[0]?.comment && (
+                {work?.checklog_summary[0]?.checkin_note && (
                   <Box display={"flex"} justifyItems={"center"} gap={1} ml={3}>
                     <Typography variant="h6" fontWeight={500}>
                       Checkin Note:
@@ -559,7 +620,7 @@ export default function WorkDetailPage({
                         wordBreak: "break-word",
                       }}
                     >
-                      {work?.checklog_summary[0]?.comment}
+                      {work?.checklog_summary[0]?.checkin_note}
                     </Typography>
                   </Box>
                 )}
@@ -647,16 +708,52 @@ export default function WorkDetailPage({
                         ))}
                     </Grid>
 
-                    {work?.images.length > 0 && (
-                      <Box mt={2}>
-                        <Box mt={1} display="flex" gap={1} flexWrap="wrap">
-                          {newAfterFiles.map((file, idx) => (
-                            <Typography key={idx} variant="body2">
-                              {file.name}
-                            </Typography>
-                          ))}
-                        </Box>
-                      </Box>
+                    {newAfterPreviews.length > 0 && (
+                      <Grid container spacing={2} mt={1}>
+                        {newAfterPreviews.map((src, index) => (
+                          <Grid
+                            size={{ xs: 6 }}
+                            key={index}
+                            sx={{
+                              position: "relative",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Image
+                              src={src}
+                              alt="after-preview"
+                              width={170}
+                              height={170}
+                              style={{
+                                borderRadius: 8,
+                                objectFit: "cover",
+                                border: "2px dashed #1976d2",
+                              }}
+                            />
+
+                            <IconButton
+                              size="small"
+                              color="error"
+                              sx={{
+                                position: "absolute",
+                                top: 4,
+                                right: 4,
+                                background: "#fff",
+                              }}
+                              onClick={() => {
+                                setNewAfterFiles((prev) =>
+                                  prev.filter((_, i) => i !== index),
+                                );
+                                setNewAfterPreviews((prev) =>
+                                  prev.filter((_, i) => i !== index),
+                                );
+                              }}
+                            >
+                              <IconTrash size={16} />
+                            </IconButton>
+                          </Grid>
+                        ))}
+                      </Grid>
                     )}
 
                     {/* Hover Preview */}

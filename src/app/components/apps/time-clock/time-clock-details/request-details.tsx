@@ -228,7 +228,9 @@ const RequestCard = React.memo<{
                                 {formatPayableHour(request.old_payable_hour)}
                             </Typography>
                         </Box>
+                    </Box>
 
+                    <Box sx={{ flex: 1, display: 'flex', gap: 3 }}>
                         <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
                                 Requested Work Time:
@@ -279,7 +281,8 @@ const RequestCard = React.memo<{
                         flexDirection: 'column',
                         gap: 1,
                         alignItems: 'flex-end',
-                        minWidth: 100
+                        minWidth: 100,
+                        width:"30%"
                     }}>
                         {request.status === PENDING_STATUS ? (
                             <>

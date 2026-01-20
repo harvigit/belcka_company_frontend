@@ -319,7 +319,7 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                     <Box
                         key={record.checklog_id || idx}
                         mb={2}
-                        sx={{ display: "flex", flexDirection: "column", cursor: "pointer" }}
+                        sx={{ display: "flex", cursor: "pointer" }}
                         onClick={() => handleWorkClick(record.checklog_id)}
                     >
                         <Box
@@ -332,6 +332,7 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                                 alignItems: "center",
                                 justifyContent: "space-between",
                                 flexWrap: "wrap",
+                                width: "100%",
                                 "&:hover": {
                                     boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
                                 },
@@ -378,12 +379,11 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                             {/* Work row */}
                             <Stack
                                 direction="row"
-                                spacing={2}
                                 alignItems="center"
                                 justifyContent="space-between"
                                 sx={{ width: "100%", mt: 1 }}
                             >
-                                <Box>
+                                <Box sx={{ width:"100%"}}>
                                     <Typography
                                         fontWeight="bold"
                                         sx={{ fontSize: { xs: "1rem", sm: "1.125rem" } }}
@@ -399,8 +399,8 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                                     </Typography>
                                 </Box>
 
-                                <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1 }}>
-                                    <Box>
+                                <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1, width:"35%" }}>
+                                    <Box width={"100%"} alignContent={"center"}>
                                         <Typography fontWeight="bold" fontSize="1.25rem">
                                             {formatHour(record.total_hours)} H
                                         </Typography>
