@@ -59,7 +59,7 @@ import {
   IconX,
   IconDotsVertical,
   IconUsersMinus,
-  IconTableColumn,
+  IconEye,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -1211,8 +1211,8 @@ const TablePagination = () => {
               <IconDotsVertical width={18} />
             </IconButton>
 
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-              <IconTableColumn />
+            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+              <IconEye />
             </IconButton>
             <Popover
               open={Boolean(anchorEl2)}

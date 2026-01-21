@@ -44,10 +44,10 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconDotsVertical,
+  IconEye,
   IconFilter,
   IconRotate,
   IconSearch,
-  IconTableColumn,
   IconTrash,
   IconUserPlus,
 } from "@tabler/icons-react";
@@ -750,8 +750,8 @@ const TablePagination = () => {
                   Create Code
                 </MenuItem>
               </Menu>
-              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-                <IconTableColumn />
+              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+                <IconEye />
               </IconButton>
               <Popover
                 open={Boolean(anchorEl2)}

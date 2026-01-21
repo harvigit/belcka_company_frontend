@@ -42,10 +42,9 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
-  IconFilter,
+  IconEye,
   IconNotes,
   IconSearch,
-  IconTableColumn,
   IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -414,8 +413,8 @@ const TablePagination = () => {
               Archive
             </Button>
           )}
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-            <IconTableColumn />
+          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+            <IconEye />
           </IconButton>
           <Popover
             open={Boolean(anchorEl2)}

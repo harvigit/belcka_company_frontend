@@ -33,13 +33,13 @@ import {
     IconSearch,
     IconChevronLeft,
     IconChevronRight,
-    IconTableColumn,
     IconLock,
     IconLockOpen,
     IconChevronUp,
     IconChevronDown,
     IconDotsVertical,
     IconNotes, IconExclamationCircle, IconX,
+    IconSettings,
 } from '@tabler/icons-react';
 import {
     useReactTable,
@@ -74,6 +74,8 @@ import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
 import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
+import { IconEye } from '@tabler/icons-react';
+import Settings from '../timesheet/setting/settings';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -247,12 +249,21 @@ const TimeClock = ({queryParams}: Props) => {
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
+    const [settingOpen, setSettingOpen] = useState(false);
 
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
         actionType: 'lock' | 'unlock' | 'paid';
         conflictCount: number;
     } | null>(null);
+
+    const handleSettingOpen = () => {
+        setSettingOpen(true);
+    };
+
+    const handleSettingClose = () => {
+        setSettingOpen(false);
+    };
 
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl(event.currentTarget);
@@ -370,7 +381,6 @@ const TimeClock = ({queryParams}: Props) => {
 
         if (queryParams?.type) {
             setDetailsOpen(true);
-            console.log('working')
             setTimeout(() => {
             router.replace("/apps/timesheet/list", { scroll: false });
             }, 5000);
@@ -1241,10 +1251,16 @@ const TimeClock = ({queryParams}: Props) => {
                             </Button>
                         )}
 
-                        <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)}>
-                            <IconTableColumn/>
+                        <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)} color='primary'>
+                            <IconEye/>
                         </IconButton>
 
+                        <IconButton onClick={handleSettingOpen} color='primary'>
+                            <IconSettings/>
+                        </IconButton>
+
+                        <Settings settingOpen={settingOpen} onClose={handleSettingClose} />
+                        
                         <IconButton
                             sx={{margin: '0px', marginLeft: '0 !important'}}
                             id="basic-button"

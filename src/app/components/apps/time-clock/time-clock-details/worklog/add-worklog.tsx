@@ -219,7 +219,6 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(singleDate);
     if (
       !newRecord.userId ||
       !newRecord.shift_id ||

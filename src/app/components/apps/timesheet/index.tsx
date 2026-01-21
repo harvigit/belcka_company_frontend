@@ -37,7 +37,7 @@ const TimesheetPage = () => {
     <PermissionGuard permission="Bookkeeper">
       <Box p={2} pt={0}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Tabs
+          {/* <Tabs
             className="timesheet-tabs"
             value={value}
             onChange={handleTabChange}
@@ -63,7 +63,7 @@ const TimesheetPage = () => {
                 display: "none",
               },
             }}
-          >
+          > */}
             {/* Commented out Timesheets tab */}
             {/*<Tab
                         label="Timesheets"
@@ -81,7 +81,7 @@ const TimesheetPage = () => {
                             },
                         }}
                     />*/}
-            <Tab
+            {/* <Tab
               label="Bookkeeper"
               sx={{
                 textTransform: "none",
@@ -95,10 +95,9 @@ const TimesheetPage = () => {
                   color: "#1976d2",
                 },
               }}
-            />
-          </Tabs>
-
-          <Button
+            /> */}
+          {/* </Tabs> */}
+          {/* <Button
             variant="outlined"
             color="primary"
             onClick={handleSettingOpen}
@@ -114,13 +113,14 @@ const TimesheetPage = () => {
           >
             <IconSettings />
             Setting
-          </Button>
+          </Button> */}
+         
         </Box>
 
         {/* Commented out TimesheetList rendering */}
         {/*{value === 0 && <TimesheetList />}*/}
         {value === 0 && (
-          <TimeClock
+           <TimeClock
             queryParams={{
               user_id: userIdParam,
               start_date: startParam,
@@ -131,7 +131,7 @@ const TimesheetPage = () => {
           />
         )}
 
-        <Setting settingOpen={settingOpen} onClose={handleSettingClose} />
+        {/* <Setting settingOpen={settingOpen} onClose={handleSettingClose} /> */}
       </Box>
     </PermissionGuard>
   );

@@ -42,6 +42,7 @@ import {
   IconArrowLeft,
   IconTrash,
   IconLocation,
+  IconEye,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -73,7 +74,6 @@ import MapGantt from "@/app/components/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 import Link from "next/link";
 import { IconNotes } from "@tabler/icons-react";
-import { IconTableColumn } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -893,8 +893,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   Archive
                 </Button>
               )}
-              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-                <IconTableColumn />
+              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+                <IconEye />
               </IconButton>
               <Popover
                 open={Boolean(anchorEl2)}

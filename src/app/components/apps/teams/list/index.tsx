@@ -42,6 +42,7 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconEye,
   IconFilter,
   IconNotes,
   IconRotate,
@@ -67,7 +68,6 @@ import { IconEdit } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ArchiveTeam from "../archive";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import { IconTableColumn } from "@tabler/icons-react";
 import CreateTeam from "../create";
 import EditTeam from "../edit";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
@@ -657,8 +657,8 @@ const TablePagination = () => {
               </Button>
             )}
 
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-              <IconTableColumn />
+            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+              <IconEye />
             </IconButton>
             <Popover
               open={Boolean(anchorEl2)}

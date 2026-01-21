@@ -61,12 +61,12 @@ import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import { IconEdit } from "@tabler/icons-react";
 import { AxiosResponse } from "axios";
-import { IconTableColumn } from "@tabler/icons-react";
 import CreateTrade from "../create";
 import EditTrade from "../edit";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { IconEye } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -589,8 +589,8 @@ const TradeList = () => {
               Remove
             </Button>
           )}
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-            <IconTableColumn />
+          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+            <IconEye />
           </IconButton>
           <Popover
             open={Boolean(anchorEl2)}

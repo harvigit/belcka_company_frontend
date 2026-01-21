@@ -46,6 +46,7 @@ import {
   IconChevronRight,
   IconDotsVertical,
   IconEdit,
+  IconEye,
   IconNotes,
   IconPlus,
   IconSearch,
@@ -571,7 +572,7 @@ const TablePagination = () => {
               </Button>
             )}
             <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-              <IconTableColumn />
+              <IconEye />
             </IconButton>
             <Popover
               open={Boolean(anchorEl2)}

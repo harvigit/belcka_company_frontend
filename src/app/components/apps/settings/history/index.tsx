@@ -43,7 +43,6 @@ import {
   IconChevronRight,
   IconFilter,
   IconSearch,
-  IconTableColumn,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -56,6 +55,7 @@ import { IconX } from "@tabler/icons-react";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { IconEye } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -529,8 +529,8 @@ const HistoryList = () => {
           justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
         >
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
-            <IconTableColumn />
+          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+            <IconEye />
           </IconButton>
           <Popover
             open={Boolean(anchorEl2)}

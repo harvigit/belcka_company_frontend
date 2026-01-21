@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Stack, Typography, IconButton, Popover, TextField, FormGroup, FormControlLabel, Checkbox } from '@mui/material';
-import { IconTableColumn } from '@tabler/icons-react';
+import { IconEye } from '@tabler/icons-react';
 import {TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
 
 interface TimeClockStatsProps {
@@ -59,8 +59,8 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
 
                 {/* 2. Column visibility icon button + popover */}
                 <Box sx={{ position: 'relative' }}>
-                    <IconButton onClick={handlePopoverOpen}>
-                        <IconTableColumn />
+                    <IconButton onClick={handlePopoverOpen} color='primary'>
+                        <IconEye />
                     </IconButton>
 
                     <Popover
