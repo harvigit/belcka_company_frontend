@@ -398,20 +398,24 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
                                         {record.task_count || 0} Tasks
                                     </Typography>
                                 </Box>
-
                                 <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1, width:"35%" }}>
                                     <Box width={"100%"} alignContent={"center"}>
-                                        <Typography fontWeight="bold" fontSize="1.25rem">
-                                            {formatHour(record.total_hours)} H
-                                        </Typography>
-                                        <Typography
-                                            variant="body2"
-                                            color="#777e89"
-                                            sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
-                                        >
-                                            ({record.checkin_time || "-"}-{record.checkout_time || "-"})
-                                        </Typography>
+                                        {record?.checkout_time &&(
+                                            <Box width={"100%"} alignContent={"center"}>
+                                                <Typography fontWeight="bold" fontSize="1.25rem">
+                                                    {formatHour(record.total_hours)} H
+                                                </Typography>
+                                                <Typography
+                                                    variant="body2"
+                                                    color="#777e89"
+                                                    sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+                                                >
+                                                    ({record.checkin_time || "-"}-{record.checkout_time || "-"})
+                                                </Typography>
+                                            </Box>
+                                        )}
                                     </Box>
+
                                     <IconButton
                                         color="error"
                                         aria-label="Delete checklog"

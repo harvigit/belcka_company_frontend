@@ -566,7 +566,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 await api.post(endpoint, payload);
 
             if (response.data.IsSuccess) {
-                showAlert(`All requests ${action}ed successfully`, 'success');
+                showAlert(`All requests ${action == 'approve' ? `approved` : action == 'reject' ? 'rejected' :""} successfully`, 'success');
 
                 await delay(2000);
 

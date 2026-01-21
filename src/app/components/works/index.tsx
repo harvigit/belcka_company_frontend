@@ -14,7 +14,12 @@ import {
   Tooltip,
 } from "@mui/material";
 import Image from "next/image";
-import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconNotes,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
 import toast from "react-hot-toast";
 
 interface WorkDetailPageProps {
@@ -90,12 +95,12 @@ export default function WorkDetailPage({
   }, [open, work]);
 
   useEffect(() => {
-    if (workId && companyId && addressId){
+    if (workId && companyId && addressId) {
       fetchWorkDetail();
-[...newBeforePreviews, ...newAfterPreviews].forEach((url) =>
+      [...newBeforePreviews, ...newAfterPreviews].forEach((url) =>
         URL.revokeObjectURL(url),
       );
-    } 
+    }
   }, [workId, companyId, addressId]);
 
   const getProgressColor = (progress: number) => {
@@ -463,11 +468,36 @@ export default function WorkDetailPage({
                           variant="h6"
                           className="f-14"
                           fontWeight={600}
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
                         >
                           ({checklog.checkin_date}) {checklog.start_time}
-                          {checklog.end_time
-                            ? `- ${checklog.end_time}`
-                            : ""} = {formatSeconds(checklog.payable_seconds)}
+                          {checklog.checkin_note && (
+                            <Tooltip
+                              title={checklog.checkin_note}
+                              placement="top"
+                            >
+                              <IconNotes size={18} />
+                            </Tooltip>
+                          )}
+                          {checklog.end_time && (
+                            <>
+                              <span>- {checklog.end_time}</span>
+
+                              {checklog.checkout_note && (
+                                <Tooltip
+                                  title={checklog.checkout_note}
+                                  placement="top"
+                                >
+                                  <IconNotes size={18} />
+                                </Tooltip>
+                              )}
+                            </>
+                          )}
+                          <span>
+                            = {formatSeconds(checklog.payable_seconds)}
+                          </span>
                         </Typography>
                       </Box>
                     ))}
@@ -600,28 +630,6 @@ export default function WorkDetailPage({
                         ))}
                       </Grid>
                     )}
-                  </Box>
-                )}
-                {work?.checklog_summary[0]?.checkin_note && (
-                  <Box display={"flex"} justifyItems={"center"} gap={1} ml={3}>
-                    <Typography variant="h6" fontWeight={500}>
-                      Checkin Note:
-                    </Typography>
-                    <Typography
-                      color="textSecondary"
-                      className="f-14"
-                      sx={{
-                        display: "-webkit-box",
-                        WebkitBoxOrient: "vertical",
-                        WebkitLineClamp: 6,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        lineHeight: 1.15,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {work?.checklog_summary[0]?.checkin_note}
-                    </Typography>
                   </Box>
                 )}
 
@@ -785,35 +793,6 @@ export default function WorkDetailPage({
                         />
                       </Box>
                     )}
-                  </Box>
-                )}
-
-                {work?.checklog_summary[0]?.checkout_note && (
-                  <Box
-                    display={"flex"}
-                    justifyItems={"center"}
-                    gap={1}
-                    ml={3}
-                    mt={1}
-                  >
-                    <Typography variant="h6" fontWeight={500}>
-                      Checkout Note:
-                    </Typography>
-                    <Typography
-                      color="textSecondary"
-                      className="f-14"
-                      sx={{
-                        display: "-webkit-box",
-                        WebkitBoxOrient: "vertical",
-                        WebkitLineClamp: 6,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        lineHeight: 1.15,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {work?.checklog_summary[0]?.checkout_note}
-                    </Typography>
                   </Box>
                 )}
               </Box>
