@@ -571,7 +571,7 @@ const TablePagination = () => {
                 Archive
               </Button>
             )}
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }}>
+            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color="primary">
               <IconEye />
             </IconButton>
             <Popover

@@ -232,10 +232,11 @@ const TimeClock = ({queryParams}: Props) => {
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const session = useSession();
     const user = session.data?.user as User & { company_id: number } & { user_role_id: number; };
-    const openMenu = Boolean(anchorEl);
+    const openMenu = Boolean(anchorEl3);
     const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
     const openAddleave = Boolean(addDropDown);
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
@@ -266,11 +267,11 @@ const TimeClock = ({queryParams}: Props) => {
     };
 
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        setAnchorEl(event.currentTarget);
+        setAnchorEl3(event.currentTarget);
     };
 
     const handleClose = () => {
-        setAnchorEl(null);
+        setAnchorEl3(null);
     };
 
     const handleAddClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -1274,7 +1275,7 @@ const TimeClock = ({queryParams}: Props) => {
 
                         <Menu
                             id="basic-menu"
-                            anchorEl={anchorEl}
+                            anchorEl={anchorEl3}
                             open={openMenu}
                             onClose={handleClose}
                             slotProps={{

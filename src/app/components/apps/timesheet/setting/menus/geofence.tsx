@@ -4,9 +4,7 @@ import {
   Box,
   Typography,
   Button,
-  Radio,
   Tooltip,
-  Switch,
   CircularProgress,
 } from "@mui/material";
 import Image from "next/image";
@@ -24,8 +22,6 @@ import {
   Polyline,
   Marker,
 } from "@react-google-maps/api";
-
-import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 interface GeneralSettingProps {
   onSaveSuccess: () => void;
@@ -55,7 +51,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
 
   const mapContainerStyle = {
     width: "100%",
-    height: "300px",
+    height: "400px",
   };
 
   // Load Google Maps
@@ -112,21 +108,6 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     getWorkzones();
   }, [user?.company_id, lastUpdatedSiteId]);
 
-  const options = [
-    {
-      id: "checking-checkout",
-      title: "Clock in & out",
-      description: "Track users' clock in and clock out locations",
-      image: "/images/location/geolocation2.png",
-    },
-    {
-      id: "off",
-      title: "Off",
-      description: "Don't track users' location at all",
-      image: "/images/location/geolocation3.png",
-    },
-  ];
-
   const styles = useMemo(
     () => ({
       tooltipStyles: {
@@ -165,72 +146,6 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
   return (
     <Box display={"flex"} overflow="auto">
       <Box sx={{ p: 3 }} m="auto" width={"60%"}>
-        {/* Top Section */}
-        <Box
-          display="flex"
-          flexDirection="column"
-          justifyContent="space-between"
-          sx={{ width: 120 }}
-        >
-          <Box display="flex" alignItems="center" gap={1} sx={{ height: 32 }}>
-            <Typography variant="h1" fontSize={"20px !important"}>
-              Geolocation
-            </Typography>
-          </Box>
-        </Box>
-        <Typography variant="body2" color="text.secondary">
-          Select how location tracking is used for clocking in and out.
-        </Typography>
-
-        {/* Options Boxes */}
-        <Box display="flex" gap={3} flexWrap="wrap" p={3}>
-          {options.map((opt) => {
-            const isSelected = selectedOption === opt.id;
-            return (
-              <Box
-                key={opt.id}
-                onClick={() => setSelectedOption(opt.id)}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  cursor: "pointer",
-                  border: 1,
-                  borderColor: isSelected ? "#9dd0ff" : "#f0f1f2",
-                  bgcolor: isSelected ? "#eaf5ff" : "#fff",
-                  transition: "all 0.2s ease",
-                  width: 270,
-                }}
-              >
-                <Image
-                  src={opt.image}
-                  alt={opt.title}
-                  height={146}
-                  width={238}
-                  style={{ borderRadius: 5 }}
-                />
-                <Box display="flex" alignItems="center" mb={0}>
-                  <Radio
-                    size="small"
-                    color="primary"
-                    checked={isSelected}
-                    onChange={() => setSelectedOption(opt.id)}
-                  />
-                  <Typography fontWeight={400} color={"text.primary"}>
-                    {opt.title}
-                  </Typography>
-                </Box>
-                <Typography
-                  ml={5}
-                  fontSize="12px !important"
-                  color="textSecondary"
-                >
-                  {opt.description}
-                </Typography>
-              </Box>
-            );
-          })}
-        </Box>
-
         {/* Geo fence sites header */}
         <Box display="flex" justifyContent="space-between" mt={3}>
           <Box display="flex" alignItems="center" gap={1} sx={{ height: 32 }}>
@@ -342,7 +257,7 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                 <Image
                   src="/images/location/geofence-map-placeholder.png"
                   alt="placeholder"
-                  height={300}
+                  height={400}
                   width={920}
                   style={{ width: "100%", borderRadius: 18 }}
                 />
