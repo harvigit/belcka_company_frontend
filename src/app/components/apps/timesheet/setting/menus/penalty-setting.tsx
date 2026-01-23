@@ -38,7 +38,7 @@ export default function PenaltySettings() {
       ...t,
       selected: t.selected || false,
       is_autostop_work_penalty: t.is_autostop_work_penalty || false,
-    }))
+    })),
   );
 
   const [swUsers, setSwUsers] = useState<any[]>(
@@ -46,7 +46,7 @@ export default function PenaltySettings() {
       ...u,
       selected: u.selected || false,
       is_autostop_work_penalty: u.is_autostop_work_penalty || false,
-    }))
+    })),
   );
 
   const [showSwTeamsList, setShowSwTeamsList] = useState(false);
@@ -65,7 +65,7 @@ export default function PenaltySettings() {
       const res = await api.get("/setting/get-company-settings");
       if (res.data?.data) {
         setEnabled(
-          res.data?.data ? res.data?.data?.is_outside_boundary_penalty : false
+          res.data?.data ? res.data?.data?.is_outside_boundary_penalty : false,
         );
         setTimeZone(res.data.data.timezone_id);
         const dbTime = res.data.data.outside_boundary_penalty_minute
@@ -92,7 +92,7 @@ export default function PenaltySettings() {
   const fetchTeams = async () => {
     try {
       const res = await api.get(
-        `get-company-resources?flag=teamList&company_id=${user.company_id}`
+        `get-company-resources?flag=teamList&company_id=${user.company_id}`,
       );
       if (res.data?.info) {
         setTeams(res.data.info);
@@ -123,9 +123,46 @@ export default function PenaltySettings() {
     }
   }, [user?.company_id]);
 
+  const areAllTeamsEnabled =
+    teams.length > 0
+      ? teams.every((t) => t.is_outside_boundary_penalty)
+      : false;
+
+  const areAllUsersEnabled =
+    users.length > 0
+      ? users.every((u) => u.is_outside_boundary_penalty)
+      : false;
+
+  const areAllTeamsDisabled =
+    teams.length > 0
+      ? teams.every((t) => !t.is_outside_boundary_penalty)
+      : false;
+
+  const areAllUsersDisabled =
+    users.length > 0
+      ? users.every((u) => !u.is_outside_boundary_penalty)
+      : false;
+
+  useEffect(() => {
+    if (areAllTeamsEnabled && areAllUsersEnabled) {
+      handleToggle(true);
+      return;
+    }
+
+    if (areAllTeamsDisabled && areAllUsersDisabled) {
+      handleToggle(false);
+      return;
+    }
+  }, [
+    areAllTeamsEnabled,
+    areAllUsersEnabled,
+    areAllTeamsDisabled,
+    areAllUsersDisabled,
+  ]);
+
   const handleToggle = async (
     overrideStatus?: boolean,
-    overrideTime?: string | null
+    overrideTime?: string | null,
   ) => {
     const newStatus = overrideStatus ?? !enabled;
 
@@ -178,7 +215,7 @@ export default function PenaltySettings() {
 
       const res = await api.post(
         "user/change-bulk-outside-penalty-status",
-        payload
+        payload,
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -201,7 +238,7 @@ export default function PenaltySettings() {
 
       const res = await api.post(
         "team/change-bulk-outside-penalty-status",
-        payload
+        payload,
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -211,9 +248,33 @@ export default function PenaltySettings() {
     } catch (err) {}
   };
 
+  const TeamsEnabled =
+    teams.length > 0 ? teams.every((t) => t.is_autostop_work_penalty) : false;
+
+  const UsersEnabled =
+    users.length > 0 ? users.every((u) => u.is_autostop_work_penalty) : false;
+
+  const TeamsDisabled =
+    teams.length > 0 ? teams.every((t) => !t.is_autostop_work_penalty) : false;
+
+  const UsersDisabled =
+    users.length > 0 ? users.every((u) => !u.is_autostop_work_penalty) : false;
+
+  useEffect(() => {
+    if (TeamsEnabled && UsersEnabled) {
+      handleToggleStopWork(true);
+      return;
+    }
+
+    if (TeamsDisabled && UsersDisabled) {
+      handleToggleStopWork(false);
+      return;
+    }
+  }, [TeamsEnabled, UsersEnabled, TeamsDisabled, UsersDisabled]);
+
   const handleToggleStopWork = async (
     overrideStatus?: boolean,
-    overrideTime?: string | null
+    overrideTime?: string | null,
   ) => {
     const newStatus = overrideStatus !== undefined ? overrideStatus : swEnabled;
 
@@ -255,7 +316,7 @@ export default function PenaltySettings() {
 
       const res = await api.post(
         "team/change-bulk-auto-stop-penalty-status",
-        payload
+        payload,
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -278,7 +339,7 @@ export default function PenaltySettings() {
 
       const res = await api.post(
         "user/change-bulk-auto-stop-penalty-status",
-        payload
+        payload,
       );
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
@@ -300,7 +361,7 @@ export default function PenaltySettings() {
     return users.filter(
       (u) =>
         u.name?.toLowerCase().includes(s) ||
-        u.team_name?.toLowerCase().includes(s)
+        u.team_name?.toLowerCase().includes(s),
     );
   }, [users, searchUser]);
 
@@ -316,7 +377,7 @@ export default function PenaltySettings() {
     return swUsers.filter(
       (u) =>
         u.name?.toLowerCase().includes(s) ||
-        u.team_name?.toLowerCase().includes(s)
+        u.team_name?.toLowerCase().includes(s),
     );
   }, [swUsers, searchSwUser]);
 
@@ -547,8 +608,8 @@ export default function PenaltySettings() {
                                       selected: checked,
                                       is_outside_boundary_penalty: checked,
                                     }
-                                  : t
-                              )
+                                  : t,
+                              ),
                             );
                             setIsTeamsDirty(true);
                           }}
@@ -570,8 +631,8 @@ export default function PenaltySettings() {
                                     selected: checked,
                                     is_outside_boundary_penalty: checked,
                                   }
-                                : t
-                            )
+                                : t,
+                            ),
                           );
                           setIsTeamsDirty(true);
                         }}
@@ -600,8 +661,8 @@ export default function PenaltySettings() {
                                           selected: checked,
                                           is_outside_boundary_penalty: checked,
                                         }
-                                      : t
-                                  )
+                                      : t,
+                                  ),
                                 );
                                 setIsTeamsDirty(true);
                               }}
@@ -621,8 +682,8 @@ export default function PenaltySettings() {
                                         selected: checked,
                                         is_outside_boundary_penalty: checked,
                                       }
-                                    : t
-                                )
+                                    : t,
+                                ),
                               );
                               setIsTeamsDirty(true);
                             }}
@@ -693,8 +754,8 @@ export default function PenaltySettings() {
                                       selected: checked,
                                       is_outside_boundary_penalty: checked,
                                     }
-                                  : u
-                              )
+                                  : u,
+                              ),
                             );
                             setIsUsersDirty(true);
                           }}
@@ -716,8 +777,8 @@ export default function PenaltySettings() {
                                     selected: checked,
                                     is_outside_boundary_penalty: checked,
                                   }
-                                : u
-                            )
+                                : u,
+                            ),
                           );
                           setIsUsersDirty(true);
                         }}
@@ -746,8 +807,8 @@ export default function PenaltySettings() {
                                           selected: checked,
                                           is_outside_boundary_penalty: checked,
                                         }
-                                      : u
-                                  )
+                                      : u,
+                                  ),
                                 );
                                 setIsUsersDirty(true);
                               }}
@@ -769,8 +830,8 @@ export default function PenaltySettings() {
                                         selected: checked,
                                         is_outside_boundary_penalty: checked,
                                       }
-                                    : u
-                                )
+                                    : u,
+                                ),
                               );
                               setIsUsersDirty(true);
                             }}
@@ -856,7 +917,7 @@ export default function PenaltySettings() {
                       setTemp(formatted || fallback || "");
                       handleToggleStopWork(
                         swEnabled,
-                        formatted || fallback || null
+                        formatted || fallback || null,
                       );
                     }}
                     sx={{ width: "90px", "& input": { textAlign: "center" } }}
@@ -951,8 +1012,8 @@ export default function PenaltySettings() {
                                       selected: checked,
                                       is_autostop_work_penalty: checked,
                                     }
-                                  : t
-                              )
+                                  : t,
+                              ),
                             );
                             setSwTeamsDirty(true);
                           }}
@@ -974,8 +1035,8 @@ export default function PenaltySettings() {
                                     selected: checked,
                                     is_autostop_work_penalty: checked,
                                   }
-                                : t
-                            )
+                                : t,
+                            ),
                           );
                           setSwTeamsDirty(true);
                         }}
@@ -1004,8 +1065,8 @@ export default function PenaltySettings() {
                                           selected: checked,
                                           is_autostop_work_penalty: checked,
                                         }
-                                      : t
-                                  )
+                                      : t,
+                                  ),
                                 );
                                 setSwTeamsDirty(true);
                               }}
@@ -1025,8 +1086,8 @@ export default function PenaltySettings() {
                                         selected: checked,
                                         is_autostop_work_penalty: checked,
                                       }
-                                    : t
-                                )
+                                    : t,
+                                ),
                               );
                               setSwTeamsDirty(true);
                             }}
@@ -1097,8 +1158,8 @@ export default function PenaltySettings() {
                                       selected: checked,
                                       is_autostop_work_penalty: checked,
                                     }
-                                  : u
-                              )
+                                  : u,
+                              ),
                             );
                             setSwUsersDirty(true);
                           }}
@@ -1120,8 +1181,8 @@ export default function PenaltySettings() {
                                     selected: checked,
                                     is_autostop_work_penalty: checked,
                                   }
-                                : u
-                            )
+                                : u,
+                            ),
                           );
                           setSwUsersDirty(true);
                         }}
@@ -1150,8 +1211,8 @@ export default function PenaltySettings() {
                                           selected: checked,
                                           is_autostop_work_penalty: checked,
                                         }
-                                      : u
-                                  )
+                                      : u,
+                                  ),
                                 );
                                 setSwUsersDirty(true);
                               }}
@@ -1173,8 +1234,8 @@ export default function PenaltySettings() {
                                         selected: checked,
                                         is_autostop_work_penalty: checked,
                                       }
-                                    : u
-                                )
+                                    : u,
+                                ),
                               );
                               setSwUsersDirty(true);
                             }}
