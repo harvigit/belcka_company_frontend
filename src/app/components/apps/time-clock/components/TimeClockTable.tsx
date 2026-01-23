@@ -867,6 +867,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 label: statusText,
                                                                 size: 'small' as const,
                                                                 sx: {
+                                                                    width: 80,
                                                                     height: 28,
                                                                     fontWeight: 600,
                                                                     fontSize: '0.75rem',

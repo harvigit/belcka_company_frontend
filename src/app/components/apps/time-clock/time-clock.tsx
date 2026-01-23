@@ -776,6 +776,7 @@ const TimeClock = ({queryParams}: Props) => {
                             color={statusColorFromApi as any}
                             size="small"
                             sx={{
+                                width: 80,
                                 height: 28,
                                 fontWeight: 600,
                                 fontSize: '0.75rem',
@@ -790,6 +791,7 @@ const TimeClock = ({queryParams}: Props) => {
                         label={statusColorFromApi}
                         size="small"
                         sx={{
+                            width: 80,
                             height: 28,
                             fontWeight: 600,
                             fontSize: '0.75rem',
