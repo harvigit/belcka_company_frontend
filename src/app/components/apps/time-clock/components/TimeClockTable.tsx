@@ -84,6 +84,7 @@ interface TimeClockTableProps {
     conflictsByDate?: { [key: string]: number };
     openConflictsSideBar?: () => Promise<void>;
     openChecklogsSidebar?: (worklogId: number) => Promise<void>;
+    openPenaltiesSidebar?: (worklogId: number) => Promise<void>;
     leaveRequestCount: number;
     leaveRequestByDate?: { [key: string]: number };
     openLeaveRequestsSideBar?: () => Promise<void>;
@@ -130,6 +131,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            conflictsByDate = {},
                                                            openConflictsSideBar,
                                                            openChecklogsSidebar,
+                                                           openPenaltiesSidebar,
                                                            leaveRequestCount,
                                                            leaveRequestByDate,
                                                            openLeaveRequestsSideBar,
@@ -773,12 +775,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {visibleColumnConfigs.penaltyHours?.visible && (
                                                     <TableCell
                                                         align="center"
+                                                        onClick={() => openPenaltiesSidebar?.(log.worklog_id)}
                                                         sx={{
                                                             py: 0.5,
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit')
+                                                            color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit'),
+                                                            '&:hover': {
+                                                                color: '#1976d2'
+                                                            }
                                                         }}
                                                     >
                                                         {log.is_pricework ? '--' : formatHour(log?.penalty_hours ?? 0)}

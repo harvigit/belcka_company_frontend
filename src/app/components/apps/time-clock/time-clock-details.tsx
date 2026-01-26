@@ -25,6 +25,7 @@ import ActionBar from './components/ActionBar';
 import {DailyBreakdown, TimeClockDetailsProps, RecordType} from '@/app/components/apps/time-clock/types/timeClock';
 import {IconExclamationMark} from '@tabler/icons-react';
 import Checklogs from './time-clock-details/checklogs/index';
+import Penalties from './time-clock-details/penalties/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
@@ -157,7 +158,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
 
     const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; actionType: 'lock' | 'unlock' | 'delete'; conflictCount: number; } | null>(null);
-    
+
+    const [penaltiesSidebar, setPenaltiesSidebar] = useState<boolean>(false);
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
@@ -492,6 +494,23 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const closeChecklogsSidebar = async () => {
         setChecklogsSidebar(false);
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error fetching time clock data after closing conflict sidebar:', error);
+        }
+    };
+    
+    const handlePenalties = async (worklogId: number) => {
+        setPenaltiesSidebar(true);
+        setSelectedWorkId(worklogId)
+    };
+
+    const closePenaltiesSidebar = async () => {
+        setPenaltiesSidebar(false);
         try {
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
@@ -1085,59 +1104,105 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const handleDeleteWorklogs = async () => {
         const worklogIds: string[] = [];
+        const leaveIds: string[] = [];
+        const expenseIds: string[] = [];
 
-        const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
-            return parseInt(rowId.replace('row-', ''));
-        });
+        const selectedRowIndices = Array.from(selectedRows).map((rowId) =>
+            parseInt(rowId.replace('row-', ''))
+        );
 
         selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
+
             if (rowData && rowData.rowType === 'day') {
-                if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
-                    rowData.rowsData.forEach((worklog: any) => {
-                        if (worklog.worklog_id) {
-                            worklogIds.push(worklog.worklog_id);
+                if (Array.isArray(rowData.rowsData)) {
+                    rowData.rowsData.forEach((record: any) => {
+                        // Worklog
+                        if (record.worklog_id) {
+                            worklogIds.push(record.worklog_id);
+                        }
+
+                        // Leave
+                        if (record.is_leave && record.user_leave_id) {
+                            leaveIds.push(record.user_leave_id);
+                        }
+
+                        // Expense
+                        if (record.is_expense && record.expense_id) {
+                            expenseIds.push(record.expense_id);
                         }
                     });
                 }
             }
         });
 
-        if (worklogIds.length === 0) return;
+        if (!worklogIds.length && !leaveIds.length && !expenseIds.length) return;
 
         const conflictCount = getConflictsInSelectedRows();
 
         if (conflictCount > 0) {
-            setConfirmDialog({
-                open: true,
-                actionType: 'delete',
-                conflictCount,
-            });
+            setConfirmDialog({open: true, actionType: 'delete', conflictCount,});
         } else {
-            await proceedWithDelete(worklogIds);
+            await proceedWithDelete({worklogIds, leaveIds, expenseIds,});
         }
     };
 
-    const proceedWithDelete = async (worklogIds: string[]) => {
+    const proceedWithDelete = async ({worklogIds, leaveIds, expenseIds,}: { worklogIds: string[]; leaveIds: string[]; expenseIds: string[]; }) => {
         try {
-            const ids = worklogIds.join(',');
-            const response: AxiosResponse<{
-                IsSuccess: boolean
-            }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
-
-            if (response.data.IsSuccess) {
-                const defaultStartDate = startDate || defaultStart;
-                const defaultEndDate = endDate || defaultEnd;
-                await fetchTimeClockData(defaultStartDate, defaultEndDate);
-                setSelectedRows(new Set());
-                onDataChange?.();
-            } else {
-                console.error(`Error deleting timesheets`);
+            // Worklogs
+            if (worklogIds.length) {
+                await api.post(DELETE_ENDPOINTS.worklog, {
+                    ids: worklogIds.join(','),
+                });
             }
+
+            // Expenses
+            if (expenseIds.length) {
+                await api.post(DELETE_ENDPOINTS.expense, {
+                    ids: expenseIds.join(','),
+                });
+            }
+
+            // Leaves
+            if (leaveIds.length) {
+                await api.post(DELETE_ENDPOINTS.leave, {
+                    user_leave_id: leaveIds.join(','),
+                });
+            }
+
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            setSelectedRows(new Set());
+            onDataChange?.();
+
         } catch (error) {
-            console.error(`Error deleting timesheets:`, error);
+            console.error('Error deleting records:', error);
         }
     };
+
+
+    // const proceedWithDelete = async (worklogIds: string[]) => {
+    //     try {
+    //         const ids = worklogIds.join(',');
+    //         const response: AxiosResponse<{
+    //             IsSuccess: boolean
+    //         }> = await api.post('/time-clock/worklogs-bulk-delete', {ids});
+    //
+    //         if (response.data.IsSuccess) {
+    //             const defaultStartDate = startDate || defaultStart;
+    //             const defaultEndDate = endDate || defaultEnd;
+    //             await fetchTimeClockData(defaultStartDate, defaultEndDate);
+    //             setSelectedRows(new Set());
+    //             onDataChange?.();
+    //         } else {
+    //             console.error(`Error deleting timesheets`);
+    //         }
+    //     } catch (error) {
+    //         console.error(`Error deleting timesheets:`, error);
+    //     }
+    // };
 
     const handleConfirmAction = async () => {
         if (!confirmDialog) return;
@@ -1197,21 +1262,42 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
             case 'delete': {
                 const worklogIds: string[] = [];
+                const leaveIds: string[] = [];
+                const expenseIds: string[] = [];
+
+                const selectedRowIndices = Array.from(selectedRows).map((rowId) =>
+                    parseInt(rowId.replace('row-', ''))
+                );
+
                 selectedRowIndices.forEach((rowIndex) => {
                     const rowData = dailyData[rowIndex];
+
                     if (rowData && rowData.rowType === 'day') {
-                        if (rowData.rowsData && Array.isArray(rowData.rowsData) && rowData.rowsData.length > 0) {
-                            rowData.rowsData.forEach((worklog: any) => {
-                                if (worklog.worklog_id) {
-                                    worklogIds.push(worklog.worklog_id);
+                        if (Array.isArray(rowData.rowsData)) {
+                            rowData.rowsData.forEach((record: any) => {
+                                // Worklog
+                                if (record.worklog_id) {
+                                    worklogIds.push(record.worklog_id);
+                                }
+
+                                // Leave
+                                if (record.is_leave && record.user_leave_id) {
+                                    leaveIds.push(record.user_leave_id);
+                                }
+
+                                // Expense
+                                if (record.is_expense && record.expense_id) {
+                                    expenseIds.push(record.expense_id);
                                 }
                             });
                         }
                     }
                 });
-                if (worklogIds.length > 0) {
-                    await proceedWithDelete(worklogIds);
-                }
+
+                if (!worklogIds.length && !leaveIds.length && !expenseIds.length) return;
+
+                await proceedWithDelete({worklogIds, leaveIds, expenseIds,});
+
                 break;
             }
         }
@@ -1612,6 +1698,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 leaveRequestByDate={leaveRequestByDate}
                 openConflictsSideBar={handleConflicts}
                 openChecklogsSidebar={handleChecklogs}
+                openPenaltiesSidebar={handlePenalties}
                 leaveRequestCount={leaveRequestCount}
                 openLeaveRequestsSideBar={handleLeaveRequests}
             />
@@ -1693,6 +1780,27 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Checklogs
                     worklogId={selectedWorkId}
                     onClose={closeChecklogsSidebar}
+                />
+            </Drawer>
+            
+            <Drawer
+                anchor="right"
+                open={penaltiesSidebar}
+                onClose={closePenaltiesSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '500px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <Penalties
+                    worklogId={selectedWorkId}
+                    onClose={closePenaltiesSidebar}
                 />
             </Drawer>
 
