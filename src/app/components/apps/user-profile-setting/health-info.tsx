@@ -79,7 +79,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
       setLoading(true);
       try {
         const resInfo = await api.get(
-          `user-health-info/get-health-info?user_id=${Number(userId)}`
+          `user-health-info/get-health-info?user_id=${Number(userId)}`,
         );
         const infoData = resInfo.data.info;
         const resOptions = await api.get(`user-health-info/get-health-issues`);
@@ -91,7 +91,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
           setHasExistingInfo(existingIssues.length > 0);
           const mappedIssues: HealthIssue[] = optionsData.map((option) => {
             const existing = existingIssues.find(
-              (h: any) => h.health_issue_id === option.id
+              (h: any) => h.health_issue_id === option.id,
             );
 
             if (existing) {
@@ -177,7 +177,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
               [field]: value,
             },
           }
-        : null
+        : null,
     );
   };
 
@@ -189,14 +189,14 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
             ...prev,
             [field]: value,
           }
-        : null
+        : null,
     );
   };
 
   const handleHealthIssueChange = (
     index: number,
     key: "is_check" | "comment",
-    value: any
+    value: any,
   ) => {
     if (!healthInfo) return;
 
@@ -216,7 +216,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
             ...prev,
             health_issues: updatedIssues,
           }
-        : null
+        : null,
     );
   };
 
@@ -246,7 +246,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
       if (hasExistingInfo) {
         const res = await api.put(
           "user-health-info/update-health-info",
-          payload
+          payload,
         );
         if (res.data.IsSuccess == true) {
           toast.success(res.data.message);
@@ -254,7 +254,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
       } else {
         const res = await api.post(
           "user-health-info/store-health-info",
-          payload
+          payload,
         );
         if (res.data.IsSuccess == true) {
           toast.success(res.data.message);
@@ -297,7 +297,18 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
       </Box>
     );
   }
-  if (!healthInfo) return <Typography>Health Info not found!</Typography>;
+  if (!healthInfo) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="450px"
+      >
+        <Typography>Health Info not found!</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box m={2} p={2} pt={0} mt={2} ml={5}>
@@ -328,13 +339,13 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                       onChange={(e) =>
                         handleFieldChange(
                           key as keyof EmergencyContact,
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />
                   </Tooltip>
                 </Grid>
-              )
+              ),
             )}
 
             <Grid>
@@ -455,7 +466,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
           </Button>
         </Box>
       ) : (
-        <Box mt={4} display={"flex"} height={'450px'} justifyContent={"center"}>
+        <Box mt={4} display={"flex"} height={"450px"} justifyContent={"center"}>
           <Typography color="textSecondary" className="f-18">
             You do not have permission to view this information.
           </Typography>
