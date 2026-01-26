@@ -71,7 +71,7 @@ const RateSetting = () => {
       );
       if (res.data.IsSuccess) {
         setData(res.data.info);
-        setTimeZone(res.data.info[0].timezone_id);
+        setTimeZone(res.data.info[0]?.timezone_id);
       } else {
         toast.error(res.data.message);
       }

@@ -123,16 +123,6 @@ export default function PenaltySettings() {
     }
   }, [user?.company_id]);
 
-  const areAllTeamsEnabled =
-    teams.length > 0
-      ? teams.every((t) => t.is_outside_boundary_penalty)
-      : false;
-
-  const areAllUsersEnabled =
-    users.length > 0
-      ? users.every((u) => u.is_outside_boundary_penalty)
-      : false;
-
   const areAllTeamsDisabled =
     teams.length > 0
       ? teams.every((t) => !t.is_outside_boundary_penalty)
@@ -144,21 +134,11 @@ export default function PenaltySettings() {
       : false;
 
   useEffect(() => {
-    if (areAllTeamsEnabled && areAllUsersEnabled) {
-      handleToggle(true);
-      return;
-    }
-
     if (areAllTeamsDisabled && areAllUsersDisabled) {
       handleToggle(false);
       return;
     }
-  }, [
-    areAllTeamsEnabled,
-    areAllUsersEnabled,
-    areAllTeamsDisabled,
-    areAllUsersDisabled,
-  ]);
+  }, [areAllTeamsDisabled, areAllUsersDisabled]);
 
   const handleToggle = async (
     overrideStatus?: boolean,
@@ -247,13 +227,6 @@ export default function PenaltySettings() {
       }
     } catch (err) {}
   };
-
-  const TeamsEnabled =
-    teams.length > 0 ? teams.every((t) => t.is_autostop_work_penalty) : false;
-
-  const UsersEnabled =
-    users.length > 0 ? users.every((u) => u.is_autostop_work_penalty) : false;
-
   const TeamsDisabled =
     teams.length > 0 ? teams.every((t) => !t.is_autostop_work_penalty) : false;
 
@@ -261,16 +234,11 @@ export default function PenaltySettings() {
     users.length > 0 ? users.every((u) => !u.is_autostop_work_penalty) : false;
 
   useEffect(() => {
-    if (TeamsEnabled && UsersEnabled) {
-      handleToggleStopWork(true);
-      return;
-    }
-
     if (TeamsDisabled && UsersDisabled) {
       handleToggleStopWork(false);
       return;
     }
-  }, [TeamsEnabled, UsersEnabled, TeamsDisabled, UsersDisabled]);
+  }, [TeamsDisabled, UsersDisabled]);
 
   const handleToggleStopWork = async (
     overrideStatus?: boolean,
