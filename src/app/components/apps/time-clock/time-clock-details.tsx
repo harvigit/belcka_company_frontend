@@ -465,7 +465,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
    useEffect(() => {
     if (!queryParams?.open) return;
 
-    if (queryParams?.type !== null) {
+    if(queryParams.type === "expense"){
+        return
+    }
+    else if (queryParams?.type !== null) {
         setRequestListOpen(true);
         // setLeaveRequestSidebar(false);
     } else {

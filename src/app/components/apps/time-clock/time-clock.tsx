@@ -384,7 +384,7 @@ const TimeClock = ({queryParams}: Props) => {
             setDetailsOpen(true);
             setTimeout(() => {
             router.replace("/apps/timesheet/list", { scroll: false });
-            }, 5000);
+            }, 10000);
         } else {
             router.replace("/apps/timesheet/list", { scroll: false });
         }

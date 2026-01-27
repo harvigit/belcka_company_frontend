@@ -100,7 +100,7 @@ const Company = () => {
 
   const initialDates = getInitialDates();
   const [startDate, setStartDate] = useState<Date | null>(
-    initialDates.startDate
+    initialDates.startDate,
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
@@ -109,7 +109,7 @@ const Company = () => {
     const fetchCompanies = async () => {
       try {
         const response: AxiosResponse<any> = await api.get(
-          `user/switch-company-list?user_id=${user.id}`
+          `user/switch-company-list?user_id=${user.id}`,
         );
         setCompanies(response.data.info);
       } catch (error) {
@@ -125,7 +125,7 @@ const Company = () => {
     setLoadingFeeds(true);
     try {
       const res = await api.get(
-        `get-feeds?company_id=${user.company_id}&user_id=${user.id}`
+        `get-feeds?company_id=${user.company_id}&user_id=${user.id}`,
       );
 
       const feeds = res.data?.info ?? [];
@@ -171,7 +171,7 @@ const Company = () => {
       };
       const response: AxiosResponse<any> = await api.post(
         "company/switch-company",
-        payload
+        payload,
       );
       if (response.data.IsSuccess == true) {
         toast.success(response.data.message);
@@ -199,7 +199,7 @@ const Company = () => {
         const payload = { feed_ids: unreedFeed };
         const res: AxiosResponse<any> = await api.post(
           "feed/mark-as-read",
-          payload
+          payload,
         );
         if (res.data) {
           await fetchFeeds();
@@ -221,7 +221,7 @@ const Company = () => {
     try {
       setLoading(true);
       const res: AxiosResponse<any> = await api.get(
-        `announcements/get-announcements?company_id=${user.company_id}&user_id=${user.id}`
+        `announcements/get-announcements?company_id=${user.company_id}&user_id=${user.id}`,
       );
       const data = res.data.info || [];
       setItems(data);
@@ -257,6 +257,24 @@ const Company = () => {
       if (recordId) params.push(`user_id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=shift");
+      params.push(`open=true`);
+
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
+
+      return url;
+    },
+    Expense: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push(`open=true`);
+      params.push(`type=expense`);
 
       if (params.length > 0) {
         url += `?${params.join("&")}`;
@@ -271,6 +289,7 @@ const Company = () => {
       if (recordId) params.push(`user_id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
+      // params.push(`open=true`);
 
       if (params.length > 0) {
         url += `?${params.join("&")}`;
@@ -511,9 +530,8 @@ const Company = () => {
 
                             if (routeFn) {
                               if (
-                                item.request_name === "Shift" ||
-                                (item.request_name === "Timesheet" &&
-                                  item.action !== "stop")
+                                item.request_name === "Timesheet" &&
+                                item.action !== "stop"
                               ) {
                                 const start = startDate
                                   ? format(startDate, "yyyy-MM-dd")
@@ -522,12 +540,12 @@ const Company = () => {
                                   ? format(endDate, "yyyy-MM-dd")
                                   : undefined;
                                 router.push(routeFn(item.user_id, start, end));
-                              } else if (item.request_name === "Leave") {
+                              } else if (item.request_name === "Shift") {
                                 const dateAdded = item.date_added
                                   ? parse(
                                       item.date_added,
                                       "d MMMM yyyy HH:mm",
-                                      new Date()
+                                      new Date(),
                                     )
                                   : undefined;
 
@@ -539,14 +557,54 @@ const Company = () => {
                                   routeFn(
                                     item.user_id,
                                     formattedDate,
-                                    formattedDate
-                                  )
+                                    formattedDate,
+                                  ),
+                                );
+                              } else if (item.request_name === "Expense") {
+                                const dateAdded = item.date_added
+                                  ? parse(
+                                      item.date_added,
+                                      "d MMMM yyyy HH:mm",
+                                      new Date(),
+                                    )
+                                  : undefined;
+
+                                const formattedDate = dateAdded
+                                  ? format(dateAdded, "yyyy-MM-dd")
+                                  : undefined;
+
+                                router.push(
+                                  routeFn(
+                                    item.user_id,
+                                    formattedDate,
+                                    formattedDate,
+                                  ),
+                                );
+                              } else if (item.request_name === "Leave") {
+                                const dateAdded = item.date_added
+                                  ? parse(
+                                      item.date_added,
+                                      "d MMMM yyyy HH:mm",
+                                      new Date(),
+                                    )
+                                  : undefined;
+
+                                const formattedDate = dateAdded
+                                  ? format(dateAdded, "yyyy-MM-dd")
+                                  : undefined;
+
+                                router.push(
+                                  routeFn(
+                                    item.user_id,
+                                    formattedDate,
+                                    formattedDate,
+                                  ),
                                 );
                               } else if (item.request_name === "Team") {
                                 router.push(routeFn(item.team_id));
                               } else if (item.request_name === "Project") {
                                 router.push(
-                                  routeFn(item.project_id ?? item.record_id)
+                                  routeFn(item.project_id ?? item.record_id),
                                 );
                               } else {
                                 router.push(routeFn(item.user_id));

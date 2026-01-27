@@ -187,7 +187,7 @@ export default function AnnouncementsList({
 
   return (
     <Box>
-      <Box display="flex" justifyContent="end" mt={1}>
+      <Box display="flex" justifyContent="end">
         {roleId == 1 && (
           <Button
             variant="contained"
