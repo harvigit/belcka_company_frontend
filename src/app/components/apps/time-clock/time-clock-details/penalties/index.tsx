@@ -75,6 +75,24 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
         //     setIsDeleting(false);
         // }
     };
+    
+    const handleDeletePenalty = async (penalty: PenaltyItem) => {
+        try {
+            setIsDeleting(true);
+            const res = await api.post("time-clock/delete-penalty", {
+                penalty_id: penalty.penalty_id,
+            });
+
+            if (res.data?.IsSuccess) {
+                fetchPenalties();
+                onClose()
+            }
+        } catch {
+            toast.error("Something went wrong");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const formatHour = (val: string | number | null | undefined): string => {
         if (val === null || val === undefined) return "-";
@@ -126,15 +144,26 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                                 </Typography>
                             </Box>
 
+                            {/*<Button*/}
+                            {/*    variant="outlined"*/}
+                            {/*    color="error"*/}
+                            {/*    size="small"*/}
+                            {/*    disabled={isDeleting}*/}
+                            {/*    onClick={() => handleRemovePenaltyAppeal(penalty)}*/}
+                            {/*    sx={{ borderRadius: 2, textTransform: "none" }}*/}
+                            {/*>*/}
+                            {/*    Remove Appeal*/}
+                            {/*</Button>*/}
+
                             <Button
                                 variant="outlined"
                                 color="error"
                                 size="small"
                                 disabled={isDeleting}
-                                onClick={() => handleRemovePenaltyAppeal(penalty)}
+                                onClick={() => handleDeletePenalty(penalty)}
                                 sx={{ borderRadius: 2, textTransform: "none" }}
                             >
-                                Remove Appeal
+                                Delete
                             </Button>
                         </Box>
 
