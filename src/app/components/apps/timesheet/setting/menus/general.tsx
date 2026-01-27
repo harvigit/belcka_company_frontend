@@ -289,7 +289,7 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                         payRatePermission: true,
                         exportFormat: fetchedSettings.export_format || 'time',
                         isSaving: false,
-                        leave_limit: fetchedSettings.leave_limit ?? null
+                        leave_limit: fetchedSettings.leave_limit ?? 0
                     });
                 } else {
                     updateSettings(getDefaultSettings());

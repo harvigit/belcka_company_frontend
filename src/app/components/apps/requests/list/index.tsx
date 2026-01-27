@@ -23,22 +23,6 @@ import { capitalize } from "lodash";
 
 dayjs.extend(customParseFormat);
 
-interface CompanyList {
-  id: number;
-  table_name: string;
-  user_name: string;
-  message: string;
-  status_text: string;
-  date: string;
-  action: string;
-  note: string;
-  company: string;
-  user_image: string;
-  type_name: string;
-  user_id: number;
-  date_added: string | null;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -104,7 +88,7 @@ export default function UserRequests({
 
   const initialDates = getInitialDates();
 
-  const [data, setData] = useState<CompanyList[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<Date | null>(
@@ -191,6 +175,9 @@ export default function UserRequests({
     },
     "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
     Company: (id) => `/apps/users/${id}?tab=rate`,
+    Comapny: (id) => `/apps/users/${id}?tab=billing`,
+    Project: (id) => `/apps/projects/index?id=${id}`,
+    Team: (id) => `/apps/teams/team?team_id=${id}`,
     Leave: (recordId, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
@@ -341,6 +328,12 @@ export default function UserRequests({
 
                         router.push(
                           routeFn(work.user_id, formattedDate, formattedDate),
+                        );
+                      } else if (work.type_name === "Team") {
+                        router.push(routeFn(work.team_id));
+                      } else if (work.type_name === "Project") {
+                        router.push(
+                          routeFn(work?.project_id ?? work?.record_id),
                         );
                       } else {
                         router.push(routeFn(work.user_id));

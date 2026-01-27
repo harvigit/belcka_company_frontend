@@ -3,8 +3,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
 import {
   Box,
   Grid,
@@ -116,14 +114,6 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
     initialDates.startDate
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
-  const session = useSession();
-  const user = session.data?.user as User & {
-    company_id?: string | null;
-    company_name?: string | null;
-    company_image?: number | null;
-    id: number;
-    user_role_id: number;
-  };
 
   const fetchRequests = async (
     start: Date,
