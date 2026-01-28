@@ -69,10 +69,11 @@ const useMenuState = () => {
 };
 
 const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
-                                                            conflict,
-                                                            index,
-                                                            startDate,  
-                                                            endDate
+                                                             conflict,
+                                                             index,
+                                                             startDate,
+                                                             endDate,
+                                                             onClose,
                                                          }) => {
     const {
         anchorEl,
@@ -87,6 +88,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
     } = useMenuState();
 
     const [selectedItem, setSelectedItem] = useState<ConflictItem | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const splitData = useMemo(() => {
 
@@ -102,14 +104,14 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
             start2: parseDT(item2.start),
             end2: parseDT(item2.end),
         };
-        
+
 
         if (!Object.values(times).every(dt => dt.isValid)) {
             return null;
         }
 
         const {start1, end1, start2, end2} = times;
-        
+
 
         // Check for complete containment first
         if (start1 <= start2 && end1 >= end2) {
@@ -124,7 +126,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
         if (hasOverlap) {
             // For now, return null, but you could implement partial overlap handling
         }
-        
+
         return null;
     }, [conflict.items, conflict.formatted_date]);
 
@@ -140,7 +142,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
         const innerWorklogId = innerItem.worklog_id ? Number(innerItem.worklog_id) : 0;
         const outerUserId = outerItem.user_id ? Number(outerItem.user_id) : 0;
         const innerUserId = innerItem.user_id ? Number(innerItem.user_id) : 0;
-        
+
 
         if (!outerUserId || !innerUserId) {
             return null;
@@ -152,7 +154,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
             innerStart: parseDT(innerItem.start),
             innerEnd: parseDT(innerItem.end),
         };
-        
+
 
         if (!Object.values(times).every(dt => dt.isValid)) {
             return null;
@@ -174,7 +176,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                 total: calcDiffHM(times.outerStart, times.innerStart),
             });
         }
-        
+
         rows.push({
             user_id: innerUserId,
             worklog_id: innerWorklogId,
@@ -200,7 +202,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                 total: calcDiffHM(times.innerEnd, times.outerEnd),
             });
         }
-        
+
         return rows;
     }, [splitData]);
 
@@ -219,8 +221,8 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
         if (!splitData || !splitData.outerItem) {
             return;
         }
-        
-        
+
+
         setSelectedItem(splitData.outerItem);
         setSplitPreviewOpen(true);
         handleMenuClose();
@@ -239,26 +241,30 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
     }, [conflict.items, handleOpenDeletePreview]);
 
     const handleConfirmSplit = useCallback(async () => {
-        if (!splitPreview || !selectedItem?.worklog_id) {
+        if (!splitPreview || !selectedItem?.worklog_id || isLoading) {
             handleMenuClose();
             return;
         }
+        setIsLoading(true);
         try {
             const response = await api.post('/time-clock/split-worklog', {
                 split_data: splitPreview,
             });
-            
-            
+
+
             if (!response.data.IsSuccess) {
                 console.error('Failed to split worklog:', response.data.message);
             }
-            
+
             handleMenuClose();
+            onClose(); // Close the sidebar on success
         } catch (error) {
             console.error('Error saving split action:', error);
             handleMenuClose();
+        } finally {
+            setIsLoading(false);
         }
-    }, [splitPreview, selectedItem, handleMenuClose]);
+    }, [splitPreview, selectedItem, handleMenuClose, onClose, isLoading]);
 
     const handleCancelSplit = useCallback(() => {
         setSplitPreviewOpen(false);
@@ -267,21 +273,25 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
     }, [handleMenuClose]);
 
     const handleConfirmDelete = useCallback(async () => {
-        if (!selectedItem?.worklog_id) {
+        if (!selectedItem?.worklog_id || isLoading) {
             handleMenuClose();
             return;
         }
+        setIsLoading(true);
         try {
             await api.post('/time-clock/delete-worklog', {
                 worklog_id: selectedItem.worklog_id,
             });
 
             handleMenuClose();
+            onClose(); // Close the sidebar on success
         } catch (error) {
             console.error('Error saving delete action:', error);
             handleMenuClose();
+        } finally {
+            setIsLoading(false);
         }
-    }, [selectedItem, handleMenuClose]);
+    }, [selectedItem, handleMenuClose, onClose, isLoading]);
 
     const handleCancelDelete = useCallback(() => {
         setDeletePreviewOpen(false);
@@ -467,7 +477,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                             size="small"
                             variant="contained"
                             onClick={handleConfirmSplit}
-                            disabled={!splitPreview || splitPreview.length === 0}
+                            disabled={!splitPreview || splitPreview.length === 0 || isLoading}
                             sx={{
                                 textTransform: 'none',
                                 fontSize: '0.85rem',
@@ -478,7 +488,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                                 '&:hover': {backgroundColor: '#333'}
                             }}
                         >
-                            Confirm split
+                            {isLoading ? 'Processing...' : 'Confirm split'}
                         </Button>
                     </Box>
                 </Card>
@@ -545,6 +555,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                             variant="outlined"
                             color="error"
                             onClick={handleConfirmDelete}
+                            disabled={isLoading}
                             sx={{
                                 textTransform: 'none',
                                 fontSize: '0.8rem',
@@ -554,7 +565,7 @@ const SplitDeleteCase: React.FC<SplitDeleteCaseProps> = ({
                                 py: 0.5,
                             }}
                         >
-                            Confirm delete
+                            {isLoading ? 'Processing...' : 'Confirm delete'}
                         </Button>
                     </Box>
                 </Card>

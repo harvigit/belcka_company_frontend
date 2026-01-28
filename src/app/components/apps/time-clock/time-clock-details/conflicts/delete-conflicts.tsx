@@ -75,7 +75,8 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
     } = useMenuState();
 
     const [selectedItem, setSelectedItem] = useState<ConflictItem | null>(null);
-    
+    const [isLoading, setIsLoading] = useState(false);
+
     const deletePreview = useMemo<DeletePreviewRow[] | null>(() => {
         if (!selectedItem) return null;
 
@@ -89,15 +90,16 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
         }];
     }, [selectedItem]);
 
-   
+
     const handleDeletePreview = useCallback((item: ConflictItem) => {
         setSelectedItem(item);
         handleOpenDeletePreview();
     }, [handleOpenDeletePreview]);
-    
-    const handleConfirmDelete = useCallback(async () => {
-        if (!selectedItem) return;
 
+    const handleConfirmDelete = useCallback(async () => {
+        if (!selectedItem || isLoading) return;
+
+        setIsLoading(true);
         try {
             if (selectedItem.is_leave && selectedItem.user_leave_id) {
                 await api.post('/user-leaves/delete-leave', {
@@ -110,12 +112,14 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
             }
 
             handleMenuClose();
-            onClose();
+            onClose(); // Close the sidebar on success
         } catch (error) {
             console.error('Error deleting item:', error);
             handleMenuClose();
+        } finally {
+            setIsLoading(false);
         }
-    }, [selectedItem, handleMenuClose, startDate, endDate]);
+    }, [selectedItem, handleMenuClose, onClose, startDate, endDate, isLoading]);
 
     const handleCancelDelete = useCallback(() => {
         setDeletePreviewOpen(false);
@@ -306,6 +310,7 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
                             variant="outlined"
                             color="error"
                             onClick={handleConfirmDelete}
+                            disabled={isLoading}
                             sx={{
                                 textTransform: 'none',
                                 fontSize: '0.8rem',
@@ -315,7 +320,7 @@ const DeleteOnlyCase: React.FC<DeleteOnlyCaseProps> = ({conflict, index, onClose
                                 py: 0.5,
                             }}
                         >
-                            Confirm delete
+                            {isLoading ? 'Processing...' : 'Confirm delete'}
                         </Button>
                     </Box>
                 </Card>

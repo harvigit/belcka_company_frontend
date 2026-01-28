@@ -25,7 +25,7 @@ import { DateTime } from "luxon";
 interface CutDeleteConflictsProps {
     conflict: Conflict;
     index: number;
-    startDate: string; 
+    startDate: string;
     endDate: string;
     onClose: () => void;
 }
@@ -91,6 +91,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                                                                    index,
                                                                    startDate,
                                                                    endDate,
+                                                                   onClose,
                                                                }) => {
     const {
         anchorEl,
@@ -105,6 +106,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
     } = useMenuState();
 
     const [selectedItem, setSelectedItem] = useState<ConflictItem | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Determine which worklog is longer
     const longerWorklog = useMemo(() => {
@@ -283,27 +285,32 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
     );
 
     const handleConfirmCut = useCallback(async () => {
-        if (!selectedItem?.worklog_id) {
+        if (!selectedItem?.worklog_id || isLoading) {
             console.error("No selected worklog_id for cut");
             return;
         }
+        setIsLoading(true);
         try {
             const cutData = prepareCutData();
             if (!cutData) {
                 console.error("No cut data prepared");
+                setIsLoading(false);
                 return;
             }
 
             await api.post("/time-clock/cut-worklog", { cut_data: cutData });
-            
+
             setCutPreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
+            onClose(); // Close the sidebar on success
         } catch (error) {
             console.error("Error saving cut action:", error);
             setCutPreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
+        } finally {
+            setIsLoading(false);
         }
     }, [
         selectedItem,
@@ -311,6 +318,8 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
         startDate,
         endDate,
         handleMenuClose,
+        onClose,
+        isLoading,
     ]);
 
     const handleCancelCut = useCallback(() => {
@@ -319,29 +328,35 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
     }, []);
 
     const handleConfirmDelete = useCallback(async () => {
-        if (!selectedItem?.worklog_id) {
+        if (!selectedItem?.worklog_id || isLoading) {
             console.error("No selected worklog_id for delete");
             return;
         }
+        setIsLoading(true);
         try {
             await api.post("/time-clock/delete-worklog", {
                 worklog_id: selectedItem.worklog_id,
             });
-            
+
             setDeletePreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
+            onClose(); // Close the sidebar on success
         } catch (error) {
             console.error("Error saving delete action:", error);
             setDeletePreviewOpen(false);
             setSelectedItem(null);
             handleMenuClose();
+        } finally {
+            setIsLoading(false);
         }
     }, [
         selectedItem,
         startDate,
         endDate,
         handleMenuClose,
+        onClose,
+        isLoading,
     ]);
 
     const handleCancelDelete = useCallback(() => {
@@ -662,13 +677,14 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                             variant="contained"
                             color="primary"
                             onClick={handleConfirmCut}
+                            disabled={isLoading}
                             sx={{
                                 textTransform: "none",
                                 fontSize: "0.85rem",
                                 px: 2.5,
                             }}
                         >
-                            Confirm cut
+                            {isLoading ? "Processing..." : "Confirm cut"}
                         </Button>
                     </Box>
                 </Card>
@@ -742,6 +758,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                             variant="outlined"
                             color="error"
                             onClick={handleConfirmDelete}
+                            disabled={isLoading}
                             sx={{
                                 textTransform: "none",
                                 fontSize: "0.8rem",
@@ -751,7 +768,7 @@ const CutDeleteConflicts: React.FC<CutDeleteConflictsProps> = ({
                                 py: 0.5,
                             }}
                         >
-                            Confirm delete
+                            {isLoading ? "Processing..." : "Confirm delete"}
                         </Button>
                     </Box>
                 </Card>
