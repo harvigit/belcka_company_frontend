@@ -239,7 +239,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
       user_id: Number(newRecord.userId),
       device_type: 3,
       device_model_type: "web",
-      date: singleDate.toISOString().slice(0, 10),
+      date: singleDate?.toLocaleDateString("en-CA"),
       shift_id: Number(newRecord.shift_id),
       project_id: Number(newRecord.project_id),
       start_time: newRecord.start,

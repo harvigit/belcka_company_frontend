@@ -445,7 +445,7 @@ const TablePagination = () => {
                   onChange={(e: any) =>
                     handleFieldChange("user_code", e.target.value)
                   }
-                  inputProps={{ maxLength: 6 }}
+                  inputProps={{ maxLength: 10 }}
                   fullWidth
                 />
 
