@@ -35,6 +35,10 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    if (error.config?.skipToast) {
+      return Promise.reject(error);
+    }
+
     if (!error.config?.__handled) {
       error.config.__handled = true;
       toast.error(error.response?.data?.message || "Something went wrong");

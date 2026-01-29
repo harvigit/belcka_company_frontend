@@ -207,10 +207,17 @@ const TablePagination = () => {
 
       let phoneExists = false;
       try {
-        const res = await api.post("check-phone-exist", {
-          phone: formData.phone,
-          extension: formData.extension,
-        });
+        const res = await api.post(
+          "check-phone-exist",
+          {
+            phone: formData.phone,
+            extension: formData.extension,
+          },
+          {
+            headers: { "x-skip-auth": "true" },
+            skipToast: true,
+          } as any,
+        );
         phoneExists = res.data.IsSuccess === true;
       } catch (err: any) {
         if (err.response?.status !== 404) {
@@ -250,6 +257,7 @@ const TablePagination = () => {
       const otp = await askOtp();
       if (!otp) {
         toast.error("OTP is required");
+        setIsPhoneUpdate(false);
         return;
       }
 
