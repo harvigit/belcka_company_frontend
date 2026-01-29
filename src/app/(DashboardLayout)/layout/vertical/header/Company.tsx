@@ -298,6 +298,7 @@ const Company = () => {
       return url;
     },
     "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
+    "User": (id) => `/apps/users/${id}?tab=health_info`,
     Company: (id) => `/apps/users/${id}?tab=rate`,
     Comapny: (id) => `/apps/users/${id}?tab=billing`,
     Project: (id) => `/apps/projects/index?id=${id}`,
@@ -602,7 +603,10 @@ const Company = () => {
                                 );
                               } else if (item.request_name === "Team") {
                                 router.push(routeFn(item.team_id));
-                              } else if (item.request_name === "Project") {
+                              } else if (item.request_name === "User"){
+                                router.push(routeFn(item.user_id));
+
+                              }else if (item.request_name === "Project") {
                                 router.push(
                                   routeFn(item.project_id ?? item.record_id),
                                 );
