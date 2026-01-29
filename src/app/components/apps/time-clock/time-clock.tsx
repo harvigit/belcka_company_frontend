@@ -170,6 +170,7 @@ interface Props {
         end_date?: string | null;
         open?: string | null;
         type?: string | null;
+        recordId?: string | null;
     };
 }
 

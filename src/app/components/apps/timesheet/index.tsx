@@ -17,6 +17,7 @@ const TimesheetPage = () => {
   const [settingOpen, setSettingOpen] = useState(false);
   const searchParams = useSearchParams();
   const userIdParam = searchParams?.get("user_id");
+  const recordIdParam = searchParams?.get("id");
   const startParam = searchParams?.get("start_date");
   const endParam = searchParams?.get("end_date");
   const openParam = searchParams?.get("open");
@@ -127,6 +128,7 @@ const TimesheetPage = () => {
               end_date: endParam,
               open: openParam,
               type: type,
+              recordId: recordIdParam
             }}
           />
         )}

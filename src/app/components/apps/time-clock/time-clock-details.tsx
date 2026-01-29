@@ -99,6 +99,7 @@ interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
         end_date?: string | null;
         open?: string | null;
         type?: string | null;
+        recordId?: string| null;
     };
 }
 
@@ -469,8 +470,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
    useEffect(() => {
     if (!queryParams?.open) return;
 
-    if(queryParams.type === "expense"){
-        return
+    if(queryParams.type === "expense" && queryParams.recordId){
+        setExpensesSidebar(true);
+        setSelectedExpenseId(Number(queryParams.recordId))
     }
     else if (queryParams?.type !== null) {
         setRequestListOpen(true);

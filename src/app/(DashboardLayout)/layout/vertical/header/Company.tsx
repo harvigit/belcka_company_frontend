@@ -248,7 +248,7 @@ const Company = () => {
 
   const REQUEST_ROUTE_MAP: Record<
     string,
-    (recordId?: number, startDate?: string, endDate?: string) => string
+    (recordId?: number, id?: number,startDate?: string, endDate?: string) => string
   > = {
     Shift: (recordId, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
@@ -266,11 +266,12 @@ const Company = () => {
 
       return url;
     },
-    Expense: (recordId, startDate, endDate) => {
+    Expense: (recordId,id, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
 
       if (recordId) params.push(`user_id=${recordId}`);
+      if (id) params.push(`id=${id}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
       params.push(`open=true`);
@@ -540,7 +541,7 @@ const Company = () => {
                                 const end = endDate
                                   ? format(endDate, "yyyy-MM-dd")
                                   : undefined;
-                                router.push(routeFn(item.user_id, start, end));
+                                router.push(routeFn(item.user_id,item.record_id, start, end));
                               } else if (item.request_name === "Shift") {
                                 const dateAdded = item.date_added
                                   ? parse(
@@ -557,6 +558,7 @@ const Company = () => {
                                 router.push(
                                   routeFn(
                                     item.user_id,
+                                    item.record_id,
                                     formattedDate,
                                     formattedDate,
                                   ),
@@ -577,6 +579,7 @@ const Company = () => {
                                 router.push(
                                   routeFn(
                                     item.user_id,
+                                    item.record_id,
                                     formattedDate,
                                     formattedDate,
                                   ),
@@ -597,6 +600,7 @@ const Company = () => {
                                 router.push(
                                   routeFn(
                                     item.user_id,
+                                    item.record_id,
                                     formattedDate,
                                     formattedDate,
                                   ),
