@@ -4,11 +4,16 @@ import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
 });
 
 api.interceptors.request.use(
   (config) => {
+    if (config.headers?.["x-skip-auth"]) {
+      delete config.headers["x-skip-auth"];
+      return config;
+    }
+
     const token = getAccessToken();
 
     if (token) {
@@ -19,7 +24,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 api.interceptors.response.use(
@@ -36,7 +41,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

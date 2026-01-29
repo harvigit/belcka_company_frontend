@@ -252,6 +252,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
       const response = await api.post("/time-clock/add-worklog", params);
 
       if (response.data.IsSuccess) {
+        toast.success(response.data.message)
         onClose();
       }
     } catch (error: any) {
