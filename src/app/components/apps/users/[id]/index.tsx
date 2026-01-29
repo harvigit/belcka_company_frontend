@@ -198,12 +198,12 @@ const TablePagination = () => {
     const phoneChanged =
       formData.phone !== originalPhone.phone ||
       formData.extension !== originalPhone.extension;
-    setIsPhoneUpdate(true);
     try {
       if (!phoneChanged) {
         await updateProfile();
         return;
       }
+      setIsPhoneUpdate(true);
 
       let phoneExists = false;
       try {
