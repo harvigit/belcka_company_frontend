@@ -84,6 +84,7 @@ interface TimeClockTableProps {
     conflictsByDate?: { [key: string]: number };
     openConflictsSideBar?: () => Promise<void>;
     openChecklogsSidebar?: (worklogId: number) => Promise<void>;
+    openExpensesSidebar?: (expenseId: number) => Promise<void>;
     openPenaltiesSidebar?: (worklogId: number) => Promise<void>;
     leaveRequestCount: number;
     leaveRequestByDate?: { [key: string]: number };
@@ -131,6 +132,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            conflictsByDate = {},
                                                            openConflictsSideBar,
                                                            openChecklogsSidebar,
+                                                           openExpensesSidebar,
                                                            openPenaltiesSidebar,
                                                            leaveRequestCount,
                                                            leaveRequestByDate,
@@ -805,12 +807,24 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Expense Column */}
                                                 {visibleColumnConfigs.expense?.visible && (
-                                                    <TableCell align="center" sx={{
-                                                        py: 0.5,
-                                                        fontSize: '0.875rem',
-                                                        height: '45px',
-                                                        verticalAlign: 'middle'
-                                                    }}>
+                                                    <TableCell
+                                                        align="center"
+                                                        onClick={() => {
+                                                            if (log.is_expense && log.expense_id) {
+                                                                openExpensesSidebar?.(log.expense_id);
+                                                            }
+                                                        }}
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                            cursor: (log.total_expense_amount > 0) ? 'pointer' : 'default',
+                                                            '&:hover': {
+                                                                color: (log.total_expense_amount > 0) ? '#1976d2' : 'inherit'
+                                                            }
+                                                        }}
+                                                    >
                                                         {`${currency}${log.total_expense_amount || 0}`}
                                                     </TableCell>
                                                 )}

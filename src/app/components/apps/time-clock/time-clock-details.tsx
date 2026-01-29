@@ -25,6 +25,7 @@ import ActionBar from './components/ActionBar';
 import {DailyBreakdown, TimeClockDetailsProps, RecordType} from '@/app/components/apps/time-clock/types/timeClock';
 import {IconExclamationMark} from '@tabler/icons-react';
 import Checklogs from './time-clock-details/checklogs/index';
+import Expenses from './time-clock-details/expenses/index';
 import Penalties from './time-clock-details/penalties/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
@@ -156,7 +157,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [leaveRequestSidebar, setLeaveRequestSidebar] = useState<boolean>(false);
 
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
-
+    const [expensesSidebar, setExpensesSidebar] = useState<boolean>(false);
+    const [selectedExpenseId, setSelectedExpenseId] = useState<number>(0);
+    
     const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; actionType: 'lock' | 'unlock' | 'delete'; conflictCount: number; } | null>(null);
 
     const [penaltiesSidebar, setPenaltiesSidebar] = useState<boolean>(false);
@@ -486,7 +489,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
             setLeaveRequestSidebar(false);
         } catch (error) {
-            console.error('Error fetching time clock data after closing conflict sidebar:', error);
+            console.error('Error fetching time clock data after closing leaves sidebar:', error);
         }
     };
 
@@ -503,7 +506,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
             onDataChange?.();
         } catch (error) {
-            console.error('Error fetching time clock data after closing conflict sidebar:', error);
+            console.error('Error fetching time clock data after closing checklogs sidebar:', error);
+        }
+    };
+
+    const handleExpenses = async (expenseId: number) => {
+        setExpensesSidebar(true);
+        setSelectedExpenseId(expenseId)
+    };
+
+    const closeExpensesSidebar = async () => {
+        setExpensesSidebar(false);
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error fetching time clock data after closing expenses sidebar:', error);
         }
     };
     
@@ -520,7 +540,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
             onDataChange?.();
         } catch (error) {
-            console.error('Error fetching time clock data after closing conflict sidebar:', error);
+            console.error('Error fetching time clock data after closing penalties sidebar:', error);
         }
     };
 
@@ -1701,6 +1721,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 leaveRequestByDate={leaveRequestByDate}
                 openConflictsSideBar={handleConflicts}
                 openChecklogsSidebar={handleChecklogs}
+                openExpensesSidebar={handleExpenses}
                 openPenaltiesSidebar={handlePenalties}
                 leaveRequestCount={leaveRequestCount}
                 openLeaveRequestsSideBar={handleLeaveRequests}
@@ -1783,6 +1804,27 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Checklogs
                     worklogId={selectedWorkId}
                     onClose={closeChecklogsSidebar}
+                />
+            </Drawer>
+            
+            <Drawer
+                anchor="right"
+                open={expensesSidebar}
+                onClose={closeExpensesSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '500px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <Expenses
+                    expenseId={selectedExpenseId}
+                    onClose={closeExpensesSidebar}
                 />
             </Drawer>
             
