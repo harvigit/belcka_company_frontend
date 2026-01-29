@@ -17,19 +17,18 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { IconArrowLeft, IconEdit, IconMedal, IconX } from "@tabler/icons-react";
+import { IconArrowLeft, IconMedal, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
-
 import DigitalIDCard from "@/app/components/common/users-card/UserDigitalCard";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import HealthInfo from "../../user-profile-setting/health-info";
 import BillingInfo from "../../user-profile-setting/billing-info";
-import { getSession, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
@@ -67,6 +66,7 @@ export interface TradeList {
 const TablePagination = () => {
   const [data, setData] = useState<TeamList>();
   const [loading, setLoading] = useState<boolean>(true);
+  const [isPhoneUpdate, setIsPhoneUpdate] = useState<boolean>(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -85,6 +85,13 @@ const TablePagination = () => {
   const [openModel, setOpenModel] = useState(false);
   const [openIdCard, setOpenIdCard] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [originalPhone, setOriginalPhone] = useState({
+    phone: "",
+    extension: "",
+  });
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [otpResolve, setOtpResolve] = useState<(otp: string | null) => void>();
 
   const param = useParams();
   const userId = param?.id;
@@ -124,6 +131,11 @@ const TablePagination = () => {
         const ext = data?.extension || "";
         const number = data?.phone || "";
         const userInfo = data;
+        setOriginalPhone({
+          phone: userInfo.phone || "",
+          extension: userInfo.extension || "",
+        });
+
         setFormData({
           first_name: userInfo.first_name || "",
           last_name: userInfo.last_name || "",
@@ -150,30 +162,134 @@ const TablePagination = () => {
     fetchData();
   }, [userId]);
 
+  const updateProfile = async () => {
+    const payload = { user_id: userId, ...formData };
+    const res = await api.post("user/update-profile", payload);
+
+    if (res.data.IsSuccess) {
+      toast.success(res.data.message);
+      fetchData();
+
+      if (Number(userId) === Number(user?.id)) {
+        await update({
+          ...session,
+          user: {
+            ...session?.user,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            email: formData.email,
+            phone: formData.phone,
+          },
+        });
+      }
+    }
+  };
+  const askOtp = (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      setOtpValue("");
+      setOtpResolve(() => resolve);
+      setOtpModalOpen(true);
+    });
+  };
+
   const handleUpdatePersonalDetails = async () => {
     if (!userId) return;
-    const payload = { user_id: userId, ...formData };
+
+    const phoneChanged =
+      formData.phone !== originalPhone.phone ||
+      formData.extension !== originalPhone.extension;
     try {
-      const res = await api.post("user/update-profile", payload);
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        fetchData();
-        if (Number(userId) === Number(user?.id)) {
-          await update({
-            ...session,
-            user: {
-              ...session?.user,
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              email: formData.email,
-              phone: formData.phone,
-            },
-          });
-        }
+      if (!phoneChanged) {
+        await updateProfile();
+        return;
       }
+      setIsPhoneUpdate(true);
+
+      let phoneExists = false;
+      try {
+        const res = await api.post(
+          "check-phone-exist",
+          {
+            phone: formData.phone,
+            extension: formData.extension,
+          },
+          {
+            headers: { "x-skip-auth": "true" },
+            skipToast: true,
+          } as any,
+        );
+        phoneExists = res.data.IsSuccess === true;
+      } catch (err: any) {
+        if (err.response?.status !== 404) {
+          throw err;
+        }
+        phoneExists = false;
+      }
+
+      if (phoneExists) {
+        setIsPhoneUpdate(false);
+        await updateProfile();
+      }
+
+      let otpSent = false;
+      try {
+        const sendOtpRes = await api.post(
+          "send-otp-register",
+          {
+            phone: formData.phone,
+            extension: formData.extension,
+          },
+          {
+            headers: { "x-skip-auth": "true" },
+          },
+        );
+
+        otpSent = sendOtpRes.data.IsSuccess === true;
+      } catch (err: any) {
+        if (err.response?.status !== 404) throw err;
+        otpSent = false;
+      }
+
+      if (!otpSent) {
+        return;
+      }
+
+      const otp = await askOtp();
+      if (!otp) {
+        toast.error("OTP is required");
+        setIsPhoneUpdate(false);
+        return;
+      }
+
+      let otpVerified = false;
+      try {
+        const verifyRes = await api.post(
+          "verify-register-otp",
+          {
+            phone: formData.phone,
+            extension: formData.extension,
+            otp,
+          },
+          {
+            headers: { "x-skip-auth": "true" },
+          },
+        );
+        otpVerified = verifyRes.data.IsSuccess === true;
+      } catch (err: any) {
+        if (err.response?.status !== 404) throw err;
+        otpVerified = false;
+      }
+
+      if (!otpVerified) {
+        toast.error("Invalid OTP");
+        return;
+      }
+
+      await updateProfile();
     } catch (err) {
       console.error("Update failed:", err);
     }
+    setIsPhoneUpdate(false);
   };
 
   const handlePhoneInputChange = (value: string, country: any) => {
@@ -255,6 +371,63 @@ const TablePagination = () => {
   return (
     <Box>
       <BlankCard>
+        <Dialog
+          fullWidth
+          open={otpModalOpen}
+          onClose={() => {
+            setOtpModalOpen(false);
+            otpResolve?.(null);
+          }}
+        >
+          <DialogTitle>
+            <Typography color="GrayText" fontWeight={700}>
+              Enter OTP
+            </Typography>
+            <IconButton
+              onClick={() => {
+                setOtpModalOpen(false);
+                otpResolve?.(null);
+              }}
+              sx={{
+                position: "absolute",
+                right: 12,
+                top: 8,
+                backgroundColor: "transparent",
+              }}
+            >
+              <IconX size={40} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <CustomTextField
+              fullWidth
+              value={otpValue}
+              onChange={(e: any) => setOtpValue(e.target.value)}
+              placeholder="Enter OTP"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setOtpModalOpen(false);
+                otpResolve?.(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setOtpModalOpen(false);
+                otpResolve?.(otpValue);
+              }}
+              variant="contained"
+              color="primary"
+            >
+              Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <CardContent sx={{ pt: 1 }}>
           <Box
             display="flex"
@@ -318,7 +491,8 @@ const TablePagination = () => {
                   color="textSecondary"
                   ml={2}
                 >
-                  {data?.trade_name ?? null} {data?.user_code ? `| ${data.user_code}` :""}
+                  {data?.trade_name ?? null}{" "}
+                  {data?.user_code ? `| ${data.user_code}` : ""}
                 </Typography>
               </Box>
             </Box>
@@ -433,7 +607,7 @@ const TablePagination = () => {
                   fullWidth
                 />
 
-                 <Typography color="textSecondary" variant="h5" mt={2}>
+                <Typography color="textSecondary" variant="h5" mt={2}>
                   User Code
                 </Typography>
                 <CustomTextField
@@ -472,9 +646,10 @@ const TablePagination = () => {
                 <Button
                   variant="contained"
                   color="primary"
+                  disabled={isPhoneUpdate}
                   onClick={handleUpdatePersonalDetails}
                 >
-                  Update
+                  {isPhoneUpdate ? "Sending otp in your phone.." : "Update"}
                 </Button>
               </Box>
             </Box>
@@ -713,7 +888,7 @@ const TablePagination = () => {
                 };
                 const response = await api.post(
                   "user/archive-user-account",
-                  payload
+                  payload,
                 );
                 toast.success(response.data.message);
                 router.push("/apps/users/list");

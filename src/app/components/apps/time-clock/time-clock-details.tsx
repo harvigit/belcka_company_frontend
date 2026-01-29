@@ -34,6 +34,7 @@ import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import { Stack } from '@mui/system';
 
 import ConfirmationDialog from './components/ConfirmationDialog';
+import toast from 'react-hot-toast';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -768,6 +769,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const response = await api.post('/time-clock/add-worklog', params);
 
             if (response.data.IsSuccess) {
+                toast.success(response.data.message)
                 cancelNewRecord(recordKey);
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
