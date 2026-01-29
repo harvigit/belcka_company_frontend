@@ -220,7 +220,8 @@ const TablePagination = () => {
       }
 
       if (phoneExists) {
-        return;
+        setIsPhoneUpdate(false);
+        await updateProfile();
       }
 
       let otpSent = false;
