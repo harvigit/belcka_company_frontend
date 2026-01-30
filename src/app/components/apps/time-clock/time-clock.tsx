@@ -142,6 +142,8 @@ export type TimeClock = {
     daylog_payable_amount: number;
     pricework_total_amount: number;
     total_expense_amount: number;
+    cis_amount: number;
+    gross_amount: number;
     total_payable_amount: number;
     status_text: string;
     status_color?: string;
@@ -746,6 +748,24 @@ const TimeClock = ({queryParams}: Props) => {
             },
         }),
 
+        columnHelper.accessor('cis_amount', {
+            id: 'cis_amount',
+            header: 'CIS Amount',
+            cell: (info: any) => {
+                const value = info.getValue();
+                return value === 0 ? '0' : value ? `${currency}${value}` : '-';
+            },
+        }),
+
+        columnHelper.accessor('gross_amount', {
+            id: 'gross_amount',
+            header: 'Gross Amount',
+            cell: (info: any) => {
+                const value = info.getValue();
+                return value === 0 ? '0' : value ? `${currency}${value}` : '-';
+            },
+        }),
+        
         columnHelper.accessor('total_payable_amount', {
             id: 'total_payable_amount',
             header: 'Total Payable Amount',

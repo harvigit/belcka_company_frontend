@@ -821,7 +821,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 weekLabel: week.week_range,
                 weeklyTotalHours: formatHour(week.weekly_total_hours),
                 weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
-                timesheet_ids: ''
+                timesheet_ids: '',
+                cis_amount: 0,
+                gross_amount: 0
             }];
 
             const filteredDayRows = (week.days || []).flatMap((day: any) => {
@@ -1574,6 +1576,22 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 size: 120,
             },
             {
+                id: 'cis_amount',
+                accessorKey: 'cis_amount',
+                meta: {label: 'CIS'},
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>CIS</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.cis_amount : null,
+                size: 120,
+            },
+            {
+                id: 'gross_amount',
+                accessorKey: 'gross_amount',
+                meta: {label: 'Gross'},
+                header: () => <span style={{display: 'block', textAlign: 'center'}}>Gross</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.gross_amount : null,
+                size: 120,
+            },
+            {
                 id: 'checkIns',
                 accessorKey: 'checkIns',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Check Ins</span>,
@@ -1582,7 +1600,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             },
             {
                 id: 'status',
-                accessorKey: 'checkIns',
+                accessorKey: 'status',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Status</span>,
                 cell: ({row}) => row.original.rowType === 'day' ? row.original.status_text : null,
                 size: 100,

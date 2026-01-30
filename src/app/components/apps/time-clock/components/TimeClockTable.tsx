@@ -829,6 +829,36 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
+                                                {/* CIS Column */}
+                                                {visibleColumnConfigs.cis_amount?.visible && (
+                                                    <TableCell
+                                                        align="center"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                        }}
+                                                    >
+                                                        {`${currency}${log.cis_amount || 0}`}
+                                                    </TableCell>
+                                                )}
+
+                                                {/* GROSS Column */}
+                                                {visibleColumnConfigs.gross_amount?.visible && (
+                                                    <TableCell
+                                                        align="center"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                        }}
+                                                    >
+                                                        {`${currency}${log.gross_amount || 0}`}
+                                                    </TableCell>
+                                                )}
+
                                                 {/* Check ins Column */}
                                                 {visibleColumnConfigs.checkIns?.visible && (
                                                     <TableCell
