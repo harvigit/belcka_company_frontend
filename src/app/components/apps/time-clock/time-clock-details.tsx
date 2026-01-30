@@ -167,6 +167,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; actionType: 'lock' | 'unlock' | 'delete'; conflictCount: number; } | null>(null);
 
     const [penaltiesSidebar, setPenaltiesSidebar] = useState<boolean>(false);
+
+    const initialParamsRef = useRef(queryParams);
+    const handledRef = useRef(false);
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
         saveDateRangeToStorage(startDate, endDate, columnVisibility);
@@ -469,25 +472,26 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestSidebar(true);
     };
 
-    const handledRef = useRef(false);
-
-    useEffect(() => {
+   useEffect(() => {
     if (handledRef.current) return;
-    if (queryParams?.open !== "true") return;
 
-    if (queryParams.type === "expense" && queryParams.recordId) {
+    const params = initialParamsRef.current;
+    if (!params || params.open !== "true") return;
+
+    if (params.type === "expense" && params.recordId) {
         setExpensesSidebar(true);
-        setSelectedExpenseId(Number(queryParams.recordId));
-    } else if (queryParams.type) {
+        setSelectedExpenseId(Number(params.recordId));
+    } else if (params.type) {
         setRequestListOpen(true);
     }
-    // setLeaveRequestSidebar(false);
 
     handledRef.current = true;
+
     setTimeout(() => {
-            router.replace("/apps/timesheet/list", { scroll: false });
-        }, 0);
-    }, [queryParams]);
+        router.replace("/apps/timesheet/list", { scroll: false });
+    }, 50);
+    }, []);
+
 
     const closeLeaveRequestSidebar = async () => {
         try {
