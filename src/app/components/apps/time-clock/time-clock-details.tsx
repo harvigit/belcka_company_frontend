@@ -96,6 +96,7 @@ const loadDateRangeFromStorage = () => {
 interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
     onDataChange?: () => void;
     queryParams?: {
+        user_id?: string | null;
         start_date?: string | null;
         end_date?: string | null;
         open?: string | null;
@@ -489,7 +490,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     setTimeout(() => {
         router.replace("/apps/timesheet/list", { scroll: false });
-    }, 50);
+    }, 7000);
     }, []);
 
 
