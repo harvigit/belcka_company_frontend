@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
+import React, {useState, useEffect, useMemo, useCallback, useRef} from 'react';
 import {Box, Drawer, IconButton, TableCell, Typography} from '@mui/material';
 import {
     useReactTable,
@@ -35,6 +35,7 @@ import { Stack } from '@mui/system';
 
 import ConfirmationDialog from './components/ConfirmationDialog';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -161,6 +162,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [expensesSidebar, setExpensesSidebar] = useState<boolean>(false);
     const [selectedExpenseId, setSelectedExpenseId] = useState<number>(0);
+    const router = useRouter();
     
     const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; actionType: 'lock' | 'unlock' | 'delete'; conflictCount: number; } | null>(null);
 
@@ -467,20 +469,24 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestSidebar(true);
     };
 
-   useEffect(() => {
-    if (!queryParams?.open) return;
+    const handledRef = useRef(false);
 
-    if(queryParams.type === "expense" && queryParams.recordId){
+    useEffect(() => {
+    if (handledRef.current) return;
+    if (queryParams?.open !== "true") return;
+
+    if (queryParams.type === "expense" && queryParams.recordId) {
         setExpensesSidebar(true);
-        setSelectedExpenseId(Number(queryParams.recordId))
-    }
-    else if (queryParams?.type !== null) {
+        setSelectedExpenseId(Number(queryParams.recordId));
+    } else if (queryParams.type) {
         setRequestListOpen(true);
-        // setLeaveRequestSidebar(false);
-    } else {
-        // setLeaveRequestSidebar(true);
-        setRequestListOpen(false);
     }
+    // setLeaveRequestSidebar(false);
+
+    handledRef.current = true;
+    setTimeout(() => {
+            router.replace("/apps/timesheet/list", { scroll: false });
+        }, 0);
     }, [queryParams]);
 
     const closeLeaveRequestSidebar = async () => {

@@ -62,7 +62,6 @@ import AddLeave from './time-clock-details/leaves/add-leave';
 
 import 'react-day-picker/dist/style.css';
 import '@/app/global.css';
-import {useRouter, useSearchParams} from 'next/navigation';
 import {useSession} from 'next-auth/react';
 import {User} from 'next-auth';
 import AddExpense from './time-clock-details/expenses/add-expense';
@@ -228,8 +227,6 @@ const TimeClock = ({queryParams}: Props) => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [companyId, setCompanyId] = useState<number | null>(null);
-    const router = useRouter();
-    const searchParams = useSearchParams();
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -244,10 +241,6 @@ const TimeClock = ({queryParams}: Props) => {
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [addWorklogSidebar, setAddWorklogSidebar] = useState<boolean>(false);
     const [openLeaves, setOpenLeaves] = useState(false);
-    const userIdParam = searchParams?.get("user_id");
-    const startParam = searchParams?.get("start_date");
-    const endParam = searchParams?.get("end_date");
-    const openParam = searchParams?.get("open");
     // Conflict sidebar
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
@@ -360,20 +353,27 @@ const TimeClock = ({queryParams}: Props) => {
         return [];
     };
 
-    useEffect(() => {
-    if (!userIdParam || !startParam || !endParam) return;
-    const startDateObj = new Date(startParam);
-    const endDateObj = new Date(endParam);
+      useEffect(() => {
+        if (
+        !queryParams?.user_id ||
+        !queryParams?.start_date ||
+        !queryParams?.end_date
+        )
+        return;
 
-    setStartDate(startDateObj);
-    setEndDate(endDateObj);
+        const startDateObj = new Date(queryParams.start_date);
+        const endDateObj = new Date(queryParams.end_date);
+
+        setStartDate(startDateObj);
+        setEndDate(endDateObj);
 
     (async () => {
-        try {
+      try {
         const fetchedData = await fetchData(startDateObj, endDateObj);
 
         const foundUser = fetchedData.find(
-            (item) => Number(item.user_id) === Number(userIdParam)
+          (item) =>
+            Number(item.user_id) === Number(queryParams.user_id)
         );
 
         if (!foundUser) return;
@@ -382,15 +382,18 @@ const TimeClock = ({queryParams}: Props) => {
         setSelectedTimeClock(foundUser);
 
         if (queryParams?.type) {
-            setDetailsOpen(true);
-        } else {
+          setDetailsOpen(true);
         }
-
-        } catch (err) {
+      } catch (err) {
         console.error("Failed to load data from query params:", err);
-        }
-    })();
-    }, [searchParams]);
+      }
+        })();
+    }, [
+        queryParams?.user_id,
+        queryParams?.start_date,
+        queryParams?.end_date,
+        queryParams?.type,
+    ]);
 
 
     const fetchConflictsData = async (start: Date, end: Date) => {
