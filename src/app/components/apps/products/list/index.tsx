@@ -169,7 +169,7 @@ const ProductList = () => {
 
   const downloadSampleFile = () => {
     const link = document.createElement("a");
-    link.href = "/public/files/products_export.xlsx";
+    link.href = "/files/products_export.xlsx"
     link.download = "sample-file.xlsx";
     link.click();
   };
@@ -869,7 +869,7 @@ const ProductList = () => {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    downloadSampleFile;
+                    downloadSampleFile();
                   }}
                   style={{
                     width: "100%",

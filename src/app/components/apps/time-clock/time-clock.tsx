@@ -75,6 +75,7 @@ import {ConflictDetail} from '@/app/components/apps/time-clock/types/timeClock';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import { IconEye } from '@tabler/icons-react';
 import Settings from '../timesheet/setting/settings';
+import BookkeeperHistory from './history';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -247,6 +248,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [conflictSidebar, setConflictSidebar] = useState<boolean>(false);
     const [conflictDetails, setConflictDetails] = useState<ConflictDetail[]>([]);
     const [settingOpen, setSettingOpen] = useState(false);
+    const [openDrawer, setOpenDrawer] = useState(false);
 
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
@@ -1128,6 +1130,15 @@ const TimeClock = ({queryParams}: Props) => {
                                 ),
                             }}
                         />
+                        <Button
+                            color="primary"
+                            variant="outlined"
+                            onClick={() => setOpenDrawer(true)}
+                            sx={{ mt: { xs: 1, sm: 0 } }}
+                            >
+                            Activity
+                        </Button>
+                        <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)}/>
                     </Stack>
 
                     <Stack direction="row" spacing={1} alignItems="center">

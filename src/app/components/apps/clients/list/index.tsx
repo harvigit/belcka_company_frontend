@@ -93,7 +93,7 @@ export type ClientList = {
   expire_date: string;
 };
 
-const TablePagination = () => {
+const ClientList = () => {
   const [data, setData] = useState<ClientList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -512,7 +512,7 @@ const TablePagination = () => {
   }));
 
   return (
-    <PermissionGuard permission="Clients">
+    <PermissionGuard permission="Settings">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -1080,4 +1080,4 @@ const TablePagination = () => {
   );
 };
 
-export default TablePagination;
+export default ClientList;

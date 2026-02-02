@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Drawer,
   Box,
@@ -18,6 +18,7 @@ import {
   TableCell,
   TableBody,
   Fab,
+  Dialog,
 } from "@mui/material";
 import {
   createColumnHelper,
@@ -151,7 +152,10 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
   const [product, setProduct] = useState<any>([]);
-  const [totalQty,setTotalQty] = useState("");
+  const [totalQty, setTotalQty] = useState("");
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [mainFile, setMainFile] = useState<File | null>(null);
 
   const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
     id: 0,
@@ -355,10 +359,15 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
     fetchResources();
   }, [api]);
   const mainDropzone = useDropzone({
-    accept: { "image/*": [] },
+    accept: {
+      "image/*": [".jpg", ".jpeg", ".png"],
+    },
     multiple: false,
-    onDrop: ([file]) => {
+    onDrop: (acceptedFiles) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
       setFormData((p) => ({ ...p, image: file }));
+      setMainFile(file);
       setMainPreview(URL.createObjectURL(file));
     },
   });
@@ -755,14 +764,54 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     {...mainDropzone.getInputProps()}
                     accept=".jpg,.png,.jpeg"
                   />
+
                   {mainPreview ? (
-                    <Avatar
-                      src={mainPreview}
-                      sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      variant="square"
-                    />
+                    <>
+                      <Avatar
+                        src={mainPreview}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage(mainPreview);
+                          setOpenPreview(true);
+                        }}
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          cursor: "zoom-in",
+                        }}
+                        variant="square"
+                      />
+
+                      <IconButton
+                        size="small"
+                        color="error"
+                        sx={{
+                          position: "absolute",
+                          top: 6,
+                          right: 6,
+                          backgroundColor: "#fff",
+                          zIndex: 2,
+                          "&:hover": {
+                            backgroundColor: "#fff",
+                            color: "red",
+                          },
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMainPreview(null);
+                          setMainFile(null); 
+                        }}
+                      >
+                        <IconTrash size={16} />
+                      </IconButton>
+                    </>
                   ) : (
-                    <Typography variant="body2" color="textSecondary" ml={3}>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      align="center"
+                    >
                       Click or Drag to upload
                     </Typography>
                   )}
@@ -810,7 +859,12 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                               src={item.src}
                               alt="Product image"
                               fill
-                              style={{ objectFit: "cover" }}
+                              style={{ objectFit: "cover", cursor: "zoom-in" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewImage(item.src);
+                                setOpenPreview(true);
+                              }}
                             />
 
                             <IconButton
@@ -822,7 +876,10 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                                 right: 4,
                                 backgroundColor: "#fff",
                                 zIndex: 2,
-                                "&:hover": { backgroundColor: "#fff" },
+                                "&:hover": {
+                                  backgroundColor: "#fff",
+                                  color: "red",
+                                },
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -850,6 +907,58 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     </Box>
                   )}
                 </Box>
+
+                <Dialog
+                  open={openPreview}
+                  onClose={() => setOpenPreview(false)}
+                  fullScreen
+                  PaperProps={{
+                    sx: {
+                      backgroundColor: "transparent",
+                      boxShadow: "none",
+                    },
+                  }}
+                >
+                  <IconButton
+                    onClick={() => setOpenPreview(false)}
+                    color="primary"
+                    sx={{
+                      position: "fixed",
+                      top: 16,
+                      right: 16,
+                      zIndex: 1301,
+                      backgroundColor: "#fff",
+                      "&:hover": {
+                        backgroundColor: "#eee",
+                        color: "#1e4db7",
+                      },
+                    }}
+                  >
+                    <IconX />
+                  </IconButton>
+
+                  <Box
+                    sx={{
+                      width: "100vw",
+                      height: "100vh",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    onClick={() => setOpenPreview(false)}
+                  >
+                    <img
+                      src={previewImage || ""}
+                      alt="Preview"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: "90% !important",
+                        height: "50%",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </Box>
+                </Dialog>
               </Grid>
 
               {/* Right side */}
@@ -1131,7 +1240,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                   </Box>
                   <Box width={"100%"}>
                     <Typography variant="body2" gutterBottom>
-                      ID
+                      UUID
                     </Typography>
 
                     <CustomTextField

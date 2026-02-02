@@ -61,13 +61,13 @@ const MenuItems: NavGroup[] = [
     icon: IconFiles,
     href: "/apps/projects/index",
   },
-  {
-    id: uniqueId(),
-    title: "Clients",
-    slug: "clients",
-    icon: IconUsers,
-    href: "/apps/clients/list",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Clients",
+  //   slug: "clients",
+  //   icon: IconUsers,
+  //   href: "/apps/clients/list",
+  // },
 
   {
     navlabel: true,

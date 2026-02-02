@@ -6,7 +6,7 @@ import {Grid, Tabs, Tab, Box, Stack} from '@mui/material';
 import CreateWork from '@/app/components/apps/settings/tasks/list';
 import LocationList from '@/app/components/apps/settings/locations/list';
 import LeaveList from '@/app/components/apps/settings/leaves/list';
-import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconExclamationCircle, IconCategory2, IconClock} from '@tabler/icons-react';
+import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconExclamationCircle, IconCategory2, IconClock, IconUsers} from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
@@ -21,6 +21,7 @@ import { IconBasket } from '@tabler/icons-react';
 import TradeCategoryList from '@/app/components/apps/trade-categories/list';
 import UnitList from '@/app/components/apps/units/list';
 import StockHistoryList from '@/app/components/apps/settings/history/stock-history';
+import ClientList from '@/app/components/apps/clients/list';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -155,16 +156,23 @@ const AdminSetting = () => {
                                      <Tab
                                         className="admin-settings"
                                         iconPosition="start"
+                                        icon={<IconUsers size="20"/>}
+                                        label="Clients"
+                                        {...a11yProps(9)}
+                                    />
+                                     <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
                                         icon={<IconClock size="20"/>}
                                         label="Stock History"
-                                        {...a11yProps(9)}
+                                        {...a11yProps(10)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconExclamationCircle size="20"/>}
                                         label="History"
-                                        {...a11yProps(10)}
+                                        {...a11yProps(11)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -206,9 +214,12 @@ const AdminSetting = () => {
                                 <UnitList />
                             </TabPanel>
                             <TabPanel value={value} index={9}>
-                                <StockHistoryList />
+                                <ClientList />
                             </TabPanel>
                             <TabPanel value={value} index={10}>
+                                <StockHistoryList />
+                            </TabPanel>
+                            <TabPanel value={value} index={11}>
                                 <HistoryList />
                             </TabPanel>
                         </BlankCard>
