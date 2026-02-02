@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -17,16 +17,17 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
+  Dialog,
+  Menu,
+  ListItemIcon,
   Tooltip,
   Popover,
   FormGroup,
   FormControlLabel,
   Checkbox,
-  Avatar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from "@mui/material";
 import {
   flexRender,
@@ -41,175 +42,170 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
-  IconFilter,
   IconSearch,
+  IconTableColumn,
+  IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import Link from "next/link";
+import { IconDotsVertical } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { IconPlus } from "@tabler/icons-react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconX } from "@tabler/icons-react";
-import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import { IconEdit } from "@tabler/icons-react";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import CreateUnit from "../create";
+import EditUnit from "../edit";
 import { IconEye } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
-const STORAGE_KEY = "history-date-range";
-const saveDateRangeToStorage = (startDate: Date, endDate: Date) => {
-  try {
-    const dateRange = {
-      startDate: startDate ? startDate.toDateString() : null,
-      endDate: endDate ? endDate.toDateString() : null,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
-  } catch (error) {
-    console.error("Error saving date range to localStorage:", error);
-  }
-};
-
-const loadDateRangeFromStorage = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
-        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
-      };
-    }
-  } catch (error) {
-    console.error("Error loading date range from localStorage:", error);
-  }
-  return null;
-};
-
-const HistoryList = () => {
+const UnitList = () => {
   const [data, setData] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [fetchHistory, setFetchHistory] = useState<boolean>(true);
+  const [fetchUnit, setFetchUnit] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
-  const [filters, setFilters] = useState({ type: "", user: "" });
-  const [tempFilters, setTempFilters] = useState(filters);
-  const [open, setOpen] = useState(false);
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null } & {
-    user_role_id?: number | null;
-  };
-  const today = new Date();
-  const defaultStart = new Date(today);
-  defaultStart.setDate(today.getDate() - today.getDay() + 1);
-
-  const defaultEnd = new Date(today);
-  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
-
-  const getInitialDates = () => {
-    const stored = loadDateRangeFromStorage();
-    if (stored && stored.startDate && stored.endDate) {
-      return {
-        startDate: stored.startDate,
-        endDate: stored.endDate,
-      };
-    }
-    return {
-      startDate: defaultStart,
-      endDate: defaultEnd,
-    };
-  };
-
-  const initialDates = getInitialDates();
+  const user = session.data?.user as User & { company_id?: number | null };
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState<Date | null>(
-    initialDates.startDate,
-  );
-  const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
-  // Fetch histories
-  const fetchHistories = async (start?: string, end?: string) => {
-    setFetchHistory(true);
+  const [formData, setFormData] = useState<any>({
+    id: 0,
+    name: "",
+    type: "",
+    company_id: user.company_id,
+  });
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  // Fetch data
+  const fetchUnits = async () => {
+    setFetchUnit(true);
     try {
-      const res = await api.get(
-        `requests/get-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}`,
-      );
+      const res = await api.get(`units/get?company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
       }
     } catch (err) {
-      console.error("Failed to fetch location", err);
+      console.error("Failed to fetch units", err);
     }
-    setFetchHistory(false);
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get("user/get-user-lists");
-      if (res.data) {
-        setUsers(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch location", err);
-    }
+    setFetchUnit(false);
   };
 
   useEffect(() => {
-    if (startDate && endDate) {
-      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
-      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
-      fetchHistories(formattedStart, formattedEnd);
-    }
-  }, [startDate, endDate]);
-
-  const handleDateRangeChange = (range: {
-    from: Date | null;
-    to: Date | null;
-  }) => {
-    if (range.from && range.to) {
-      setStartDate(range.from);
-      setEndDate(range.to);
-
-      saveDateRangeToStorage(range.from, range.to);
-    }
-  };
-  useEffect(() => {
-    fetchUsers();
+    fetchUnits();
   }, [api]);
 
-  const uniqueSupervisors = useMemo(
-    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
-    [users],
-  );
+  const handleOpenCreateDrawer = () => {
+    setFormData({
+      name: "",
+      type: "",
+      company_id: user.company_id,
+    });
+    setDrawerOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+      };
+
+      const result = await api.post("units/create", payload);
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setFormData({
+          id: 0,
+          name: "",
+          type: "",
+        });
+        fetchUnits();
+        setDrawerOpen(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const editUnit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+      };
+
+      const result = await api.put("units/update", payload);
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setFormData({
+          name: "",
+          type: "",
+        });
+        fetchUnits();
+        setEditDrawerOpen(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
-      const matchesType = filters.type
-        ? item.request_type === Number(filters.type)
-        : true;
-      const matchesUser = filters.user ? item.user_name === filters.user : true;
-      const matchesSearch =
-        item.user_name?.toLowerCase().includes(search) ||
-        item.type_name?.toLowerCase().includes(search) ||
-        item.message?.toLowerCase().includes(search);
 
-      return matchesSearch && matchesType && matchesUser;
+      const matchesSearch =
+        item.name?.toLowerCase().includes(search) ||
+        item.type?.toLowerCase().includes(search) ||
+        item.company_name?.toLowerCase().includes(search);
+
+      return matchesSearch;
     });
-  }, [data, filters, searchTerm]);
+  }, [data, searchTerm]);
+
+  // UseCallback to memoize these functions
+  const handleEdit = useCallback((id: number) => {
+    setSelectedTaskId(id);
+    setEditDrawerOpen(true);
+  }, []);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
     columnHelper.accessor("name", {
-      id: "userName",
+      id: "name",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -224,30 +220,27 @@ const HistoryList = () => {
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
               const isChecked = e.target.checked;
 
-              setShowAllCheckboxes(isChecked);
-
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((r) => r.id)));
+                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
             }}
           />
-
-          <Typography variant="subtitle2">User Name</Typography>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
         </Stack>
       ),
       enableSorting: true,
-
       cell: ({ row }) => {
-        const user = row.original;
-
-        const isChecked = selectedRowIds.has(user.id);
-
-        const showCheckbox =
-          showAllCheckboxes || hoveredRow === user.id || isChecked;
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+        const showCheckbox = isChecked || hoveredRow === item.id;
 
         return (
           <Stack
@@ -255,89 +248,76 @@ const HistoryList = () => {
             alignItems="center"
             spacing={4}
             sx={{ pl: 1 }}
-            onClick={(e) => e.stopPropagation()}
+            onMouseEnter={() => setHoveredRow(item.id)}
+            onMouseLeave={() => setHoveredRow(null)}
           >
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <CustomCheckbox
-                checked={isChecked}
-                onClick={(e) => e.stopPropagation()}
-                onChange={() => {
-                  const newSet = new Set(selectedRowIds);
-                  if (newSet.has(user.id)) newSet.delete(user.id);
-                  else newSet.add(user.id);
-                  setSelectedRowIds(newSet);
-                }}
-                sx={{
-                  opacity: showCheckbox ? 1 : 0,
-                  pointerEvents: showCheckbox ? "auto" : "none",
-                  transition: "opacity 0.2s ease",
-                }}
-              />
-            </Box>
-
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={4}
-              sx={{ cursor: "pointer" }}
-            >
-              <Avatar
-                src={user.user_image ? user.user_image : ""}
-                alt={user.user_name}
-                sx={{ width: 36, height: 36 }}
-              />
-              <Box>
-                <Typography
-                  className="f-14"
-                  color="textPrimary"
-                  sx={{
-                    cursor: "pointer",
-                    width: 150,
-                  }}
-                >
-                  {user.user_name ?? "-"}
-                </Typography>
-              </Box>
+            <CustomCheckbox
+              checked={isChecked}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const newSelected = new Set(selectedRowIds);
+                if (isChecked) {
+                  newSelected.delete(item.id);
+                } else {
+                  newSelected.add(item.id);
+                }
+                setSelectedRowIds(newSelected);
+              }}
+              sx={{
+                opacity: showCheckbox ? 1 : 0,
+                pointerEvents: showCheckbox ? "auto" : "none",
+                transition: "opacity 0.2s ease",
+              }}
+            />
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography textTransform="capitalize" className="f-14">
+                {item.name ?? "-"}
+              </Typography>
             </Stack>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.message, {
-      id: "details",
-      header: () => "Details",
-      cell: (info) => {
-        return (
-          <Typography className="f-14" color="textPrimary">
-            {info.getValue() ?? "-"}
+    columnHelper.accessor("type_text", {
+      id: "type",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Type
           </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography textTransform="capitalize" className="f-14">
+                {item.type_text ?? "-"}
+              </Typography>
+            </Stack>
+          </Stack>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.type_name, {
-      id: "historyType",
-      header: () => "Type",
-      cell: (info) => {
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const item = row.original;
         return (
-          <Typography className="f-14" color="textPrimary">
-            {info.getValue() ?? "-"}
-          </Typography>
-        );
-      },
-    }),
-
-    columnHelper.accessor("date", {
-      id: "date",
-      header: () => "Date",
-      cell: (info) => {
-        const row = info.row.original;
-
-        return (
-          <Typography className="f-14" color="textPrimary">
-            {info.getValue()} {row.time}
-          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Edit">
+              <IconButton onClick={() => handleEdit(item.id)} color="primary">
+                <IconEdit size={18} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         );
       },
     }),
@@ -347,7 +327,6 @@ const HistoryList = () => {
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -394,13 +373,8 @@ const HistoryList = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            HISTORIES ({table.getPrePaginationRowModel().rows.length}){" "}
+            UNITS ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
-          <DateRangePickerBox
-            from={startDate}
-            to={endDate}
-            onChange={handleDateRangeChange}
-          />
           <TextField
             id="search"
             type="text"
@@ -419,126 +393,28 @@ const HistoryList = () => {
               },
             }}
           />
-          <Button variant="contained" onClick={() => setOpen(true)}>
-            <IconFilter width={18} />
-          </Button>
         </Grid>
-        <Dialog
-          open={open}
-          onClose={() => setOpen(false)}
-          fullWidth
-          maxWidth="sm"
-        >
-          <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
-            Filters
-            <IconButton
-              aria-label="close"
-              onClick={() => setOpen(false)}
-              size="large"
-              sx={{
-                position: "absolute",
-                right: 12,
-                top: 8,
-                color: (theme) => theme.palette.grey[900],
-                backgroundColor: "transparent",
-                zIndex: 10,
-                width: 50,
-                height: 50,
-              }}
-            >
-              <IconX size={40} style={{ width: 40, height: 40 }} />
-            </IconButton>
-          </DialogTitle>
-
-          <DialogContent>
-            <Stack spacing={2} mt={1}>
-              <TextField
-                select
-                label="History Type"
-                value={tempFilters.type}
-                onChange={(e) =>
-                  setTempFilters({ ...tempFilters, type: e.target.value })
-                }
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="101">Timesheet</MenuItem>
-                <MenuItem value="102">Worklog</MenuItem>
-                <MenuItem value="103">Billing Info</MenuItem>
-                <MenuItem value="104">User</MenuItem>
-                <MenuItem value="105">User Company</MenuItem>
-                <MenuItem value="106">Project</MenuItem>
-                <MenuItem value="107">Address</MenuItem>
-                <MenuItem value="108">Company</MenuItem>
-                <MenuItem value="109">Team</MenuItem>
-                <MenuItem value="110">Leave</MenuItem>
-                <MenuItem value="111">Expense</MenuItem>
-                <MenuItem value="112">Zone</MenuItem>
-                <MenuItem value="113">Shift</MenuItem>
-                <MenuItem value="114">Supplier</MenuItem>
-                <MenuItem value="115">Store</MenuItem>
-                <MenuItem value="117">Product</MenuItem>
-                <MenuItem value="119">Purchase Order</MenuItem>
-                <MenuItem value="120">Stock</MenuItem>
-              </TextField>
-
-              {uniqueSupervisors.length > 0 ? (
-                <TextField
-                  select
-                  label="User"
-                  value={tempFilters.user}
-                  onChange={(e) =>
-                    setTempFilters({
-                      ...tempFilters,
-                      user: e.target.value,
-                    })
-                  }
-                  fullWidth
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {uniqueSupervisors.map((supervisor, i) => (
-                    <MenuItem key={i} value={supervisor}>
-                      {supervisor}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              ) : (
-                <></>
-              )}
-            </Stack>
-          </DialogContent>
-
-          <DialogActions>
-            <Button
-              onClick={() => {
-                setTempFilters({ type: "", user: "" });
-                setFilters({ type: "", user: "" });
-                setOpen(false);
-              }}
-              color="inherit"
-            >
-              Clear
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => {
-                setFilters(tempFilters);
-                setOpen(false);
-              }}
-            >
-              Apply
-            </Button>
-          </DialogActions>
-        </Dialog>
         <Stack
           mb={2}
           justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
         >
-          <IconButton
-            onClick={handlePopoverOpen}
-            sx={{ ml: 1 }}
-            color="primary"
-          >
+          {selectedRowIds.size > 0 && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<IconTrash width={18} />}
+              sx={{ marginRight: "5px" }}
+              onClick={() => {
+                const selectedIds = Array.from(selectedRowIds);
+                setUsersToDelete(selectedIds);
+                setConfirmOpen(true);
+              }}
+            >
+              Remove
+            </Button>
+          )}
+          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
             <IconEye />
           </IconButton>
           <Popover
@@ -591,9 +467,115 @@ const HistoryList = () => {
                 ))}
             </FormGroup>
           </Popover>
+          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogContent>
+              <Typography color="textSecondary">
+                Are you sure you want to delete {usersToDelete.length} unit
+                {usersToDelete.length > 1 ? "s" : ""} from the units?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setConfirmOpen(false)}
+                variant="outlined"
+                color="primary"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      unit_ids: usersToDelete.join(","),
+                    };
+                    const response = await api.post("units/delete", payload);
+                    toast.success(response.data.message);
+                    setSelectedRowIds(new Set());
+                    await fetchUnits();
+                  } catch (error) {
+                    toast.error("Failed to remove units");
+                  } finally {
+                    setConfirmOpen(false);
+                  }
+                }}
+                variant="outlined"
+                color="error"
+              >
+                Remove
+              </Button>
+            </DialogActions>
+          </Dialog>
+          <IconButton
+            sx={{ margin: "0px" }}
+            id="basic-button"
+            aria-controls={openMenu ? "basic-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={openMenu ? "true" : undefined}
+            onClick={handleClick}
+          >
+            <IconDotsVertical width={18} />
+          </IconButton>
+          <Menu
+            id="basic-menu"
+            anchorEl={anchorEl}
+            open={openMenu}
+            onClose={handleClose}
+            slotProps={{
+              list: {
+                "aria-labelledby": "basic-button",
+              },
+            }}
+          >
+            <MenuItem onClick={handleClose}>
+              <Link
+                color="body1"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleOpenCreateDrawer();
+                }}
+                style={{
+                  width: "100%",
+                  color: "#11142D",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <ListItemIcon>
+                  <IconPlus width={18} />
+                </ListItemIcon>
+                Add Unit
+              </Link>
+            </MenuItem>
+          </Menu>
         </Stack>
       </Stack>
       <Divider />
+
+      {/* Add unit */}
+      <CreateUnit
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        formData={formData}
+        setFormData={setFormData}
+        handleSubmit={handleSubmit}
+        isSaving={isSaving}
+      />
+
+      {/* Edit unit */}
+      <EditUnit
+        open={editDrawerOpen}
+        onClose={() => setEditDrawerOpen(false)}
+        id={selectedTaskId}
+        formData={formData}
+        setFormData={setFormData}
+        EditUnit={editUnit}
+        isSaving={isSaving}
+        companyId={user.company_id ?? null}
+      />
 
       <Box
         sx={{
@@ -667,7 +649,7 @@ const HistoryList = () => {
               ))}
             </TableHead>
             <TableBody>
-              {fetchHistory ? (
+              {fetchUnit ? (
                 <SkeletonLoader
                   columns={simpleColumns}
                   rowCount={simpleColumns.length}
@@ -698,13 +680,7 @@ const HistoryList = () => {
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    sx={{ cursor: "pointer" }}
-                    onMouseEnter={() => setHoveredRow(row.original.id)}
-                    onMouseLeave={() => setHoveredRow(null)}
-                  >
+                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
@@ -806,4 +782,4 @@ const HistoryList = () => {
   );
 };
 
-export default HistoryList;
+export default UnitList;

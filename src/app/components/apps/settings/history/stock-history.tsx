@@ -17,12 +17,10 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
-  Tooltip,
   Popover,
   FormGroup,
   FormControlLabel,
   Checkbox,
-  Avatar,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -59,7 +57,7 @@ import { IconEye } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
-const STORAGE_KEY = "history-date-range";
+const STORAGE_KEY = "stock-history-date-range";
 const saveDateRangeToStorage = (startDate: Date, endDate: Date) => {
   try {
     const dateRange = {
@@ -88,11 +86,10 @@ const loadDateRangeFromStorage = () => {
   return null;
 };
 
-const HistoryList = () => {
+const StockHistoryList = () => {
   const [data, setData] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [fetchHistory, setFetchHistory] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -140,7 +137,7 @@ const HistoryList = () => {
     setFetchHistory(true);
     try {
       const res = await api.get(
-        `requests/get-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}`,
+        `stocks/stock-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -193,23 +190,20 @@ const HistoryList = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
-      const matchesType = filters.type
-        ? item.request_type === Number(filters.type)
-        : true;
       const matchesUser = filters.user ? item.user_name === filters.user : true;
       const matchesSearch =
-        item.user_name?.toLowerCase().includes(search) ||
-        item.type_name?.toLowerCase().includes(search) ||
-        item.message?.toLowerCase().includes(search);
+        item.short_name?.toLowerCase().includes(search) ||
+        item.uuid?.toLowerCase().includes(search) ||
+        item.note?.toLowerCase().includes(search);
 
-      return matchesSearch && matchesType && matchesUser;
+      return matchesSearch && matchesUser;
     });
   }, [data, filters, searchTerm]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "userName",
+    columnHelper.accessor("date", {
+      id: "Date",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -236,18 +230,18 @@ const HistoryList = () => {
             }}
           />
 
-          <Typography variant="subtitle2">User Name</Typography>
+          <Typography variant="subtitle2">Date</Typography>
         </Stack>
       ),
       enableSorting: true,
 
       cell: ({ row }) => {
-        const user = row.original;
+        const item = row.original;
 
-        const isChecked = selectedRowIds.has(user.id);
+        const isChecked = selectedRowIds.has(item.id);
 
         const showCheckbox =
-          showAllCheckboxes || hoveredRow === user.id || isChecked;
+          showAllCheckboxes || hoveredRow === item.id || isChecked;
 
         return (
           <Stack
@@ -263,8 +257,8 @@ const HistoryList = () => {
                 onClick={(e) => e.stopPropagation()}
                 onChange={() => {
                   const newSet = new Set(selectedRowIds);
-                  if (newSet.has(user.id)) newSet.delete(user.id);
-                  else newSet.add(user.id);
+                  if (newSet.has(item.id)) newSet.delete(item.id);
+                  else newSet.add(item.id);
                   setSelectedRowIds(newSet);
                 }}
                 sx={{
@@ -281,32 +275,25 @@ const HistoryList = () => {
               spacing={4}
               sx={{ cursor: "pointer" }}
             >
-              <Avatar
-                src={user.user_image ? user.user_image : ""}
-                alt={user.user_name}
-                sx={{ width: 36, height: 36 }}
-              />
-              <Box>
-                <Typography
-                  className="f-14"
-                  color="textPrimary"
-                  sx={{
-                    cursor: "pointer",
-                    width: 150,
-                  }}
-                >
-                  {user.user_name ?? "-"}
-                </Typography>
-              </Box>
+              <Typography
+                className="f-14"
+                color="textPrimary"
+                sx={{
+                  cursor: "pointer",
+                  width: 150,
+                }}
+              >
+                {item.date ?? "-"}
+              </Typography>
             </Stack>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.message, {
-      id: "details",
-      header: () => "Details",
+    columnHelper.accessor((row) => row?.uuid, {
+      id: "code",
+      header: () => "Code",
       cell: (info) => {
         return (
           <Typography className="f-14" color="textPrimary">
@@ -316,9 +303,9 @@ const HistoryList = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.type_name, {
-      id: "historyType",
-      header: () => "Type",
+    columnHelper.accessor((row) => row?.name, {
+      id: "name",
+      header: () => "Name",
       cell: (info) => {
         return (
           <Typography className="f-14" color="textPrimary">
@@ -328,15 +315,76 @@ const HistoryList = () => {
       },
     }),
 
-    columnHelper.accessor("date", {
-      id: "date",
-      header: () => "Date",
+    columnHelper.accessor("note", {
+      id: "note",
+      header: () => "Note",
       cell: (info) => {
-        const row = info.row.original;
-
         return (
           <Typography className="f-14" color="textPrimary">
-            {info.getValue()} {row.time}
+            {info.getValue()}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.total_amount, {
+      id: "totalAmount",
+      header: () => "Total Amount",
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <Typography
+            className="f-14"
+            color="textSecondary"
+            fontSize={16}
+            fontWeight={500}
+          >
+            {item.currency}
+            {info.getValue() ?? "0"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.qty, {
+      id: "adjustedStock",
+      header: () => "Adjusted stock",
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <Typography
+            fontSize={16}
+            fontWeight={500}
+            sx={{
+              color:
+                Number(info.getValue()) > 0
+                  ? "success.main"
+                  : Number(info.getValue()) < 0
+                    ? "error.main"
+                    : "text.primary",
+            }}
+          >
+            {info.getValue() ?? "-"}{" "}
+            {item.is_sub_qty
+              ? `(${item.pack_off_qty} ${item.pack_off_name})`
+              : ""}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.new_qty, {
+      id: "stockInHand",
+      header: () => "Stock in Hand",
+      cell: (info) => {
+        return (
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            fontSize={16}
+            fontWeight={500}
+          >
+            {info.getValue() ?? "-"}
           </Typography>
         );
       },
@@ -394,7 +442,8 @@ const HistoryList = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            HISTORIES ({table.getPrePaginationRowModel().rows.length}){" "}
+            STOCK HISTORIES ({table.getPrePaginationRowModel().rows.length}
+            ){" "}
           </Button>
           <DateRangePickerBox
             from={startDate}
@@ -452,35 +501,6 @@ const HistoryList = () => {
 
           <DialogContent>
             <Stack spacing={2} mt={1}>
-              <TextField
-                select
-                label="History Type"
-                value={tempFilters.type}
-                onChange={(e) =>
-                  setTempFilters({ ...tempFilters, type: e.target.value })
-                }
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="101">Timesheet</MenuItem>
-                <MenuItem value="102">Worklog</MenuItem>
-                <MenuItem value="103">Billing Info</MenuItem>
-                <MenuItem value="104">User</MenuItem>
-                <MenuItem value="105">User Company</MenuItem>
-                <MenuItem value="106">Project</MenuItem>
-                <MenuItem value="107">Address</MenuItem>
-                <MenuItem value="108">Company</MenuItem>
-                <MenuItem value="109">Team</MenuItem>
-                <MenuItem value="110">Leave</MenuItem>
-                <MenuItem value="111">Expense</MenuItem>
-                <MenuItem value="112">Zone</MenuItem>
-                <MenuItem value="113">Shift</MenuItem>
-                <MenuItem value="114">Supplier</MenuItem>
-                <MenuItem value="115">Store</MenuItem>
-                <MenuItem value="117">Product</MenuItem>
-                <MenuItem value="119">Purchase Order</MenuItem>
-                <MenuItem value="120">Stock</MenuItem>
-              </TextField>
-
               {uniqueSupervisors.length > 0 ? (
                 <TextField
                   select
@@ -806,4 +826,4 @@ const HistoryList = () => {
   );
 };
 
-export default HistoryList;
+export default StockHistoryList;

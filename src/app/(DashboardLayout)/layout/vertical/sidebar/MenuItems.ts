@@ -3,11 +3,14 @@ import { uniqueId } from "lodash";
 import {
   IconBasket,
   IconCategory,
+  IconClock,
   IconDatabase,
   IconFiles,
   IconInfoCircle,
   IconKeyframes,
+  IconServer,
   IconShieldCheck,
+  IconShoppingBag,
   IconSql,
   IconUser,
   IconUserPlus,
@@ -82,37 +85,53 @@ const MenuItems: NavGroup[] = [
   //   icon: IconInfoCircle,
   //   href: "/app-info",
   // },
-  // {
-  //   id: uniqueId(),
-  //   title: "Products",
-  //   slug: "products",
-  //   icon: IconDatabase,
-  //   href: "/apps/products/list",
-  // },
+  {
+    id: uniqueId(),
+    title: "Products",
+    slug: "products",
+    icon: IconDatabase,
+    href: "/apps/products/list",
+  },
 
-  // {
-  //   id: uniqueId(),
-  //   title: "Stores",
-  //   slug: "stores",
-  //   icon: IconCategory,
-  //   href: "/apps/stores/list",
-  // },
+  {
+    id: uniqueId(),
+    title: "Stock",
+    slug: "stock",
+    icon: IconServer,
+    href: "/apps/stocks/list",
+  },
 
-  // {
-  //   id: uniqueId(),
-  //   title: "Categories",
-  //   slug: "categories",
-  //   icon: IconKeyframes,
-  //   href: "/apps/categories/list",
-  // },
+   {
+    id: uniqueId(),
+    title: "Stores",
+    slug: "stores",
+    icon: IconCategory,
+    href: "/apps/stores/list",
+  },
 
-  // {
-  //   id: uniqueId(),
-  //   title: "Suppliers",
-  //   slug: "suppliers",
-  //   icon: IconBox,
-  //   href: "/apps/suppliers/list",
-  // },
+  {
+    id: uniqueId(),
+    title: "Purchase Order",
+    slug: "purchase_order",
+    icon: IconShoppingBag,
+    href: "/apps/purchase-orders/list",
+  },
+
+  {
+    id: uniqueId(),
+    title: "Categories",
+    slug: "categories",
+    icon: IconKeyframes,
+    href: "/apps/categories/list",
+  },
+
+  {
+    id: uniqueId(),
+    title: "Suppliers",
+    slug: "suppliers",
+    icon: IconBox,
+    href: "/apps/suppliers/list",
+  },
 
   {
     id: uniqueId(),

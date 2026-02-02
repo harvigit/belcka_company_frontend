@@ -6,7 +6,7 @@ import {Grid, Tabs, Tab, Box, Stack} from '@mui/material';
 import CreateWork from '@/app/components/apps/settings/tasks/list';
 import LocationList from '@/app/components/apps/settings/locations/list';
 import LeaveList from '@/app/components/apps/settings/leaves/list';
-import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconExclamationCircle, IconCategory2} from '@tabler/icons-react';
+import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconExclamationCircle, IconCategory2, IconClock} from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
@@ -17,7 +17,10 @@ import { User } from 'next-auth';
 import TradeList from '@/app/components/apps/settings/company-trades/list';
 import HistoryList from '@/app/components/apps/settings/history';
 import { IconCategoryPlus } from '@tabler/icons-react';
+import { IconBasket } from '@tabler/icons-react';
 import TradeCategoryList from '@/app/components/apps/trade-categories/list';
+import UnitList from '@/app/components/apps/units/list';
+import StockHistoryList from '@/app/components/apps/settings/history/stock-history';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -128,7 +131,7 @@ const AdminSetting = () => {
                                         label="Expense Category"
                                         {...a11yProps(5)}
                                     />
-                                        <Tab
+                                    <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconCategory2 size="20"/>}
@@ -142,12 +145,26 @@ const AdminSetting = () => {
                                         label="Trade Categories"
                                         {...a11yProps(7)}
                                     />
-                                        <Tab
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconBasket size="20"/>}
+                                        label="Units"
+                                        {...a11yProps(8)}
+                                    />
+                                     <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconClock size="20"/>}
+                                        label="Stock History"
+                                        {...a11yProps(9)}
+                                    />
+                                    <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconExclamationCircle size="20"/>}
                                         label="History"
-                                        {...a11yProps(8)}
+                                        {...a11yProps(10)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -182,10 +199,16 @@ const AdminSetting = () => {
                             <TabPanel value={value} index={6}>
                                 <TradeList />
                             </TabPanel>
-                                <TabPanel value={value} index={7}>
+                            <TabPanel value={value} index={7}>
                                 <TradeCategoryList />
                             </TabPanel>
                             <TabPanel value={value} index={8}>
+                                <UnitList />
+                            </TabPanel>
+                            <TabPanel value={value} index={9}>
+                                <StockHistoryList />
+                            </TabPanel>
+                            <TabPanel value={value} index={10}>
                                 <HistoryList />
                             </TabPanel>
                         </BlankCard>
