@@ -1138,8 +1138,8 @@ const TimeClock = ({queryParams}: Props) => {
                             >
                             Activity
                         </Button>
-                        <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)}/>
                     </Stack>
+                    <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)}/>
 
                     <Stack direction="row" spacing={1} alignItems="center">
                         {isAnyRowSelected && (
