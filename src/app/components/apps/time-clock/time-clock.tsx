@@ -49,6 +49,7 @@ import {
     getSortedRowModel,
     createColumnHelper,
     flexRender,
+    VisibilityState
 } from '@tanstack/react-table';
 import {format} from 'date-fns';
 import {AxiosResponse} from 'axios';
@@ -130,6 +131,13 @@ export type TimeClock = {
     user_id: any;
     conflicts: string;
     user_name: string;
+    user_code: string;
+    name_on_account: string;
+    sort_code: string;
+    account_number: string;
+    utr_name: string;
+    utr_number: string;
+    nin_number: string;
     trade_name: string;
     type: string;
     user_thumb_image: string;
@@ -250,6 +258,15 @@ const TimeClock = ({queryParams}: Props) => {
     const [settingOpen, setSettingOpen] = useState(false);
     const [openDrawer, setOpenDrawer] = useState(false);
 
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+        name_on_account: false,
+        sort_code: false,
+        account_number: false,
+        utr_name: false,
+        utr_number: false,
+        nin_number: false,
+    });
+    
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
         actionType: 'lock' | 'unlock' | 'paid';
@@ -497,7 +514,7 @@ const TimeClock = ({queryParams}: Props) => {
 
     const filteredData = useMemo(() => {
         return data.filter((item) => {
-            const matchesSearch = item.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.trade_name?.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = item.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.user_code?.toLowerCase().includes(searchTerm.toLowerCase()) || item.trade_name?.toLowerCase().includes(searchTerm.toLowerCase());
             return matchesSearch;
         });
     }, [data, searchTerm]);
@@ -654,7 +671,24 @@ const TimeClock = ({queryParams}: Props) => {
                 );
             },
         }),
-
+        
+        columnHelper.accessor('user_code', {
+            id: 'user_code',
+            header: 'User Code',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.user_code}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+        
         columnHelper.accessor('total_hours', {
             id: 'total_hours',
             header: 'Total Hours',
@@ -777,6 +811,109 @@ const TimeClock = ({queryParams}: Props) => {
             },
         }),
 
+
+        columnHelper.accessor('name_on_account', {
+            id: 'name_on_account',
+            header: 'Name On Account',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.name_on_account}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('sort_code', {
+            id: 'sort_code',
+            header: 'Sort Code',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.sort_code}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('account_number', {
+            id: 'account_number',
+            header: 'Account Number',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.account_number}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('utr_name', {
+            id: 'utr_name',
+            header: 'Name On UTR',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.utr_name}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('utr_number', {
+            id: 'utr_number',
+            header: 'UTR Number',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.utr_number}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.accessor('nin_number', {
+            id: 'nin_number',
+            header: 'NIN Number',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.nin_number}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+        
         columnHelper.accessor('status_text', {
             id: 'status_text',
             header: 'Status',
@@ -839,6 +976,15 @@ const TimeClock = ({queryParams}: Props) => {
             pagination: {
                 pageSize: 50,
             },
+        },
+
+        state: {
+            columnVisibility,
+        },
+        onColumnVisibilityChange: (updater) => {
+            setColumnVisibility((prev) =>
+                typeof updater === 'function' ? updater(prev) : updater
+            );
         },
     });
 
@@ -1374,10 +1520,15 @@ const TimeClock = ({queryParams}: Props) => {
                                     control={
                                         <Checkbox
                                             checked={col.getIsVisible()}
-                                            onChange={col.getToggleVisibilityHandler()}
+                                            onChange={(e) => {
+                                                e.stopPropagation();
+                                                col.getToggleVisibilityHandler()(e);
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
                                         />
                                     }
                                     sx={{textTransform: 'none'}}
+                                    onClick={(e) => e.stopPropagation()}
                                     label={
                                         col.columnDef.meta?.label ||
                                         (typeof col.columnDef.header === 'string' &&
@@ -1395,8 +1546,19 @@ const TimeClock = ({queryParams}: Props) => {
 
                 <Divider/>
 
-                <TableContainer sx={{overflowX: 'auto'}}>
-                    <Table stickyHeader>
+                <TableContainer
+                    sx={{
+                        width: '100%',
+                        overflowX: 'auto', 
+                    }}
+                >
+                    <Table
+                        stickyHeader
+                        sx={{
+                            minWidth: 1600,    // ✅ force wider table
+                            tableLayout: 'auto',
+                        }}
+                    >
                         <TableHead>
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id}>
@@ -1414,6 +1576,7 @@ const TimeClock = ({queryParams}: Props) => {
                                                     zIndex: 11,
                                                     // backgroundColor: '#fff',
                                                     p: 0,
+                                                    whiteSpace: 'nowrap',
                                                 }}
                                             >
                                                 <Box
@@ -1434,10 +1597,7 @@ const TimeClock = ({queryParams}: Props) => {
                                                     }}
                                                 >
                                                     <Typography variant="body2">
-                                                        {flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
+                                                        {flexRender(header.column.columnDef.header, header.getContext())}
                                                     </Typography>
                                                     {isSortable && (
                                                         <Box
