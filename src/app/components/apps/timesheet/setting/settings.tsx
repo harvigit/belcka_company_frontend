@@ -37,7 +37,7 @@ const menuItems = [
     // { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     // { icon: <IconCoffee size={18} />, label: "Breaks" },
     // { icon: <IconPaperclip size={18} />, label: "Shift entries" },
-    { icon: <IconMapPin size={18} />, label: "Geolocation" },
+    // { icon: <IconMapPin size={18} />, label: "Geolocation" },
     // { icon: <IconClock size={18} />, label: "Reminders" },
     // { icon: <IconBellRinging size={18} />, label: "Notifications" },
     // { icon: <IconFileText size={18} />, label: "Auto reports" },
@@ -170,9 +170,9 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                          {activeMenuItem === "Penalty Setting" && (
                             <PenaltySettings />
                         )}
-                        {activeMenuItem === 'Geolocation' && (
+                        {/* {activeMenuItem === 'Geolocation' && (
                             <Geofence onSaveSuccess={handleSaveSuccess} />
-                        )}
+                        )} */}
                     </Box>
                 </Box>
             </Drawer>

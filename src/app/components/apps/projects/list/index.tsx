@@ -1806,25 +1806,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     }}
                   >
                     {paginatedFeeds.map((addr, index) => {
-                      let color = "";
-
-                      switch (addr.status_int) {
-                        case 13:
-                          color = "#A600FF";
-                          break;
-                        case 14:
-                          color = "#A600FF";
-                          break;
-                        case 3:
-                          color = "#FF7F00";
-                          break;
-                        case 4:
-                          color = "#32A852";
-                          break;
-                        default:
-                          color = "#999";
-                      }
-
+               
                       return (
                         <Box
                           key={addr.id ?? index}
@@ -1848,7 +1830,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             position="absolute"
                             top="-10px"
                             left="15px"
-                            bgcolor={color}
+                            bgcolor="#FF7F00"
                             px={1.5}
                             borderRadius="10px"
                             zIndex={1}
@@ -1859,7 +1841,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                               fontSize={"12px !important"}
                               color="#fff"
                             >
-                              {addr.status_text}
+                              {addr.type_name}
                             </Typography>
                           </Box>
                           <Box
