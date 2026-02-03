@@ -126,6 +126,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                       case 121:
                         color = "#32A852";
                         break;
+                      case 110:
+                        color = "#949090ff";
+                        break;
                       default:
                         color = "#ff3737ff";
                     }

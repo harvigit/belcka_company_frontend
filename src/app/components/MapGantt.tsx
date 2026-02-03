@@ -111,7 +111,7 @@ export default function MapGantt({
         setGeofences(res.data.info?.zones ?? []);
       } else if (value === 1) {
         const res = await api.get("work-zone/get", {
-          params: { company_id: user.company_id, is_project: true },
+          params: { company_id: user.company_id, is_project: true ,project_id: pid},
         });
         setGeofences(res.data.info ?? []);
       }
