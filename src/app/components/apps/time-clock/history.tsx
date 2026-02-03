@@ -8,6 +8,7 @@ import {
   IconButton,
   Drawer,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import { IconX, IconArrowLeft } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
@@ -180,7 +181,8 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                             fontSize="14px"
                             className="multi-ellipsis"
                           >
-                            <b>{addr.user_name}:</b> {addr.message}
+                            <b>{addr.user_name}:</b>{" "}
+                            <Tooltip placement="top" title={addr.message} arrow>{addr.message}</Tooltip>
                           </Typography>
                           <p
                             style={{
