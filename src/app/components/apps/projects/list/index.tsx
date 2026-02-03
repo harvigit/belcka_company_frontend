@@ -173,7 +173,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [projectOpen, setProjectOpen] = useState(false);
   const [projectEditOpen, setProjectEditOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectList | null>(
-    null
+    null,
   );
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
@@ -282,7 +282,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -310,10 +310,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       if (res.data?.info) {
         setProject(res.data.info);
         const cookieProjectId = Cookies.get(
-          COOKIE_PREFIX + user.id + user.company_id
+          COOKIE_PREFIX + user.id + user.company_id,
         );
         const validProjectId = res.data.info.some(
-          (p: any) => p.id === Number(cookieProjectId)
+          (p: any) => p.id === Number(cookieProjectId),
         )
           ? Number(cookieProjectId)
           : res.data.info[0]?.id;
@@ -336,7 +336,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       Cookies.set(
         COOKIE_PREFIX + user.id + user.company_id,
         projectId.toString(),
-        { expires: 30 }
+        { expires: 30 },
       );
     }
   }, [projectId, user?.id, user.company_id]);
@@ -365,7 +365,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const fetchHistories = async () => {
     try {
       const res = await api.get(
-        `project/get-history?project_id=${Number(projectID)}`
+        `project/get-history?project_id=${Number(projectID)}`,
       );
       if (res.data?.info) {
         setHistory(res.data.info);
@@ -382,7 +382,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   }, [openDrawer == true && !Number.isNaN(projectID)]);
 
   const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prevData: any) => ({
@@ -624,7 +624,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       const res = await fetch(
         `https://ws.postcoder.com/pcw/${
           process.env.NEXT_PUBLIC_POSTCODER_KEY
-        }/address/${country}/${encodeURIComponent(query)}?format=json`
+        }/address/${country}/${encodeURIComponent(query)}?format=json`,
       );
 
       const data = await res.json();
@@ -642,7 +642,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           results.map((r) => ({
             ...r,
             source: "google",
-          }))
+          })),
         );
       } else {
         setPredictions([]);
@@ -650,10 +650,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     });
   };
   const selectGooglePrediction = (
-    item: { source: "google" } & google.maps.places.AutocompletePrediction
+    item: { source: "google" } & google.maps.places.AutocompletePrediction,
   ) => {
     const service = new google.maps.places.PlacesService(
-      document.createElement("div")
+      document.createElement("div"),
     );
 
     service.getDetails({ placeId: item.place_id }, (place, status) => {
@@ -685,7 +685,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   const selectPostcoderPrediction = (
-    item: { source: "postcoder" } & PostcoderAddress
+    item: { source: "postcoder" } & PostcoderAddress,
   ) => {
     const geocoder = new google.maps.Geocoder();
 
@@ -893,7 +893,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   Archive
                 </Button>
               )}
-              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+              <IconButton
+                onClick={handlePopoverOpen}
+                sx={{ ml: 1 }}
+                color="primary"
+              >
                 <IconEye />
               </IconButton>
               <Popover
@@ -919,7 +923,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     .filter((col: any) => !["conflicts"].includes(col.id)) // Exclude conflicts
                     .filter(
                       (col: any) =>
-                        col.id.toLowerCase().includes(search.toLowerCase()) // Filter by search term
+                        col.id.toLowerCase().includes(search.toLowerCase()), // Filter by search term
                     )
                     .map((col: any) => (
                       <FormControlLabel
@@ -951,7 +955,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             : col.id
                                 .replace(/([A-Z])/g, " $1")
                                 .replace(/^./, (str: string) =>
-                                  str.toUpperCase()
+                                  str.toUpperCase(),
                                 )
                                 .trim())
                         }
@@ -1367,7 +1371,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                               if (!circleRef.current) return;
 
                               const newRadius = Math.round(
-                                circleRef.current.getRadius()
+                                circleRef.current.getRadius(),
                               );
 
                               if (lastRadiusRef.current === newRadius) return;
@@ -1521,6 +1525,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           <MapGantt
             open={mapOpen}
             onClose={() => setMapOpen(false)}
+            onUpdate={triggerRefresh}
             projectId={projectId}
             companyId={user.company_id ?? null}
           />
@@ -1550,7 +1555,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   };
                   const response = await api.post(
                     "address/archive-addresses",
-                    payload
+                    payload,
                   );
                   toast.success(response.data.message);
                   setProcessedIds((prev) => [...prev, ...selectedIds]);
@@ -1647,7 +1652,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       try {
                         await archiveProjectApi(projectToDelete.id);
                         setProject((prev: any) =>
-                          prev.filter((p: any) => p.id !== projectToDelete.id)
+                          prev.filter((p: any) => p.id !== projectToDelete.id),
                         );
                       } catch (err) {
                         console.error("Archive failed", err);
@@ -1806,7 +1811,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     }}
                   >
                     {paginatedFeeds.map((addr, index) => {
-               
                       return (
                         <Box
                           key={addr.id ?? index}

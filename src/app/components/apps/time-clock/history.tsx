@@ -189,7 +189,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                               fontSize: "12px",
                               textAlign: "end",
                               color: "GrayText",
-                              margin: 0,
+                              margin: "3px",
                             }}
                             color="textSecondary"
                           >
