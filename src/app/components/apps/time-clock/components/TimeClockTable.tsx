@@ -484,7 +484,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_requested ? (
+                                                        {log.is_requested || log.is_penalty_appealed ? (
                                                             <IconButton
                                                                 size="small"
                                                                 color="error"

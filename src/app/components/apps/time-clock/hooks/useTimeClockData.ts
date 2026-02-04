@@ -26,7 +26,10 @@ export const useTimeClockData = (user_id: any, currency: string) => {
             if (response.data.IsSuccess) {
                 setData(response.data.info || []);
                 setHeaderDetail(response.data);
-                setPendingRequestCount(response.data.pending_request_count || 0);
+                
+                const totalPendingCount = (response.data.pending_request_count || 0) + (response.data.pending_penalty_appeal_count || 0);
+                setPendingRequestCount(totalPendingCount);
+                
                 setLeaveRequestCount(response.data.total_leave_requests || 0);
 
                 await fetchConflicts(start, end, user_id);
