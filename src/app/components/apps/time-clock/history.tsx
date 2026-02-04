@@ -8,6 +8,7 @@ import {
   IconButton,
   Drawer,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import { IconX, IconArrowLeft } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
@@ -126,6 +127,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                       case 121:
                         color = "#32A852";
                         break;
+                      case 110:
+                        color = "#949090ff";
+                        break;
                       default:
                         color = "#ff3737ff";
                     }
@@ -177,14 +181,15 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                             fontSize="14px"
                             className="multi-ellipsis"
                           >
-                            <b>{addr.user_name}:</b> {addr.message}
+                            <b>{addr.user_name}:</b>{" "}
+                            <Tooltip placement="top" title={addr.message} arrow>{addr.message}</Tooltip>
                           </Typography>
                           <p
                             style={{
                               fontSize: "12px",
                               textAlign: "end",
                               color: "GrayText",
-                              margin: 0,
+                              margin: "3px",
                             }}
                             color="textSecondary"
                           >

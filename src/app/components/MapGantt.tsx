@@ -56,6 +56,7 @@ import { User } from "next-auth";
 type Props = {
   open: boolean;
   onClose: () => void;
+  onUpdate: () => void;
   projectId: number | null;
   companyId: number | null;
 };
@@ -65,6 +66,7 @@ const GOOGLE_MAP_LIBRARIES = ["places", "drawing"];
 export default function MapGantt({
   open,
   onClose,
+  onUpdate,
   projectId,
   companyId,
 }: Props) {
@@ -111,7 +113,11 @@ export default function MapGantt({
         setGeofences(res.data.info?.zones ?? []);
       } else if (value === 1) {
         const res = await api.get("work-zone/get", {
-          params: { company_id: user.company_id, is_project: true },
+          params: {
+            company_id: user.company_id,
+            is_project: true,
+            project_id: pid,
+          },
         });
         setGeofences(res.data.info ?? []);
       }
@@ -153,7 +159,8 @@ export default function MapGantt({
       const res = await api.delete(`work-zone/delete?id=${deleteId}`);
 
       if (res.data.IsSuccess) {
-        toast.success("Zone deleted");
+        toast.success(res.data.message);
+        onUpdate?.();
 
         setGeofences((prev) => prev.filter((z) => z.id !== deleteId));
         setDeleteConfirmOpen(false);
@@ -173,7 +180,7 @@ export default function MapGantt({
       (item) =>
         item.address?.toLowerCase().includes(search) ||
         item.address_name?.toLowerCase().includes(search) ||
-        item.name?.toLowerCase().includes(search)
+        item.name?.toLowerCase().includes(search),
     );
   }, [geofences, searchTerm]);
 
@@ -441,11 +448,11 @@ const AllZonesMap = ({ zones, isLoaded }: any) => {
         });
       } else if (zone.type === "polygon" && zone.coordinates?.length) {
         zone.coordinates.forEach((point: any) =>
-          bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) })
+          bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) }),
         );
       } else if (zone.type === "polyline" && zone.coordinates?.length) {
         zone.coordinates.forEach((point: any) =>
-          bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) })
+          bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) }),
         );
       }
     });
@@ -473,7 +480,7 @@ const AllZonesMap = ({ zones, isLoaded }: any) => {
     ) {
       const bounds = new google.maps.LatLngBounds();
       zone.coordinates.forEach((point: any) =>
-        bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) })
+        bounds.extend({ lat: Number(point.lat), lng: Number(point.lng) }),
       );
       mapRef.current.fitBounds(bounds);
     }
@@ -656,16 +663,16 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
       const radius = Number(zone.radius);
 
       bounds.extend(
-        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 0)
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 0),
       );
       bounds.extend(
-        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 90)
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 90),
       );
       bounds.extend(
-        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 180)
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 180),
       );
       bounds.extend(
-        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 270)
+        google.maps.geometry.spherical.computeOffset(circleCenter, radius, 270),
       );
 
       map.fitBounds(bounds);
@@ -674,7 +681,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
 
     if (zone.type === "polygon" && zone.coordinates?.length > 0) {
       zone.coordinates.forEach((point: any) =>
-        bounds.extend(new google.maps.LatLng(point.lat, point.lng))
+        bounds.extend(new google.maps.LatLng(point.lat, point.lng)),
       );
 
       map.fitBounds(bounds);
@@ -683,7 +690,7 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
 
     if (zone.type === "polyline" && zone.coordinates?.length > 0) {
       zone.coordinates.forEach((point: any) =>
-        bounds.extend(new google.maps.LatLng(point.lat, point.lng))
+        bounds.extend(new google.maps.LatLng(point.lat, point.lng)),
       );
 
       map.fitBounds(bounds);
@@ -694,8 +701,8 @@ const ViewZoneMap = ({ zone, isLoaded }: any) => {
     zone.type === "circle"
       ? center
       : zone.type === "polygon"
-      ? polygonCenter
-      : polylineCenter;
+        ? polygonCenter
+        : polylineCenter;
 
   return (
     <Paper sx={{ height: "90%" }}>
@@ -803,7 +810,7 @@ const AddZone = ({
 
     new google.maps.places.AutocompleteService().getPlacePredictions(
       { input },
-      (preds) => setPredictions(preds || [])
+      (preds) => setPredictions(preds || []),
     );
   };
 
@@ -829,7 +836,7 @@ const AddZone = ({
 
   const selectPrediction = (placeId: string) => {
     new google.maps.places.PlacesService(
-      document.createElement("div")
+      document.createElement("div"),
     ).getDetails({ placeId }, (place, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && place) {
         setAddress(place.formatted_address || place.name || "");
@@ -1143,7 +1150,7 @@ const EditZone = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const [zoneType, setZoneType] = useState<"circle" | "polygon" | "polyline">(
-    zone.type || "circle"
+    zone.type || "circle",
   );
 
   const [location, setLocation] = useState({
@@ -1159,7 +1166,7 @@ const EditZone = ({
   >([]);
 
   const [addressId, setAddressId] = useState<number | null>(
-    zone.address_id || null
+    zone.address_id || null,
   );
 
   const circleRef = useRef<google.maps.Circle | null>(null);
@@ -1230,13 +1237,13 @@ const EditZone = ({
     if (!input) return setPredictions([]);
     new google.maps.places.AutocompleteService().getPlacePredictions(
       { input },
-      (preds) => setPredictions(preds || [])
+      (preds) => setPredictions(preds || []),
     );
   };
 
   const selectPrediction = (placeId: string) => {
     new google.maps.places.PlacesService(
-      document.createElement("div")
+      document.createElement("div"),
     ).getDetails({ placeId }, (place, status) => {
       if (
         status === google.maps.places.PlacesServiceStatus.OK &&

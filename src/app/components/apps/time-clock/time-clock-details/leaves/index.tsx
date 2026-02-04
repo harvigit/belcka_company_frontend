@@ -14,7 +14,7 @@ import {
   Avatar,
 } from "@mui/material";
 import { IconArrowLeft, IconX } from "@tabler/icons-react";
-import { format } from "date-fns";
+import { format,parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
 import { capitalize } from "lodash";
@@ -202,6 +202,28 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
     }
   };
 
+   const REQUEST_ROUTE_MAP: Record<
+    string,
+    (recordId?: number, startDate?: string, endDate?: string) => string
+  > = {
+    Leave: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push(`open=true`);
+      params.push(`type=leave`);
+
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
+
+      return url;
+    },
+  };
+
   const filteredData = useMemo(() => {
     return data.filter((item) =>
       [
@@ -282,6 +304,29 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
             {filteredData.map((work, idx) => (
               <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
                 <Box
+                onClick={() => {
+                  const routeFn = REQUEST_ROUTE_MAP["Leave"];
+                  if (routeFn) {
+                    const formattedDate = work.start_date
+                      ? format(
+                          parse(work.start_date, "dd/MM/yyyy", new Date()),
+                          "yyyy-MM-dd"
+                        )
+                      : undefined;
+
+                    const formattedEndDate = work.end_date
+                      ? format(
+                          parse(work.end_date, "dd/MM/yyyy", new Date()),
+                          "yyyy-MM-dd"
+                        )
+                      : undefined;
+
+                    router.push(
+                      routeFn(work.user_id, formattedDate, formattedEndDate)
+                    );
+                    onClose();
+                  }
+                }}
                   sx={{
                     border: "1px solid #ddd",
                     borderRadius: 2,

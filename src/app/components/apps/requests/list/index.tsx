@@ -228,6 +228,7 @@ export default function UserRequests({
     "Work log": "#FFFF7F00",
     Timesheet: "#FFFF7F00",
     "User Account": "#FF3F51B5",
+    "Penalty": "#ff3737ff",
   };
 
   return (
