@@ -43,7 +43,6 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconSearch,
-  IconTableColumn,
   IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";

@@ -77,13 +77,13 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
             try {
                 if (!startDate || !endDate) return;
                 
-                const params: Record<string, string> = {
+                const payload: Record<string, string> = {
                     user_id: String(userId),
                     start_date: format(new Date(startDate), 'dd/MM/yyyy'),
                     end_date: format(new Date(endDate), 'dd/MM/yyyy'),
                 };
 
-                const response = await api.get('/user-leaves/request-details', { params });
+                const response = await api.post('/user-leaves/request-details', payload);
 
                 if (response.data?.IsSuccess) {
                     setLeaveRequestDetails(response.data.info || []);

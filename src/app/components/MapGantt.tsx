@@ -236,35 +236,53 @@ export default function MapGantt({
             sx={{ width: { xs: "90%", sm: "50%", md: "30%", lg: "25%" } }}
           />
 
-          <Autocomplete
-            id="project_id"
-            className="zone-project-selection"
-            options={projectList}
-            value={projectList.find((p) => p.id === activeProjectId) ?? null}
-            onChange={(event, newValue) => {
-              const newId = newValue?.id ?? null;
-
-              setActiveProjectId(newId);
-
-              if (newId) {
+          <FormControl sx={{ width: "15%" }} size="small">
+            <Select
+              id="project_id"
+              className="zone-project-selection"
+              value={activeProjectId ?? ""}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setActiveProjectId(e.target.value);
                 fetchProjectDetail(newId);
-              }
-            }}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            sx={{ minWidth: 200, minHeight: 20 }}
-            renderInput={(params) => (
-              <CustomTextField
-                {...params}
-                InputProps={{
-                  ...params.InputProps,
-                  readOnly: true,
-                  style: { caretColor: "transparent" },
-                }}
-                placeholder="Projects"
-              />
-            )}
-          />
+              }}
+              sx={{
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#e0e0e0",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#bbb",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#50ABFF",
+                },
+              }}
+            >
+              <MenuItem value="" disabled>
+                <span style={{ color: "#999" }}>Projects</span>
+              </MenuItem>
+              {projectList.map((proj) => (
+                <MenuItem key={proj.id} value={proj.id.toString()}>
+                  <Typography
+                    component={"span"}
+                    variant="body1"
+                    className="f-14"
+                    sx={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: 250,
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {proj.name}
+                  </Typography>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
         {/* ADD BUTTON + CLOSE */}
