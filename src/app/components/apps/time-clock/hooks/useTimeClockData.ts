@@ -13,6 +13,7 @@ export const useTimeClockData = (user_id: any, currency: string) => {
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [leaveRequestCount, setLeaveRequestCount] = useState<number>(0);
+    const [penaltyAppealCount, setPenaltyAppealCount] = useState<number>(0);
 
     const fetchTimeClockData = useCallback(async (start: Date, end: Date): Promise<void> => {
         try {
@@ -26,11 +27,9 @@ export const useTimeClockData = (user_id: any, currency: string) => {
             if (response.data.IsSuccess) {
                 setData(response.data.info || []);
                 setHeaderDetail(response.data);
-                
-                const totalPendingCount = (response.data.pending_request_count || 0) + (response.data.pending_penalty_appeal_count || 0);
-                setPendingRequestCount(totalPendingCount);
-                
+                setPendingRequestCount(response.data.pending_request_count || 0);
                 setLeaveRequestCount(response.data.total_leave_requests || 0);
+                setPenaltyAppealCount(response.data.pending_penalty_appeal_count || 0);
 
                 await fetchConflicts(start, end, user_id);
 
@@ -87,6 +86,8 @@ export const useTimeClockData = (user_id: any, currency: string) => {
         conflictDetails,
         leaveRequestCount,
         setLeaveRequestCount,
+        penaltyAppealCount,
+        setPenaltyAppealCount,
         shifts,
         projects,
         fetchTimeClockData,

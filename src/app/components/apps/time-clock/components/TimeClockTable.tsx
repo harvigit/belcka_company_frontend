@@ -87,7 +87,9 @@ interface TimeClockTableProps {
     openExpensesSidebar?: (expenseId: number) => Promise<void>;
     openPenaltiesSidebar?: (worklogId: number) => Promise<void>;
     leaveRequestCount: number;
+    penaltyAppealCount: number;
     leaveRequestByDate?: { [key: string]: number };
+    penaltyAppealByDate?: { [key: string]: number };
     openLeaveRequestsSideBar?: () => Promise<void>;
 }
 
@@ -135,10 +137,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            openExpensesSidebar,
                                                            openPenaltiesSidebar,
                                                            leaveRequestCount,
+                                                           penaltyAppealCount,
                                                            leaveRequestByDate,
+                                                           penaltyAppealByDate,
                                                            openLeaveRequestsSideBar,
                                                        }) => {
     const [conflictAnchorEl, setConflictAnchorEl] = useState<HTMLElement | null>(null);
+    const [exclamationAnchorEl, setExclamationAnchorEl] = useState<HTMLElement | null>(null);
+    const [selectedWorklog, setSelectedWorklog] = useState<any>(null);
 
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
@@ -170,12 +176,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         setConflictAnchorEl(null);
         openLeaveRequestsSideBar?.();
     };
-
+    
     const leaveDaysCount = useMemo(() => {
         if (!leaveRequestByDate) return 0;
         return Object.keys(leaveRequestByDate).filter(date => leaveRequestByDate[date] > 0).length;
     }, [leaveRequestByDate]);
-
+    
     const isNewRecordValid = (newRecord: NewRecord) => {
         return (
             !!newRecord.shift_id &&
@@ -488,7 +494,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             <IconButton
                                                                 size="small"
                                                                 color="error"
-                                                                onClick={handlePendingRequest}
+                                                                onClick={(e) => {
+                                                                    setExclamationAnchorEl(e.currentTarget);
+                                                                    setSelectedWorklog(log);
+                                                                }}
                                                                 aria-label="error"
                                                                 sx={{
                                                                     '&:hover': {
@@ -1499,6 +1508,95 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                 <Button
                                     size="small"
                                     onClick={handleRequests}
+                                    sx={{
+                                        textTransform: 'none',
+                                        color: 'primary.main',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Review
+                                </Button>
+                            </Box>
+                        )}
+                    </Stack>
+                </Box>
+            </Popover>
+
+            <Popover
+                open={Boolean(exclamationAnchorEl)}
+                anchorEl={exclamationAnchorEl}
+                onClose={() => {
+                    setExclamationAnchorEl(null);
+                    setSelectedWorklog(null);
+                }}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'center',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'center',
+                }}
+                sx={{
+                    mt: 1,
+                    '& .MuiPopover-paper': {
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        borderRadius: '8px',
+                        minWidth: '280px',
+                    },
+                }}
+            >
+                <Box sx={{ p: 2 }}>
+                    <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        sx={{ mb: 1.5 }}
+                    >
+                        Worklog Issues
+                    </Typography>
+                    <Stack direction="column" spacing={1}>
+                        {selectedWorklog?.is_requested && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <IconExclamationMark size={18} color="#d32f2f" />
+                                    <Typography variant="body2">
+                                        Pending Request
+                                    </Typography>
+                                </Box>
+                                <Button
+                                    size="small"
+                                    onClick={() => {
+                                        setExclamationAnchorEl(null);
+                                        setSelectedWorklog(null);
+                                        handlePendingRequest();
+                                    }}
+                                    sx={{
+                                        textTransform: 'none',
+                                        color: 'primary.main',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Review
+                                </Button>
+                            </Box>
+                        )}
+                        {selectedWorklog?.is_penalty_appealed && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <IconExclamationCircle size={18} color="#ff9800" />
+                                    <Typography variant="body2">
+                                        Penalty Appeal ({selectedWorklog?.penalty_count || 1})
+                                    </Typography>
+                                </Box>
+                                <Button
+                                    size="small"
+                                    onClick={() => {
+                                        setExclamationAnchorEl(null);
+                                        if (selectedWorklog?.worklog_id) {
+                                            openPenaltiesSidebar?.(selectedWorklog.worklog_id);
+                                        }
+                                        setSelectedWorklog(null);
+                                    }}
                                     sx={{
                                         textTransform: 'none',
                                         color: 'primary.main',

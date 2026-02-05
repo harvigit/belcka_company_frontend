@@ -11,7 +11,7 @@ import {
     Divider,
     Chip,
 } from "@mui/material";
-import { IconArrowLeft, IconClock, IconAlertTriangle } from "@tabler/icons-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 
 interface ChecklogsPageProps {
@@ -20,12 +20,15 @@ interface ChecklogsPageProps {
 }
 
 interface PenaltyItem {
+    appeal_note: string;
     penalty_id?: number;
     payable_hours?: string | number | null;
     formatted_start_time?: string;
     formatted_end_time?: string;
     penalty_type?: string | null;
     penalty_minutes?: string | null;
+    is_penalty_appeal?: boolean;
+    appeal_id?: number;
 }
 
 export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
@@ -34,6 +37,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
     const [day, setDay] = useState("");
     const [date, setDate] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
+    const [processingAppealId, setProcessingAppealId] = useState<number | null>(null);
 
     useEffect(() => {
         if (worklogId > 0) fetchPenalties();
@@ -55,27 +59,33 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
         }
     };
 
-    const handleRemovePenaltyAppeal = async (penalty: PenaltyItem) => {
-        // try {
-        //     setIsDeleting(true);
-        //     const res = await api.post("remove-penalty-appeal", {
-        //         worklog_id: worklogId,
-        //         penalty_id: penalty.penalty_id,
-        //     });
-        //
-        //     if (res.data?.IsSuccess) {
-        //         toast.success("Penalty appeal removed");
-        //         fetchPenalties();
-        //     } else {
-        //         toast.error(res.data?.message || "Failed");
-        //     }
-        // } catch {
-        //     toast.error("Something went wrong");
-        // } finally {
-        //     setIsDeleting(false);
-        // }
+    const handleAppealAction = async (penalty: PenaltyItem, isApproved: boolean) => {
+        if (!penalty.appeal_id) {
+            toast.error("Appeal ID not found");
+            return;
+        }
+
+        try {
+            setProcessingAppealId(penalty.appeal_id);
+            const res = await api.post("time-clock/appeal-action", {
+                appeal_id: penalty.appeal_id,
+                status: isApproved ? 5 : 12,
+            });
+
+            if (res.data?.IsSuccess) {
+                toast.success(isApproved ? "Appeal approved" : "Appeal rejected");
+                fetchPenalties();
+                onClose();
+            } else {
+                toast.error(res.data?.message || "Failed to process appeal");
+            }
+        } catch {
+            toast.error("Something went wrong");
+        } finally {
+            setProcessingAppealId(null);
+        }
     };
-    
+
     const handleDeletePenalty = async (penalty: PenaltyItem) => {
         try {
             setIsDeleting(true);
@@ -85,7 +95,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
 
             if (res.data?.IsSuccess) {
                 fetchPenalties();
-                onClose()
+                onClose();
             }
         } catch {
             toast.error("Something went wrong");
@@ -103,7 +113,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
         const m = Math.round((num - h) * 60);
         return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
     };
-    
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
@@ -142,29 +152,51 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                                 <Typography fontWeight={700}>
                                     {penalty.penalty_type || "Penalty"}
                                 </Typography>
+                                {penalty.is_penalty_appeal && (
+                                    <Chip
+                                        label="Appeal"
+                                        size="small"
+                                        color="warning"
+                                    />
+                                )}
                             </Box>
 
-                            {/*<Button*/}
-                            {/*    variant="outlined"*/}
-                            {/*    color="error"*/}
-                            {/*    size="small"*/}
-                            {/*    disabled={isDeleting}*/}
-                            {/*    onClick={() => handleRemovePenaltyAppeal(penalty)}*/}
-                            {/*    sx={{ borderRadius: 2, textTransform: "none" }}*/}
-                            {/*>*/}
-                            {/*    Remove Appeal*/}
-                            {/*</Button>*/}
-
-                            <Button
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                disabled={isDeleting}
-                                onClick={() => handleDeletePenalty(penalty)}
-                                sx={{ borderRadius: 2, textTransform: "none" }}
-                            >
-                                Delete
-                            </Button>
+                            {/* Conditional Buttons */}
+                            {penalty.is_penalty_appeal ? (
+                                <Box display="flex" gap={1}>
+                                    <Button
+                                        variant="contained"
+                                        color="success"
+                                        size="small"
+                                        disabled={processingAppealId === penalty.appeal_id}
+                                        onClick={() => handleAppealAction(penalty, true)}
+                                        sx={{ borderRadius: 2, textTransform: "none" }}
+                                    >
+                                        Approve
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        disabled={processingAppealId === penalty.appeal_id}
+                                        onClick={() => handleAppealAction(penalty, false)}
+                                        sx={{ borderRadius: 2, textTransform: "none" }}
+                                    >
+                                        Reject
+                                    </Button>
+                                </Box>
+                            ) : (
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    disabled={isDeleting}
+                                    onClick={() => handleDeletePenalty(penalty)}
+                                    sx={{ borderRadius: 2, textTransform: "none" }}
+                                >
+                                    Delete
+                                </Button>
+                            )}
                         </Box>
 
                         <Divider sx={{ my: 1 }} />
@@ -185,6 +217,14 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                                     <strong>{penalty.penalty_minutes || 0} Minutes</strong>
                                 </Typography>
                             </Box>
+                            { penalty.appeal_note !== null && (
+                                <Box display="flex" alignItems="center" gap={1}>
+                                    <Typography variant="body2">
+                                        Appeal Note:{" "}
+                                        <strong>{penalty.appeal_note}</strong>
+                                    </Typography>
+                                </Box>
+                            )}
                         </Box>
                     </Box>
                 ))

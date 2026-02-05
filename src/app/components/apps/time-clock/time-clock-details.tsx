@@ -31,11 +31,11 @@ import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
-import { Stack } from '@mui/system';
+import {Stack} from '@mui/system';
 
 import ConfirmationDialog from './components/ConfirmationDialog';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
+import {useRouter} from 'next/navigation';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
@@ -101,7 +101,7 @@ interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
         end_date?: string | null;
         open?: string | null;
         type?: string | null;
-        recordId?: string| null;
+        recordId?: string | null;
     };
 }
 
@@ -164,9 +164,14 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [expensesSidebar, setExpensesSidebar] = useState<boolean>(false);
     const [selectedExpenseId, setSelectedExpenseId] = useState<number>(0);
     const router = useRouter();
-    
-    const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; actionType: 'lock' | 'unlock' | 'delete'; conflictCount: number; } | null>(null);
 
+    const [confirmDialog, setConfirmDialog] = useState<{
+        open: boolean;
+        actionType: 'lock' | 'unlock' | 'delete';
+        conflictCount: number;
+    } | null>(null);
+
+    const [penaltyAppealByDate, setPenaltyAppealByDate] = useState<{ [key: string]: number }>({});
     const [penaltiesSidebar, setPenaltiesSidebar] = useState<boolean>(false);
 
     const initialParamsRef = useRef(queryParams);
@@ -188,13 +193,15 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         conflictDetails,
         leaveRequestCount,
         setLeaveRequestCount,
+        penaltyAppealCount,
+        setPenaltyAppealCount,
         shifts,
         projects,
         fetchTimeClockData,
     } = useTimeClockData(user_id, currency);
 
+    // Process conflicts
     useEffect(() => {
-        // Process conflicts
         if (conflictDetails && conflictDetails.length > 0) {
             const conflicts: { [key: string]: number } = {};
 
@@ -208,7 +215,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const dayName = daysOfWeek[dateObj.getDay()];
-                    const formattedKey = `${dayName} ${parseInt(day)}/${parseInt(month)}`; // e.g., "Wed 15/10"
+                    const formattedKey = `${dayName} ${parseInt(day)}/${parseInt(month)}`;
 
                     conflicts[formattedKey] = items.length;
                 }
@@ -219,6 +226,50 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             setConflictsByDate({});
         }
     }, [conflictDetails]);
+
+    // ADD THIS NEW EFFECT FOR LEAVE REQUESTS
+    useEffect(() => {
+        if (data && data.length > 0) {
+            const leaves: { [key: string]: number } = {};
+
+            data.forEach((week: any) => {
+                (week.days || []).forEach((day: any) => {
+                    const worklogs = day.worklogs || [];
+                    const leaveWorklogs = worklogs.filter((log: any) => log.is_leave);
+
+                    if (leaveWorklogs.length > 0) {
+                        leaves[day.date] = leaveWorklogs.length;
+                    }
+                });
+            });
+
+            setLeaveRequestByDate(leaves);
+        } else {
+            setLeaveRequestByDate({});
+        }
+    }, [data]);
+
+    // ADD THIS NEW EFFECT FOR PENALTY APPEALS
+    useEffect(() => {
+        if (data && data.length > 0) {
+            const appeals: { [key: string]: number } = {};
+
+            data.forEach((week: any) => {
+                (week.days || []).forEach((day: any) => {
+                    const worklogs = day.worklogs || [];
+                    const appealedWorklogs = worklogs.filter((log: any) => log.is_penalty_appealed);
+
+                    if (appealedWorklogs.length > 0) {
+                        appeals[day.date] = appealedWorklogs.length;
+                    }
+                });
+            });
+
+            setPenaltyAppealByDate(appeals);
+        } else {
+            setPenaltyAppealByDate({});
+        }
+    }, [data]);
 
     const {
         editingWorklogs,
@@ -402,7 +453,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
 
             const ids = timesheetIds.join(',');
-            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export-details', {ids, format: option});
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export-details', {
+                ids,
+                format: option
+            });
 
             if (response.data.IsSuccess) {
                 const {file, filename, contentType} = response.data.data;
@@ -473,28 +527,28 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestSidebar(true);
     };
 
-   useEffect(() => {
-    if (handledRef.current) return;
+    useEffect(() => {
+        if (handledRef.current) return;
 
-    const params = initialParamsRef.current;
-    if (!params || params.open !== "true") return;
+        const params = initialParamsRef.current;
+        if (!params || params.open !== 'true') return;
 
-    if (params.type === "expense" && params.recordId) {
-        setExpensesSidebar(true);
-        setSelectedExpenseId(Number(params.recordId));
-    } else if (params.type == 'leave') {
-        setLeaveRequestSidebar(true);
-    }else{
-        setRequestListOpen(true);
-    }
+        if (params.type === 'expense' && params.recordId) {
+            setExpensesSidebar(true);
+            setSelectedExpenseId(Number(params.recordId));
+        } else if (params.type == 'leave') {
+            setLeaveRequestSidebar(true);
+        } else {
+            setRequestListOpen(true);
+        }
 
-    handledRef.current = true;
+        handledRef.current = true;
 
-    const timer = setTimeout(() => {
-        router.replace("/apps/timesheet/list");
-    }, 4000);
+        const timer = setTimeout(() => {
+            router.replace('/apps/timesheet/list');
+        }, 4000);
 
-    return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
     }, []);
 
 
@@ -544,7 +598,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             console.error('Error fetching time clock data after closing expenses sidebar:', error);
         }
     };
-    
+
     const handlePenalties = async (worklogId: number) => {
         setPenaltiesSidebar(true);
         setSelectedWorkId(worklogId)
@@ -565,7 +619,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const handleAddLeave = async () => {
         setAddLeaveSidebar(true);
     };
-    
+
     const handleAddExpense = async () => {
         setAddExpenseSidebar(true);
     };
@@ -581,7 +635,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             console.error('Error fetching time clock data after closing add leave sidebar:', error);
         }
     };
-    
+
     const closeAddExpenseSidebar = async () => {
         setAddExpenseSidebar(false);
         try {
@@ -646,11 +700,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 start_time: newStart,
                 end_time: newEnd,
             });
-            
+
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
-            
+
             onDataChange?.();
         } catch (error) {
             console.error('Error saving worklog:', error);
@@ -883,7 +937,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         parsedDate: parseDate(day.date),
                         address: '--',
                         check_out: '--',
-                        rowsData: worklogs,          
+                        rowsData: worklogs,
                         rowSpan: 1,
                         status_text: '--',
                         is_requested: false,
@@ -969,7 +1023,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const getSelectedRowsLockStatus = () => {
         let hasLockedRows = false;
         let hasUnlockedRows = false;
-        
+
         const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
             return parseInt(rowId.replace('row-', ''));
         });
@@ -994,7 +1048,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 }
             }
         });
-        
+
         return {hasLockedRows, hasUnlockedRows};
     };
 
@@ -1030,9 +1084,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setData([]);
         setTotalConflicts(0);
         setLeaveRequestCount(0);
+        setPenaltyAppealCount(0);
         setPendingRequestCount(0);
         setConflictsByDate({});
         setLeaveRequestByDate({});
+        setPenaltyAppealByDate({});
         setExpandedWorklogsIds([]);
 
         if (currentUserIndex > 0 && onUserChange) {
@@ -1046,9 +1102,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setData([]);
         setTotalConflicts(0);
         setLeaveRequestCount(0);
+        setPenaltyAppealCount(0);
         setPendingRequestCount(0);
         setConflictsByDate({});
         setLeaveRequestByDate({});
+        setPenaltyAppealByDate({});
         setExpandedWorklogsIds([]);
 
         if (currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1 && onUserChange) {
@@ -1065,7 +1123,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
-                const dateKey: string | undefined = rowData.date ;
+                const dateKey: string | undefined = rowData.date;
                 if (dateKey && conflictsByDate[dateKey]) {
                     conflictCount += conflictsByDate[dateKey];
                 }
@@ -1196,7 +1254,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
-    const proceedWithDelete = async ({worklogIds, leaveIds, expenseIds,}: { worklogIds: string[]; leaveIds: string[]; expenseIds: string[]; }) => {
+    const proceedWithDelete = async ({worklogIds, leaveIds, expenseIds,}: {
+        worklogIds: string[];
+        leaveIds: string[];
+        expenseIds: string[];
+    }) => {
         try {
             // Worklogs
             if (worklogIds.length) {
@@ -1376,7 +1438,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
         return {hasWorklogs};
     };
-    
+
     const handleDeleteRecord = async (id: string, type: RecordType) => {
         if (!id || !type) {
             console.error('Invalid delete parameters');
@@ -1394,9 +1456,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             let response: AxiosResponse<{ IsSuccess: boolean }>;
 
             if (type === 'leave') {
-                response = await api.post(endpoint, { user_leave_id: id });
+                response = await api.post(endpoint, {user_leave_id: id});
             } else {
-                response = await api.post(endpoint, { ids: id });
+                response = await api.post(endpoint, {ids: id});
             }
 
             if (response.data.IsSuccess) {
@@ -1445,20 +1507,20 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 size: 50,
                 meta: {align: 'center'},
             },
-             {
+            {
                 id: 'date',
                 header: () => <span style={{display: 'block', textAlign: 'center'}}>Date</span>,
                 cell: (info: any) => {
                     const row = info.row.original;
 
                     return (
-                        <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%' }}>
-                            <Box textAlign="left" sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{width: '100%'}}>
+                            <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
                                 <Typography
                                     className="f-14"
                                     noWrap
                                 >
-                                    {row.original.date }
+                                    {row.original.date}
                                 </Typography>
                             </Box>
                         </Stack>
@@ -1645,7 +1707,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 size: 100,
             },
         ],
-        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect, leaveRequestByDate]
+        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect, leaveRequestByDate, penaltyAppealByDate]
     );
 
     const table = useReactTable({
@@ -1761,11 +1823,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onDeleteClick={handleDeleteRecord}
                 conflictsByDate={conflictsByDate}
                 leaveRequestByDate={leaveRequestByDate}
+                penaltyAppealByDate={penaltyAppealByDate}
                 openConflictsSideBar={handleConflicts}
                 openChecklogsSidebar={handleChecklogs}
                 openExpensesSidebar={handleExpenses}
                 openPenaltiesSidebar={handlePenalties}
                 leaveRequestCount={leaveRequestCount}
+                penaltyAppealCount={penaltyAppealCount}
                 openLeaveRequestsSideBar={handleLeaveRequests}
             />
 
@@ -1848,7 +1912,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     onClose={closeChecklogsSidebar}
                 />
             </Drawer>
-            
+
             <Drawer
                 anchor="right"
                 open={expensesSidebar}
@@ -1869,7 +1933,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     onClose={closeExpensesSidebar}
                 />
             </Drawer>
-            
+
             <Drawer
                 anchor="right"
                 open={penaltiesSidebar}
@@ -1912,7 +1976,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     companyId={companyId}
                 />
             </Drawer>
-            
+
             <Drawer
                 anchor="right"
                 open={addExpenseSidebar}
