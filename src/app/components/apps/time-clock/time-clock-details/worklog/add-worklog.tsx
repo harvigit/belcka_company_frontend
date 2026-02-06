@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
+import { AxiosResponse } from "axios";
 
 interface User {
   id: number;
@@ -119,6 +120,26 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const id = newRecord.userId;
+
+      const res: AxiosResponse<any> = await api.get(
+        `project/get?company_id=${companyId}${id ? `&user_id=${id}` : ""}`,
+      );
+
+      if (res.data?.info) {
+        setProjects(res.data.info);
+      }
+    } catch (err) {
+      console.error("Failed to fetch projects", err);
+      setProjects([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, [newRecord.userId]);
   const validateAndFormatTime = (value: string): string | null => {
     if (!value) return null;
 
@@ -143,7 +164,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
       2,
-      "0"
+      "0",
     )}`;
   };
   const [blurredFields, setBlurredFields] = useState<{
@@ -153,7 +174,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
 
   const handleBlur = (field: "start" | "end") => {
     const formattedTime = validateAndFormatTime(
-      (newRecord[field] as string) || ""
+      (newRecord[field] as string) || "",
     );
     setNewRecord((prev) => ({
       ...prev,
@@ -182,7 +203,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
     debounce((value: string) => {
       setSearchTerm(value);
     }, 300),
-    []
+    [],
   );
 
   const handleChange = useCallback(
@@ -190,7 +211,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
       (
         event:
           | SelectChangeEvent<NewRecord[K]>
-          | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+          | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
       ) => {
         const value = event.target.value as NewRecord[K];
 
@@ -199,7 +220,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
           [field]: value,
         }));
       },
-    []
+    [],
   );
 
   const handleDateButtonClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -252,7 +273,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
       const response = await api.post("/time-clock/add-worklog", params);
 
       if (response.data.IsSuccess) {
-        toast.success(response.data.message)
+        toast.success(response.data.message);
         onClose();
       }
     } catch (error: any) {
@@ -268,14 +289,14 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
       "Unknown User"
     )
       .toLowerCase()
-      .includes(searchTerm.toLowerCase())
+      .includes(searchTerm.toLowerCase()),
   );
 
   const filteredProject = projects.filter((user) =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   const filteredShifts = shifts.filter((user) =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const getUserName = (user: User) =>
@@ -470,15 +491,15 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                           variant="body1"
                           className="f-14"
                           sx={{
-                              display: "-webkit-box",
-                              WebkitBoxOrient: "vertical",
-                              WebkitLineClamp: 1,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              maxWidth: 450,
-                              wordBreak: "break-word",
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 450,
+                            wordBreak: "break-word",
                           }}
-                          >
+                        >
                           {getUserName(user)}
                         </Typography>
                       </Box>
@@ -526,7 +547,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                       </Typography>
                     );
                   const project = projects.find(
-                    (u) => u.id === Number(selected)
+                    (u) => u.id === Number(selected),
                   );
                   return (
                     <Box display="flex" alignItems="center" gap={1}>
@@ -604,7 +625,9 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                             maxWidth: 450,
                             wordBreak: "break-word",
                           }}
-                        >{project.name}</Typography>
+                        >
+                          {project.name}
+                        </Typography>
                       </Box>
                     </MenuItem>
                   ))
@@ -652,7 +675,7 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                   const shift = shifts.find((u) => u.id === Number(selected));
                   return (
                     <Box display="flex" alignItems="center" gap={1}>
-                     <Typography
+                      <Typography
                         component={"span"}
                         variant="body1"
                         className="f-14"
@@ -726,7 +749,9 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                             maxWidth: 450,
                             wordBreak: "break-word",
                           }}
-                        >{shift.name}</Typography>
+                        >
+                          {shift.name}
+                        </Typography>
                       </Box>
                     </MenuItem>
                   ))
