@@ -49,7 +49,7 @@ function daysBetween(start: Date, end: Date) {
 function isVisibleInTimeline(
   task: Task,
   timelineStart: Date,
-  timelineEnd: Date
+  timelineEnd: Date,
 ) {
   const start = dayjs(task.start);
   const end = dayjs(task.end);
@@ -68,7 +68,7 @@ export default function DynamicGantt({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const today = new Date();
@@ -83,7 +83,7 @@ export default function DynamicGantt({
 
   // Add these states at the top of your component
   const [sortField, setSortField] = useState<"name" | "start" | "end" | null>(
-    null
+    null,
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -124,16 +124,16 @@ export default function DynamicGantt({
           end_date: endDate ? dayjs(endDate).format("YYYY-MM-DD") : null,
         },
       });
-      const projects = res.data.info;
 
+      const projects = res.data.info;
       const mappedTasks: Task[] = [];
 
       projects.forEach((project: any) => {
         const projStart = project.start_date
           ? new Date(project.start_date)
           : project.created_at
-          ? new Date(project.created_at)
-          : new Date();
+            ? new Date(project.created_at)
+            : new Date();
 
         const projEnd = project.end_date
           ? new Date(project.end_date)
@@ -147,8 +147,8 @@ export default function DynamicGantt({
         const displayEnd = showFullEnd
           ? projEnd
           : endDate && projEnd > endDate
-          ? endDate
-          : projEnd;
+            ? endDate
+            : projEnd;
 
         if (displayStart > displayEnd) return;
 
@@ -163,16 +163,16 @@ export default function DynamicGantt({
             project.status === 4
               ? "Completed"
               : project.status === 3
-              ? "In Progress"
-              : "Pending",
+                ? "In Progress"
+                : "Pending",
         });
 
         project.tasks.forEach((t: any) => {
           const taskStart = t.start_date
             ? new Date(t.start_date)
             : t.created_at
-            ? new Date(t.created_at)
-            : new Date();
+              ? new Date(t.created_at)
+              : new Date();
 
           const taskEnd = t.end_date ? new Date(t.end_date) : new Date();
 
@@ -184,8 +184,8 @@ export default function DynamicGantt({
           const displayTaskEnd = showFullEndChild
             ? taskEnd
             : endDate && taskEnd > endDate
-            ? endDate
-            : taskEnd;
+              ? endDate
+              : taskEnd;
 
           if (displayTaskStart > displayTaskEnd) return;
 
@@ -201,11 +201,13 @@ export default function DynamicGantt({
               t.status === 4
                 ? "Completed"
                 : t.status === 13 || t.status === 3
-                ? "In Progress"
-                : "Pending",
+                  ? "In Progress"
+                  : "Pending",
           });
         });
       });
+
+      mappedTasks.sort((a, b) => b.start.getTime() - a.start.getTime());
 
       setTasks(mappedTasks);
     } catch (error) {
@@ -227,7 +229,7 @@ export default function DynamicGantt({
     (tasks.length
       ? tasks.reduce(
           (min, t) => (t.start < min ? t.start : min),
-          tasks[0].start
+          tasks[0].start,
         )
       : new Date());
 
@@ -243,13 +245,13 @@ export default function DynamicGantt({
 
   const rootProjects = useMemo(
     () => tasks.filter((t) => t.type === "project"),
-    [tasks]
+    [tasks],
   );
 
   // Sorted root projects
   const sortedProjects = useMemo(
     () => sortTasks(rootProjects),
-    [rootProjects, sortField, sortOrder]
+    [rootProjects, sortField, sortOrder],
   );
 
   // Child sorting too (optional)
@@ -259,8 +261,8 @@ export default function DynamicGantt({
         (t) =>
           t.type === "task" &&
           t.parentId === projectId &&
-          isVisibleInTimeline(t, timelineStart, timelineEnd)
-      )
+          isVisibleInTimeline(t, timelineStart, timelineEnd),
+      ),
     );
 
   // Handle header click
@@ -310,7 +312,7 @@ export default function DynamicGantt({
     task: Task,
     timelineStart: Date,
     timelineEnd: Date,
-    dayWidth: number
+    dayWidth: number,
   ) {
     const rangeStart = dayjs(timelineStart);
     const rangeEnd = dayjs(timelineEnd);
@@ -330,7 +332,7 @@ export default function DynamicGantt({
     const startOffsetDays = effectiveStart.diff(rangeStart, "day");
     const durationDays = Math.max(
       1,
-      effectiveEnd.diff(effectiveStart, "day") + 1
+      effectiveEnd.diff(effectiveStart, "day") + 1,
     );
 
     return {

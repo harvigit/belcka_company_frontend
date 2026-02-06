@@ -23,6 +23,7 @@ import "react-day-picker/dist/style.css";
 import api from '@/utils/axios';
 import { debounce } from 'lodash';
 import SearchIcon from '@mui/icons-material/Search';
+import { AxiosResponse } from 'axios';
 
 interface Project { id: number; name: string; }
 interface Address { id: number; name: string; project_id: number;}
@@ -59,7 +60,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             setLoading(true);
             try {
                 const res = await api.get('/expense/get-resources');
-                setProjects(res.data.projects || []);
+                // setProjects(res.data.projects || []);
                 setAddresses(res.data.addresses || []);
                 setCategories(res.data.categories || []);
             } catch (err) {
@@ -70,6 +71,29 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         };
         fetchResources();
     }, []);
+
+    const fetchProjects = async () => {
+        try {
+            const id = selecteUser ? selectedUser : userId;
+            console.log("Fetching projects for user:", id);
+
+            const res: AxiosResponse<any> = await api.get(
+                `project/get?company_id=${companyId}${id ? `&user_id=${id}` : ''}`
+            );
+
+            if (res.data?.info) {
+                setProjects(res.data.info);
+            }
+        } catch (err) {
+            console.error("Failed to fetch projects", err);
+            setProjects([]); 
+        }
+    };
+
+    useEffect(() => {
+        fetchProjects();
+    }, [selecteUser, selectedUser]);
+
 
     useEffect(() => {
         setSelectedAddress('');

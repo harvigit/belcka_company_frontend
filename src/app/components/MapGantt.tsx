@@ -258,9 +258,6 @@ export default function MapGantt({
                 },
               }}
             >
-              <MenuItem value="" disabled>
-                <span style={{ color: "#999" }}>Projects</span>
-              </MenuItem>
               {projectList.map((proj) => (
                 <MenuItem key={proj.id} value={proj.id.toString()}>
                   <Typography
