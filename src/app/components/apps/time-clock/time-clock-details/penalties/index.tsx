@@ -10,6 +10,11 @@ import {
     Button,
     Divider,
     Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
 } from "@mui/material";
 import { IconArrowLeft } from "@tabler/icons-react";
 import toast from "react-hot-toast";
@@ -39,6 +44,12 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [processingAppealId, setProcessingAppealId] = useState<number | null>(null);
 
+    // Admin note dialog state
+    const [openAdminNoteDialog, setOpenAdminNoteDialog] = useState(false);
+    const [adminNote, setAdminNote] = useState("");
+    const [selectedPenalty, setSelectedPenalty] = useState<PenaltyItem | null>(null);
+    const [appealAction, setAppealAction] = useState<boolean>(false); // true = approve, false = reject
+
     useEffect(() => {
         if (worklogId > 0) fetchPenalties();
     }, [worklogId]);
@@ -59,23 +70,37 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
         }
     };
 
-    const handleAppealAction = async (penalty: PenaltyItem, isApproved: boolean) => {
-        if (!penalty.appeal_id) {
+    const openAdminNotePrompt = (penalty: PenaltyItem, isApproved: boolean) => {
+        setSelectedPenalty(penalty);
+        setAppealAction(isApproved);
+        setAdminNote("");
+        setOpenAdminNoteDialog(true);
+    };
+
+    const handleAdminNoteSubmit = async () => {
+        if (!selectedPenalty?.appeal_id) {
             toast.error("Appeal ID not found");
             return;
         }
 
+        if (!adminNote.trim()) {
+            toast.error("Please enter an admin note");
+            return;
+        }
+
         try {
-            setProcessingAppealId(penalty.appeal_id);
+            setProcessingAppealId(selectedPenalty.appeal_id);
             const res = await api.post("time-clock/appeal-action", {
-                appeal_id: penalty.appeal_id,
-                status: isApproved ? 5 : 12,
+                appeal_id: selectedPenalty.appeal_id,
+                status: appealAction ? 5 : 12,
+                admin_note: adminNote.trim(),
             });
 
             if (res.data?.IsSuccess) {
-                toast.success(isApproved ? "Appeal approved" : "Appeal rejected");
+                toast.success(appealAction ? "Appeal approved" : "Appeal rejected");
                 fetchPenalties();
                 onClose();
+                handleCloseDialog();
             } else {
                 toast.error(res.data?.message || "Failed to process appeal");
             }
@@ -84,6 +109,12 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
         } finally {
             setProcessingAppealId(null);
         }
+    };
+
+    const handleCloseDialog = () => {
+        setOpenAdminNoteDialog(false);
+        setAdminNote("");
+        setSelectedPenalty(null);
     };
 
     const handleDeletePenalty = async (penalty: PenaltyItem) => {
@@ -169,7 +200,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                                         color="success"
                                         size="small"
                                         disabled={processingAppealId === penalty.appeal_id}
-                                        onClick={() => handleAppealAction(penalty, true)}
+                                        onClick={() => openAdminNotePrompt(penalty, true)}
                                         sx={{ borderRadius: 2, textTransform: "none" }}
                                     >
                                         Approve
@@ -179,7 +210,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                                         color="error"
                                         size="small"
                                         disabled={processingAppealId === penalty.appeal_id}
-                                        onClick={() => handleAppealAction(penalty, false)}
+                                        onClick={() => openAdminNotePrompt(penalty, false)}
                                         sx={{ borderRadius: 2, textTransform: "none" }}
                                     >
                                         Reject
@@ -217,7 +248,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                                     <strong>{penalty.penalty_minutes || 0} Minutes</strong>
                                 </Typography>
                             </Box>
-                            { penalty.appeal_note !== null && (
+                            {penalty.appeal_note !== null && (
                                 <Box display="flex" alignItems="center" gap={1}>
                                     <Typography variant="body2">
                                         Appeal Note:{" "}
@@ -233,6 +264,50 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                     <Typography color="text.secondary">No penalties found.</Typography>
                 </Box>
             )}
+
+            {/* Admin Note Dialog */}
+            <Dialog
+                open={openAdminNoteDialog}
+                onClose={handleCloseDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    {appealAction ? "Approve Appeal" : "Reject Appeal"}
+                </DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Admin Note"
+                        placeholder="Enter your note here..."
+                        multiline
+                        rows={4}
+                        fullWidth
+                        variant="outlined"
+                        value={adminNote}
+                        onChange={(e) => setAdminNote(e.target.value)}
+                        sx={{ mt: 1 }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button
+                        onClick={handleCloseDialog}
+                        sx={{ textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleAdminNoteSubmit}
+                        variant="contained"
+                        color={appealAction ? "success" : "error"}
+                        disabled={processingAppealId !== null}
+                        sx={{ textTransform: "none" }}
+                    >
+                        {appealAction ? "Approve" : "Reject"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
