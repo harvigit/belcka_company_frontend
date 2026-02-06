@@ -1,0 +1,908 @@
+"use client";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  TableContainer,
+  Table,
+  TableRow,
+  TableCell,
+  TableBody,
+  TableHead,
+  Typography,
+  Box,
+  Grid,
+  Button,
+  Divider,
+  IconButton,
+  Stack,
+  TextField,
+  InputAdornment,
+  MenuItem,
+  Tooltip,
+  Popover,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Avatar,
+  Drawer,
+} from "@mui/material";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  createColumnHelper,
+  SortingState,
+} from "@tanstack/react-table";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconSearch,
+} from "@tabler/icons-react";
+import api from "@/utils/axios";
+import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
+import Image from "next/image";
+import { IconEye } from "@tabler/icons-react";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import { format } from "date-fns";
+import IconArrowLeft from "@mui/icons-material/ArrowBack";
+
+dayjs.extend(customParseFormat);
+
+interface Props {
+  userId: number;
+  isShow: boolean;
+}
+const STORAGE_KEY = "payment-date-range";
+const loadDateRangeFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+      };
+    }
+  } catch (error) {
+    console.error("Error loading date range from localStorage:", error);
+  }
+  return null;
+};
+
+const saveDateRangeToStorage = (
+  startDate: Date | null,
+  endDate: Date | null,
+) => {
+  try {
+    const dateRange = {
+      startDate: startDate ? startDate.toDateString() : null,
+      endDate: endDate ? endDate.toDateString() : null,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dateRange));
+  } catch (error) {
+    console.error("Error saving date range to localStorage:", error);
+  }
+};
+const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
+  const [data, setData] = useState<any[]>([]);
+  const [payment, setPayment] = useState<any>([]);
+  const [columnFilters, setColumnFilters] = useState<any>([]);
+  const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null };
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+  const [search, setSearch] = useState("");
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+
+  // Load from localStorage or use defaults
+  const getInitialDates = () => {
+    const stored = loadDateRangeFromStorage();
+    if (stored && stored.startDate && stored.endDate) {
+      return {
+        startDate: stored.startDate,
+        endDate: stored.endDate,
+      };
+    }
+    return {
+      startDate: defaultStart,
+      endDate: defaultEnd,
+    };
+  };
+
+  const initialDates = getInitialDates();
+  const [startDate, setStartDate] = useState<Date | null>(
+    initialDates.startDate,
+  );
+  const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
+
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+      saveDateRangeToStorage(range.from, range.to);
+    }
+  };
+
+  // Fetch data
+  const fetchPayments = async (start: Date, end: Date): Promise<void> => {
+    setFetchPayslip(true);
+    try {
+      const startDate = format(start, "dd/MM/yyyy");
+      const endDate = format(end, "dd/MM/yyyy");
+
+      const params = {
+        company_id: user.company_id,
+        start_date: startDate,
+        end_date: endDate,
+        ...(userId ? { user_id: userId } : {}),
+      };
+
+      const res = await api.get(`payslips/get-bookkeeper-payments`, { params });
+      if (res.data) {
+        setData(res.data.info);
+        console.log(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch payslip", err);
+    }
+    setFetchPayslip(false);
+  };
+  useEffect(() => {
+    if (startDate && endDate) fetchPayments(startDate, endDate);
+  }, [api, startDate, endDate]);
+
+  const handleOpenDrawer = (item: any) => {
+    setDrawerOpen(true);
+    setPayment(item);
+
+    console.log(item);
+  };
+  const handleCloseDrawer = () => setDrawerOpen(false);
+
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch =
+        item.user_name?.toLowerCase().includes(search) ||
+        item.total_payable_amount?.toLowerCase().includes(search);
+
+      return matchesSearch;
+    });
+  }, [data, searchTerm]);
+
+  const columnHelper = createColumnHelper<any>();
+  const columns = [
+    columnHelper.accessor("week_range", {
+      id: "dateRange",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <CustomCheckbox
+            className="header-checkbox"
+            checked={
+              selectedRowIds.size === filteredData.length &&
+              filteredData.length > 0
+            }
+            indeterminate={
+              selectedRowIds.size > 0 &&
+              selectedRowIds.size < filteredData.length
+            }
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const isChecked = e.target.checked;
+
+              if (isChecked) {
+                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+              } else {
+                setSelectedRowIds(new Set());
+              }
+            }}
+          />
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Date Range
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+        const showCheckbox = isChecked || hoveredRow === item.id;
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.3 }}
+            onMouseEnter={() => setHoveredRow(item.id)}
+            onMouseLeave={() => setHoveredRow(null)}
+          >
+            <CustomCheckbox
+              className="header-checkbox"
+              checked={isChecked}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const newSelected = new Set(selectedRowIds);
+                if (isChecked) {
+                  newSelected.delete(item.id);
+                } else {
+                  newSelected.add(item.id);
+                }
+                setSelectedRowIds(newSelected);
+              }}
+              sx={{
+                opacity: showCheckbox ? 1 : 0,
+                pointerEvents: showCheckbox ? "auto" : "none",
+                transition: "opacity 0.2s ease",
+              }}
+            />
+            <Typography>{item.week_range}</Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor("user_name", {
+      id: "Name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const user = row.original;
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{ cursor: "pointer" }}
+          >
+            <Avatar
+              src={user.user_image ? user.user_image : ""}
+              alt={user.name}
+              sx={{ width: 36, height: 36 }}
+            />
+            <Box>
+              <Typography
+                className="f-14"
+                color="textPrimary"
+                sx={{
+                  width: 190,
+                }}
+              >
+                {user.user_name ?? "-"}
+              </Typography>
+            </Box>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.total_payable_amount, {
+      id: "amount",
+      header: () => "Amount",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.total_payable_amount
+                ? `${item.currency}${item.total_payable_amount}`
+                : `${item.currency}0`}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="View">
+              <IconButton
+                color="primary"
+                onClick={() => handleOpenDrawer(item)}
+              >
+                <IconEye size={20} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        );
+      },
+    }),
+  ];
+
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl2(event.currentTarget);
+  };
+  const handlePopoverClose = () => setAnchorEl2(null);
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    state: { columnFilters, sorting },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 50,
+      },
+    },
+  });
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    table.setPageIndex(0);
+  }, [searchTerm, table]);
+
+  const simpleColumns = columns.map((column) => ({
+    name: column.id ?? "Unnamed Column",
+    width: "auto",
+  }));
+
+  return (
+    <Box
+      sx={{
+        height: `${isShow ? "calc(91vh - 100px)" : "calc(73vh - 100px)"}`,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Render the search and table */}
+      <Stack
+        mr={2}
+        ml={2}
+        mb={2}
+        justifyContent="space-between"
+        direction={{ xs: "column", sm: "row" }}
+        spacing={{ xs: 1, sm: 2, md: 4 }}
+      >
+        <Grid display="flex" gap={1} alignItems={"center"}>
+          <Button variant="contained" color="primary">
+            PAYMENTS ({table.getPrePaginationRowModel().rows.length}){" "}
+          </Button>
+          <DateRangePickerBox
+            from={startDate}
+            to={endDate}
+            onChange={handleDateRangeChange}
+          />
+
+          <TextField
+            id="search"
+            type="text"
+            size="small"
+            variant="outlined"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconSearch size={"16"} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+        </Grid>
+
+        <Stack
+          mb={2}
+          justifyContent="end"
+          direction={{ xs: "column", sm: "row" }}
+        >
+          <IconButton
+            onClick={handlePopoverOpen}
+            sx={{ ml: 1 }}
+            color="primary"
+          >
+            <IconEye />
+          </IconButton>
+          <Popover
+            open={Boolean(anchorEl2)}
+            anchorEl={anchorEl2}
+            onClose={handlePopoverClose}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+          >
+            <TextField
+              size="small"
+              placeholder="Search"
+              fullWidth
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              sx={{ mb: 1 }}
+            />
+            <FormGroup>
+              {table
+                .getAllLeafColumns()
+                .filter((col: any) => {
+                  const excludedColumns = ["conflicts"];
+                  if (excludedColumns.includes(col.id)) return false;
+
+                  return col.id.toLowerCase().includes(search.toLowerCase());
+                })
+                .map((col: any) => (
+                  <FormControlLabel
+                    key={col.id}
+                    control={
+                      <Checkbox
+                        checked={col.getIsVisible()}
+                        onChange={col.getToggleVisibilityHandler()}
+                        disabled={col.id === "conflicts"}
+                      />
+                    }
+                    sx={{ textTransform: "none" }}
+                    label={
+                      col.columnDef.meta?.label ||
+                      (typeof col.columnDef.header === "string" &&
+                      col.columnDef.header.trim() !== ""
+                        ? col.columnDef.header
+                        : col.id
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str: string) => str.toUpperCase())
+                            .trim())
+                    }
+                  />
+                ))}
+            </FormGroup>
+          </Popover>
+        </Stack>
+      </Stack>
+      <Divider />
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+        }}
+      >
+        <TableContainer>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const isActive = header.column.getIsSorted();
+                    const isAsc = header.column.getIsSorted() === "asc";
+                    const isSortable = header.column.getCanSort();
+
+                    return (
+                      <TableCell
+                        key={header.id}
+                        sx={{
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          width:
+                            header.column.id === "actions" ||
+                            header.column.id === "price" ||
+                            header.column.id === "barcode"
+                              ? 80
+                              : header.column.id === "QrCode"
+                                ? 120
+                                : header.column.id === "supplierCode"
+                                  ? 140
+                                  : "auto",
+                        }}
+                      >
+                        <Box
+                          onClick={header.column.getToggleSortingHandler()}
+                          p={0}
+                          sx={{
+                            cursor: isSortable ? "pointer" : "default",
+                            border: "2px solid transparent",
+                            borderRadius: "6px",
+                            display: "flex",
+                            justifyContent: "flex-start",
+                            "&:hover": { color: "#888" },
+                            "&:hover .hoverIcon": { opacity: 1 },
+                          }}
+                        >
+                          <Typography variant="subtitle2">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </Typography>
+                          {isSortable && (
+                            <Box
+                              component="span"
+                              className="hoverIcon"
+                              ml={0.5}
+                              sx={{
+                                transition: "opacity 0.2s",
+                                opacity: isActive ? 1 : 0,
+                                fontSize: "0.9rem",
+                                color: isActive ? "#000" : "#888",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHead>
+            <TableBody>
+              {fetchPayslip ? (
+                <SkeletonLoader
+                  columns={simpleColumns}
+                  rowCount={simpleColumns.length}
+                />
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "calc(50vh - 100px)",
+                      }}
+                    >
+                      <Image
+                        src="/images/no-data.png"
+                        alt="No data"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                        width={200}
+                        height={200}
+                      />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {data.length ? <Divider /> : <></>}
+      </Box>
+      <Divider />
+      <Stack
+        gap={1}
+        pr={3}
+        pt={1}
+        pl={3}
+        pb={2}
+        alignItems="center"
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+      >
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography color="textSecondary" className="f-14">
+            {table.getPrePaginationRowModel().rows.length} Rows
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: {
+              xs: "block",
+              sm: "flex",
+            },
+          }}
+          alignItems="center"
+        >
+          <Stack direction="row" alignItems="center">
+            <Typography color="textSecondary" className="f-14">
+              Page
+            </Typography>
+            <Typography
+              color="textSecondary"
+              className="f-14"
+              fontWeight={600}
+              ml={1}
+            >
+              {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
+            </Typography>
+            <Typography color="textSecondary" ml={"3px"} className="f-14">
+              {" "}
+              | Entries :{" "}
+            </Typography>
+          </Stack>
+          <Stack
+            ml={"5px"}
+            direction="row"
+            alignItems="center"
+            color="textSecondary"
+          >
+            <CustomSelect
+              className="custom-select"
+              value={table.getState().pagination.pageSize}
+              onChange={(e: { target: { value: any } }) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+            >
+              {[50, 100, 250, 500].map((pageSize) => (
+                <MenuItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </MenuItem>
+              ))}
+            </CustomSelect>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <IconChevronLeft />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={{ width: "30px" }}
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <IconChevronRight />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Stack>
+
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => handleCloseDrawer()}
+        sx={{
+          width: 400,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 400,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            paddingRight: 1,
+          }}
+        >
+          <Box className="task-form">
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12 }}>
+                <Box display="flex" alignItems="center" mb={2} gap={1}>
+                  <IconButton onClick={() => handleCloseDrawer()} size="small">
+                    <IconArrowLeft />
+                  </IconButton>
+                  <Typography variant="h6" fontWeight={700}>
+                    {payment?.week_range}
+                  </Typography>
+                </Box>
+
+                <Box
+                  mt={2}
+                  p={2}
+                  display="flex"
+                  flexDirection="column"
+                  gap={1}
+                  sx={{
+                    backgroundColor: "rgb(238, 238, 238)",
+                    borderRadius: "5px",
+                  }}
+                >
+                  {/* Net Timesheet */}
+                  {payment?.net_timeclock_amount !== undefined && (
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        color="textSecondary"
+                        fontWeight={500}
+                      >
+                        Net Timesheet
+                      </Typography>
+                      <Typography
+                        color="success"
+                        variant="subtitle1"
+                        fontWeight={600}
+                      >
+                        {payment.currency}
+                        {payment.net_timeclock_amount}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Net PriceWork */}
+                  {payment?.net_pricework_amount !== undefined && (
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        color="textSecondary"
+                        fontWeight={500}
+                      >
+                        Net PriceWork
+                      </Typography>
+                      <Typography
+                        color="success"
+                        variant="subtitle1"
+                        fontWeight={600}
+                      >
+                        {payment.currency}
+                        {payment.net_pricework_amount}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Penalty Amount */}
+                  {payment?.net_penalty_amount !== undefined && (
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        color="textSecondary"
+                        fontWeight={500}
+                      >
+                        Penalty Amount
+                      </Typography>
+                      <Typography
+                        color="error"
+                        variant="subtitle1"
+                        fontWeight={600}
+                      >
+                        {payment.currency}-{payment.net_penalty_amount}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Expense Paid */}
+                {payment?.net_expense_amount && (
+                  <Box
+                    mt={2}
+                    p={2}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{
+                      backgroundColor: "rgb(238, 238, 238)",
+                      borderRadius: "5px",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      color="textSecondary"
+                      fontWeight={500}
+                    >
+                      Expense Paid
+                    </Typography>
+                    <Typography
+                      color="success"
+                      variant="subtitle1"
+                      fontWeight={600}
+                    >
+                      {payment.currency}
+                      {payment.net_expense_amount}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Total Paid */}
+                {payment?.total_payable_amount !== undefined && (
+                  <Box
+                    mt={2}
+                    p={2}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{
+                      backgroundColor: "rgb(238, 238, 238)",
+                      borderRadius: "5px",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      color="textSecondary"
+                      fontWeight={500}
+                    >
+                      Total Paid
+                    </Typography>
+                    <Typography
+                      color="success"
+                      variant="subtitle1"
+                      fontWeight={600}
+                    >
+                      {payment.currency}
+                      {payment.total_payable_amount}
+                    </Typography>
+                  </Box>
+                )}
+              </Grid>
+            </Grid>
+          </Box>
+        </Box>
+
+        <Box mt={2}>
+          <Button
+            color="inherit"
+            onClick={() => handleCloseDrawer()}
+            variant="contained"
+            size="large"
+            sx={{
+              backgroundColor: "transparent",
+              borderRadius: 3,
+              color: "GrayText",
+            }}
+          >
+            Close
+          </Button>
+        </Box>
+      </Drawer>
+    </Box>
+  );
+};
+
+export default PaymentsList;

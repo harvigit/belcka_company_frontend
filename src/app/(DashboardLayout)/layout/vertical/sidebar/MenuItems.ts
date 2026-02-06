@@ -4,6 +4,7 @@ import {
   IconBasket,
   IconCategory,
   IconClock,
+  IconCurrencyDollar,
   IconDatabase,
   IconFiles,
   IconInfoCircle,
@@ -101,7 +102,7 @@ const MenuItems: NavGroup[] = [
     href: "/apps/stocks/list",
   },
 
-   {
+  {
     id: uniqueId(),
     title: "Stores",
     slug: "stores",
@@ -131,6 +132,14 @@ const MenuItems: NavGroup[] = [
     slug: "suppliers",
     icon: IconBox,
     href: "/apps/suppliers/list",
+  },
+
+  {
+    id: uniqueId(),
+    title: "Payments",
+    slug: "payments",
+    icon: IconCurrencyDollar,
+    href: "/apps/payments/index",
   },
 
   {
