@@ -191,7 +191,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
   };
 
   // Fetch data
-  const fetchPayslips = async (start: Date, end: Date): Promise<void> => {
+  const fetchInvoices = async (start: Date, end: Date): Promise<void> => {
     setFetchPayslip(true);
     try {
       const startDate = format(start, "dd/MM/yyyy");
@@ -214,7 +214,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
   }, [api]);
 
   useEffect(() => {
-    if (startDate && endDate) fetchPayslips(startDate, endDate);
+    if (startDate && endDate) fetchInvoices(startDate, endDate);
   }, [api, startDate, endDate]);
 
   const handleZip = async () => {
@@ -284,7 +284,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
         toast.success(result.data.message);
         setDrawerOpen(false);
         if (startDate && endDate) {
-          fetchPayslips(startDate, endDate);
+          fetchInvoices(startDate, endDate);
         }
       } else {
         toast.error(result.data.message);
@@ -296,20 +296,29 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     }
   };
 
+  const flattenedData = useMemo(() => {
+    if (!data) return [];
+
+    return data.flatMap((group) =>
+      group.data.map((item: any) => ({
+        ...item,
+        date: group.date,
+      })),
+    );
+  }, [data]);
+
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
+    const search = searchTerm.toLowerCase();
+    return flattenedData.filter(
+      (item) =>
         item.user_name?.toLowerCase().includes(search) ||
         item.from_date?.toLowerCase().includes(search) ||
         item.date?.toLowerCase().includes(search) ||
         item.description?.toLowerCase().includes(search) ||
         item.invoice_number?.toLowerCase().includes(search) ||
-        item.to_date?.toLowerCase().includes(search);
-
-      return matchesSearch;
-    });
-  }, [data, searchTerm]);
+        item.to_date?.toLowerCase().includes(search),
+    );
+  }, [flattenedData, searchTerm]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
@@ -503,7 +512,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
 
     columnHelper.accessor((row) => row?.date, {
       id: "date",
-      header: () => "Date",
+      header: () => "Invoice Date",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -771,7 +780,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
                     if (startDate && endDate) {
-                      await fetchPayslips(startDate, endDate);
+                      await fetchInvoices(startDate, endDate);
                     }
                   } catch (error) {
                   } finally {

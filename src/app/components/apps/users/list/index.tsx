@@ -60,6 +60,8 @@ import {
   IconDotsVertical,
   IconUsersMinus,
   IconEye,
+  IconChevronUp,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -165,6 +167,8 @@ const TablePagination = () => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+  const [anchorEl3, setAnchorEl3] = React.useState<null | HTMLElement>(null);
+  const openModel = Boolean(anchorEl3);
 
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
   const [hasHorizontalScrollbar, setHasHorizontalScrollbar] = useState(false);
@@ -187,7 +191,21 @@ const TablePagination = () => {
   const [isPermission, setIsPermission] = useState(true);
   const [search, setSearch] = useState("");
   const [selectAll, setSelectAll] = useState(false);
+  const [selectedExportOption, setSelectedExportOption] = useState<
+    string | null
+  >(null);
 
+  const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl3(event.currentTarget);
+  };
+
+  const handleExportClose = (option: string) => {
+    if (option) {
+      setSelectedExportOption(option);
+      handleExportData(option);
+    }
+    setAnchorEl3(null);
+  };
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -195,6 +213,16 @@ const TablePagination = () => {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  interface ExportResponse {
+    IsSuccess: boolean;
+    message: string;
+    data: {
+      file: string;
+      filename: string;
+      contentType: string;
+    };
+  }
 
   const fetchUsers = async () => {
     setFetchUser(true);
@@ -209,6 +237,61 @@ const TablePagination = () => {
     setFetchUser(false);
   };
 
+  const handleExportData = async (option: string) => {
+    try {
+      if (!data || !Array.isArray(data)) {
+        throw new Error("Invalid or missing data");
+      }
+      const ids = Array.from(selectedRowIds).join(",");
+
+      if (ids.length === 0) {
+        throw new Error("No user IDs selected for export");
+      }
+
+      const response: AxiosResponse<ExportResponse> = await api.post(
+        "user/export-details",
+        {
+          ids,
+          format: option,
+        },
+      );
+
+      if (response.data.IsSuccess) {
+        const { file, filename, contentType } = response.data.data;
+
+        const binaryString = atob(file);
+        const binaryLen = binaryString.length;
+        const bytes = new Uint8Array(binaryLen);
+        for (let i = 0; i < binaryLen; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const blob = new Blob([bytes], { type: contentType });
+
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download =
+          filename ||
+          `timeclock_details_export_${new Date().toISOString()}.${option}`;
+        document.body.appendChild(link);
+        link.click();
+
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        fetchUsers();
+        setSelectedRowIds(new Set());
+      } else {
+        throw new Error(response.data.message || "Export request failed");
+      }
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
   }, [user.company_id, user.id]);
@@ -217,7 +300,7 @@ const TablePagination = () => {
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -231,7 +314,7 @@ const TablePagination = () => {
     const fetchTeams = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`
+          `get-company-resources?flag=teamList&company_id=${user.company_id}`,
         );
         if (res.data) setTeams(res.data.info);
       } catch (err) {
@@ -248,19 +331,19 @@ const TablePagination = () => {
 
   const uniqueTeams = useMemo(
     () => [...new Set(data.map((item) => item.team_name).filter(Boolean))],
-    [data]
+    [data],
   );
 
   const uniqueTrades = useMemo(
     () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
-    [trade]
+    [trade],
   );
 
   const uniqueSupervisors = useMemo(
     () => [
       ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
     ],
-    [data]
+    [data],
   );
 
   const formatDate = (date?: Date | string | null) => {
@@ -324,8 +407,8 @@ const TablePagination = () => {
       user.user_role_id == 1
         ? true
         : false || userPermission.id == user.id
-        ? true
-        : false;
+          ? true
+          : false;
     setIsPermission(permssion);
     setPermissionSearch("");
     setPermissionsDrawerOpen(true);
@@ -333,7 +416,7 @@ const TablePagination = () => {
 
   const handlePermissionToggle = (
     permissionId: number,
-    type: "web" | "app"
+    type: "web" | "app",
   ) => {
     setTempPermissions((prev) => {
       const updated = new Set(prev[type]);
@@ -347,7 +430,7 @@ const TablePagination = () => {
 
   const handleSelectAll = (type: "web" | "app") => {
     const allSelected = filteredPermissions.every((p) =>
-      tempPermissions[type].has(p.id)
+      tempPermissions[type].has(p.id),
     );
 
     setTempPermissions((prev) => {
@@ -389,12 +472,12 @@ const TablePagination = () => {
 
       const response = await api.post(
         "dashboard/company/change-user-permissions-status",
-        payload
+        payload,
       );
 
       if (response.data.IsSuccess === true) {
         toast.success(
-          response.data.message || "Permissions updated successfully"
+          response.data.message || "Permissions updated successfully",
         );
 
         setData((prevData) => {
@@ -445,7 +528,7 @@ const TablePagination = () => {
       if (tableContainerRef.current) {
         setHasHorizontalScrollbar(
           tableContainerRef.current.scrollWidth >
-            tableContainerRef.current.clientWidth
+            tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -483,10 +566,10 @@ const TablePagination = () => {
       new Map(
         selectedUserPermissions.permissions
           .filter((p) =>
-            p.name.toLowerCase().includes(permissionSearch.toLowerCase())
+            p.name.toLowerCase().includes(permissionSearch.toLowerCase()),
           )
-          .map((p) => [p.id, p])
-      ).values()
+          .map((p) => [p.id, p]),
+      ).values(),
     );
     return uniquePermissions;
   }, [selectedUserPermissions, permissionSearch]);
@@ -672,7 +755,7 @@ const TablePagination = () => {
           <Typography
             className="f-14"
             color="textPrimary"
-            sx={{ width: 100 ,ml: 2}}
+            sx={{ width: 100, ml: 2 }}
             noWrap
           >
             {info.getValue() ? info.getValue() : "-"}
@@ -743,7 +826,7 @@ const TablePagination = () => {
           >
             {row.is_invited
               ? "Not logged in"
-              : formatDate(row.logged_in_at) ?? "-"}
+              : (formatDate(row.logged_in_at) ?? "-")}
           </Typography>
         );
       },
@@ -994,7 +1077,7 @@ const TablePagination = () => {
       }),
       {
         expires: 365,
-      }
+      },
     );
 
     table.setColumnVisibility(newVisibility);
@@ -1211,7 +1294,11 @@ const TablePagination = () => {
               <IconDotsVertical width={18} />
             </IconButton>
 
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+            <IconButton
+              onClick={handlePopoverOpen}
+              sx={{ ml: 1 }}
+              color="primary"
+            >
               <IconEye />
             </IconButton>
             <Popover
@@ -1258,7 +1345,7 @@ const TablePagination = () => {
                           onChange={(e) =>
                             handleColumnVisibilityChange(
                               col.id,
-                              e.target.checked
+                              e.target.checked,
                             )
                           }
                         />
@@ -1292,6 +1379,57 @@ const TablePagination = () => {
                 Remove
               </Button>
             )}
+
+            {selectedRowIds.size > 0 && (
+              <>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  sx={{
+                    px: 2,
+                    ml: 2,
+                    "&:hover": {
+                      backgroundColor: "transparent",
+                      borderColor: "inherit",
+                      boxShadow: "none",
+                      color: "#1e4db7",
+                    },
+                  }}
+                  onClick={handleExportClick}
+                  endIcon={
+                    openModel ? (
+                      <IconChevronUp size={20} />
+                    ) : (
+                      <IconChevronDown size={20} />
+                    )
+                  }
+                >
+                  <Typography sx={{ fontWeight: 600 }}>Export</Typography>
+                </Button>
+                <Menu
+                  anchorEl={anchorEl3}
+                  open={openModel}
+                  onClose={() => handleExportClose("")}
+                  anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                  }}
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                >
+                  <MenuItem onClick={() => handleExportClose("excel")}>
+                    Excel
+                  </MenuItem>
+                  <MenuItem onClick={() => handleExportClose("pdf")}>
+                    PDF
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
+
             <Button
               variant="outlined"
               color="primary"
@@ -1583,7 +1721,7 @@ const TablePagination = () => {
                   };
                   const response = await api.post(
                     "user/archive-user-account",
-                    payload
+                    payload,
                   );
                   toast.success(response.data.message);
                   setSelectedRowIds(new Set());
@@ -1608,7 +1746,7 @@ const TablePagination = () => {
                   };
                   const response = await api.post(
                     "user/remove-account",
-                    payload
+                    payload,
                   );
                   toast.success(response.data.message);
                   setSelectedRowIds(new Set());
@@ -1670,7 +1808,7 @@ const TablePagination = () => {
                         >
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                           {isSortable && (
                             <Box
@@ -1742,7 +1880,7 @@ const TablePagination = () => {
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

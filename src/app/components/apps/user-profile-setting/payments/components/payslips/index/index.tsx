@@ -332,8 +332,19 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
     }
   };
 
+  const flattenedData = useMemo(() => {
+    if (!data) return [];
+
+    return data.flatMap((group) =>
+      group.data.map((item: any) => ({
+        ...item,
+        date: group.date,
+      })),
+    );
+  }, [data]);
+
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
+    return flattenedData.filter((item) => {
       const search = searchTerm.toLowerCase();
       const matchesSearch =
         item.user_name?.toLowerCase().includes(search) ||
@@ -497,15 +508,15 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.from_date, {
+    columnHelper.accessor((row) => row?.fromDate, {
       id: "period",
       header: () => "Period",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Typography textTransform="capitalize" className="f-14">
-            {item.from_date ? item.from_date : "-"} T0{" "}
-            {item.to_date ? item.to_date : "-"}
+            {item.fromDate ? item.fromDate : "-"} T0{" "}
+            {item.toDate ? item.toDate : "-"}
           </Typography>
         );
       },

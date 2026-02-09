@@ -60,7 +60,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             setLoading(true);
             try {
                 const res = await api.get('/expense/get-resources');
-                // setProjects(res.data.projects || []);
+                setProjects(res.data.projects || []);
                 setAddresses(res.data.addresses || []);
                 setCategories(res.data.categories || []);
             } catch (err) {
@@ -81,12 +81,11 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                 `project/get?company_id=${companyId}${id ? `&user_id=${id}` : ''}`
             );
 
-            if (res.data?.info) {
-                setProjects(res.data.info);
+            if (res.data?.id) {
+                setSelectedProject(res.data.id);
             }
         } catch (err) {
             console.error("Failed to fetch projects", err);
-            setProjects([]); 
         }
     };
 
@@ -374,10 +373,36 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
                                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
                                 }}
+                                renderValue={(selected) => {
+                                if (!selected)
+                                    return (
+                                        <Typography color="#999" component="span">
+                                            Select Project
+                                        </Typography>
+                                    );
+                                const project = projects.find((u) => u.id === Number(selected));
+                                return (
+                                    <Box display="flex" alignItems="center" gap={1}>
+                                        <Typography
+                                            component={"span"}
+                                            variant="body1"
+                                            className="f-14"
+                                            sx={{
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 1,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                maxWidth: 250,
+                                                wordBreak: "break-word",
+                                            }}
+                                        >
+                                            {project?.name}
+                                        </Typography>
+                                    </Box>
+                                );
+                            }}
                             >
-                                <MenuItem value="" disabled>
-                                    <span style={{ color: '#999' }}>Select Project</span>
-                                </MenuItem>
                                 {projects.map((proj) => (
                                     <MenuItem key={proj.id} value={proj.id.toString()}>
                                         <Typography
@@ -543,10 +568,36 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
                                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
                                 }}
+                                 renderValue={(selected) => {
+                                if (!selected)
+                                    return (
+                                        <Typography color="#999" component="span">
+                                            Select Category
+                                        </Typography>
+                                    );
+                                const category = categories.find((u) => u.id === Number(selected));
+                                return (
+                                    <Box display="flex" alignItems="center" gap={1}>
+                                        <Typography
+                                            component={"span"}
+                                            variant="body1"
+                                            className="f-14"
+                                            sx={{
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 1,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                maxWidth: 250,
+                                                wordBreak: "break-word",
+                                            }}
+                                        >
+                                            {category?.name}
+                                        </Typography>
+                                    </Box>
+                                );
+                            }}
                             >
-                                <MenuItem value="" disabled>
-                                    <span style={{ color: '#999' }}>Select Category</span>
-                                </MenuItem>
                                 {categories.map((cat) => (
                                     <MenuItem key={cat.id} value={cat.id.toString()}>
                                         <Typography
@@ -709,6 +760,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                         '&:hover': {
                                             borderColor: '#bbb',
                                             bgcolor: '#fafafa',
+                                            color: '#666'
                                         },
                                     }}
                                 >

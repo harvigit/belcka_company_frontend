@@ -1,29 +1,34 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  Box,
+  Typography,
+  CircularProgress,
+  TextField,
+  Button,
+  DialogContent,
+  IconButton,
+  Divider,
+  Drawer,
+  Avatar,
+  Tooltip,
+  MenuItem,
   TableContainer,
   Table,
+  TableHead,
   TableRow,
   TableCell,
   TableBody,
-  TableHead,
-  Typography,
-  Box,
-  Grid,
-  Button,
-  Divider,
-  IconButton,
-  Stack,
-  TextField,
-  InputAdornment,
-  MenuItem,
-  Tooltip,
-  Popover,
-  FormGroup,
   FormControlLabel,
   Checkbox,
-  Avatar,
-  Drawer,
+  FormGroup,
+  Popover,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogActions,
+  Chip,
 } from "@mui/material";
 import {
   flexRender,
@@ -35,32 +40,35 @@ import {
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
+import api from "@/utils/axios";
+import toast from "react-hot-toast";
+import { Grid, Stack } from "@mui/system";
 import {
+  IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconExclamationCircle,
+  IconEye,
+  IconHistory,
   IconSearch,
+  IconX,
 } from "@tabler/icons-react";
-import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
-import Image from "next/image";
-import { IconEye } from "@tabler/icons-react";
-import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
 import { format } from "date-fns";
-import IconArrowLeft from "@mui/icons-material/ArrowBack";
+import CustomSelect from "../../forms/theme-elements/CustomSelect";
+import SkeletonLoader from "../../SkeletonLoader";
+import Image from "next/image";
+import DateRangePickerBox from "../../common/DateRangePickerBox";
 
-dayjs.extend(customParseFormat);
-
-interface Props {
-  userId: number;
-  isShow: boolean;
+interface UserLeaveProps {
+  active: boolean;
+  name: string | null;
+  userId: any;
 }
-const STORAGE_KEY = "payment-date-range";
+
+const STORAGE_KEY = "leave-range";
 const loadDateRangeFromStorage = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -91,26 +99,32 @@ const saveDateRangeToStorage = (
     console.error("Error saving date range to localStorage:", error);
   }
 };
-const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
+
+const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
   const [data, setData] = useState<any[]>([]);
-  const [payment, setPayment] = useState<any>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [columnFilters, setColumnFilters] = useState<any>([]);
+  const [fetchLeave, setFetchLeave] = useState<boolean>(true);
+  const [openActionModal, setOpenActionModal] = useState(false);
+  const [actionType, setActionType] = useState<"approve" | "reject" | null>(
+    null,
+  );
+  const [note, setNote] = useState("");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
 
   const today = new Date();
-  const defaultStart = new Date(today);
-  defaultStart.setDate(today.getDate() - today.getDay() + 1);
-  const defaultEnd = new Date(today);
-  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+  const defaultStart = new Date(today.getFullYear(), 0, 1);
+  const defaultEnd = new Date(today.getFullYear(), 11, 31);
 
   // Load from localStorage or use defaults
   const getInitialDates = () => {
@@ -144,41 +158,96 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
     }
   };
 
+  const handleOpen = () => {
+    setOpen(true);
+    if (startDate && endDate) fetchLeaveHistory(startDate, endDate);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+  const fetchLeaveHistory = async (start: Date, end: Date) => {
+    try {
+      const startDate = format(start, "dd/MM/yyyy");
+      const endDate = format(end, "dd/MM/yyyy");
+      const payload = {
+        company_id: user.company_id,
+        start_date: startDate,
+        end_date: endDate,
+        user_id: userId,
+      };
+
+      const res = await api.post(`user-leaves/get-list`, payload);
+      if (res.data?.IsSuccess) setHistory(res.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (active) {
+      if (startDate && endDate) fetchLeaveHistory(startDate, endDate);
+    }
+  }, []);
+
   // Fetch data
-  const fetchPayments = async (start: Date, end: Date): Promise<void> => {
-    setFetchPayslip(true);
+  const fetchLeaves = async (start: Date, end: Date): Promise<void> => {
+    setFetchLeave(true);
     try {
       const startDate = format(start, "dd/MM/yyyy");
       const endDate = format(end, "dd/MM/yyyy");
 
-      const params = {
+      const payload = {
         company_id: user.company_id,
         start_date: startDate,
         end_date: endDate,
-        ...(userId ? { user_id: userId } : {}),
+        user_id: userId,
       };
 
-      const res = await api.get(`payslips/get-bookkeeper-payments`, { params });
+      const res = await api.post(`user-leaves/get-list`, payload);
       if (res.data) {
-        setData(res.data.info);
-        console.log(data);
+        setData(res.data.data);
       }
     } catch (err) {
-      console.error("Failed to fetch payslip", err);
+      console.error("Failed to fetch leaves", err);
     }
-    setFetchPayslip(false);
+    setFetchLeave(false);
   };
   useEffect(() => {
-    if (startDate && endDate) fetchPayments(startDate, endDate);
-  }, [api, startDate, endDate]);
+    if (startDate && endDate) fetchLeaves(startDate, endDate);
+  }, [api, startDate, endDate, active]);
 
-  const handleOpenDrawer = (item: any) => {
-    setDrawerOpen(true);
-    setPayment(item);
+  const handleSubmitAction = async () => {
+    if (!selectedId || !actionType) return;
 
-    console.log(item);
+    if (actionType === "reject" && !note.trim()) {
+      return toast.error("Rejection note is required");
+    }
+
+    try {
+      setLoading(true);
+
+      const url =
+        actionType === "approve" ? "user-leaves/approve" : "user-leaves/reject";
+
+      const res = await api.post(
+        `${url}?user_leave_id=${selectedId}&note=${encodeURIComponent(note)}`,
+      );
+
+      toast.success(res.data.message);
+
+      setOpenActionModal(false);
+      if (startDate && endDate) fetchLeaves(startDate, endDate);
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleCloseDrawer = () => setDrawerOpen(false);
+
+  const TYPE_COLOR: Record<string, string> = {
+    unpaid: "#FF7F00",
+    paid: "#4CBC6D",
+  };
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -193,8 +262,8 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("week_range", {
-      id: "dateRange",
+    columnHelper.accessor("date", {
+      id: "leaveDate",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -221,7 +290,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
             }}
           />
           <Typography variant="subtitle2" fontWeight="inherit">
-            Date Range
+            Leave Date
           </Typography>
         </Stack>
       ),
@@ -261,7 +330,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Typography variant="subtitle2" fontWeight="inherit">{item.week_range}</Typography>
+            <Typography>{item.date}</Typography>
           </Stack>
         );
       },
@@ -307,17 +376,15 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.total_payable_amount, {
-      id: "amount",
-      header: () => "Amount",
+    columnHelper.accessor((row) => row?.leave_name, {
+      id: "leaveType",
+      header: () => "Leave type",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography textTransform="capitalize" className="f-14">
-              {item.total_payable_amount
-                ? `${item.currency}${item.total_payable_amount}`
-                : `${item.currency}0`}
+              {item.leave_name}
             </Typography>
           </Stack>
         );
@@ -330,15 +397,55 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="View">
-              <IconButton
-                color="primary"
-                onClick={() => handleOpenDrawer(item)}
-              >
-                <IconEye size={20} />
-              </IconButton>
-            </Tooltip>
+          <Stack direction="row" spacing={1} alignItems="center">
+            {item.status === 3 ? (
+              <>
+                <Tooltip title="Approve">
+                  <IconButton
+                    color="success"
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setActionType("approve");
+                      setNote("");
+                      setOpenActionModal(true);
+                    }}
+                  >
+                    <IconCheck size={16} />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Reject">
+                  <IconButton
+                    color="error"
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setActionType("reject");
+                      setNote("");
+                      setOpenActionModal(true);
+                    }}
+                  >
+                    <IconX size={16} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
+              <Box>
+                {item.status_text && (
+                  <Chip
+                    label={item.status_text}
+                    color={
+                      item.status == 5
+                        ? "success"
+                        : item.status == 12
+                          ? "error"
+                          : "default"
+                    }
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
+              </Box>
+            )}
           </Stack>
         );
       },
@@ -378,8 +485,9 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
 
   return (
     <Box
+      mt={3}
       sx={{
-        height: `${isShow ? "calc(91vh - 100px)" : "calc(73vh - 100px)"}`,
+        height: `calc(80vh - 100px)`,
         display: "flex",
         flexDirection: "column",
       }}
@@ -395,7 +503,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            PAYMENTS ({table.getPrePaginationRowModel().rows.length}){" "}
+            LEAVES ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
           <DateRangePickerBox
             from={startDate}
@@ -428,6 +536,21 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
           justifyContent="end"
           direction={{ xs: "column", sm: "row" }}
         >
+          <Button
+            color="inherit"
+            startIcon={<IconHistory />}
+            variant="contained"
+            size="large"
+            sx={{
+              backgroundColor: "transparent",
+              borderRadius: 3,
+              color: "#047bff",
+              float: "inline-end",
+            }}
+            onClick={handleOpen}
+          >
+            Leave History
+          </Button>
           <IconButton
             onClick={handlePopoverOpen}
             sx={{ ml: 1 }}
@@ -511,16 +634,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width:
-                            header.column.id === "actions" ||
-                            header.column.id === "price" ||
-                            header.column.id === "barcode"
-                              ? 80
-                              : header.column.id === "QrCode"
-                                ? 120
-                                : header.column.id === "supplierCode"
-                                  ? 140
-                                  : "auto",
+                          width: "auto",
                         }}
                       >
                         <Box
@@ -568,7 +682,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
               ))}
             </TableHead>
             <TableBody>
-              {fetchPayslip ? (
+              {fetchLeave ? (
                 <SkeletonLoader
                   columns={simpleColumns}
                   rowCount={simpleColumns.length}
@@ -698,15 +812,80 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
         </Box>
       </Stack>
 
+      <Dialog
+        open={openActionModal}
+        onClose={() => !loading && setOpenActionModal(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display={"flex"} justifyContent={"space-between"}>
+            {actionType === "approve" ? "Approve Leave" : "Reject Leave"}
+            <IconX
+              onClick={() => setOpenActionModal(false)}
+              style={{ cursor: "pointer" }}
+            />
+          </Box>
+        </DialogTitle>
+
+        <DialogContent>
+          <Typography mb={1}>
+            {actionType === "approve"
+              ? "Add approval note (optional)"
+              : "Rejection reason (required)"}
+          </Typography>
+
+          <TextField
+            autoFocus
+            multiline
+            minRows={3}
+            fullWidth
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={
+              actionType === "approve"
+                ? "Enter approval note..."
+                : "Enter rejection reason..."
+            }
+            error={actionType === "reject" && !note.trim()}
+            helperText={
+              actionType === "reject" && !note.trim()
+                ? "Rejection note is required"
+                : ""
+            }
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenActionModal(false)} disabled={loading}>
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            color={actionType === "approve" ? "success" : "error"}
+            disabled={loading || (actionType === "reject" && !note.trim())}
+            onClick={handleSubmitAction}
+          >
+            {loading
+              ? "Saving..."
+              : actionType === "approve"
+                ? "Approve"
+                : "Reject"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* leave history */}
       <Drawer
         anchor="right"
-        open={drawerOpen}
-        onClose={() => handleCloseDrawer()}
+        open={open}
+        onClose={handleClose}
         sx={{
-          width: 400,
+          width: 500,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: 400,
+            width: 500,
             padding: 2,
             backgroundColor: "#f9f9f9",
             display: "flex",
@@ -714,195 +893,188 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
           },
         }}
       >
-        <Box
-          sx={{
-            flex: 1,
-            overflowY: "auto",
-            paddingRight: 1,
-          }}
-        >
-          <Box className="task-form">
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12 }}>
-                <Box display="flex" alignItems="center" mb={2} gap={1}>
-                  <IconButton onClick={() => handleCloseDrawer()} size="small">
-                    <IconArrowLeft />
-                  </IconButton>
-                  <Typography variant="h6" fontWeight={700}>
-                    {payment?.week_range}
-                  </Typography>
-                </Box>
+        <Box textAlign={"center"} color="textSecondary" mb={2}>
+          <Typography color="textSecondary">
+            {name ? `${name}'s Leave history` : ""}
+          </Typography>
 
-                <Box
-                  mt={2}
-                  p={2}
-                  display="flex"
-                  flexDirection="column"
-                  gap={1}
-                  sx={{
-                    backgroundColor: "rgb(238, 238, 238)",
-                    borderRadius: "5px",
-                  }}
-                >
-                  {/* Net Timesheet */}
-                  {payment?.net_timeclock_amount !== undefined && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
-                      >
-                        Net Timesheet
-                      </Typography>
-                      <Typography
-                        color="success"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        {payment.currency}
-                        {payment.net_timeclock_amount}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {/* Net PriceWork */}
-                  {payment?.net_pricework_amount !== undefined && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
-                      >
-                        Net PriceWork
-                      </Typography>
-                      <Typography
-                        color="success"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        {payment.currency}
-                        {payment.net_pricework_amount}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {/* Penalty Amount */}
-                  {payment?.net_penalty_amount !== undefined && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
-                      >
-                        Penalty Amount
-                      </Typography>
-                      <Typography
-                        color="error"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        {payment.currency}-{payment.net_penalty_amount}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-
-                {/* Expense Paid */}
-                {payment?.net_expense_amount && (
-                  <Box
-                    mt={2}
-                    p={2}
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{
-                      backgroundColor: "rgb(238, 238, 238)",
-                      borderRadius: "5px",
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle1"
-                      color="textSecondary"
-                      fontWeight={500}
-                    >
-                      Expense Paid
-                    </Typography>
-                    <Typography
-                      color="success"
-                      variant="subtitle1"
-                      fontWeight={600}
-                    >
-                      {payment.currency}
-                      {payment.net_expense_amount}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Total Paid */}
-                {payment?.total_payable_amount !== undefined && (
-                  <Box
-                    mt={2}
-                    p={2}
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{
-                      backgroundColor: "rgb(238, 238, 238)",
-                      borderRadius: "5px",
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle1"
-                      color="textSecondary"
-                      fontWeight={500}
-                    >
-                      Total Paid
-                    </Typography>
-                    <Typography
-                      color="success"
-                      variant="subtitle1"
-                      fontWeight={600}
-                    >
-                      {payment.currency}
-                      {payment.total_payable_amount}
-                    </Typography>
-                  </Box>
-                )}
-              </Grid>
-            </Grid>
-          </Box>
-        </Box>
-
-        <Box mt={2}>
-          <Button
-            color="inherit"
-            onClick={() => handleCloseDrawer()}
-            variant="contained"
+          <IconButton
+            aria-label="close"
+            onClick={handleClose}
             size="large"
             sx={{
+              position: "absolute",
+              right: 12,
+              top: 6,
+              color: (theme) => theme.palette.grey[900],
               backgroundColor: "transparent",
-              borderRadius: 3,
-              color: "GrayText",
+              zIndex: 10,
+              width: 45,
+              height: 45,
             }}
           >
-            Close
-          </Button>
+            <IconX size={40} style={{ width: 40, height: 40 }} />
+          </IconButton>
         </Box>
+        <DialogContent dividers sx={{ padding: 0 }}>
+          {loading ? (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              p={4}
+            >
+              <CircularProgress />
+            </Box>
+          ) : history.length > 0 ? (
+            <>
+              <Box
+                sx={{
+                  position: "relative",
+                  mt: 2,
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    left: "2px",
+                    top: 0,
+                    bottom: 0,
+                    width: "2px",
+                  },
+                }}
+              >
+                {history?.map((item: any, index: number) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      position: "relative",
+                      mb: 3,
+                      bgcolor: "white",
+                      transition: "0.2s",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {item.message && (
+                      <>
+                        <Box
+                          mb={1}
+                          ml={2}
+                          sx={{ top: -8, position: "absolute" }}
+                          flexWrap="wrap"
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              px: 1.2,
+                              py: 0.2,
+                              borderRadius: "12px",
+                              bgcolor: TYPE_COLOR[item.leave_type] || "#757575",
+                              color: "#fff",
+                              fontSize: "0.75rem",
+                              fontWeight: 500,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {item.leave_type}
+                          </Typography>
+                        </Box>
+                        {/* Card box */}
+
+                        <Box
+                          sx={{
+                            border: 1,
+                            p: { xs: 1.5, sm: 2 },
+                            borderColor: "#c5c3c3ff",
+                            borderRadius: 2,
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                            maxWidth: "100%",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "block",
+                              gap: 0.5,
+                              alignItems: "baseline",
+                            }}
+                          >
+                            <Box
+                              display={"flex"}
+                              justifyContent={"space-between"}
+                            >
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                fontSize={16}
+                                color="text.primary"
+                              >
+                                {item.user_name}:
+                              </Typography>
+                              {item.note && (
+                                <Tooltip title={item.note}>
+                                  <IconExclamationCircle
+                                    style={{ color: "red" }}
+                                    size={16}
+                                  />
+                                </Tooltip>
+                              )}
+                              {item.comment && (
+                                <Tooltip title={item.comment}>
+                                  <IconExclamationCircle
+                                    style={{ color: "green" }}
+                                    size={16}
+                                  />
+                                </Tooltip>
+                              )}
+                            </Box>
+
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              fontSize={16}
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 3,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                lineHeight: 1.25,
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {item.message}
+                            </Typography>
+                          </Box>
+
+                          {/* Date */}
+                          {item.user_name && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{
+                                display: "flex",
+                                justifyContent: "flex-end",
+                              }}
+                            >
+                              {item.date}
+                            </Typography>
+                          )}
+                        </Box>
+                      </>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </>
+          ) : (
+            <Box sx={{ height: "150px !important" }}>
+              <Typography align="center" color="textSecondary">
+                No leave history found.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
       </Drawer>
     </Box>
   );
 };
 
-export default PaymentsList;
+export default UserLeaves;

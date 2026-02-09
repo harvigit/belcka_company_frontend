@@ -538,6 +538,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             setSelectedExpenseId(Number(params.recordId));
         } else if (params.type == 'leave') {
             setLeaveRequestSidebar(true);
+        } else if (params.type == 'penalty') {
+            setPenaltiesSidebar(true);
         } else {
             setRequestListOpen(true);
         }

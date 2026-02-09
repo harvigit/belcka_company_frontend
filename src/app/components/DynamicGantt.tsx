@@ -55,7 +55,7 @@ function isVisibleInTimeline(
   const end = dayjs(task.end);
 
   return (
-    end.isAfter(dayjs(timelineStart)) && start.isBefore(dayjs(timelineEnd))
+    !end.isBefore(dayjs(timelineStart)) && !start.isAfter(dayjs(timelineEnd))
   );
 }
 
@@ -80,6 +80,16 @@ export default function DynamicGantt({
 
   const [startDate, setStartDate] = useState<Date | null>(defaultStart);
   const [endDate, setEndDate] = useState<Date | null>(defaultEnd);
+
+  const filterStart = useMemo(
+    () => (startDate ? dayjs(startDate).startOf("day").toDate() : null),
+    [startDate],
+  );
+
+  const filterEnd = useMemo(
+    () => (endDate ? dayjs(endDate).endOf("day").toDate() : null),
+    [endDate],
+  );
 
   // Add these states at the top of your component
   const [sortField, setSortField] = useState<"name" | "start" | "end" | null>(
@@ -120,8 +130,10 @@ export default function DynamicGantt({
         params: {
           project_id: projectId,
           company_id: companyId,
-          start_date: startDate ? dayjs(startDate).format("YYYY-MM-DD") : null,
-          end_date: endDate ? dayjs(endDate).format("YYYY-MM-DD") : null,
+          start_date: filterStart
+            ? dayjs(filterStart).format("YYYY-MM-DD")
+            : null,
+          end_date: filterEnd ? dayjs(filterEnd).format("YYYY-MM-DD") : null,
         },
       });
 
@@ -143,11 +155,12 @@ export default function DynamicGantt({
           project.progress === 100 || project.status === 4 || !project.end_date;
 
         const displayStart =
-          startDate && projStart < startDate ? startDate : projStart;
+          filterStart && projStart < filterStart ? filterStart : projStart;
+
         const displayEnd = showFullEnd
           ? projEnd
-          : endDate && projEnd > endDate
-            ? endDate
+          : filterEnd && projEnd > filterEnd
+            ? filterEnd
             : projEnd;
 
         if (displayStart > displayEnd) return;
@@ -225,7 +238,7 @@ export default function DynamicGantt({
   }, [projectId, companyId, startDate, endDate, open]);
 
   const timelineStart =
-    startDate ??
+    filterStart ??
     (tasks.length
       ? tasks.reduce(
           (min, t) => (t.start < min ? t.start : min),
@@ -234,7 +247,7 @@ export default function DynamicGantt({
       : new Date());
 
   const timelineEnd =
-    endDate ??
+    filterEnd ??
     (tasks.length
       ? tasks.reduce((max, t) => (t.end > max ? t.end : max), tasks[0].end)
       : new Date());

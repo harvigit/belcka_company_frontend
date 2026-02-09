@@ -128,12 +128,11 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
         `project/get?company_id=${companyId}${id ? `&user_id=${id}` : ""}`,
       );
 
-      if (res.data?.info) {
-        setProjects(res.data.info);
+      if (res.data?.id) {
+        newRecord.project_id = res.data.id
       }
     } catch (err) {
       console.error("Failed to fetch projects", err);
-      setProjects([]);
     }
   };
 

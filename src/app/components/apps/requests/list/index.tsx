@@ -178,6 +178,22 @@ export default function UserRequests({
     Comapny: (id) => `/apps/users/${id}?tab=billing`,
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
+    Penalty: (recordId, startDate, endDate) => {
+      let url = `/apps/timesheet/list`;
+      const params: any[] = [];
+
+      if (recordId) params.push(`user_id=${recordId}`);
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      params.push("type=penalty");
+      params.push(`open=true`);
+
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
+
+      return url;
+    },
     Leave: (recordId, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
@@ -228,7 +244,7 @@ export default function UserRequests({
     "Work log": "#FFFF7F00",
     Timesheet: "#FFFF7F00",
     "User Account": "#FF3F51B5",
-    "Penalty": "#ff3737ff",
+    Penalty: "#ff3737ff",
   };
 
   return (
@@ -315,6 +331,22 @@ export default function UserRequests({
                           routeFn(work.user_id, formattedDate, formattedDate),
                         );
                       } else if (work.type_name === "Leave") {
+                        const dateAdded = work.date_added
+                          ? parse(
+                              work.date_added,
+                              "d MMMM yyyy HH:mm",
+                              new Date(),
+                            )
+                          : undefined;
+
+                        const formattedDate = dateAdded
+                          ? format(dateAdded, "yyyy-MM-dd")
+                          : undefined;
+
+                        router.push(
+                          routeFn(work.user_id, formattedDate, formattedDate),
+                        );
+                      } else if (work.type_name === "Penalty") {
                         const dateAdded = work.date_added
                           ? parse(
                               work.date_added,

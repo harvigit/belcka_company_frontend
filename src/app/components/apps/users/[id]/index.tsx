@@ -36,6 +36,7 @@ import Notifications from "../../user-profile-setting/notifications";
 import toast from "react-hot-toast";
 import ComapnyRate from "../../user-profile-setting/company-rate";
 import Payments from "../../user-profile-setting/payments";
+import UserLeaves from "../../user-profile-setting/user-leaves";
 
 dayjs.extend(customParseFormat);
 
@@ -746,6 +747,7 @@ const TablePagination = () => {
                   "Health Info",
                   "Billing Info",
                   "Rate",
+                  "Leaves",
                   "Notification Settings",
                   "Payments",
                 ].map((label, index) => (
@@ -785,16 +787,23 @@ const TablePagination = () => {
                 />
               </Box>
               <Box hidden={value !== 3}>
-                <Notifications
-                  companyId={Number(user.company_id)}
+                <UserLeaves
                   active={value === 3}
+                  name={formData.first_name}
                   userId={Number(userId)}
                 />
               </Box>
               <Box hidden={value !== 4}>
-                <Payments
+                <Notifications
                   companyId={Number(user.company_id)}
                   active={value === 4}
+                  userId={Number(userId)}
+                />
+              </Box>
+              <Box hidden={value !== 5}>
+                <Payments
+                  companyId={Number(user.company_id)}
+                  active={value === 5}
                   userId={Number(userId)}
                   isShow={false}
                 />
@@ -895,7 +904,6 @@ const TablePagination = () => {
                   }
                 } catch (err) {
                   console.error("Image upload failed:", err);
-                  // toast.error("Failed to upload image");
                 }
               }
             }}

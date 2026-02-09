@@ -25,6 +25,7 @@ import {
   IconArrowLeft,
   IconBell,
   IconNotes,
+  IconPlus,
   IconSpeakerphone,
   IconX,
 } from "@tabler/icons-react";
@@ -34,6 +35,7 @@ import UserRequests from "@/app/components/apps/requests/list";
 import { useRouter } from "next/navigation";
 import { format, parse } from "date-fns";
 import { AxiosResponse } from "axios";
+import CompanyRegistration from "@/app/components/apps/modals/register-company";
 
 const STORAGE_KEY = "feed-date-range";
 const loadDateRangeFromStorage = () => {
@@ -69,6 +71,7 @@ const Company = () => {
   const [page, setPage] = useState<number>(1);
   const limit = 20;
   const [loadingFeeds, setLoadingFeeds] = useState(false);
+  const [openCompanyDrawer, setOpenCompanyDrawer] = useState(false);
 
   const user = session.data?.user as User & { company_id?: string | null } & {
     company_name?: string | null;
@@ -248,7 +251,12 @@ const Company = () => {
 
   const REQUEST_ROUTE_MAP: Record<
     string,
-    (recordId?: number, id?: number,startDate?: string, endDate?: string) => string
+    (
+      recordId?: number,
+      id?: number,
+      startDate?: string,
+      endDate?: string,
+    ) => string
   > = {
     Shift: (recordId, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
@@ -266,7 +274,7 @@ const Company = () => {
 
       return url;
     },
-    Expense: (recordId,id, startDate, endDate) => {
+    Expense: (recordId, id, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
 
@@ -299,7 +307,7 @@ const Company = () => {
       return url;
     },
     "Billing Info": (id) => `/apps/users/${id}?tab=billing`,
-    "User": (id) => `/apps/users/${id}?tab=health_info`,
+    User: (id) => `/apps/users/${id}?tab=health_info`,
     Company: (id) => `/apps/users/${id}?tab=rate`,
     Comapny: (id) => `/apps/users/${id}?tab=billing`,
     Project: (id) => `/apps/projects/index?id=${id}`,
@@ -363,9 +371,19 @@ const Company = () => {
       )}
 
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
-        <MenuItem value="" disabled>
-          Switch company
-        </MenuItem>
+        <Button
+          color="primary"
+          fullWidth
+          variant="outlined"
+          sx={{ mb: 1 }}
+          onClick={() => {
+            setOpenCompanyDrawer(true)
+            setAnchorEl(null)
+          }}
+          startIcon={<IconPlus size={18} />}
+        >
+          Register New
+        </Button>
         {companies.map((company) => (
           <MenuItem
             key={company.id}
@@ -541,11 +559,18 @@ const Company = () => {
                                 const end = endDate
                                   ? format(endDate, "yyyy-MM-dd")
                                   : undefined;
-                                router.push(routeFn(item.user_id,item.record_id, start, end));
+                                router.push(
+                                  routeFn(
+                                    item.user_id,
+                                    item.record_id,
+                                    start,
+                                    end,
+                                  ),
+                                );
                               } else if (item.request_name === "Shift") {
-                                const dateAdded = item.date_added
+                                const dateAdded = item.date
                                   ? parse(
-                                      item.date_added,
+                                      item.date,
                                       "d MMMM yyyy HH:mm",
                                       new Date(),
                                     )
@@ -585,9 +610,9 @@ const Company = () => {
                                   ),
                                 );
                               } else if (item.request_name === "Leave") {
-                                const dateAdded = item.date_added
+                                const dateAdded = item.date
                                   ? parse(
-                                      item.date_added,
+                                      item.date,
                                       "d MMMM yyyy HH:mm",
                                       new Date(),
                                     )
@@ -651,7 +676,7 @@ const Company = () => {
                                 fontWeight={500}
                                 className="multi-ellipsis"
                               >
-                                {item.date_added}
+                                {item.date}
                               </Typography>
                             </Box>
                           </Box>
@@ -762,6 +787,11 @@ const Company = () => {
           </Box>
         </Box>
       </Drawer>
+
+      <CompanyRegistration
+        open={openCompanyDrawer}
+        onClose={() => setOpenCompanyDrawer(false)}
+      />
     </Box>
   );
 };

@@ -302,7 +302,7 @@ const ClientList = () => {
     }),
 
     columnHelper.accessor((row) => row?.invite_link, {
-      id: "inviteIink",
+      id: "inviteLink",
       header: () => "Invite Link",
       cell: (info) => {
         const link = info.getValue();
