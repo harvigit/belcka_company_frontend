@@ -427,7 +427,7 @@ export default function UserRequests({
                           {work.user_name}:
                         </Typography>
                         <Typography variant="subtitle1">
-                          {capitalize(work.message)}
+                          {work.message}
                         </Typography>
                       </Box>
                       <Box justifyContent={"flex-end"}>

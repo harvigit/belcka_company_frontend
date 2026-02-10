@@ -107,11 +107,10 @@ const EditTeam: React.FC<Props> = ({
 
   // Fetch team data and members info
   const fetchTeamData = async () => {
-    if (!teamId || teams.length === 0) return;
-
+    if (!teamId) return;
     try {
       const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
-
+      
       if (!res.data?.info) return;
 
       const flattened = res.data.info.flatMap(
@@ -128,10 +127,9 @@ const EditTeam: React.FC<Props> = ({
 
       const uniqueMembers = getUniqueUsersById(flattened);
 
-      const team = flattened.find(
+      const team = res.data.info.find(
         (item: any) => String(item.team_id) === String(teamId)
       );
-
       if (!team) return;
 
       setFormData((prev: any) => ({

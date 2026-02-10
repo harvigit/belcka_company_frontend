@@ -47,9 +47,9 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
-  IconExclamationCircle,
   IconEye,
   IconHistory,
+  IconNotes,
   IconSearch,
   IconX,
 } from "@tabler/icons-react";
@@ -262,7 +262,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("date", {
+    columnHelper.accessor("start_date", {
       id: "leaveDate",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -330,7 +330,14 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Typography>{item.date}</Typography>
+            <Box>
+              <Typography variant="subtitle2" fontWeight="inherit">
+                {item.leave_date}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {item.duration ? `${item.duration}` : ""}
+              </Typography>
+            </Box>
           </Stack>
         );
       },
@@ -1010,7 +1017,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
                               </Typography>
                               {item.note && (
                                 <Tooltip title={item.note}>
-                                  <IconExclamationCircle
+                                  <IconNotes
                                     style={{ color: "red" }}
                                     size={16}
                                   />
@@ -1018,7 +1025,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
                               )}
                               {item.comment && (
                                 <Tooltip title={item.comment}>
-                                  <IconExclamationCircle
+                                  <IconNotes
                                     style={{ color: "green" }}
                                     size={16}
                                   />

@@ -82,7 +82,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             );
 
             if (res.data?.id) {
-                setSelectedProject(res.data.id);
+                setSelectedProject(res.data.info[0].id ? res.data.info[0].id : res.data.id);
             }
         } catch (err) {
             console.error("Failed to fetch projects", err);

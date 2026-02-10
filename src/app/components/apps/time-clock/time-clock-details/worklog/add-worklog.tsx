@@ -129,7 +129,9 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
       );
 
       if (res.data?.id) {
-        newRecord.project_id = res.data.id
+        const projectId = res.data.info[0].id ? res.data.info[0].id : res.data.id;
+        setNewRecord({ ...newRecord, project_id: projectId });
+
       }
     } catch (err) {
       console.error("Failed to fetch projects", err);

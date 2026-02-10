@@ -390,11 +390,12 @@ export default function WorkDetailPage({
                         gap: 1,
                       }}
                     >
+                      
                       Estimated duration: ~{work.duration}{" "}
-                      {work?.total_checklog_minutes > 0 && (
+                      {work?.total_payable_seconds > 0 && (
                         <Tooltip title="user spend time" placement="top">
                           <Typography color="primary.main" className="f-14">
-                            ({work.total_checklog_minutes} min)
+                           ({formatSeconds(work?.total_payable_seconds)})
                           </Typography>
                         </Tooltip>
                       )}
