@@ -386,6 +386,9 @@ const TablePagination = () => {
         case "rate":
           setValue(2);
           break;
+        case "leave":
+          setValue(3);
+          break;
         default:
           setValue(0);
       }
@@ -791,6 +794,7 @@ const TablePagination = () => {
                   active={value === 3}
                   name={formData.first_name}
                   userId={Number(userId)}
+                  companyId={Number(user.company_id)}
                 />
               </Box>
               <Box hidden={value !== 4}>

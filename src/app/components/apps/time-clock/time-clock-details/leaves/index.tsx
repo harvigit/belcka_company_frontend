@@ -14,7 +14,7 @@ import {
   Avatar,
 } from "@mui/material";
 import { IconArrowLeft, IconX } from "@tabler/icons-react";
-import { format,parse } from "date-fns";
+import { format, parse } from "date-fns";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { useRouter } from "next/navigation";
 import { capitalize } from "lodash";
@@ -36,6 +36,8 @@ interface Props {
 const TIME_CLOCK_PAGE = "time-clock-page";
 const TIME_CLOCK_DETAILS_PAGE = "time-clock-details-page";
 const STORAGE_KEY = "request-date-range";
+const LEAVE_STORAGE_KEY = "leave-range";
+
 const loadDateRangeFromStorage = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -54,7 +56,7 @@ const loadDateRangeFromStorage = () => {
 
 const saveDateRangeToStorage = (
   startDate: Date | null,
-  endDate: Date | null
+  endDate: Date | null,
 ) => {
   try {
     const dateRange = {
@@ -111,14 +113,14 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<Date | null>(
-    initialDates.startDate
+    initialDates.startDate,
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
   const fetchRequests = async (
     start: Date,
     end: Date,
-    id?: string | null
+    id?: string | null,
   ): Promise<any> => {
     try {
       setLoading(true);
@@ -162,11 +164,11 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
         const fetchedData = await fetchRequests(
           startDateObj,
           endDateObj,
-          queryParams?.user_id as string
+          queryParams?.user_id as string,
         );
 
         const foundUser = fetchedData.find(
-          (item: any) => Number(item.user_id) === Number(queryParams?.user_id)
+          (item: any) => Number(item.user_id) === Number(queryParams?.user_id),
         );
 
         if (foundUser) {
@@ -202,25 +204,30 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
     }
   };
 
-   const REQUEST_ROUTE_MAP: Record<
+  const saveDateRangeToStorage = (
+    startDate: Date | null,
+    endDate: Date | null,
+  ) => {
+    try {
+      const dateRange = {
+        startDate: startDate ? startDate.toDateString() : null,
+        endDate: endDate ? endDate.toDateString() : null,
+      };
+      localStorage.setItem(LEAVE_STORAGE_KEY, JSON.stringify(dateRange));
+    } catch (error) {
+      console.error("Error saving date range to localStorage:", error);
+    }
+  };
+
+  const REQUEST_ROUTE_MAP: Record<
     string,
     (recordId?: number, startDate?: string, endDate?: string) => string
   > = {
-    Leave: (recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
-      const params: any[] = [];
-
-      if (recordId) params.push(`user_id=${recordId}`);
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      params.push(`open=true`);
-      params.push(`type=leave`);
-
-      if (params.length > 0) {
-        url += `?${params.join("&")}`;
+    Leave: (id, startDate, endDate) => {
+      if (startDate && endDate) {
+        saveDateRangeToStorage(new Date(startDate), new Date(endDate));
       }
-
-      return url;
+      return `/apps/users/${id}?tab=leave`;
     },
   };
 
@@ -237,7 +244,9 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
         item.type,
       ]
         .filter(Boolean)
-        .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+        .some((field) =>
+          field.toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
     );
   }, [data, searchTerm]);
 
@@ -304,29 +313,29 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
             {filteredData.map((work, idx) => (
               <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
                 <Box
-                onClick={() => {
-                  const routeFn = REQUEST_ROUTE_MAP["Leave"];
-                  if (routeFn) {
-                    const formattedDate = work.start_date
-                      ? format(
-                          parse(work.start_date, "dd/MM/yyyy", new Date()),
-                          "yyyy-MM-dd"
-                        )
-                      : undefined;
+                  onClick={() => {
+                    const routeFn = REQUEST_ROUTE_MAP["Leave"];
+                    if (routeFn) {
+                      const formattedDate = work.start_date
+                        ? format(
+                            parse(work.start_date, "dd/MM/yyyy", new Date()),
+                            "yyyy-MM-dd",
+                          )
+                        : undefined;
 
-                    const formattedEndDate = work.end_date
-                      ? format(
-                          parse(work.end_date, "dd/MM/yyyy", new Date()),
-                          "yyyy-MM-dd"
-                        )
-                      : undefined;
+                      const formattedEndDate = work.end_date
+                        ? format(
+                            parse(work.end_date, "dd/MM/yyyy", new Date()),
+                            "yyyy-MM-dd",
+                          )
+                        : undefined;
 
-                    router.push(
-                      routeFn(work.user_id, formattedDate, formattedEndDate)
-                    );
-                    onClose();
-                  }
-                }}
+                      router.push(
+                        routeFn(work.user_id, formattedDate, formattedEndDate),
+                      );
+                      onClose();
+                    }
+                  }}
                   sx={{
                     border: "1px solid #ddd",
                     borderRadius: 2,
@@ -372,7 +381,8 @@ export default function LeaveLists({ open, onClose, queryParams }: Props) {
                         borderRadius: "12px",
                         borderColor:
                           work.leave_type == "paid" ? "#39af43ff" : "orange",
-                        bgcolor: work.leave_type == "paid" ? "#39af43ff" : "orange",
+                        bgcolor:
+                          work.leave_type == "paid" ? "#39af43ff" : "orange",
                         color: "#fff",
                         fontSize: "0.75rem",
                         fontWeight: 500,

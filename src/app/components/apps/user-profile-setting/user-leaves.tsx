@@ -47,6 +47,7 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconEdit,
   IconEye,
   IconHistory,
   IconNotes,
@@ -61,11 +62,13 @@ import CustomSelect from "../../forms/theme-elements/CustomSelect";
 import SkeletonLoader from "../../SkeletonLoader";
 import Image from "next/image";
 import DateRangePickerBox from "../../common/DateRangePickerBox";
+import AddLeave from "../time-clock/time-clock-details/leaves/add-leave";
 
 interface UserLeaveProps {
   active: boolean;
   name: string | null;
   userId: any;
+  companyId: number;
 }
 
 const STORAGE_KEY = "leave-range";
@@ -100,7 +103,12 @@ const saveDateRangeToStorage = (
   }
 };
 
-const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
+const UserLeaves: React.FC<UserLeaveProps> = ({
+  active,
+  name,
+  userId,
+  companyId,
+}) => {
   const [data, setData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -121,7 +129,8 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
-
+  const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
+  const [editLeaveRequest, setEditLeaveRequest] = useState<any | undefined>();
   const today = new Date();
   const defaultStart = new Date(today.getFullYear(), 0, 1);
   const defaultEnd = new Date(today.getFullYear(), 11, 31);
@@ -166,6 +175,25 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
   const handleClose = () => {
     setOpen(false);
   };
+
+  const handleEdit = (request: any) => {
+    const updatedRequest = {
+      ...request,
+      user_leave_id: request.id,
+    };
+
+    delete updatedRequest.id;
+
+    setEditLeaveRequest(updatedRequest);
+    setAddLeaveSidebar(true);
+  };
+
+  const closeAddLeaveSidebar = () => {
+    setAddLeaveSidebar(false);
+    setEditLeaveRequest(undefined);
+    if (startDate && endDate) fetchLeaves(startDate, endDate);
+  };
+
   const fetchLeaveHistory = async (start: Date, end: Date) => {
     try {
       const startDate = format(start, "dd/MM/yyyy");
@@ -436,7 +464,13 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
                 </Tooltip>
               </>
             ) : (
-              <Box>
+              <Box display={"flex"} gap={1} alignItems={"center"}>
+                {/* <Tooltip title="Edit">
+                  <IconButton onClick={() => handleEdit(item)} color="primary">
+                    <IconEdit size={16} />
+                  </IconButton>
+                </Tooltip> */}
+
                 {item.status_text && (
                   <Chip
                     label={item.status_text}
@@ -501,53 +535,54 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
     >
       {/* Render the search and table */}
       <Stack
-        mr={2}
-        ml={2}
+        mx={2}
         mb={2}
-        justifyContent="space-between"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 2, md: 4 }}
+        direction={{ xs: "column", md: "row" }}
+        alignItems={{ xs: "stretch", md: "center" }}
       >
-        <Grid display="flex" gap={1} alignItems={"center"}>
-          <Button variant="contained" color="primary">
-            LEAVES ({table.getPrePaginationRowModel().rows.length}){" "}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          sx={{ flex: 1, minWidth: 0 }}
+        >
+          <Button variant="contained" color="primary" sx={{ flexShrink: 0 }}>
+            LEAVES ({table.getPrePaginationRowModel().rows.length})
           </Button>
-          <DateRangePickerBox
-            from={startDate}
-            to={endDate}
-            onChange={handleDateRangeChange}
-          />
+
+          <Box className="date_range_picker">
+            <DateRangePickerBox
+              from={startDate}
+              to={endDate}
+              onChange={handleDateRangeChange}
+            />
+          </Box>
 
           <TextField
-            id="search"
-            type="text"
             size="small"
-            variant="outlined"
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size={"16"} />
-                  </InputAdornment>
-                ),
-              },
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconSearch size={16} />
+                </InputAdornment>
+              ),
             }}
           />
-        </Grid>
+        </Stack>
 
         <Stack
-          mb={2}
-          justifyContent="end"
-          direction={{ xs: "column", sm: "row" }}
+          direction="row"
+          justifyContent={{ xs: "flex-start", md: "flex-end" }}
+          alignItems="center"
+          sx={{ flexShrink: 0 }}
         >
           <Button
             color="inherit"
             startIcon={<IconHistory />}
             variant="contained"
-            size="large"
             sx={{
               backgroundColor: "transparent",
               borderRadius: 3,
@@ -558,13 +593,11 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
           >
             Leave History
           </Button>
-          <IconButton
-            onClick={handlePopoverOpen}
-            sx={{ ml: 1 }}
-            color="primary"
-          >
+
+          <IconButton onClick={handlePopoverOpen} color="primary">
             <IconEye />
           </IconButton>
+
           <Popover
             open={Boolean(anchorEl2)}
             anchorEl={anchorEl2}
@@ -581,13 +614,13 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
               onChange={(e) => setSearch(e.target.value)}
               sx={{ mb: 1 }}
             />
+
             <FormGroup>
               {table
                 .getAllLeafColumns()
                 .filter((col: any) => {
                   const excludedColumns = ["conflicts"];
                   if (excludedColumns.includes(col.id)) return false;
-
                   return col.id.toLowerCase().includes(search.toLowerCase());
                 })
                 .map((col: any) => (
@@ -600,16 +633,13 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
                         disabled={col.id === "conflicts"}
                       />
                     }
-                    sx={{ textTransform: "none" }}
                     label={
                       col.columnDef.meta?.label ||
-                      (typeof col.columnDef.header === "string" &&
-                      col.columnDef.header.trim() !== ""
+                      (typeof col.columnDef.header === "string"
                         ? col.columnDef.header
                         : col.id
                             .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str: string) => str.toUpperCase())
-                            .trim())
+                            .replace(/^./, (str: string) => str.toUpperCase()))
                     }
                   />
                 ))}
@@ -617,6 +647,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
           </Popover>
         </Stack>
       </Stack>
+
       <Divider />
       <Box
         sx={{
@@ -1079,6 +1110,29 @@ const UserLeaves: React.FC<UserLeaveProps> = ({ active, name, userId }) => {
             </Box>
           )}
         </DialogContent>
+      </Drawer>
+
+      <Drawer
+        anchor="right"
+        open={addLeaveSidebar}
+        onClose={closeAddLeaveSidebar}
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            boxShadow: "none",
+            overflow: "hidden",
+            width: "504px",
+            borderTopLeftRadius: 18,
+            borderBottomLeftRadius: 18,
+          },
+        }}
+      >
+        <AddLeave
+          onClose={closeAddLeaveSidebar}
+          leaveData={editLeaveRequest}
+          userId={userId}
+          companyId={companyId}
+        />
       </Drawer>
     </Box>
   );

@@ -161,7 +161,6 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
       const res = await api.get(`payslips/get-bookkeeper-payments`, { params });
       if (res.data) {
         setData(res.data.info);
-        console.log(data);
       }
     } catch (err) {
       console.error("Failed to fetch payslip", err);
@@ -175,8 +174,6 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
   const handleOpenDrawer = (item: any) => {
     setDrawerOpen(true);
     setPayment(item);
-
-    console.log(item);
   };
   const handleCloseDrawer = () => setDrawerOpen(false);
 
@@ -261,7 +258,9 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Typography variant="subtitle2" fontWeight="inherit">{item.week_range}</Typography>
+            <Typography variant="subtitle2" fontWeight="inherit">
+              {item.week_range}
+            </Typography>
           </Stack>
         );
       },
@@ -386,22 +385,27 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
     >
       {/* Render the search and table */}
       <Stack
-        mr={2}
-        ml={2}
+        mx={2}
         mb={2}
-        justifyContent="space-between"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 2, md: 4 }}
+        direction={{ xs: "column", md: "row" }}
+        alignItems={{ xs: "stretch", md: "center" }}
       >
-        <Grid display="flex" gap={1} alignItems={"center"}>
-          <Button variant="contained" color="primary">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          sx={{ flex: 1, minWidth: 0 }}
+        >
+          <Button variant="contained" color="primary" sx={{ flexShrink: 0 }}>
             PAYMENTS ({table.getPrePaginationRowModel().rows.length}){" "}
           </Button>
-          <DateRangePickerBox
-            from={startDate}
-            to={endDate}
-            onChange={handleDateRangeChange}
-          />
+          <Box className={isShow ? "" : "date_range_picker"}>
+            <DateRangePickerBox
+              from={startDate}
+              to={endDate}
+              onChange={handleDateRangeChange}
+            />
+          </Box>
 
           <TextField
             id="search"
@@ -421,12 +425,13 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
               },
             }}
           />
-        </Grid>
+        </Stack>
 
         <Stack
-          mb={2}
-          justifyContent="end"
-          direction={{ xs: "column", sm: "row" }}
+          direction="row"
+          justifyContent={{ xs: "flex-start", md: "flex-end" }}
+          alignItems="center"
+          sx={{ flexShrink: 0 }}
         >
           <IconButton
             onClick={handlePopoverOpen}

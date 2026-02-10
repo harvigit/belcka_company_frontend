@@ -71,25 +71,25 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
     setFetchWork(false);
   };
 
-useEffect(() => {
-  if (!tabData || tabData.length === 0) {
-    setFilterOptions([]);
-    return;
-  }
-
-  const uniqueTradesMap = new Map<number, any>();
-
-  tabData.forEach((item: any) => {
-    if (item.trade_id && !uniqueTradesMap.has(item.trade_id)) {
-      uniqueTradesMap.set(item.trade_id, {
-        id: item.trade_id,
-        name: item.trade_name,
-      });
+  useEffect(() => {
+    if (!tabData || tabData.length === 0) {
+      setFilterOptions([]);
+      return;
     }
-  });
 
-  setFilterOptions(Array.from(uniqueTradesMap.values()));
-}, [tabData]);
+    const uniqueTradesMap = new Map<number, any>();
+
+    tabData.forEach((item: any) => {
+      if (item.trade_id && !uniqueTradesMap.has(item.trade_id)) {
+        uniqueTradesMap.set(item.trade_id, {
+          id: item.trade_id,
+          name: item.trade_name,
+        });
+      }
+    });
+
+    setFilterOptions(Array.from(uniqueTradesMap.values()));
+  }, [tabData]);
 
   const formatHour = (val: string | number | null | undefined): string => {
     if (val === null || val === undefined) return "-";
@@ -126,7 +126,7 @@ useEffect(() => {
       data = data.filter(
         (item) =>
           item.name?.toLowerCase().includes(search) ||
-          item.trade_name?.toLowerCase().includes(search)
+          item.trade_name?.toLowerCase().includes(search),
       );
     }
 
@@ -154,6 +154,64 @@ useEffect(() => {
     setSelectedWorkId(workId);
     setOpenSidebar(true);
   };
+
+  interface Work {
+    name: string;
+    duration_minute: number;
+    total_payable_seconds: number;
+  }
+
+  function ProgressBar({ work }: { work: Work }) {
+    const totalPayableMinutes = Number(work.total_payable_seconds || 0) / 60;
+    const durationMinutes = Number(work.duration_minute) || 1;
+
+    // Fill percent of bar
+    const fillPercent = Math.min(
+      (totalPayableMinutes / durationMinutes) * 100,
+      100,
+    );
+
+    const bgColor =
+      totalPayableMinutes > durationMinutes ? "#FFB4A2" : "#B9FBC0";
+    const barColor =
+      totalPayableMinutes > durationMinutes ? "#FF6B6B" : "#4CAF50";
+
+    if (work.total_payable_seconds > 0) {
+      return (
+        <Tooltip
+          title={
+            <>
+              <div>
+                Time Spend: {Math.round(work.total_payable_seconds / 60)} min
+              </div>
+            </>
+          }
+          arrow
+          placement="bottom"
+        >
+          <Box
+            sx={{
+              height: 8,
+              width: "100%",
+              backgroundColor: bgColor,
+              borderRadius: 1,
+              overflow: "hidden",
+            }}
+          >
+            <Box
+              sx={{
+                width: `${fillPercent}%`,
+                height: "100%",
+                backgroundColor: barColor,
+                borderRadius: 2,
+              }}
+            />
+          </Box>
+        </Tooltip>
+      );
+    }
+  }
+
   return (
     <Box>
       <Stack
@@ -216,7 +274,7 @@ useEffect(() => {
               getOptionLabel={(opt: any) => opt.name || ""}
               value={
                 filterOptions.find(
-                  (opt) => opt.id.toString() === tempFilters.type
+                  (opt) => opt.id.toString() === tempFilters.type,
                 ) || null
               }
               onChange={(_, newValue) => {
@@ -422,10 +480,14 @@ useEffect(() => {
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography
                     fontWeight="bold"
+                    mb={1}
                     sx={{ fontSize: { xs: "1rem", sm: "1.125rem" } }}
                   >
                     {work.name}
                   </Typography>
+
+                  {/* Progress Bar */}
+                  <ProgressBar work={work} />
                 </Box>
 
                 {work.is_checklog === false && work.status_int == 1 && (
