@@ -230,7 +230,7 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
     try {
       const res = await api.post(
         "payslips/zip",
-        { invoice_ids: Array.from(selectedRowIds) },
+        { ids: Array.from(selectedRowIds) },
         { responseType: "blob" },
       );
 

@@ -26,6 +26,7 @@ import {
     IconPlus,
     IconTrash,
     IconSun,
+    IconPointFilled,
 } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import EditableTimeCell from './EditableTimeCell';
@@ -798,7 +799,31 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             }
                                                         }}
                                                     >
-                                                        {log.is_pricework ? '--' : formatHour(log?.penalty_hours ?? 0)}
+                                                        <Box
+                                                            sx={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            gap: 0.5,
+                                                            width: "100%",
+                                                            }}
+                                                        >
+                                                            {log.penalty_message && (
+                                                            <Tooltip title={log.penalty_message} arrow placement="top">
+                                                                <Box
+                                                                sx={{
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    "&:hover": { cursor: "pointer" },
+                                                                }}
+                                                                >
+                                                                <IconPointFilled size={18} style={{ color: "#ff9800" }} />
+                                                                </Box>
+                                                            </Tooltip>
+                                                            )}
+
+                                                            {log.is_pricework ? "--" : formatHour(log?.penalty_hours ?? 0)}
+                                                        </Box>
                                                     </TableCell>
                                                 )}
 

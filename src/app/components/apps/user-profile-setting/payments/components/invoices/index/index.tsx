@@ -225,7 +225,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     try {
       const res = await api.post(
         "bookkeeper-invoices/zip",
-        { invoice_ids: Array.from(selectedRowIds) },
+        { ids: Array.from(selectedRowIds) },
         { responseType: "blob" },
       );
 

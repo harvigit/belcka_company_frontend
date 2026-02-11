@@ -465,11 +465,11 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
               </>
             ) : (
               <Box display={"flex"} gap={1} alignItems={"center"}>
-                {/* <Tooltip title="Edit">
+                <Tooltip title="Edit">
                   <IconButton onClick={() => handleEdit(item)} color="primary">
                     <IconEdit size={16} />
                   </IconButton>
-                </Tooltip> */}
+                </Tooltip>
 
                 {item.status_text && (
                   <Chip

@@ -312,11 +312,11 @@ const Company = () => {
     Comapny: (id) => `/apps/users/${id}?tab=billing`,
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
-    Leave: (recordId, startDate, endDate) => {
+    Leave: (userId,recordId, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
 
-      if (recordId) params.push(`user_id=${recordId}`);
+      if (userId) params.push(`user_id=${userId}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
       params.push(`open=true`);
