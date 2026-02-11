@@ -790,40 +790,40 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         onClick={() => openPenaltiesSidebar?.(log.worklog_id)}
                                                         sx={{
                                                             py: 0.5,
-                                                            fontSize: '0.875rem',
-                                                            height: '45px',
-                                                            verticalAlign: 'middle',
-                                                            color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit'),
-                                                            '&:hover': {
-                                                                color: '#1976d2'
-                                                            }
+                                                            fontSize: "0.875rem",
+                                                            height: "49px",
+                                                            verticalAlign: "middle",
+                                                            display: "flex",
+                                                            justifyContent: log.penalty_message ? "center" : "center",
+                                                            alignItems: "center",
+                                                            // gap: 1,
+                                                            color: (log.isMoreThanWork || log.isLessThanWork)
+                                                            ? "#1976d2"
+                                                            : log.is_edited
+                                                                ? "#ff0000"
+                                                                : "inherit",
+                                                            "&:hover": {
+                                                            color: "#1976d2",
+                                                            },
                                                         }}
                                                     >
+                                                    {log.penalty_message && (
+                                                        <Tooltip title={log.penalty_message} arrow placement="top">
                                                         <Box
                                                             sx={{
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            gap: 0.5,
-                                                            width: "100%",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                cursor: "pointer",
+                                                                marginLeft: '-15px',
                                                             }}
                                                         >
-                                                            {log.penalty_message && (
-                                                            <Tooltip title={log.penalty_message} arrow placement="top">
-                                                                <Box
-                                                                sx={{
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    "&:hover": { cursor: "pointer" },
-                                                                }}
-                                                                >
-                                                                <IconPointFilled size={18} style={{ color: "#ff9800" }} />
-                                                                </Box>
-                                                            </Tooltip>
-                                                            )}
-
-                                                            {log.is_pricework ? "--" : formatHour(log?.penalty_hours ?? 0)}
+                                                            <IconPointFilled size={18} style={{ color: "#ff9800" }} />
                                                         </Box>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {log.is_pricework ? "--" : formatHour(log?.penalty_hours ?? 0)}
                                                     </TableCell>
                                                 )}
 
