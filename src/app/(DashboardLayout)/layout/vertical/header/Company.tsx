@@ -38,6 +38,8 @@ import { AxiosResponse } from "axios";
 import CompanyRegistration from "@/app/components/apps/modals/register-company";
 
 const STORAGE_KEY = "feed-date-range";
+const LEAVE_STORAGE_KEY = "leave-range";
+
 const loadDateRangeFromStorage = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -53,6 +55,22 @@ const loadDateRangeFromStorage = () => {
   }
   return null;
 };
+
+const saveDateRangeToStorage = (
+  startDate: string | undefined,
+  endDate: string | undefined,
+) => {
+  try {
+    const dateRange = {
+      startDate: startDate ?? null,
+      endDate: endDate ?? null,
+    };
+    localStorage.setItem(LEAVE_STORAGE_KEY, JSON.stringify(dateRange));
+  } catch (error) {
+    console.error("Error saving date range to localStorage:", error);
+  }
+};
+
 const Company = () => {
   const [companies, setCompanies] = useState<any[]>([]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -312,19 +330,11 @@ const Company = () => {
     Comapny: (id) => `/apps/users/${id}?tab=billing`,
     Project: (id) => `/apps/projects/index?id=${id}`,
     Team: (id) => `/apps/teams/team?team_id=${id}`,
-    Leave: (userId,recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
-      const params: any[] = [];
-
-      if (userId) params.push(`user_id=${userId}`);
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      params.push(`open=true`);
-
-      if (params.length > 0) {
-        url += `?${params.join("&")}`;
+    Leave: (userId, recordId, startDate, endDate) => {
+      let url = `/apps/users/${userId}?tab=leave`;
+      if (startDate && endDate) {
+        saveDateRangeToStorage(startDate, endDate);
       }
-
       return url;
     },
   };
@@ -377,8 +387,8 @@ const Company = () => {
           variant="outlined"
           sx={{ mb: 1 }}
           onClick={() => {
-            setOpenCompanyDrawer(true)
-            setAnchorEl(null)
+            setOpenCompanyDrawer(true);
+            setAnchorEl(null);
           }}
           startIcon={<IconPlus size={18} />}
         >
@@ -632,10 +642,9 @@ const Company = () => {
                                 );
                               } else if (item.request_name === "Team") {
                                 router.push(routeFn(item.team_id));
-                              } else if (item.request_name === "User"){
+                              } else if (item.request_name === "User") {
                                 router.push(routeFn(item.user_id));
-
-                              }else if (item.request_name === "Project") {
+                              } else if (item.request_name === "Project") {
                                 router.push(
                                   routeFn(item.project_id ?? item.record_id),
                                 );

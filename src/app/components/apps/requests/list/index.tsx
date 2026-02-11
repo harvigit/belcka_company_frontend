@@ -29,6 +29,8 @@ interface Props {
   onRequestCountChange: any;
 }
 const STORAGE_KEY = "request-date-range";
+const LEAVE_STORAGE_KEY = "leave-range";
+
 const loadDateRangeFromStorage = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -59,6 +61,20 @@ const saveDateRangeToStorage = (
   }
 };
 
+const saveLeaveDateRangeToStorage = (
+  startDate: string | undefined,
+  endDate: string | undefined,
+) => {
+  try {
+    const dateRange = {
+      startDate: startDate ?? null,
+      endDate: endDate ?? null,
+    };
+    localStorage.setItem(LEAVE_STORAGE_KEY, JSON.stringify(dateRange));
+  } catch (error) {
+    console.error("Error saving date range to localStorage:", error);
+  }
+};
 export default function UserRequests({
   open,
   onClose,
@@ -195,18 +211,10 @@ export default function UserRequests({
       return url;
     },
     Leave: (recordId, startDate, endDate) => {
-      let url = `/apps/timesheet/list`;
-      const params: any[] = [];
-
-      if (recordId) params.push(`user_id=${recordId}`);
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      params.push(`open=true`);
-
-      if (params.length > 0) {
-        url += `?${params.join("&")}`;
+      let url = `/apps/users/${recordId}?tab=leave`;
+      if (startDate && endDate) {
+        saveLeaveDateRangeToStorage(startDate, endDate);
       }
-
       return url;
     },
   };
