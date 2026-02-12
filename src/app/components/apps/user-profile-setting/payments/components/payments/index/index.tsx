@@ -750,7 +750,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   }}
                 >
                   {/* Net Timesheet */}
-                  {payment?.net_timeclock_amount !== undefined && (
+                  {payment?.net_timeclock_amount !== null && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -774,8 +774,58 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                     </Box>
                   )}
 
+                  {/* Gross amount */}
+                  {payment?.gross_amount !== null && (
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        color="textSecondary"
+                        fontWeight={500}
+                      >
+                        Gross Amount
+                      </Typography>
+                      <Typography
+                        color="success"
+                        variant="subtitle1"
+                        fontWeight={600}
+                      >
+                        {payment.currency}
+                        {payment.gross_amount}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Cis amount */}
+                  {payment?.cis_amount !== null && (
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        color="textSecondary"
+                        fontWeight={500}
+                      >
+                        Cis Amount
+                      </Typography>
+                      <Typography
+                        color="error"
+                        variant="subtitle1"
+                        fontWeight={600}
+                      >
+                        -{payment.currency}
+                        {payment.cis_amount}
+                      </Typography>
+                    </Box>
+                  )}
+
                   {/* Net PriceWork */}
-                  {payment?.net_pricework_amount !== undefined && (
+                  {payment?.net_pricework_amount !== null && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -800,7 +850,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   )}
 
                   {/* Penalty Amount */}
-                  {payment?.net_penalty_amount !== undefined && (
+                  {payment?.net_penalty_amount !== null && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -818,7 +868,8 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                         variant="subtitle1"
                         fontWeight={600}
                       >
-                        {payment.currency}-{payment.net_penalty_amount}
+                        -{payment.currency}
+                        {payment.net_penalty_amount}
                       </Typography>
                     </Box>
                   )}
@@ -856,7 +907,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                 )}
 
                 {/* Total Paid */}
-                {payment?.total_payable_amount !== undefined && (
+                {payment?.total_payable_amount !== null && (
                   <Box
                     mt={2}
                     p={2}

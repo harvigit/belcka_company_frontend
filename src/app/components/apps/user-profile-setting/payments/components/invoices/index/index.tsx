@@ -65,6 +65,7 @@ import { IconEye } from "@tabler/icons-react";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { format } from "date-fns";
 import CreateInvoice from "../create";
+import { DateTime } from "luxon";
 dayjs.extend(customParseFormat);
 
 interface Props {
@@ -269,8 +270,13 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     setIsSaving(true);
 
     try {
+      const formatDateForBE = (date?: string) =>
+        date ? DateTime.fromISO(date).toFormat("dd/MM/yyyy") : "";
       const payload = {
         ...formData,
+        from_date: formatDateForBE(formData.from_date),
+        to_date: formatDateForBE(formData.to_date),
+        invoice_date: formatDateForBE(formData.invoice_date),
       };
 
       const result = await api.post("bookkeeper-invoices/store", payload, {
@@ -322,7 +328,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
   const columnHelper = createColumnHelper<any>();
   const columns = [
     columnHelper.accessor("image", {
-      id: "Id",
+      id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox

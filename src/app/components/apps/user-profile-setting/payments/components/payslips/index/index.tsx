@@ -66,6 +66,7 @@ import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { format } from "date-fns";
 import CreatePayslip from "../create";
 import EditPayslip from "../edit";
+import { DateTime } from "luxon";
 
 dayjs.extend(customParseFormat);
 
@@ -275,8 +276,14 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
     setIsSaving(true);
 
     try {
+      const formatDateForBE = (date?: string) =>
+        date ? DateTime.fromISO(date).toFormat("dd/MM/yyyy") : "";
+
       const payload = {
         ...formData,
+        from_date: formatDateForBE(formData.from_date),
+        to_date: formatDateForBE(formData.to_date),
+        payment_date: formatDateForBE(formData.payment_date),
       };
 
       const result = await api.post("payslips/store", payload, {
@@ -306,9 +313,16 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
     setIsSaving(true);
 
     try {
+      const formatDateForBE = (date?: string) =>
+        date ? DateTime.fromISO(date).toFormat("dd/MM/yyyy") : "";
+
       const payload = {
         ...formData,
+        from_date: formatDateForBE(formData.from_date),
+        to_date: formatDateForBE(formData.to_date),
+        payment_date: formatDateForBE(formData.payment_date),
       };
+
       const result = await api.post("payslips/update", payload, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -364,7 +378,7 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
   const columnHelper = createColumnHelper<any>();
   const columns = [
     columnHelper.accessor("image", {
-      id: "Id",
+      id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <CustomCheckbox
@@ -507,15 +521,15 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.fromDate, {
+    columnHelper.accessor((row) => row?.from_date, {
       id: "period",
       header: () => "Period",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Typography textTransform="capitalize" className="f-14">
-            {item.fromDate ? item.fromDate : "-"} T0{" "}
-            {item.toDate ? item.toDate : "-"}
+            {item.from_date ? item.from_date : "-"} <b>To</b>{" "}
+            {item.to_date ? item.to_date : "-"}
           </Typography>
         );
       },
