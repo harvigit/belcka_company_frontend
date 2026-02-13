@@ -920,7 +920,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 <FormGroup>
                   {currentTable
                     ?.getAllLeafColumns()
-                    .filter((col: any) => !["conflicts"].includes(col.id)) // Exclude conflicts
+                    .filter((col: any) => !["conflicts","select"].includes(col.id)) // Exclude conflicts
                     .filter(
                       (col: any) =>
                         col.id.toLowerCase().includes(search.toLowerCase()), // Filter by search term

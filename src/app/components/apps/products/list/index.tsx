@@ -169,7 +169,7 @@ const ProductList = () => {
 
   const downloadSampleFile = () => {
     const link = document.createElement("a");
-    link.href = "/files/products_export.xlsx"
+    link.href = "/files/products_export.xlsx";
     link.download = "sample-file.xlsx";
     link.click();
   };
@@ -252,7 +252,7 @@ const ProductList = () => {
   };
 
   const importProducts = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsImport(true)
+    setIsImport(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -274,7 +274,7 @@ const ProductList = () => {
     } finally {
       e.target.value = "";
     }
-    setIsImport(false)
+    setIsImport(false);
   };
 
   const handleOpenCreateDrawer = () => {
@@ -459,10 +459,10 @@ const ProductList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("uuid", {
-      id: "Id",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -486,28 +486,22 @@ const ProductList = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            ID
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 0.3 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
           >
             <CustomCheckbox
-              className="header-checkbox"
               checked={isChecked}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
@@ -527,6 +521,31 @@ const ProductList = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("uuid", {
+      id: "Id",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            ID
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.3 }}
+          >
             <Typography textTransform="capitalize" className="f-14">
               {item.uuid ? item.uuid : "-"}
             </Typography>
@@ -800,7 +819,11 @@ const ProductList = () => {
           {/* file Import model */}
 
           {/* Modal for File Upload */}
-          <Modal open={openModel} onClose={handleModelClose} disableEscapeKeyDown>
+          <Modal
+            open={openModel}
+            onClose={handleModelClose}
+            disableEscapeKeyDown
+          >
             <Box
               sx={{
                 position: "absolute",
@@ -951,7 +974,7 @@ const ProductList = () => {
                 {table
                   .getAllLeafColumns()
                   .filter((col: any) => {
-                    const excludedColumns = ["conflicts"];
+                    const excludedColumns = ["conflicts", "select"];
                     if (excludedColumns.includes(col.id)) return false;
 
                     return col.id.toLowerCase().includes(search.toLowerCase());
@@ -1263,7 +1286,9 @@ const ProductList = () => {
                                   ? 120
                                   : header.column.id === "supplierCode"
                                     ? 140
-                                    : "auto",
+                                    : header.column.id === "select"
+                                      ? 30
+                                      : "auto",
                           }}
                         >
                           <Box

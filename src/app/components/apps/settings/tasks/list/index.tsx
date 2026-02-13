@@ -167,7 +167,7 @@ const TablePagination = () => {
     const fetchTrades = async () => {
       try {
         const res: AxiosResponse<any> = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${id.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -261,7 +261,7 @@ const TablePagination = () => {
 
   const uniqueTrades = useMemo(
     () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
-    [trade]
+    [trade],
   );
 
   const filteredData = useMemo(() => {
@@ -289,10 +289,10 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<TaskList>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -316,26 +316,21 @@ const TablePagination = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -357,23 +352,40 @@ const TablePagination = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography
-                className="f-14"
-                sx={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: 1.15,
-                  wordBreak: "break-word",
-                  maxWidth: 250,
-                }}
-              >
-                {item.name ?? "-"}
-              </Typography>
-            </Stack>
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography
+              className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: 1.15,
+                wordBreak: "break-word",
+                maxWidth: 250,
+              }}
+            >
+              {item.name ?? "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -637,7 +649,11 @@ const TablePagination = () => {
               Archive
             </Button>
           )}
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+          <IconButton
+            onClick={handlePopoverOpen}
+            sx={{ ml: 1 }}
+            color="primary"
+          >
             <IconEye />
           </IconButton>
           <Popover
@@ -660,7 +676,7 @@ const TablePagination = () => {
               {table
                 .getAllLeafColumns()
                 .filter((col: any) => {
-                  const excludedColumns = ["conflicts"];
+                  const excludedColumns = ["conflicts", "select"];
                   if (excludedColumns.includes(col.id)) return false;
 
                   return col.id.toLowerCase().includes(search.toLowerCase());
@@ -714,7 +730,7 @@ const TablePagination = () => {
                     };
                     const response = await api.post(
                       "type-works/archive-works",
-                      payload
+                      payload,
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
@@ -858,7 +874,12 @@ const TablePagination = () => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box
@@ -877,7 +898,7 @@ const TablePagination = () => {
                           <Typography variant="subtitle2">
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                           </Typography>
                           {isSortable && (
@@ -942,7 +963,7 @@ const TablePagination = () => {
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

@@ -310,10 +310,10 @@ const StockList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("uuid", {
-      id: "Id",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -337,28 +337,23 @@ const StockList = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            ID
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 0.3 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 0.3 }}
           >
             <CustomCheckbox
-              className="header-checkbox"
               checked={isChecked}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
@@ -378,6 +373,25 @@ const StockList = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("uuid", {
+      id: "Id",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            ID
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={4}>
             <Typography textTransform="capitalize" className="f-14">
               {item.uuid ? item.uuid : "-"}
             </Typography>
@@ -724,7 +738,7 @@ const StockList = () => {
                 {table
                   .getAllLeafColumns()
                   .filter((col: any) => {
-                    const excludedColumns = ["conflicts"];
+                    const excludedColumns = ["conflicts", "select"];
                     if (excludedColumns.includes(col.id)) return false;
 
                     return col.id.toLowerCase().includes(search.toLowerCase());
@@ -895,7 +909,9 @@ const StockList = () => {
                                     : header.column.id === "supplierCode" ||
                                         header.column.id === "stockStatus"
                                       ? 140
-                                      : "auto",
+                                      : header.column.id === "QrCode"
+                                        ? 120
+                                        : "auto",
                           }}
                         >
                           <Box
@@ -1181,22 +1197,22 @@ const StockList = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                       <Tooltip title={h.reference} placement="top" arrow>
-                         <Typography
-                          sx={{
-                            display: "-webkit-box",
-                            WebkitBoxOrient: "vertical",
-                            WebkitLineClamp: 1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            lineHeight: 1.25,
-                            maxWidth: 100,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {h.reference}
-                        </Typography>
-                       </Tooltip>
+                        <Tooltip title={h.reference} placement="top" arrow>
+                          <Typography
+                            sx={{
+                              display: "-webkit-box",
+                              WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              lineHeight: 1.25,
+                              maxWidth: 100,
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {h.reference}
+                          </Typography>
+                        </Tooltip>
                       </TableCell>
                       <TableCell>{h.price}</TableCell>
                       <TableCell style={{ fontWeight: "bold" }}>

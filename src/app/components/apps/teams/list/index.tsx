@@ -182,7 +182,7 @@ const TablePagination = () => {
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${id.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -195,7 +195,7 @@ const TablePagination = () => {
   const handleGenerateCode = async (): Promise<string> => {
     try {
       const response = await api.post(
-        `team/company-generate-code?company_id=${id.company_id}`
+        `team/company-generate-code?company_id=${id.company_id}`,
       );
       toast.success(response.data.message);
       return response.data.info.company_otp;
@@ -210,7 +210,7 @@ const TablePagination = () => {
     (id: number) => {
       router.push(`/apps/teams/edit/${id}`);
     },
-    [router]
+    [router],
   );
 
   const handleDeleteClick = (teamId: number) => {
@@ -245,13 +245,13 @@ const TablePagination = () => {
 
   const uniqueTrades = useMemo(
     () => [...new Set(data.map((item) => item.name).filter(Boolean))],
-    [data]
+    [data],
   );
   const uniqueSupervisors = useMemo(
     () => [
       ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
     ],
-    [data]
+    [data],
   );
 
   const filteredData = useMemo(() => {
@@ -268,7 +268,7 @@ const TablePagination = () => {
         item.supervisor_name?.toLowerCase().includes(search) ||
         (item.users &&
           item.users.some((user: any) =>
-            user.name?.toLowerCase().includes(search)
+            user.name?.toLowerCase().includes(search),
           ));
 
       return matchesTeam && matchesSearch && matchesSupervisor;
@@ -277,12 +277,12 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
-           className="header-checkbox"
+            className="header-checkbox"
             checked={
               selectedRowIds.size === filteredData.length &&
               filteredData.length > 0
@@ -298,14 +298,56 @@ const TablePagination = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(
-                  new Set(filteredData.map((row) => row.team_id))
-                );
+                setSelectedRowIds(new Set(filteredData.map((row) => row.team_id)));
               } else {
                 setSelectedRowIds(new Set());
               }
             }}
           />
+        </Stack>
+      ),
+      cell: ({ row }: any) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.team_id);
+        const isHovered = hoveredRow === item.team_id;
+        const showCheckbox = isChecked || isHovered;
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onMouseEnter={() => setHoveredRow(item.team_id)}
+            onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
+          >
+            <CustomCheckbox
+              checked={isChecked}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const newSelected = new Set(selectedRowIds);
+                if (isChecked) {
+                  newSelected.delete(item.team_id);
+                } else {
+                  newSelected.add(item.team_id);
+                }
+                setSelectedRowIds(newSelected);
+              }}
+              sx={{
+                opacity: showCheckbox ? 1 : 0,
+                pointerEvents: showCheckbox ? "auto" : "none",
+                transition: "opacity 0.2s ease",
+              }}
+            />
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
             Name
           </Typography>
@@ -315,57 +357,22 @@ const TablePagination = () => {
 
       cell: ({ row }) => {
         const item = row.original;
-        const isChecked = selectedRowIds.has(item.team_id);
-
-        const showCheckbox = isChecked || hoveredRow === item.team_id;
 
         const shouldHighlight =
           item.is_subcontractor === true &&
           item.company_id !== item.subcontractor_company_id;
 
         return (
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
-            onMouseEnter={() => setHoveredRow(item.team_id)}
-            onMouseLeave={() => setHoveredRow(null)}
-          >
-            <Box sx={{ width: 34, display: "flex", justifyContent: "center" }}>
-              <CustomCheckbox
-                checked={isChecked}
-                disabled={shouldHighlight}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const newSelected = new Set(selectedRowIds);
-                  if (isChecked) {
-                    newSelected.delete(item.team_id);
-                  } else {
-                    newSelected.add(item.team_id);
-                  }
-                  setSelectedRowIds(newSelected);
-                }}
-                sx={{
-                  opacity: showCheckbox ? 1 : 0,
-                  pointerEvents: showCheckbox ? "auto" : "none",
-                  transition: "opacity 0.2s ease",
-                }}
-              />
-            </Box>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Link href={`/apps/teams/team?team_id=${item.team_id}`} passHref>
-                <Typography
-                  className="f-14"
-                  color={shouldHighlight ? "secondary" : "textPrimary"}
-                  sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-                >
-                  {item.name ?? "-"}
-                </Typography>
-              </Link>
-            </Stack>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Link href={`/apps/teams/team?team_id=${item.team_id}`} passHref>
+              <Typography
+                className="f-14"
+                color={shouldHighlight ? "secondary" : "textPrimary"}
+                sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+              >
+                {item.name ?? "-"}
+              </Typography>
+            </Link>
           </Stack>
         );
       },
@@ -657,7 +664,11 @@ const TablePagination = () => {
               </Button>
             )}
 
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+            <IconButton
+              onClick={handlePopoverOpen}
+              sx={{ ml: 1 }}
+              color="primary"
+            >
               <IconEye />
             </IconButton>
             <Popover
@@ -680,7 +691,7 @@ const TablePagination = () => {
                 {table
                   .getAllLeafColumns()
                   .filter((col: any) => {
-                    const excludedColumns = ["conflicts"];
+                    const excludedColumns = ["conflicts", "select"];
                     if (excludedColumns.includes(col.id)) return false;
 
                     return col.id.toLowerCase().includes(search.toLowerCase());
@@ -734,7 +745,7 @@ const TablePagination = () => {
                       };
                       const response = await api.post(
                         "team/archive-teams",
-                        payload
+                        payload,
                       );
                       toast.success(response.data.message);
                       setSelectedRowIds(new Set());
@@ -909,7 +920,11 @@ const TablePagination = () => {
                             paddingTop: "10px",
                             paddingBottom: "10px",
                             width:
-                              header.column.id === "actions" ? 120 : "auto",
+                              header.column.id === "actions"
+                                ? 120
+                                : header.column.id === "select"
+                                  ? 30
+                                  : "auto",
                           }}
                         >
                           <Box
@@ -928,7 +943,7 @@ const TablePagination = () => {
                             <Typography variant="subtitle2">
                               {flexRender(
                                 header.column.columnDef.header,
-                                header.getContext()
+                                header.getContext(),
                               )}
                             </Typography>
                             {isSortable && (
@@ -1017,14 +1032,14 @@ const TablePagination = () => {
                                   !isCheckboxCell
                                 ) {
                                   router.push(
-                                    `/apps/teams/team?team_id=${row.original.team_id}`
+                                    `/apps/teams/team?team_id=${row.original.team_id}`,
                                   );
                                 }
                               }}
                             >
                               {flexRender(
                                 cell.column.columnDef.cell,
-                                cell.getContext()
+                                cell.getContext(),
                               )}
                             </TableCell>
                           );
@@ -1064,8 +1079,15 @@ const TablePagination = () => {
             alignItems="center"
           >
             <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">Page</Typography>
-              <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
+              <Typography color="textSecondary" className="f-14">
+                Page
+              </Typography>
+              <Typography
+                color="textSecondary"
+                className="f-14"
+                fontWeight={600}
+                ml={1}
+              >
                 {table.getState().pagination.pageIndex + 1} of{" "}
                 {table.getPageCount()}
               </Typography>
@@ -1081,7 +1103,7 @@ const TablePagination = () => {
               color="textSecondary"
             >
               <CustomSelect
-              className="custom-select"
+                className="custom-select"
                 value={table.getState().pagination.pageSize}
                 onChange={(e: { target: { value: any } }) => {
                   table.setPageSize(Number(e.target.value));

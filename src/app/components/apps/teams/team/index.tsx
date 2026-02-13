@@ -144,7 +144,7 @@ const TablePagination = () => {
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${id.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -283,11 +283,11 @@ const TablePagination = () => {
 
   const members = useMemo(
     () => [...new Set(users.map((item) => item.name).filter(Boolean))],
-    [users]
+    [users],
   );
   const trades = useMemo(
     () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
-    [trade]
+    [trade],
   );
   //Add team to company
   const joinCompany = async () => {
@@ -339,17 +339,10 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      enableSorting: true, // allow sorting
-      header: ({ column }) => (
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={4}
-          sx={{ cursor: "pointer" }}
-          onClick={column.getToggleSortingHandler()}
-        >
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -367,21 +360,17 @@ const TablePagination = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
+                setSelectedRowIds(new Set(filteredData.map((row,i) => i)));
               } else {
                 setSelectedRowIds(new Set());
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
         </Stack>
       ),
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(row.index);
-
         const showCheckbox = isChecked || hoveredRow === row.index;
         const shouldHighlight =
           item.is_subcontractor === true &&
@@ -390,10 +379,9 @@ const TablePagination = () => {
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(row.index)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -404,9 +392,9 @@ const TablePagination = () => {
                 e.preventDefault();
                 const newSelected = new Set(selectedRowIds);
                 if (isChecked) {
-                  newSelected.delete(row.index);
+                  newSelected.delete(row.id);
                 } else {
-                  newSelected.add(row.index);
+                  newSelected.add(row.id);
                 }
                 setSelectedRowIds(newSelected);
               }}
@@ -416,18 +404,41 @@ const TablePagination = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Avatar
-                src={item.image || "/images/users/user.png"}
-                alt={item.name}
-                sx={{ width: 36, height: 36 }}
-              />
-              <Box>
-                <Typography className="f-14" color="body2">
-                  {item.name ?? "-"}
-                </Typography>
-              </Box>
-            </Stack>
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      enableSorting: true, // allow sorting
+      header: ({ column }) => (
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={4}
+          sx={{ cursor: "pointer" }}
+          onClick={column.getToggleSortingHandler()}
+        >
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Avatar
+              src={item.image || "/images/users/user.png"}
+              alt={item.name}
+              sx={{ width: 36, height: 36 }}
+            />
+            <Box>
+              <Typography className="f-14" color="body2">
+                {item.name ?? "-"}
+              </Typography>
+            </Box>
           </Stack>
         );
       },
@@ -750,7 +761,11 @@ const TablePagination = () => {
                   Create Code
                 </MenuItem>
               </Menu>
-              <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+              <IconButton
+                onClick={handlePopoverOpen}
+                sx={{ ml: 1 }}
+                color="primary"
+              >
                 <IconEye />
               </IconButton>
               <Popover
@@ -773,7 +788,7 @@ const TablePagination = () => {
                   {table
                     .getAllLeafColumns()
                     .filter((col: any) => {
-                      const excludedColumns = ["conflicts"];
+                      const excludedColumns = ["conflicts", "select"];
                       if (excludedColumns.includes(col.id)) return false;
 
                       return col.id
@@ -799,7 +814,7 @@ const TablePagination = () => {
                             : col.id
                                 .replace(/([A-Z])/g, " $1")
                                 .replace(/^./, (str: string) =>
-                                  str.toUpperCase()
+                                  str.toUpperCase(),
                                 )
                                 .trim())
                         }
@@ -864,7 +879,7 @@ const TablePagination = () => {
                   sx={{ marginRight: "5px" }}
                   onClick={() => {
                     const selectedIds = Array.from(selectedRowIds).map(
-                      (index) => filteredData[index]?.id
+                      (index) => filteredData[index]?.id,
                     );
                     setUsersToDelete(selectedIds);
                     setConfirmOpen(true);
@@ -898,10 +913,10 @@ const TablePagination = () => {
                         };
                         const response = await api.post(
                           "team/remove-users-to-team",
-                          payload
+                          payload,
                         );
                         toast.success(
-                          response.data.message || "Users removed successfully"
+                          response.data.message || "Users removed successfully",
                         );
                         setSelectedRowIds(new Set());
                         await fetchData(); // Refresh the table
@@ -953,7 +968,11 @@ const TablePagination = () => {
                                 paddingTop: "10px",
                                 paddingBottom: "10px",
                                 width:
-                                  header.column.id === "actions" ? 120 : "auto",
+                                  header.column.id === "actions"
+                                    ? 120
+                                    : header.column.id === "select"
+                                      ? 30
+                                      : "auto",
                               }}
                             >
                               <Box
@@ -972,7 +991,7 @@ const TablePagination = () => {
                                 <Typography variant="subtitle2">
                                   {flexRender(
                                     header.column.columnDef.header,
-                                    header.getContext()
+                                    header.getContext(),
                                   )}
                                 </Typography>
                                 {isSortable && (
@@ -1038,7 +1057,7 @@ const TablePagination = () => {
                             <TableCell key={cell.id} sx={{ padding: "10px" }}>
                               {flexRender(
                                 cell.column.columnDef.cell,
-                                cell.getContext()
+                                cell.getContext(),
                               )}
                             </TableCell>
                           ))}

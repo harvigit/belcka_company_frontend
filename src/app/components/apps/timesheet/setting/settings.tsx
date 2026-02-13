@@ -22,18 +22,21 @@ import {
     IconTiltShift,
     IconCoinPound,
     IconMapPinCog,
+    IconUserCog,
 } from '@tabler/icons-react';
 import GeneralSetting from './menus/general';
 import ShiftLists from './menus/shift/index';
 import Geofence from "./menus/geofence";
 import RateSetting from "./menus/rate-setting";
 import PenaltySettings from "./menus/penalty-setting";
+import BookkeeperSetting from "./menus/bookkeeper-setting";
 
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
     { icon: <IconTiltShift size={18} />, label: "Shift" },
-    { icon: <IconCoinPound size={18} />, label: "Rate settings" },
+    { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
     { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
+    { icon: <IconUserCog size={18} />, label: "Bookkeeper Setting" },
     // { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     // { icon: <IconCoffee size={18} />, label: "Breaks" },
     // { icon: <IconPaperclip size={18} />, label: "Shift entries" },
@@ -163,12 +166,15 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         {activeMenuItem === "Shift" && (
                             <ShiftLists />
                         )}
-                        {activeMenuItem === "Rate settings" && (
+                        {activeMenuItem === "Rate Settings" && (
                             <RateSetting />
                         )}
 
-                         {activeMenuItem === "Penalty Setting" && (
+                        {activeMenuItem === "Penalty Setting" && (
                             <PenaltySettings />
+                        )}
+                        {activeMenuItem === "Bookkeeper Setting" && (
+                            <BookkeeperSetting onSaveSuccess={handleSaveSuccess}/>
                         )}
                         {/* {activeMenuItem === 'Geolocation' && (
                             <Geofence onSaveSuccess={handleSaveSuccess} />

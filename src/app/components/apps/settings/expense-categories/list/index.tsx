@@ -117,7 +117,7 @@ const TablePagination = () => {
     setFetchCategory(true);
     try {
       const res = await api.get(
-        `expense-categories/get?company_id=${id.company_id}`
+        `expense-categories/get?company_id=${id.company_id}`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -214,10 +214,10 @@ const TablePagination = () => {
 
   const columnHelper = createColumnHelper<ExpenseCategoryList>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -241,25 +241,21 @@ const TablePagination = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -281,9 +277,27 @@ const TablePagination = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-14">{item.name ?? "-"}</Typography>
-            </Stack>
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography className="f-14">{item.name ?? "-"}</Typography>
           </Stack>
         );
       },
@@ -357,7 +371,8 @@ const TablePagination = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            EXPESNSE CATEGORIES ({table.getPrePaginationRowModel().rows.length}){" "}
+            EXPESNSE CATEGORIES ({table.getPrePaginationRowModel().rows.length}
+            ){" "}
           </Button>
           <TextField
             id="search"
@@ -398,7 +413,11 @@ const TablePagination = () => {
               Archive
             </Button>
           )}
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+          <IconButton
+            onClick={handlePopoverOpen}
+            sx={{ ml: 1 }}
+            color="primary"
+          >
             <IconEye />
           </IconButton>
           <Popover
@@ -421,7 +440,7 @@ const TablePagination = () => {
               {table
                 .getAllLeafColumns()
                 .filter((col: any) => {
-                  const excludedColumns = ["conflicts"];
+                  const excludedColumns = ["conflicts", "select"];
                   if (excludedColumns.includes(col.id)) return false;
 
                   return col.id.toLowerCase().includes(search.toLowerCase());
@@ -477,7 +496,7 @@ const TablePagination = () => {
                     };
                     const response = await api.post(
                       "expense-categories/archive",
-                      payload
+                      payload,
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
@@ -615,7 +634,12 @@ const TablePagination = () => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box
@@ -634,7 +658,7 @@ const TablePagination = () => {
                           <Typography variant="subtitle2">
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                           </Typography>
                           {isSortable && (
@@ -699,7 +723,7 @@ const TablePagination = () => {
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}
@@ -738,12 +762,19 @@ const TablePagination = () => {
           alignItems="center"
         >
           <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">Page</Typography>
-            <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
+            <Typography color="textSecondary" className="f-14">
+              Page
+            </Typography>
+            <Typography
+              color="textSecondary"
+              className="f-14"
+              fontWeight={600}
+              ml={1}
+            >
               {table.getState().pagination.pageIndex + 1} of{" "}
               {table.getPageCount()}
             </Typography>
-            <Typography color="textSecondary" ml={"3px"}className="f-14">
+            <Typography color="textSecondary" ml={"3px"} className="f-14">
               {" "}
               | Entries :{" "}
             </Typography>
@@ -755,7 +786,7 @@ const TablePagination = () => {
             color="textSecondary"
           >
             <CustomSelect
-            className="custom-select"
+              className="custom-select"
               value={table.getState().pagination.pageSize}
               onChange={(e: { target: { value: any } }) => {
                 table.setPageSize(Number(e.target.value));

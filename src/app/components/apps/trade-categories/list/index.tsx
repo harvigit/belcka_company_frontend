@@ -113,7 +113,7 @@ const TradeCategoryList = () => {
     setFetchCategory(true);
     try {
       const res = await api.get(
-        `trade/trade-categories?company_id=${id.company_id}`
+        `trade/trade-categories?company_id=${id.company_id}`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -146,7 +146,7 @@ const TradeCategoryList = () => {
 
       const result: AxiosResponse<any> = await api.post(
         "trade/create-trade-category",
-        payload
+        payload,
       );
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
@@ -176,7 +176,7 @@ const TradeCategoryList = () => {
 
       const result: AxiosResponse<any> = await api.post(
         "trade/update-trade-category",
-        payload
+        payload,
       );
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
@@ -214,10 +214,10 @@ const TradeCategoryList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -241,26 +241,21 @@ const TradeCategoryList = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -282,9 +277,26 @@ const TradeCategoryList = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography className="f-14">{item.name ?? "-"}</Typography>
-            </Stack>
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography className="f-14">{item.name ?? "-"}</Typography>
           </Stack>
         );
       },
@@ -359,7 +371,8 @@ const TradeCategoryList = () => {
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
           <Button variant="contained" color="primary">
-            TRADE CATEGORIES ({table.getPrePaginationRowModel().rows.length}){" "}
+            TRADE CATEGORIES ({table.getPrePaginationRowModel().rows.length}
+            ){" "}
           </Button>
           <TextField
             id="search"
@@ -400,7 +413,11 @@ const TradeCategoryList = () => {
               Remove
             </Button>
           )}
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+          <IconButton
+            onClick={handlePopoverOpen}
+            sx={{ ml: 1 }}
+            color="primary"
+          >
             <IconEye />
           </IconButton>
           <Popover
@@ -423,7 +440,7 @@ const TradeCategoryList = () => {
               {table
                 .getAllLeafColumns()
                 .filter((col: any) => {
-                  const excludedColumns = ["conflicts"];
+                  const excludedColumns = ["conflicts", "select"];
                   if (excludedColumns.includes(col.id)) return false;
 
                   return col.id.toLowerCase().includes(search.toLowerCase());
@@ -477,7 +494,7 @@ const TradeCategoryList = () => {
                     };
                     const response = await api.post(
                       "trade/remove-trade-category",
-                      payload
+                      payload,
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
@@ -589,7 +606,12 @@ const TradeCategoryList = () => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box
@@ -608,7 +630,7 @@ const TradeCategoryList = () => {
                           <Typography variant="subtitle2">
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                           </Typography>
                           {isSortable && (
@@ -673,7 +695,7 @@ const TradeCategoryList = () => {
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}
@@ -711,8 +733,15 @@ const TradeCategoryList = () => {
           alignItems="center"
         >
           <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">Page</Typography>
-            <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
+            <Typography color="textSecondary" className="f-14">
+              Page
+            </Typography>
+            <Typography
+              color="textSecondary"
+              className="f-14"
+              fontWeight={600}
+              ml={1}
+            >
               {table.getState().pagination.pageIndex + 1} of{" "}
               {table.getPageCount()}
             </Typography>
@@ -728,7 +757,7 @@ const TradeCategoryList = () => {
             color="textSecondary"
           >
             <CustomSelect
-            className="custom-select"
+              className="custom-select"
               value={table.getState().pagination.pageSize}
               onChange={(e: { target: { value: any } }) => {
                 table.setPageSize(Number(e.target.value));

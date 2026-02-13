@@ -204,10 +204,10 @@ const UnitList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -231,25 +231,21 @@ const UnitList = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -271,11 +267,28 @@ const UnitList = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography textTransform="capitalize" className="f-14">
-                {item.name ?? "-"}
-              </Typography>
-            </Stack>
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.name ?? "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -414,7 +427,11 @@ const UnitList = () => {
               Remove
             </Button>
           )}
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+          <IconButton
+            onClick={handlePopoverOpen}
+            sx={{ ml: 1 }}
+            color="primary"
+          >
             <IconEye />
           </IconButton>
           <Popover
@@ -437,7 +454,7 @@ const UnitList = () => {
               {table
                 .getAllLeafColumns()
                 .filter((col: any) => {
-                  const excludedColumns = ["conflicts"];
+                  const excludedColumns = ["conflicts", "select"];
                   if (excludedColumns.includes(col.id)) return false;
 
                   return col.id.toLowerCase().includes(search.toLowerCase());
@@ -601,7 +618,12 @@ const UnitList = () => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box

@@ -202,10 +202,10 @@ const StockHistoryList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("date", {
-      id: "Date",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -218,18 +218,61 @@ const StockHistoryList = () => {
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
               const isChecked = e.target.checked;
 
-              setShowAllCheckboxes(isChecked);
-
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((r) => r.id)));
+                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
             }}
           />
+        </Stack>
+      ),
+      cell: ({ row }: any) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onMouseEnter={() => setHoveredRow(item.id)}
+            onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
+          >
+            <CustomCheckbox
+              checked={isChecked}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const newSelected = new Set(selectedRowIds);
+                if (isChecked) {
+                  newSelected.delete(item.id);
+                } else {
+                  newSelected.add(item.id);
+                }
+                setSelectedRowIds(newSelected);
+              }}
+              sx={{
+                opacity: showCheckbox ? 1 : 0,
+                pointerEvents: showCheckbox ? "auto" : "none",
+                transition: "opacity 0.2s ease",
+              }}
+            />
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("date", {
+      id: "Date",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2">Date</Typography>
         </Stack>
       ),
@@ -238,54 +281,23 @@ const StockHistoryList = () => {
       cell: ({ row }) => {
         const item = row.original;
 
-        const isChecked = selectedRowIds.has(item.id);
-
-        const showCheckbox =
-          showAllCheckboxes || hoveredRow === item.id || isChecked;
-
         return (
           <Stack
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 1 }}
-            onClick={(e) => e.stopPropagation()}
+            sx={{ cursor: "pointer" }}
           >
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <CustomCheckbox
-                checked={isChecked}
-                onClick={(e) => e.stopPropagation()}
-                onChange={() => {
-                  const newSet = new Set(selectedRowIds);
-                  if (newSet.has(item.id)) newSet.delete(item.id);
-                  else newSet.add(item.id);
-                  setSelectedRowIds(newSet);
-                }}
-                sx={{
-                  opacity: showCheckbox ? 1 : 0,
-                  pointerEvents: showCheckbox ? "auto" : "none",
-                  transition: "opacity 0.2s ease",
-                }}
-              />
-            </Box>
-
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={4}
-              sx={{ cursor: "pointer" }}
+            <Typography
+              className="f-14"
+              color="textPrimary"
+              sx={{
+                cursor: "pointer",
+                width: 150,
+              }}
             >
-              <Typography
-                className="f-14"
-                color="textPrimary"
-                sx={{
-                  cursor: "pointer",
-                  width: 150,
-                }}
-              >
-                {item.date ?? "-"}
-              </Typography>
-            </Stack>
+              {item.date ?? "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -581,7 +593,7 @@ const StockHistoryList = () => {
               {table
                 .getAllLeafColumns()
                 .filter((col: any) => {
-                  const excludedColumns = ["conflicts"];
+                  const excludedColumns = ["conflicts", "select"];
                   if (excludedColumns.includes(col.id)) return false;
 
                   return col.id.toLowerCase().includes(search.toLowerCase());
@@ -639,7 +651,12 @@ const StockHistoryList = () => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box

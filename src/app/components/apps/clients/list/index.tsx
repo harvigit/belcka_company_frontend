@@ -135,7 +135,7 @@ const ClientList = () => {
     setFetchClient(true);
     try {
       const res: AxiosResponse<any> = await api.get(
-        `company-clients/get?company_id=${id.company_id}`
+        `company-clients/get?company_id=${id.company_id}`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -206,10 +206,10 @@ const ClientList = () => {
 
   const columnHelper = createColumnHelper<ClientList>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -233,6 +233,50 @@ const ClientList = () => {
               }
             }}
           />
+        </Stack>
+      ),
+      cell: ({ row }: any) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onMouseEnter={() => setHoveredRow(item.id)}
+            onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
+          >
+            <CustomCheckbox
+              checked={isChecked}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const newSelected = new Set(selectedRowIds);
+                if (isChecked) {
+                  newSelected.delete(item.id);
+                } else {
+                  newSelected.add(item.id);
+                }
+                setSelectedRowIds(newSelected);
+              }}
+              sx={{
+                opacity: showCheckbox ? 1 : 0,
+                pointerEvents: showCheckbox ? "auto" : "none",
+                transition: "opacity 0.2s ease",
+              }}
+            />
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
             Name
           </Typography>
@@ -243,47 +287,14 @@ const ClientList = () => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
 
-        const showCheckbox = isChecked || hoveredRow === item.id;
-
         return (
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
-            onMouseEnter={() => setHoveredRow(item.id)}
-            onMouseLeave={() => setHoveredRow(null)}
-          >
-            <Box sx={{ width: 34, display: "flex", justifyContent: "center" }}>
-              <CustomCheckbox
-                checked={isChecked}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const newSelected = new Set(selectedRowIds);
-                  if (isChecked) {
-                    newSelected.delete(item.id);
-                  } else {
-                    newSelected.add(item.id);
-                  }
-                  setSelectedRowIds(newSelected);
-                }}
-                sx={{
-                  opacity: showCheckbox ? 1 : 0,
-                  pointerEvents: showCheckbox ? "auto" : "none",
-                  transition: "opacity 0.2s ease",
-                }}
-              />
-            </Box>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography
-                className="f-14"
-                sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-              >
-                {item.name ?? "-"}
-              </Typography>
-            </Stack>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography
+              className="f-14"
+              sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
+            >
+              {item.name ?? "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -512,7 +523,7 @@ const ClientList = () => {
   }));
 
   return (
-    <PermissionGuard permission="Settings">
+    // <PermissionGuard permission="Settings">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -571,7 +582,11 @@ const ClientList = () => {
                 Archive
               </Button>
             )}
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color="primary">
+            <IconButton
+              onClick={handlePopoverOpen}
+              sx={{ ml: 1 }}
+              color="primary"
+            >
               <IconEye />
             </IconButton>
             <Popover
@@ -594,7 +609,7 @@ const ClientList = () => {
                 {table
                   .getAllLeafColumns()
                   .filter((col: any) => {
-                    const excludedColumns = ["conflicts"];
+                    const excludedColumns = ["conflicts", "select"];
                     if (excludedColumns.includes(col.id)) return false;
 
                     return col.id.toLowerCase().includes(search.toLowerCase());
@@ -729,7 +744,11 @@ const ClientList = () => {
                             paddingTop: "10px",
                             paddingBottom: "10px",
                             width:
-                              header.column.id === "actions" ? 210 : "auto",
+                              header.column.id === "actions"
+                                ? 210
+                                : header.column.id === "select"
+                                  ? 30
+                                  : "auto",
                           }}
                         >
                           <Box
@@ -748,7 +767,7 @@ const ClientList = () => {
                             <Typography variant="subtitle2">
                               {flexRender(
                                 header.column.columnDef.header,
-                                header.getContext()
+                                header.getContext(),
                               )}
                             </Typography>
                             {isSortable && (
@@ -813,7 +832,7 @@ const ClientList = () => {
                         <TableCell key={cell.id} sx={{ padding: "10px" }}>
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}
@@ -916,7 +935,7 @@ const ClientList = () => {
                   };
                   const response: AxiosResponse<any> = await api.post(
                     "company-clients/archive",
-                    payload
+                    payload,
                   );
                   toast.success(response.data.message);
                   setSelectedRowIds(new Set());
@@ -977,7 +996,7 @@ const ClientList = () => {
                   };
                   const response: AxiosResponse<any> = await api.post(
                     "company-clients/reactivate-invitation",
-                    payload
+                    payload,
                   );
                   toast.success(response.data.message);
                   setSelectedClientId(null);
@@ -1076,7 +1095,7 @@ const ClientList = () => {
           </Box>
         </Stack>
       </Box>
-    </PermissionGuard>
+    // </PermissionGuard>
   );
 };
 

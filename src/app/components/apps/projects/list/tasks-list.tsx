@@ -140,7 +140,7 @@ const TasksList = ({
     const getTrades = async () => {
       try {
         const res: AxiosResponse<any> = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -176,7 +176,7 @@ const TasksList = ({
 
       try {
         const res = await api.get(
-          `company-locations/get?company_id=${user.company_id}`
+          `company-locations/get?company_id=${user.company_id}`,
         );
         if (res.data && Array.isArray(res.data.info)) {
           setLocation(res.data.info);
@@ -199,7 +199,7 @@ const TasksList = ({
     (async () => {
       try {
         const res = await api.get(
-          `type-works/get-work-resources?trade_id=${formData.trade_id}`
+          `type-works/get-work-resources?trade_id=${formData.trade_id}`,
         );
         if (res.data && Array.isArray(res.data.info)) {
           setTasks(res.data.info);
@@ -285,11 +285,11 @@ const TasksList = ({
 
     if (filters.sortOrder === "asc") {
       filtered = filtered.sort((a, b) =>
-        a.company_task_name?.localeCompare(b.company_task_name)
+        a.company_task_name?.localeCompare(b.company_task_name),
       );
     } else if (filters.sortOrder === "desc") {
       filtered = filtered.sort((a, b) =>
-        b.company_task_name?.localeCompare(a.company_task_name)
+        b.company_task_name?.localeCompare(a.company_task_name),
       );
     }
     return filtered;
@@ -301,7 +301,7 @@ const TasksList = ({
         `address/download-tasks-zip/${addressId}?taskId=${taskId}`,
         {
           responseType: "blob",
-        }
+        },
       );
 
       const blob = new Blob([response.data], { type: "application/zip" });
@@ -320,54 +320,50 @@ const TasksList = ({
   const columnHelper = createColumnHelper<TaskList>();
   const columns = useMemo(() => {
     return [
-      columnHelper.accessor("company_task_name", {
-        id: "companyTaskName",
-        header: () => (
-          <Stack direction="row" alignItems="center" spacing={4}>
+      {
+        id: "select",
+        header: ({ table }: any) => (
+          <Stack direction="row" alignItems="center">
             <CustomCheckbox
               className="header-checkbox"
-              checked={selectedRowIds.size === data.length && data.length > 0}
+              checked={
+                selectedRowIds.size === currentFilteredData.length &&
+                currentFilteredData.length > 0
+              }
               indeterminate={
-                selectedRowIds.size > 0 && selectedRowIds.size < data.length
+                selectedRowIds.size > 0 &&
+                selectedRowIds.size < currentFilteredData.length
               }
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 const isChecked = e.target.checked;
-
-                setShowAllCheckboxes(isChecked);
 
                 if (isChecked) {
                   setSelectedRowIds(
-                    new Set(currentFilteredData.map((r) => r.id))
+                    new Set(currentFilteredData.map((row) => row.id)),
                   );
                 } else {
                   setSelectedRowIds(new Set());
                 }
               }}
             />
-            <Typography variant="subtitle2" fontWeight="inherit">
-              Tasks
-            </Typography>
           </Stack>
         ),
-        enableSorting: true,
-        cell: ({ row }) => {
+        cell: ({ row }: any) => {
           const item = row.original;
           const isChecked = selectedRowIds.has(item.id);
-
-          const showCheckbox =
-            showAllCheckboxes || hoveredRow === item.id || isChecked;
+          const isHovered = hoveredRow === item.id;
+          const showCheckbox = isChecked || isHovered;
 
           return (
             <Stack
               direction="row"
               alignItems="center"
-              spacing={2}
-              sx={{ pl: 1 }}
               onMouseEnter={() => setHoveredRow(item.id)}
-              onMouseLeave={() =>
-                setHoveredRow((prev) => (prev === item.id ? null : prev))
-              }
+              onMouseLeave={() => setHoveredRow(null)}
+              sx={{ pl: 1 }}
             >
               <CustomCheckbox
                 checked={isChecked}
@@ -389,6 +385,26 @@ const TasksList = ({
                   transition: "opacity 0.2s ease",
                 }}
               />
+            </Stack>
+          );
+        },
+      },
+      columnHelper.accessor("company_task_name", {
+        id: "companyTaskName",
+        header: () => (
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Typography variant="subtitle2" fontWeight="inherit">
+              Tasks
+            </Typography>
+          </Stack>
+        ),
+        enableSorting: true,
+        cell: ({ row }) => {
+          const item = row.original;
+          const isChecked = selectedRowIds.has(item.id);
+
+          return (
+            <Stack direction="row" alignItems="center" spacing={2}>
               <Typography className="f-14">
                 {item.company_task_name ?? "-"}
               </Typography>
@@ -488,7 +504,7 @@ const TasksList = ({
                   onClick={() =>
                     handleDownloadZip(
                       info.row.original.address_id,
-                      info.row.original.company_task_id
+                      info.row.original.company_task_id,
                     )
                   }
                 >
@@ -596,7 +612,12 @@ const TasksList = ({
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box
@@ -615,7 +636,7 @@ const TasksList = ({
                           <Typography variant="subtitle2">
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                           </Typography>
                           {isSortable && (
@@ -680,7 +701,7 @@ const TasksList = ({
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

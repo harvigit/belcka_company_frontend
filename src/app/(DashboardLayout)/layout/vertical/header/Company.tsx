@@ -620,9 +620,9 @@ const Company = () => {
                                   ),
                                 );
                               } else if (item.request_name === "Leave") {
-                                const dateAdded = item.date
+                                const dateAdded = item.date_added
                                   ? parse(
-                                      item.date,
+                                      item.date_added,
                                       "d MMMM yyyy HH:mm",
                                       new Date(),
                                     )
@@ -685,7 +685,9 @@ const Company = () => {
                                 fontWeight={500}
                                 className="multi-ellipsis"
                               >
-                                {item.date}
+                                {item.request_type === 110
+                                  ? item.date_added
+                                  : item.date}
                               </Typography>
                             </Box>
                           </Box>

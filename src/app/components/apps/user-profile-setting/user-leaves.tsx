@@ -292,10 +292,10 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("start_date", {
-      id: "leaveDate",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -319,28 +319,23 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Leave Date
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 0.3 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 0.3 }}
           >
             <CustomCheckbox
-              className="header-checkbox"
               checked={isChecked}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
@@ -360,14 +355,31 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Box>
-              <Typography variant="subtitle2" fontWeight="inherit">
-                {item.leave_date}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {item.duration ? `${item.duration}` : ""}
-              </Typography>
-            </Box>
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("start_date", {
+      id: "leaveDate",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Leave Date
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Typography variant="subtitle2" fontWeight="inherit">
+              {item.leave_date}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {item.duration ? `${item.duration}` : ""}
+            </Typography>
           </Stack>
         );
       },
@@ -633,7 +645,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                   {table
                     .getAllLeafColumns()
                     .filter((col: any) => {
-                      const excludedColumns = ["conflicts"];
+                      const excludedColumns = ["conflicts", "select"];
                       if (excludedColumns.includes(col.id)) return false;
                       return col.id
                         .toLowerCase()
@@ -690,7 +702,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             sx={{
                               paddingTop: "10px",
                               paddingBottom: "10px",
-                              width: "auto",
+                              width: header.column.id == "select" ? 30 : "auto",
                             }}
                           >
                             <Box

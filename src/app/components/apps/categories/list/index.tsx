@@ -222,10 +222,10 @@ const CategoryList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("category_image", {
-      id: "image",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -249,25 +249,21 @@ const CategoryList = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Image
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -289,6 +285,25 @@ const CategoryList = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("category_image", {
+      id: "image",
+      header: () => (
+        <Stack direction="row" alignItems="center">
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Image
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center">
             {item.category_image && (
               <Image
                 src={item.category_image}
@@ -485,7 +500,11 @@ const CategoryList = () => {
                 Remove
               </Button>
             )}
-            <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+            <IconButton
+              onClick={handlePopoverOpen}
+              sx={{ ml: 1 }}
+              color="primary"
+            >
               <IconEye />
             </IconButton>
             <Popover
@@ -508,7 +527,7 @@ const CategoryList = () => {
                 {table
                   .getAllLeafColumns()
                   .filter((col: any) => {
-                    const excludedColumns = ["conflicts"];
+                    const excludedColumns = ["conflicts", "select"];
                     if (excludedColumns.includes(col.id)) return false;
 
                     return col.id.toLowerCase().includes(search.toLowerCase());
@@ -677,7 +696,7 @@ const CategoryList = () => {
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
-                            width: "auto",
+                            width: header.column.id === "select" ? 30 : "auto",
                           }}
                         >
                           <Box

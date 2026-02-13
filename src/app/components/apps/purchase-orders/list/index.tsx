@@ -537,10 +537,10 @@ const PurchaseOrderList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("date", {
-      id: "date",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -564,25 +564,21 @@ const PurchaseOrderList = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Date
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -604,6 +600,27 @@ const PurchaseOrderList = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("date", {
+      id: "date",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Date
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+        const showCheckbox = isChecked || hoveredRow === item.id;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={4}>
             <Typography
               variant="subtitle2"
               textTransform="capitalize"
@@ -617,7 +634,7 @@ const PurchaseOrderList = () => {
     }),
 
     columnHelper.accessor((row) => row?.order_id, {
-      id: "order_id",
+      id: "orderId",
       header: () => "Order ID",
       cell: ({ row }) => {
         const item = row.original;
@@ -651,7 +668,7 @@ const PurchaseOrderList = () => {
     }),
 
     columnHelper.accessor((row) => row?.order_qty, {
-      id: "order_qty",
+      id: "orderQty",
       header: () => "Ordered QTY",
       cell: ({ row }) => {
         const item = row.original;
@@ -670,7 +687,7 @@ const PurchaseOrderList = () => {
     }),
 
     columnHelper.accessor((row) => row?.receive_qty, {
-      id: "receive_qty",
+      id: "receiveQty",
       header: () => "Received QTY",
       cell: ({ row }) => {
         const item = row.original;
@@ -1292,7 +1309,7 @@ const PurchaseOrderList = () => {
                 {table
                   .getAllLeafColumns()
                   .filter((col: any) => {
-                    const excludedColumns = ["conflicts"];
+                    const excludedColumns = ["conflicts", "select"];
                     if (excludedColumns.includes(col.id)) return false;
 
                     return col.id.toLowerCase().includes(search.toLowerCase());
@@ -1460,7 +1477,7 @@ const PurchaseOrderList = () => {
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
-                            width: "auto",
+                            width: header.column.id === "select" ? 30 : "auto",
                           }}
                         >
                           <Box

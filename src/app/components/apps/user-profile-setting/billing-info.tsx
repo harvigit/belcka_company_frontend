@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Divider,
   Alert,
+  MenuItem,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -50,6 +51,7 @@ interface BillingFormData {
   new_data: Record<string, any>;
   diff_data: Record<string, { old: any; new: any }>;
   request_log_id?: number;
+  cis: string;
 }
 
 const emptyBillingInfo: BillingFormData = {
@@ -70,6 +72,7 @@ const emptyBillingInfo: BillingFormData = {
   account_no: "",
   short_code: "",
   status: 0,
+  cis: "",
   is_pending_request: false,
   old_data: {},
   new_data: {},
@@ -80,7 +83,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
   companyId,
   active,
   onUpdate,
-  userId
+  userId,
 }) => {
   const [billingInfo, setBillingInfo] = useState<BillingFormData | null>(null);
   const [hasBillingInfo, setHasBillingInfo] = useState(false);
@@ -96,7 +99,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
     try {
       setLoading(true);
       const res = await api.get(
-        `user-billing/get-user-billing-info?user_id=${userId}&company_id=${companyId}`
+        `user-billing/get-user-billing-info?user_id=${userId}&company_id=${companyId}`,
       );
       const data = res.data.info;
 
@@ -365,6 +368,30 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             inputProps={{ required: true }}
           />
         </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            select
+            label="Cis"
+            fullWidth
+            disabled={isDisabledField("cis")}
+            value={(formData as any)["cis"] ?? ""}
+            onChange={(e) =>
+              handleFieldChange("cis" as keyof BillingFormData, e.target.value)
+            }
+            SelectProps={{
+              sx: {
+                color: "#7297be",
+              },
+            }}
+          >
+            <MenuItem value="20" className="custom_color">
+              20%
+            </MenuItem>
+            <MenuItem value="30" className="custom_color">
+              30%
+            </MenuItem>
+          </TextField>
+        </Grid>
       </Grid>
       <Divider />
 
@@ -419,12 +446,12 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 onChange={(e) =>
                   handleFieldChange(
                     key as keyof BillingFormData,
-                    e.target.value
+                    e.target.value,
                   )
                 }
               />
             </Grid>
-          )
+          ),
         )}
       </Grid>
       <Divider />

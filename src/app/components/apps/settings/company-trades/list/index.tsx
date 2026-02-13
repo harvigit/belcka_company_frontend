@@ -146,7 +146,7 @@ const TradeList = () => {
     const fetchTrades = async () => {
       try {
         const res: AxiosResponse<any> = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${id.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -175,7 +175,7 @@ const TradeList = () => {
 
       const result: AxiosResponse<any> = await api.post(
         "trade/create-trade",
-        payload
+        payload,
       );
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
@@ -206,7 +206,7 @@ const TradeList = () => {
 
       const result: AxiosResponse<any> = await api.post(
         "trade/edit-trade",
-        payload
+        payload,
       );
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
@@ -229,7 +229,7 @@ const TradeList = () => {
 
   const uniqueTrades = useMemo(
     () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
-    [trade]
+    [trade],
   );
 
   const filteredData = useMemo(() => {
@@ -254,10 +254,10 @@ const TradeList = () => {
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
             checked={
@@ -281,26 +281,21 @@ const TradeList = () => {
               }
             }}
           />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
         </Stack>
       ),
-      enableSorting: true,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
         const isChecked = selectedRowIds.has(item.id);
-
-        const showCheckbox = isChecked || hoveredRow === item.id;
+        const isHovered = hoveredRow === item.id;
+        const showCheckbox = isChecked || isHovered;
 
         return (
           <Stack
             direction="row"
             alignItems="center"
-            spacing={4}
-            sx={{ pl: 1 }}
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
+            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -322,22 +317,40 @@ const TradeList = () => {
                 transition: "opacity 0.2s ease",
               }}
             />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography
-                className="f-14"
-                sx={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: 1.15,
-                  wordBreak: "break-word",
-                }}
-              >
-                {item.name ?? "-"}
-              </Typography>
-            </Stack>
+          </Stack>
+        );
+      },
+    },
+    columnHelper.accessor("name", {
+      id: "name",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Name
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const isChecked = selectedRowIds.has(item.id);
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography
+              className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: 1.15,
+                wordBreak: "break-word",
+              }}
+            >
+              {item.name ?? "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -378,7 +391,7 @@ const TradeList = () => {
               toast.success(result.data.message);
 
               const updatedData = data.map((d) =>
-                d.id === item.id ? { ...d, status: !item.status } : d
+                d.id === item.id ? { ...d, status: !item.status } : d,
               );
               setData(updatedData);
             }
@@ -589,7 +602,11 @@ const TradeList = () => {
               Remove
             </Button>
           )}
-          <IconButton onClick={handlePopoverOpen} sx={{ ml: 1 }} color='primary'>
+          <IconButton
+            onClick={handlePopoverOpen}
+            sx={{ ml: 1 }}
+            color="primary"
+          >
             <IconEye />
           </IconButton>
           <Popover
@@ -612,7 +629,7 @@ const TradeList = () => {
               {table
                 .getAllLeafColumns()
                 .filter((col: any) => {
-                  const excludedColumns = ["conflicts"];
+                  const excludedColumns = ["conflicts", "select"];
                   if (excludedColumns.includes(col.id)) return false;
 
                   return col.id.toLowerCase().includes(search.toLowerCase());
@@ -667,7 +684,7 @@ const TradeList = () => {
                     };
                     const response = await api.post(
                       "trade/company/delete-bulk-trade-status",
-                      payload
+                      payload,
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
@@ -779,7 +796,12 @@ const TradeList = () => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box
@@ -798,7 +820,7 @@ const TradeList = () => {
                           <Typography variant="subtitle2">
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                           </Typography>
                           {isSortable && (
@@ -863,7 +885,7 @@ const TradeList = () => {
                       <TableCell key={cell.id} sx={{ padding: "10px" }}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

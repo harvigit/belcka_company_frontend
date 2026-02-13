@@ -42,6 +42,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [gross, setGross] = useState<any>();
   const [cis, setCis] = useState<any>();
+  const [cisPer, setCisPer] = useState<number>(0);
   const [payRate, setPayRate] = useState<string | null>(null);
   const [ratePermisison, setRatePermission] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
@@ -75,13 +76,16 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       if (res.data.info) {
         const companyData = res.data.info;
         setCompany(companyData);
-        const netRate = Object.keys(companyData?.diff_data || {}).includes(
-          "net_rate_perday"
-        )
-          ? companyData?.diff_data?.net_rate_perday?.old ?? 0
-          : companyData?.net_rate_perDay ?? 0;
+        const cisPercentage = Number(companyData.cis) || 0;
+        setCisPer(cisPercentage);
 
-        const cisAmount = netRate * 0.2;
+        const netRate = Object.keys(companyData?.diff_data || {}).includes(
+          "net_rate_perday",
+        )
+          ? (companyData?.diff_data?.net_rate_perday?.old ?? 0)
+          : (companyData?.net_rate_perDay ?? 0);
+
+        const cisAmount = netRate * (cisPercentage / 100);
         const grossAmount = netRate + cisAmount;
 
         setCis(cisAmount.toFixed(2));
@@ -97,10 +101,11 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
       setLoading(false);
     }
   };
+
   const fetchTrades = async () => {
     try {
       const res = await api.get(
-        `get-company-resources?flag=tradeList&company_id=${comapny?.id}`
+        `get-company-resources?flag=tradeList&company_id=${comapny?.id}`,
       );
       if (res.data) setTrade(res.data.info);
     } catch (err) {
@@ -111,7 +116,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
   const findPermission = async () => {
     try {
       const res = await api.get(
-        `setting/user-payrate-permission?user_id=${user.id}&company_id=${user.company_id}`
+        `setting/user-payrate-permission?user_id=${user.id}&company_id=${user.company_id}`,
       );
 
       if (res.data && res.data.info) {
@@ -197,7 +202,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
 
         const response = await api.post(
           "/user-billing/change-trade-and-rate",
-          payload
+          payload,
         );
 
         if (response.data.IsSuccess) {
@@ -240,7 +245,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
 
         const response = await api.post(
           "user-billing/change-company-rate",
-          payload
+          payload,
         );
 
         if (response.data.IsSuccess) {
@@ -345,7 +350,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
           rate: netRate,
         }));
 
-        const cisAmount = netRate * 0.2;
+        const cisAmount = netRate * (cisPer / 100);
         const grossAmount = netRate + cisAmount;
 
         setCis(cisAmount.toFixed(2));
@@ -498,7 +503,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                               (comapny.is_pending_request ||
                               comapny.status === 12
                                 ? comapny.diff_data.trade_id.old
-                                : comapny.diff_data.trade_id.new)
+                                : comapny.diff_data.trade_id.new),
                           ) || null
                         : trade.find((t) => t.id === formData.trade_id) || null
                     }
@@ -564,7 +569,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                   </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">
-                  <Typography color="textSecondary">CIS (20%)</Typography>
+                  <Typography color="textSecondary">
+                    CIS ({cisPer ? cisPer : "20"}%)
+                  </Typography>
                   <Typography color="textSecondary">
                     {comapny?.currency}
                     {cis}
@@ -615,7 +622,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                         getOptionLabel={(opt: any) => opt?.name || ""}
                         value={
                           Object.keys(comapny?.diff_data || {}).includes(
-                            "trade_id"
+                            "trade_id",
                           )
                             ? trade.find(
                                 (t) =>
@@ -623,7 +630,7 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                                   (comapny.status === 12 ||
                                   comapny.is_pending_request
                                     ? comapny.diff_data.trade_id.old
-                                    : comapny.diff_data.trade_id.new)
+                                    : comapny.diff_data.trade_id.new),
                               ) || null
                             : trade.find((t) => t.id === formData.trade_id) ||
                               null
@@ -917,12 +924,12 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                             {item.status_text == "approved"
                               ? "Approved"
                               : item.status_text == "rejected"
-                              ? "Rejected"
-                              : `Requested ${
-                                  item.action_by !== null
-                                    ? `by ${item.action_by}`
-                                    : ""
-                                } on ${item.date} at ${item.time}`}{" "}
+                                ? "Rejected"
+                                : `Requested ${
+                                    item.action_by !== null
+                                      ? `by ${item.action_by}`
+                                      : ""
+                                  } on ${item.date} at ${item.time}`}{" "}
                             {item.action_by && item.status_text !== "pending"
                               ? `by  ${item.action_by}  on ${item.date} at ${item.time}`
                               : ""}{" "}

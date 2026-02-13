@@ -1,21 +1,22 @@
-'use client';
+"use client";
 
 import {
-    Box,
-    Typography,
-    Card,
-    CardContent,
-    IconButton, Avatar,
-} from '@mui/material';
-import React from 'react';
-import {
-    IconX,
-    IconInfoCircle,
-} from '@tabler/icons-react';
-import { DateTime } from 'luxon';
-import CutDeleteCase from './cut-delete-conflicts';
-import SplitDeleteCase from './split-delete-conflicts';
-import DeleteOnlyCase from './delete-conflicts';
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  IconButton,
+  Avatar,
+  Button,
+} from "@mui/material";
+import React, { useState } from "react";
+import { IconX, IconInfoCircle } from "@tabler/icons-react";
+import { DateTime } from "luxon";
+import CutDeleteCase from "./cut-delete-conflicts";
+import SplitDeleteCase from "./split-delete-conflicts";
+import DeleteOnlyCase from "./delete-conflicts";
+import toast from "react-hot-toast";
+import api from "@/utils/axios";
 
 export interface ConflictItem {
     user_id: number;
@@ -31,6 +32,10 @@ export interface ConflictItem {
     is_leave?: boolean;
     leave_name?: string | null;
     user_leave_id?: number | null;
+    conflict_type?: string;
+    message?: string;
+    old_data?: any;
+    new_data?: any;
 }
 
 export interface Conflict {
@@ -40,7 +45,18 @@ export interface Conflict {
     items: ConflictItem[];
 }
 
-export type ConflictType = 'cut-delete' | 'split-delete' | 'delete-only';
+export type ConflictType =
+| "cut-delete"
+| "split-delete"
+| "delete-only"
+| "billing_info";
+
+const formatFieldLabel = (key: string): string => {
+  return key
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 export const parseDT = (() => {
     const cache = new Map<string, DateTime>();
@@ -72,13 +88,17 @@ export const calcDiffHM = (start: DateTime, end: DateTime): string => {
 };
 
 export const getConflictType = (items: ConflictItem[]): ConflictType => {
-    if (items.some(item => item.is_leave)) {
-        return 'delete-only';
-    }
+  if (items.some((item) => item.conflict_type === "billing_info")) {
+    return "billing_info";
+  }
 
-    if (items.length !== 2) return 'delete-only';
+  if (items.some((item) => item.is_leave)) {
+    return "delete-only";
+  }
 
-    const [item1, item2] = items;
+  if (items.length !== 2) return "delete-only";
+
+  const [item1, item2] = items;
 
     const times = {
         start1: parseDT(item1.start),
@@ -115,39 +135,123 @@ interface ConflictsProps {
     endDate: string;
 }
 
-const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, onClose}: {
+const ConflictCaseRenderer = React.memo(({conflict,index,startDate,endDate,onClose,onApprove,onReject,isLoading}: {
     conflict: Conflict;
     index: number;
     startDate: string;
     endDate: string;
     onClose: () => void;
-}) => {
+    onApprove: (userId: number, requestLogId?: number | null) => void;
+    onReject: (userId: number, requestLogId?: number | null) => void;
+    isLoading: boolean;
+  }) => {
     const conflictType = getConflictType(conflict.items);
     const commonProps = { conflict, index, onClose, startDate, endDate };
 
     switch (conflictType) {
-        case 'cut-delete':
-            return <CutDeleteCase {...commonProps} />;
-        case 'split-delete':
-            return <SplitDeleteCase {...commonProps} />;
-        case 'delete-only':
-        default:
-            return <DeleteOnlyCase {...commonProps} />;
+      case "billing_info":
+        return (
+          <BillingConflictCase
+            conflict={conflict}
+            onApprove={onApprove}
+            onReject={onReject}
+            isLoading={isLoading}
+          />
+        );
+      case "cut-delete":
+        return <CutDeleteCase {...commonProps} />;
+      case "split-delete":
+        return <SplitDeleteCase {...commonProps} />;
+      case "delete-only":
+      default:
+        return <DeleteOnlyCase {...commonProps} />;
     }
-});
+  },
+);
 
 ConflictCaseRenderer.displayName = 'ConflictCaseRenderer';
 
-const ConflictItemDisplay = React.memo(({ items }: { items: ConflictItem[] }) => (
+const ConflictItemDisplay = React.memo(
+  ({ items }: { items: ConflictItem[] }) => (
     <Box sx={{ mb: 2 }}>
-        {items.map((item, i) => {
-            const displayName =
-                item.is_leave && item.leave_name
-                    ? item.leave_name
-                    : item.shift_name;
+      {items.map((item, i) => {
+        const isBillingConflict = items.some(
+          (i) => i.conflict_type === "billing_info",
+        );
 
-            const backgroundColor =
-                item.is_leave ? '#FFE5E5' : (item.color || '#D8E3F2');
+        const displayName = isBillingConflict ? (
+          <Box width="100%" mt={1} p={1}>
+            {/* MESSAGE */}
+            {item.message && (
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                sx={{ mb: 1, color: "#1F2A37",textAlign:"center" }}
+              >
+                {item.message}
+              </Typography>
+            )}
+
+            {Object.keys({
+              ...(item.old_data || {}),
+              ...(item.new_data || {}),
+            }).map((key) => {
+              const oldValue = item.old_data?.[key];
+              const newValue = item.new_data?.[key];
+
+              return (
+                <Box
+                  key={key}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    mb: 1,
+                    p: 1,
+                    borderRadius: 1,
+                    bgcolor: "#D8E3F2",
+                    width: "100%",
+                  }}
+                >
+                  <Typography fontWeight={700} sx={{ color: "#1F2A37" }}>
+                    {formatFieldLabel(key)}
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      wordBreak: "break-word",
+                      maxWidth: "45%",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {String(oldValue ?? "")}
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      wordBreak: "break-word",
+                      maxWidth: "45%",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {String(newValue ?? "")}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        ) : item.is_leave && item.leave_name ? (
+          item.leave_name
+        ) : (
+          item.shift_name
+        );
+
+        const backgroundColor = item.is_leave
+          ? "#FFE5E5"
+          : item.color || "#D8E3F2";
 
             return (
                 <Box key={i} sx={{ position: 'relative', mb: 1 }}>
@@ -201,74 +305,216 @@ const EmptyState = React.memo(() => (
 
 EmptyState.displayName = 'EmptyState';
 
-export default function Conflicts({conflictDetails, totalConflicts, onClose, startDate, endDate}: ConflictsProps) {
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#fff', borderLeft: '1px solid #e0e0e0' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid #e0e0e0', backgroundColor: '#fafafa' }}>
-                <IconButton onClick={onClose} sx={{ mr: 1, p: 0.5 }}>
-                    <IconX size={18} />
-                </IconButton>
-                <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                    Conflicts ({totalConflicts})
-                </Typography>
-            </Box>
+const BillingConflictCase = ({
+  conflict,
+  onApprove,
+  onReject,
+  isLoading,
+}: {
+  conflict: Conflict;
+  onApprove: (userId: number, requestLogId?: number | null) => void;
+  onReject: (userId: number, requestLogId?: number | null) => void;
+  isLoading: boolean;
+}) => {
+  const item = conflict.items[0];
 
-            <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                <Box sx={{ p: 2, overflowY: 'auto', height: '100%' }}>
-                    {conflictDetails.map((conflict, idx) => {
-                        const userName = conflict.user_name ?? '';
-                        const userThumbImage = conflict.user_thumb_image ?? '';
+  const hasData =
+    item.old_data &&
+    item.new_data &&
+    Object.keys(item.new_data).length > 0 &&
+    item.worklog_id !== 0;
 
-                        return (
-                            <Card
-                                key={`conflict-${idx}`}
-                                sx={{
-                                    mb: 2,
-                                    borderRadius: '8px',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                    border: '1px solid #e0e0e0',
-                                    '&:hover': {
-                                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-                                    }
-                                }}
-                                variant="outlined"
-                            >
-                                <CardContent>
-                                    <Box sx={{ mb: 2 }}>
-                                        {userName && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                <Avatar
-                                                    src={userThumbImage || ''}
-                                                    alt={userName}
-                                                    sx={{ width: 36, height: 36 }}
-                                                />
+  return (
+    <Box sx={{ mt: 1, display: "flex", gap: 1 }}>
+      {hasData ? (
+        <>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={isLoading}
+            onClick={() => onApprove(item.user_id, item.worklog_id)}
+          >
+            Keep Changes
+          </Button>
 
-                                                <Typography variant="subtitle2" sx={{ fontSize: '0.9rem', fontWeight: 500 }}>
-                                                    {userName}
-                                                </Typography>
-                                            </Box>
-                                        )}
+          <Button
+            variant="outlined"
+            color="error"
+            disabled={isLoading}
+            onClick={() => onReject(item.user_id, item.worklog_id)}
+          >
+            Discard
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() =>
+            (window.location.href = `/apps/users/${item.user_id}?tab=billing`)
+          }
+        >
+          Solve Conflict
+        </Button>
+      )}
+    </Box>
+  );
+};
 
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                                            {conflict.formatted_date}
-                                        </Typography>
-                                    </Box>
+export default function Conflicts({
+  conflictDetails,
+  totalConflicts,
+  onClose,
+  startDate,
+  endDate,
+}: ConflictsProps) {
+  const [isLoading, setIsLoading] = useState(false);
 
-                                    <ConflictItemDisplay items={conflict.items} />
+  const handleApprove = async (
+    userId: number,
+    requestLogId?: number | null,
+  ) => {
+    if (!requestLogId) return;
 
-                                    <ConflictCaseRenderer
-                                        conflict={conflict}
-                                        index={idx}
-                                        startDate={startDate}
-                                        endDate={endDate}
-                                        onClose={onClose}
-                                    />
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                </Box>
-            </Box>
+    setIsLoading(true);
+    try {
+      const res = await api.post("/requests/approve-request", {
+        log_id: requestLogId,
+        user_id: userId,
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        onClose();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReject = async (userId: number, requestLogId?: number | null) => {
+    if (!requestLogId) return;
+
+    setIsLoading(true);
+    try {
+      const res = await api.post("/requests/reject-request", {
+        log_id: requestLogId,
+        user_id: userId,
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        onClose();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        backgroundColor: "#fff",
+        borderLeft: "1px solid #e0e0e0",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          px: 2,
+          py: 1.5,
+          borderBottom: "1px solid #e0e0e0",
+          backgroundColor: "#fafafa",
+        }}
+      >
+        <IconButton onClick={onClose} sx={{ mr: 1, p: 0.5 }}>
+          <IconX size={18} />
+        </IconButton>
+        <Typography variant="h6" sx={{ fontSize: "1rem", fontWeight: 600 }}>
+          Conflicts ({totalConflicts})
+        </Typography>
+      </Box>
+
+      <Box sx={{ flex: 1, overflow: "hidden" }}>
+        <Box sx={{ p: 2, overflowY: "auto", height: "100%" }}>
+          {conflictDetails.map((conflict, idx) => {
+            const userName = conflict.user_name ?? "";
+            const userThumbImage = conflict.user_thumb_image ?? "";
+
+            return (
+              <Card
+                key={`conflict-${idx}`}
+                sx={{
+                  mb: 2,
+                  borderRadius: "8px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  border: "1px solid #e0e0e0",
+                  "&:hover": {
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                  },
+                }}
+                variant="outlined"
+              >
+                <CardContent>
+                  <Box sx={{ mb: 2 }}>
+                    {userName && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          mb: 0.5,
+                        }}
+                      >
+                        <Avatar
+                          src={userThumbImage || ""}
+                          alt={userName}
+                          sx={{ width: 36, height: 36 }}
+                        />
+
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontSize: "0.9rem", fontWeight: 500 }}
+                        >
+                          {userName}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontWeight: 600, fontSize: "0.9rem" }}
+                    >
+                      {conflict.formatted_date}
+                    </Typography>
+                  </Box>
+
+                  <ConflictItemDisplay items={conflict.items} />
+
+                  <ConflictCaseRenderer
+                    conflict={conflict}
+                    index={idx}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onClose={onClose}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    isLoading={isLoading}
+                  />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
+      </Box>
 
             {conflictDetails.length === 0 && <EmptyState />}
         </Box>

@@ -752,10 +752,10 @@ const AddressesList = ({
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor("name", {
-        id: "name",
-        header: () => (
-          <Stack direction="row" alignItems="center" spacing={4}>
+      {
+        id: "select",
+        header: ({ table }: any) => (
+          <Stack direction="row" alignItems="center">
             <CustomCheckbox
               className="header-checkbox"
               checked={
@@ -768,19 +768,61 @@ const AddressesList = ({
               }
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 const isChecked = e.target.checked;
 
-                setShowAllCheckboxes(isChecked);
-
                 if (isChecked) {
-                  setSelectedRowIds(
-                    new Set(currentFilteredData.map((r) => r.id)),
-                  );
+                  setSelectedRowIds(new Set(currentFilteredData.map((row) => row.id)));
                 } else {
                   setSelectedRowIds(new Set());
                 }
               }}
             />
+          </Stack>
+        ),
+        cell: ({ row }: any) => {
+          const item = row.original;
+          const isChecked = selectedRowIds.has(item.id);
+          const isHovered = hoveredRow === item.id;
+          const showCheckbox = isChecked || isHovered;
+
+          return (
+            <Stack
+              direction="row"
+              alignItems="center"
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              sx={{ pl: 1 }}
+            >
+              <CustomCheckbox
+                checked={isChecked}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const newSelected = new Set(selectedRowIds);
+                  if (isChecked) {
+                    newSelected.delete(item.id);
+                  } else {
+                    newSelected.add(item.id);
+                  }
+                  setSelectedRowIds(newSelected);
+                }}
+                sx={{
+                  opacity: showCheckbox ? 1 : 0,
+                  pointerEvents: showCheckbox ? "auto" : "none",
+                  transition: "opacity 0.2s ease",
+                }}
+              />
+            </Stack>
+          );
+        },
+      },
+      columnHelper.accessor("name", {
+        id: "name",
+        header: () => (
+          <Stack direction="row" alignItems="center" spacing={4}>
             <Typography variant="subtitle2" fontWeight="inherit">
               Address
             </Typography>
@@ -792,40 +834,8 @@ const AddressesList = ({
           const isProcessed = processedIds.includes(item.id);
           const isChecked = selectedRowIds.has(item.id);
 
-          const showCheckbox =
-            showAllCheckboxes || hoveredRow === item.id || isChecked;
-
           return (
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={4}
-              sx={{ pl: 1 }}
-              onMouseEnter={() => setHoveredRow(item.id)}
-              onMouseLeave={() =>
-                setHoveredRow((prev) => (prev === item.id ? null : prev))
-              }
-            >
-              <CustomCheckbox
-                checked={isChecked}
-                disabled={isProcessed}
-                onClick={(e) => e.stopPropagation()}
-                onChange={() => {
-                  if (isProcessed) return;
-
-                  setSelectedRowIds((prev) => {
-                    const next = new Set(prev);
-                    isChecked ? next.delete(item.id) : next.add(item.id);
-                    return next;
-                  });
-                }}
-                sx={{
-                  opacity: showCheckbox ? 1 : 0,
-                  pointerEvents: showCheckbox ? "auto" : "none",
-                  transition: "opacity 0.2s ease",
-                }}
-              />
-
+            <Stack direction="row" alignItems="center" spacing={4}>
               <Typography
                 onClick={() =>
                   setSidebarData({
@@ -988,7 +998,12 @@ const AddressesList = ({
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: header.column.id === "actions" ? 120 : "auto",
+                          width:
+                            header.column.id === "actions"
+                              ? 120
+                              : header.column.id === "select"
+                                ? 30
+                                : "auto",
                         }}
                       >
                         <Box

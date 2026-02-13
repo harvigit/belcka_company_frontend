@@ -316,165 +316,167 @@ export default function UserRequests({
           <></>
         ) : filteredData.length > 0 ? (
           <Grid container spacing={2}>
-            {filteredData.map((work, idx) => (
-              <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
-                <Box
-                  onClick={() => {
-                    const routeFn = REQUEST_ROUTE_MAP[work.type_name];
-                    if (routeFn) {
-                      if (work.type_name === "Shift") {
-                        const dateAdded = work.date_added
-                          ? parse(
-                              work.date_added,
-                              "d MMMM yyyy HH:mm",
-                              new Date(),
-                            )
-                          : undefined;
-
-                        const formattedDate = dateAdded
-                          ? format(dateAdded, "yyyy-MM-dd")
-                          : undefined;
-
-                        router.push(
-                          routeFn(work.user_id, formattedDate, formattedDate),
-                        );
-                      } else if (work.type_name === "Leave") {
-                        const dateAdded = work.date_added
-                          ? parse(
-                              work.date_added,
-                              "d MMMM yyyy HH:mm",
-                              new Date(),
-                            )
-                          : undefined;
-
-                        const formattedDate = dateAdded
-                          ? format(dateAdded, "yyyy-MM-dd")
-                          : undefined;
-
-                        router.push(
-                          routeFn(work.user_id, formattedDate, formattedDate),
-                        );
-                      } else if (work.type_name === "Penalty") {
-                        const dateAdded = work.date_added
-                          ? parse(
-                              work.date_added,
-                              "d MMMM yyyy HH:mm",
-                              new Date(),
-                            )
-                          : undefined;
-
-                        const formattedDate = dateAdded
-                          ? format(dateAdded, "yyyy-MM-dd")
-                          : undefined;
-
-                        router.push(
-                          routeFn(work.user_id, formattedDate, formattedDate),
-                        );
-                      } else if (work.type_name === "Team") {
-                        router.push(routeFn(work.team_id));
-                      } else if (work.type_name === "Project") {
-                        router.push(
-                          routeFn(work?.project_id ?? work?.record_id),
-                        );
-                      } else {
-                        router.push(routeFn(work.user_id));
-                      }
-                      onClose();
-                    }
-                  }}
-                  sx={{
-                    border: "1px solid #ddd",
-                    borderRadius: 2,
-                    position: "relative",
-                    p: 2,
-                    bgcolor: "white",
-                    transition: "0.2s",
-                    cursor: "pointer",
-                    "&:hover": {
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                      transform: "translateY(-1px)",
-                    },
-                  }}
-                >
+            {filteredData
+              .filter((item: any) => item.request_type !== 103)
+              .map((work, idx) => (
+                <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
                   <Box
-                    justifyContent="space-between"
-                    alignItems="center"
-                    mb={1}
-                    sx={{ top: -8, position: "absolute" }}
-                    flexWrap="wrap"
+                    onClick={() => {
+                      const routeFn = REQUEST_ROUTE_MAP[work.type_name];
+                      if (routeFn) {
+                        if (work.type_name === "Shift") {
+                          const dateAdded = work.date_added
+                            ? parse(
+                                work.date_added,
+                                "d MMMM yyyy HH:mm",
+                                new Date(),
+                              )
+                            : undefined;
+
+                          const formattedDate = dateAdded
+                            ? format(dateAdded, "yyyy-MM-dd")
+                            : undefined;
+
+                          router.push(
+                            routeFn(work.user_id, formattedDate, formattedDate),
+                          );
+                        } else if (work.type_name === "Leave") {
+                          const dateAdded = work.date_added
+                            ? parse(
+                                work.date_added,
+                                "d MMMM yyyy HH:mm",
+                                new Date(),
+                              )
+                            : undefined;
+
+                          const formattedDate = dateAdded
+                            ? format(dateAdded, "yyyy-MM-dd")
+                            : undefined;
+
+                          router.push(
+                            routeFn(work.user_id, formattedDate, formattedDate),
+                          );
+                        } else if (work.type_name === "Penalty") {
+                          const dateAdded = work.date_added
+                            ? parse(
+                                work.date_added,
+                                "d MMMM yyyy HH:mm",
+                                new Date(),
+                              )
+                            : undefined;
+
+                          const formattedDate = dateAdded
+                            ? format(dateAdded, "yyyy-MM-dd")
+                            : undefined;
+
+                          router.push(
+                            routeFn(work.user_id, formattedDate, formattedDate),
+                          );
+                        } else if (work.type_name === "Team") {
+                          router.push(routeFn(work.team_id));
+                        } else if (work.type_name === "Project") {
+                          router.push(
+                            routeFn(work?.project_id ?? work?.record_id),
+                          );
+                        } else {
+                          router.push(routeFn(work.user_id));
+                        }
+                        onClose();
+                      }
+                    }}
+                    sx={{
+                      border: "1px solid #ddd",
+                      borderRadius: 2,
+                      position: "relative",
+                      p: 2,
+                      bgcolor: "white",
+                      transition: "0.2s",
+                      cursor: "pointer",
+                      "&:hover": {
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                        transform: "translateY(-1px)",
+                      },
+                    }}
                   >
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        px: 1.2,
-                        py: 0.2,
-                        borderRadius: "12px",
-                        bgcolor: TYPE_COLOR[work.type_name] || "#757575",
-                        color: "#fff",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {work.type_name}
-                    </Typography>
-                  </Box>
-                  <Box display={"flex"} gap={1} mt={1}>
-                    <Avatar
-                      src={work.user_image}
-                      alt={work.user_name}
-                      sx={{ width: 36, height: 36 }}
-                    />
                     <Box
-                      display={"flex"}
-                      justifyContent={"space-between"}
-                      width={"100%"}
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={1}
+                      sx={{ top: -8, position: "absolute" }}
+                      flexWrap="wrap"
                     >
-                      <Box>
-                        <Typography variant="h1" fontSize={"16px !important"}>
-                          {work.user_name}:
-                        </Typography>
-                        <Typography variant="subtitle1">
-                          {work.message}
-                        </Typography>
-                      </Box>
-                      <Box justifyContent={"flex-end"}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            px: 1.6,
-                            py: 0.7,
-                            borderRadius: "18px",
-                            border: 2,
-                            borderColor:
-                              STATUS_COLOR[work.status_text.toLowerCase()] ||
-                              "#757575",
-                            color:
-                              STATUS_COLOR[work.status_text.toLowerCase()] ||
-                              "#757575",
-                            fontSize: "0.75rem",
-                            fontWeight: 500,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {work.status_text}
-                        </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          px: 1.2,
+                          py: 0.2,
+                          borderRadius: "12px",
+                          bgcolor: TYPE_COLOR[work.type_name] || "#757575",
+                          color: "#fff",
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {work.type_name}
+                      </Typography>
+                    </Box>
+                    <Box display={"flex"} gap={1} mt={1}>
+                      <Avatar
+                        src={work.user_image}
+                        alt={work.user_name}
+                        sx={{ width: 36, height: 36 }}
+                      />
+                      <Box
+                        display={"flex"}
+                        justifyContent={"space-between"}
+                        width={"100%"}
+                      >
+                        <Box>
+                          <Typography variant="h1" fontSize={"16px !important"}>
+                            {work.user_name}:
+                          </Typography>
+                          <Typography variant="subtitle1">
+                            {work.message}
+                          </Typography>
+                        </Box>
+                        <Box justifyContent={"flex-end"}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              px: 1.6,
+                              py: 0.7,
+                              borderRadius: "18px",
+                              border: 2,
+                              borderColor:
+                                STATUS_COLOR[work.status_text.toLowerCase()] ||
+                                "#757575",
+                              color:
+                                STATUS_COLOR[work.status_text.toLowerCase()] ||
+                                "#757575",
+                              fontSize: "0.75rem",
+                              fontWeight: 500,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {work.status_text}
+                          </Typography>
+                        </Box>
                       </Box>
                     </Box>
-                  </Box>
 
-                  <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontSize={"12px !important"}
-                    >
-                      {work.date}
-                    </Typography>
+                    <Box display={"flex"} justifyContent={"flex-end"} mt={0}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontSize={"12px !important"}
+                      >
+                        {work.date}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              </Grid>
-            ))}
+                </Grid>
+              ))}
           </Grid>
         ) : (
           <Typography
