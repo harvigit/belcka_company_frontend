@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -8,6 +8,7 @@ import {
   Button,
   CircularProgress,
   Divider,
+  Checkbox,
 } from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
@@ -23,6 +24,7 @@ interface SettingsState {
   isSaving: boolean;
   loading: boolean;
   timeZone: string;
+  is_billing_days: boolean;
 }
 
 interface BookkeeperSettingProps {
@@ -39,11 +41,20 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
     isSaving: false,
     timeZone: "",
     loading: true,
+    is_billing_days: false,
   });
 
   const updateSettings = (updates: Partial<SettingsState>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
   };
+
+  const createCheckboxHandler = useCallback(
+    (field: keyof SettingsState) =>
+      (event: React.ChangeEvent<HTMLInputElement>) => {
+        updateSettings({ [field]: event.target.checked });
+      },
+    [updateSettings],
+  );
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -58,6 +69,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
             extension: data.hr_contact_extension || "",
             billing_days: Number(data.allow_day_billing_info) || 0,
             timeZone: data.timezone_id || 39,
+            is_billing_days: data.is_billing_days || false,
           });
         }
       } catch (error) {
@@ -80,6 +92,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
         extension: settings.extension,
         billing_days: String(settings.billing_days),
         timeZone: settings.timeZone,
+        is_billing_days: settings.is_billing_days,
       };
 
       const response = await api.post("/setting/save-general-setting", payload);
@@ -124,6 +137,12 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                   justifyContent="space-between"
                 >
                   <Box display="flex" alignItems="center">
+                    <Checkbox
+                      checked={settings.is_billing_days}
+                      onChange={createCheckboxHandler("is_billing_days")}
+                      sx={{ p: 0, mr: 1 }}
+                      size="small"
+                    />
                     <Box>
                       <Typography variant="body2">
                         Allow bookkeeper to start work without fill billing info
@@ -135,6 +154,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                       variant="outlined"
                       size="small"
                       type="text"
+                      disabled={!settings.is_billing_days}
                       value={settings.billing_days}
                       onChange={(e) => {
                         const value = Number(e.target.value);
