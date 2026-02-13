@@ -192,12 +192,26 @@ const ConflictItemDisplay = React.memo(
               </Typography>
             )}
 
-            {Object.keys({
+           {Object.keys({
               ...(item.old_data || {}),
               ...(item.new_data || {}),
             }).map((key) => {
               const oldValue = item.old_data?.[key];
               const newValue = item.new_data?.[key];
+
+              const isOldEmpty =
+                oldValue === null ||
+                oldValue === undefined ||
+                oldValue === "";
+
+              const isNewEmpty =
+                newValue === null ||
+                newValue === undefined ||
+                newValue === "";
+
+              if (isOldEmpty && isNewEmpty) {
+                return null;
+              }
 
               return (
                 <Box
