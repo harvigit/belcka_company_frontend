@@ -17,39 +17,41 @@ import SplitDeleteCase from "./split-delete-conflicts";
 import DeleteOnlyCase from "./delete-conflicts";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { User } from "next-auth";
+import { useSession } from "next-auth/react";
 
 export interface ConflictItem {
-    user_id: number;
-    user_name?: string;
-    date: string;
-    start: string;
-    end: string;
-    shift_name: string;
-    shift_id: string;
-    color?: string;
-    worklog_id?: number;
-    project?: string;
-    is_leave?: boolean;
-    leave_name?: string | null;
-    user_leave_id?: number | null;
-    conflict_type?: string;
-    message?: string;
-    old_data?: any;
-    new_data?: any;
+  user_id: number;
+  user_name?: string;
+  date: string;
+  start: string;
+  end: string;
+  shift_name: string;
+  shift_id: string;
+  color?: string;
+  worklog_id?: number;
+  project?: string;
+  is_leave?: boolean;
+  leave_name?: string | null;
+  user_leave_id?: number | null;
+  conflict_type?: string;
+  message?: string;
+  old_data?: any;
+  new_data?: any;
 }
 
 export interface Conflict {
-    user_thumb_image: string;
-    user_name: string;
-    formatted_date: string;
-    items: ConflictItem[];
+  user_thumb_image: string;
+  user_name: string;
+  formatted_date: string;
+  items: ConflictItem[];
 }
 
 export type ConflictType =
-| "cut-delete"
-| "split-delete"
-| "delete-only"
-| "billing_info";
+  | "cut-delete"
+  | "split-delete"
+  | "delete-only"
+  | "billing_info";
 
 const formatFieldLabel = (key: string): string => {
   return key
@@ -59,32 +61,33 @@ const formatFieldLabel = (key: string): string => {
 };
 
 export const parseDT = (() => {
-    const cache = new Map<string, DateTime>();
-    return (s: string): DateTime => {
-        if (cache.has(s)) {
-            return cache.get(s)!;
-        }
-        const iso = DateTime.fromISO(s);
-        if (iso.isValid) {
-            cache.set(s, iso);
-            return iso;
-        }
-        const hm = DateTime.fromFormat(s, 'HH:mm');
-        const result = hm.isValid ? hm : DateTime.invalid('Invalid time');
-        cache.set(s, result);
-        return result;
-    };
+  const cache = new Map<string, DateTime>();
+  return (s: string): DateTime => {
+    if (cache.has(s)) {
+      return cache.get(s)!;
+    }
+    const iso = DateTime.fromISO(s);
+    if (iso.isValid) {
+      cache.set(s, iso);
+      return iso;
+    }
+    const hm = DateTime.fromFormat(s, "HH:mm");
+    const result = hm.isValid ? hm : DateTime.invalid("Invalid time");
+    cache.set(s, result);
+    return result;
+  };
 })();
 
-export const formatHM = (dt: DateTime): string => dt.isValid ? dt.toFormat('HH:mm') : '';
+export const formatHM = (dt: DateTime): string =>
+  dt.isValid ? dt.toFormat("HH:mm") : "";
 
 export const calcDiffHM = (start: DateTime, end: DateTime): string => {
-    if (!start.isValid || !end.isValid) return '';
-    const diff = end.diff(start, ['minutes']);
-    const mins = Math.max(0, Math.round(diff.as('minutes')));
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  if (!start.isValid || !end.isValid) return "";
+  const diff = end.diff(start, ["minutes"]);
+  const mins = Math.max(0, Math.round(diff.as("minutes")));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
 export const getConflictType = (items: ConflictItem[]): ConflictType => {
@@ -100,42 +103,54 @@ export const getConflictType = (items: ConflictItem[]): ConflictType => {
 
   const [item1, item2] = items;
 
-    const times = {
-        start1: parseDT(item1.start),
-        end1: parseDT(item1.end),
-        start2: parseDT(item2.start),
-        end2: parseDT(item2.end),
-    };
+  const times = {
+    start1: parseDT(item1.start),
+    end1: parseDT(item1.end),
+    start2: parseDT(item2.start),
+    end2: parseDT(item2.end),
+  };
 
-    if (!Object.values(times).every(dt => dt.isValid)) {
-        return 'delete-only';
-    }
+  if (!Object.values(times).every((dt) => dt.isValid)) {
+    return "delete-only";
+  }
 
-    const { start1, end1, start2, end2 } = times;
+  const { start1, end1, start2, end2 } = times;
 
-    if (start1.equals(start2) && end1.equals(end2)) {
-        return 'delete-only';
-    }
+  if (start1.equals(start2) && end1.equals(end2)) {
+    return "delete-only";
+  }
 
-    if (start1.equals(start2) || end1.equals(end2)) {
-        return 'cut-delete';
-    }
+  if (start1.equals(start2) || end1.equals(end2)) {
+    return "cut-delete";
+  }
 
-    const item1ContainsItem2 = start1 <= start2 && end1 >= end2;
-    const item2ContainsItem1 = start2 <= start1 && end2 >= end1;
+  const item1ContainsItem2 = start1 <= start2 && end1 >= end2;
+  const item2ContainsItem1 = start2 <= start1 && end2 >= end1;
 
-    return (item1ContainsItem2 || item2ContainsItem1) ? 'split-delete' : 'delete-only';
+  return item1ContainsItem2 || item2ContainsItem1
+    ? "split-delete"
+    : "delete-only";
 };
 
 interface ConflictsProps {
-    conflictDetails: Conflict[];
-    totalConflicts: number;
-    onClose: () => void;
-    startDate: string;
-    endDate: string;
+  conflictDetails: Conflict[];
+  totalConflicts: number;
+  onClose: () => void;
+  startDate: string;
+  endDate: string;
 }
 
-const ConflictCaseRenderer = React.memo(({conflict,index,startDate,endDate,onClose,onApprove,onReject,isLoading}: {
+const ConflictCaseRenderer = React.memo(
+  ({
+    conflict,
+    index,
+    startDate,
+    endDate,
+    onClose,
+    onApprove,
+    onReject,
+    isLoading,
+  }: {
     conflict: Conflict;
     index: number;
     startDate: string;
@@ -169,7 +184,7 @@ const ConflictCaseRenderer = React.memo(({conflict,index,startDate,endDate,onClo
   },
 );
 
-ConflictCaseRenderer.displayName = 'ConflictCaseRenderer';
+ConflictCaseRenderer.displayName = "ConflictCaseRenderer";
 
 const ConflictItemDisplay = React.memo(
   ({ items }: { items: ConflictItem[] }) => (
@@ -186,13 +201,13 @@ const ConflictItemDisplay = React.memo(
               <Typography
                 variant="body2"
                 fontWeight={700}
-                sx={{ mb: 1, color: "#1F2A37",textAlign:"center" }}
+                sx={{ mb: 1, color: "#1F2A37", textAlign: "center" }}
               >
                 {item.message}
               </Typography>
             )}
 
-           {Object.keys({
+            {Object.keys({
               ...(item.old_data || {}),
               ...(item.new_data || {}),
             }).map((key) => {
@@ -200,14 +215,10 @@ const ConflictItemDisplay = React.memo(
               const newValue = item.new_data?.[key];
 
               const isOldEmpty =
-                oldValue === null ||
-                oldValue === undefined ||
-                oldValue === "";
+                oldValue === null || oldValue === undefined || oldValue === "";
 
               const isNewEmpty =
-                newValue === null ||
-                newValue === undefined ||
-                newValue === "";
+                newValue === null || newValue === undefined || newValue === "";
 
               if (isOldEmpty && isNewEmpty) {
                 return null;
@@ -237,6 +248,7 @@ const ConflictItemDisplay = React.memo(
                       wordBreak: "break-word",
                       maxWidth: "45%",
                       whiteSpace: "pre-wrap",
+                      textTransform: "none",
                     }}
                   >
                     {String(oldValue ?? "")}
@@ -249,6 +261,7 @@ const ConflictItemDisplay = React.memo(
                       wordBreak: "break-word",
                       maxWidth: "45%",
                       whiteSpace: "pre-wrap",
+                      textTransform: "none",
                     }}
                   >
                     {String(newValue ?? "")}
@@ -267,57 +280,77 @@ const ConflictItemDisplay = React.memo(
           ? "#FFE5E5"
           : item.color || "#D8E3F2";
 
-            return (
-                <Box key={i} sx={{ position: 'relative', mb: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {item.start}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {item.end}
-                        </Typography>
-                    </Box>
+        return (
+          <Box key={i} sx={{ position: "relative", mb: 1 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}
+            >
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.75rem" }}
+              >
+                {item.start}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.75rem" }}
+              >
+                {item.end}
+              </Typography>
+            </Box>
 
-                    <Box
-                        sx={{
-                            borderRadius: 1,
-                            bgcolor: backgroundColor,
-                            color: '#000',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.875rem',
-                            fontWeight: 500,
-                            textTransform: 'capitalize',
-                            py: 1,
-                            border: item.is_leave ? '1px solid #FFB3B3' : 'none',
-                        }}
-                    >
-                        {displayName}
-                    </Box>
-                </Box>
-            );
-        })}
+            <Box
+              sx={{
+                borderRadius: 1,
+                bgcolor: backgroundColor,
+                color: "#000",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                textTransform: "capitalize",
+                py: 1,
+                border: item.is_leave ? "1px solid #FFB3B3" : "none",
+              }}
+            >
+              {displayName}
+            </Box>
+          </Box>
+        );
+      })}
     </Box>
-));
+  ),
+);
 
-ConflictItemDisplay.displayName = 'ConflictItemDisplay';
+ConflictItemDisplay.displayName = "ConflictItemDisplay";
 
 const EmptyState = React.memo(() => (
-    <Box sx={{ p: 3, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <IconInfoCircle size={16} color="#666" style={{ marginRight: '8px' }} />
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#666' }}>
-                Learn about conflicts
-            </Typography>
-        </Box>
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', color: '#666', lineHeight: 1.4 }}>
-            Conflicts occur when shifts overlap in time. Use the tools above to resolve them.
-        </Typography>
+  <Box
+    sx={{ p: 3, borderTop: "1px solid #e0e0e0", backgroundColor: "#fafafa" }}
+  >
+    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+      <IconInfoCircle size={16} color="#666" style={{ marginRight: "8px" }} />
+      <Typography
+        variant="body2"
+        sx={{ fontSize: "0.85rem", fontWeight: 500, color: "#666" }}
+      >
+        Learn about conflicts
+      </Typography>
     </Box>
+    <Typography
+      variant="body2"
+      sx={{ fontSize: "0.8rem", color: "#666", lineHeight: 1.4 }}
+    >
+      Conflicts occur when shifts overlap in time. Use the tools above to
+      resolve them.
+    </Typography>
+  </Box>
 ));
 
-EmptyState.displayName = 'EmptyState';
+EmptyState.displayName = "EmptyState";
 
 const BillingConflictCase = ({
   conflict,
@@ -362,13 +395,11 @@ const BillingConflictCase = ({
         </>
       ) : (
         <Button
-          variant="contained"
-          color="primary"
-          onClick={() =>
-            (window.location.href = `/apps/users/${item.user_id}?tab=billing`)
-          }
+          variant="outlined"
+          color="error"
+          onClick={() => onReject(item.user_id, null)}
         >
-          Solve Conflict
+          Discard
         </Button>
       )}
     </Box>
@@ -383,7 +414,8 @@ export default function Conflicts({
   endDate,
 }: ConflictsProps) {
   const [isLoading, setIsLoading] = useState(false);
-
+  const session = useSession();
+  const user = session?.data?.user as User & { company_id: number };
   const handleApprove = async (
     userId: number,
     requestLogId?: number | null,
@@ -409,10 +441,25 @@ export default function Conflicts({
   };
 
   const handleReject = async (userId: number, requestLogId?: number | null) => {
-    if (!requestLogId) return;
-
     setIsLoading(true);
+
     try {
+      // name and name on account mismatch conflict
+      if (!requestLogId) {
+        const payload = {
+          user_id: userId,
+          company_id: user.company_id,
+        };
+        const res = await api.post("user-billing/resolve-conflict", payload);
+
+        if (res.data.IsSuccess) {
+          toast.success(res.data.message);
+          onClose();
+        }
+
+        return;
+      }
+
       const res = await api.post("/requests/reject-request", {
         log_id: requestLogId,
         user_id: userId,
@@ -424,6 +471,7 @@ export default function Conflicts({
       }
     } catch (err) {
       console.error(err);
+      toast.error("Something went wrong");
     } finally {
       setIsLoading(false);
     }
@@ -530,7 +578,7 @@ export default function Conflicts({
         </Box>
       </Box>
 
-            {conflictDetails.length === 0 && <EmptyState />}
-        </Box>
-    );
+      {conflictDetails.length === 0 && <EmptyState />}
+    </Box>
+  );
 }

@@ -331,27 +331,30 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         </Box>
       )}
       <Grid container spacing={2} mb={2}>
-        {["first_name", "middle_name", "last_name", "email", "post_code","address"].map(
-          (key) => (
-            <Grid size={{ xs: 12, sm: 6 }} key={key}>
-              <TextField
-                fullWidth
-                className="custom_color"
-                disabled={isDisabledField(key)}
-                label={key
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (c) => c.toUpperCase())}
-                value={(formData as any)[key] ?? ""}
-                onChange={(e) =>
-                  handleFieldChange(
-                    key as keyof BillingFormData,
-                    e.target.value
-                  )
-                }
-              />
-            </Grid>
-          )
-        )}
+        {[
+          "first_name",
+          "middle_name",
+          "last_name",
+          "email",
+          "post_code",
+          "address",
+        ].map((key) => (
+          <Grid size={{ xs: 12, sm: 6 }} key={key}>
+            <TextField
+              fullWidth
+              className="custom_color"
+              disabled={isDisabledField(key)}
+              inputProps={{ maxLength: 50 }}
+              label={key
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase())}
+              value={(formData as any)[key] ?? ""}
+              onChange={(e) =>
+                handleFieldChange(key as keyof BillingFormData, e.target.value)
+              }
+            />
+          </Grid>
+        ))}
 
         <Grid size={{ xs: 12, sm: 6 }}>
           <PhoneInput
@@ -410,6 +413,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               fullWidth
               className="custom_color"
               disabled={isDisabledField(key)}
+              inputProps={{ maxLength: 50 }}
               label={key
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -439,6 +443,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 className="custom_color"
                 fullWidth
                 disabled={isDisabledField(key)}
+                inputProps={{ maxLength: 50 }}
                 label={key
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (c) => c.toUpperCase())}
