@@ -344,7 +344,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               fullWidth
               className="custom_color"
               disabled={isDisabledField(key)}
-              inputProps={{ maxLength: 50 }}
+              inputProps={{ maxLength: key == "address" ? 250 : 50 }}
               label={key
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (c) => c.toUpperCase())}

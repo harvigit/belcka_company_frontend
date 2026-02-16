@@ -312,12 +312,23 @@ const SupplierList = () => {
 
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
-            <Image
-              src={item.supplier_image}
-              alt={"Supplier image"}
-              width={50}
-              height={50}
-            />
+            {item.supplier_image ? (
+              <Image
+                src={item.supplier_image}
+                alt="Supplier"
+                width={50}
+                height={50}
+              />
+            ) : (
+              <>
+                <Image
+                  src={item.supplier_image || "Supplier"}
+                  alt={"Supplier"}
+                  width={50}
+                  height={50}
+                />
+              </>
+            )}
           </Stack>
         );
       },
