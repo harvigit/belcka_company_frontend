@@ -81,6 +81,7 @@ export interface ProductFormData {
   cutoff?: number;
   is_sub_qty?: boolean;
   store_ids?: string;
+  remove_image?: boolean;
 }
 
 interface Category {
@@ -236,6 +237,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         market_price: "",
         sort_id: 0,
         is_sub_qty: false,
+        remove_image: false,
       });
       setBarcodes([""]);
       setSelectedCategories([]);
@@ -706,6 +708,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                             e.stopPropagation();
                             setMainPreview(null);
                             setMainFile(null);
+                            setFormData((p) => ({ ...p, remove_image: true }));
                           }}
                         >
                           <IconTrash size={16} />

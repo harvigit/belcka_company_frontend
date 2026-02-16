@@ -108,6 +108,7 @@ export interface ProductFormData {
   cutoff?: number;
   is_sub_qty?: boolean;
   store_ids?: string;
+  remove_image?: boolean;
 }
 
 const ProductList = () => {
@@ -225,60 +226,60 @@ const ProductList = () => {
     fetchProducts();
   }, [api]);
 
-  const fetchOverview = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get(
-        `products/inventory-overview?company_id=${user.company_id}`,
-      );
+  // const fetchOverview = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const res = await api.get(
+  //       `products/inventory-overview?company_id=${user.company_id}`,
+  //     );
 
-      if (res.data.IsSuccess) {
-        const data = res.data.info;
+  //     if (res.data.IsSuccess) {
+  //       const data = res.data.info;
 
-        setSales([
-          {
-            btnText: "primary.main",
-            title: "Categories",
-            digits: data.categories.count,
-            subtext: "",
-            text: "",
-            text2: "In a month",
-          },
-          {
-            btnText: "warning.main",
-            title: "Total Products",
-            digits: data.total_products.count,
-            subtext: data.total_products.revenue,
-            text: "Revenue",
-            text2: "In a month",
-          },
-          {
-            btnText: "success.main",
-            title: "Top Selling",
-            digits: data.top_selling.count,
-            subtext: data.top_selling.revenue,
-            text: "Cost",
-            text2: "In a month",
-          },
-          {
-            btnText: "error.main",
-            title: "Low Stocks",
-            digits: data.low_stocks.low_stock,
-            subtext: data.low_stocks.out_of_stock,
-            text: "Not in stock",
-            text2: "Ordered",
-          },
-        ]);
-      }
-    } catch (error) {
-      console.error(error);
-      setLoading(false);
-    }
-    setLoading(false);
-  };
-  useEffect(() => {
-    fetchOverview();
-  }, [user.company_id]);
+  //       setSales([
+  //         {
+  //           btnText: "primary.main",
+  //           title: "Categories",
+  //           digits: data.categories.count,
+  //           subtext: "",
+  //           text: "",
+  //           text2: "In a month",
+  //         },
+  //         {
+  //           btnText: "warning.main",
+  //           title: "Total Products",
+  //           digits: data.total_products.count,
+  //           subtext: data.total_products.revenue,
+  //           text: "Revenue",
+  //           text2: "In a month",
+  //         },
+  //         {
+  //           btnText: "success.main",
+  //           title: "Top Selling",
+  //           digits: data.top_selling.count,
+  //           subtext: data.top_selling.revenue,
+  //           text: "Cost",
+  //           text2: "In a month",
+  //         },
+  //         {
+  //           btnText: "error.main",
+  //           title: "Low Stocks",
+  //           digits: data.low_stocks.low_stock,
+  //           subtext: data.low_stocks.out_of_stock,
+  //           text: "Not in stock",
+  //           text2: "Ordered",
+  //         },
+  //       ]);
+  //     }
+  //   } catch (error) {
+  //     console.error(error);
+  //     setLoading(false);
+  //   }
+  //   setLoading(false);
+  // };
+  // useEffect(() => {
+  //   fetchOverview();
+  // }, [user.company_id]);
 
   const theme = useTheme();
   const borderColor = theme.palette.divider;
@@ -329,7 +330,7 @@ const ProductList = () => {
 
       toast.success(res.data.message);
       fetchProducts();
-      fetchOverview();
+      // fetchOverview();
       handleModelClose();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Import failed");
@@ -554,31 +555,21 @@ const ProductList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+        const image = "/images/products/product.png";
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
-            {item.product_image ? (
-              <Image
-                src={item.product_image}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewImage(item.product_image);
-                  setOpenPreview(true);
-                }}
-                style={{ cursor: "pointer" }}
-                alt="Product"
-                width={50}
-                height={50}
-              />
-            ) : (
-              <>
-                <Image
-                  src={item.product_image || "Product"}
-                  alt={"Product"}
-                  width={60}
-                  height={50}
-                />
-              </>
-            )}
+            <Image
+              src={item.product_image || image}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(item.product_image || image);
+                setOpenPreview(true);
+              }}
+              style={{ cursor: "pointer" }}
+              alt="Product"
+              width={50}
+              height={50}
+            />
           </Stack>
         );
       },
@@ -774,7 +765,7 @@ const ProductList = () => {
           flexDirection: "column",
         }}
       >
-        <Card
+        {/* <Card
           sx={{
             p: 0,
             mb: 3,
@@ -863,7 +854,7 @@ const ProductList = () => {
               </Grid>
             ))}
           </Grid>
-        </Card>
+        </Card> */}
         <Dialog
           open={openPreview}
           onClose={() => setOpenPreview(false)}
@@ -960,13 +951,6 @@ const ProductList = () => {
             >
               <IconFileExport width={18} /> Export
             </Button>
-            {/* <input
-              ref={fileInputRef}
-              type="file"
-              hidden
-              accept=".xls,.xlsx"
-              onChange={handleFileChange}
-            /> */}
 
             <Button
               variant="contained"
