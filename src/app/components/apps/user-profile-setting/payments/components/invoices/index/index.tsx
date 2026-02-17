@@ -160,6 +160,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     to_date: "",
     invoice_date: "",
     description: "",
+    invoice_number: ""
   });
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -261,6 +262,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
       to_date: "",
       invoice_date: "",
       description: "",
+      invoice_number:""
     });
     setDrawerOpen(true);
   };

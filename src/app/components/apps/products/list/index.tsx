@@ -29,9 +29,6 @@ import {
   FormControlLabel,
   Checkbox,
   Modal,
-  Card,
-  CardContent,
-  CircularProgress,
 } from "@mui/material";
 import {
   flexRender,
@@ -52,7 +49,6 @@ import {
   IconNotes,
   IconSearch,
   IconTrash,
-  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -74,7 +70,6 @@ import ArchiveProduct from "../archive";
 import { IconEye } from "@tabler/icons-react";
 import { FileDownload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
-import { useTheme } from "@mui/material/styles";
 import ProductView from "../view";
 
 dayjs.extend(customParseFormat);
@@ -125,7 +120,6 @@ const ProductList = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [isImport, setIsImport] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
@@ -139,9 +133,7 @@ const ProductList = () => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [sales, setSales] = useState<any[]>([]);
   const [openPreview, setOpenPreview] = useState(false);
-
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [mainFile, setMainFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<ProductFormData>({
@@ -225,64 +217,6 @@ const ProductList = () => {
     fetchResorces();
     fetchProducts();
   }, [api]);
-
-  // const fetchOverview = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const res = await api.get(
-  //       `products/inventory-overview?company_id=${user.company_id}`,
-  //     );
-
-  //     if (res.data.IsSuccess) {
-  //       const data = res.data.info;
-
-  //       setSales([
-  //         {
-  //           btnText: "primary.main",
-  //           title: "Categories",
-  //           digits: data.categories.count,
-  //           subtext: "",
-  //           text: "",
-  //           text2: "In a month",
-  //         },
-  //         {
-  //           btnText: "warning.main",
-  //           title: "Total Products",
-  //           digits: data.total_products.count,
-  //           subtext: data.total_products.revenue,
-  //           text: "Revenue",
-  //           text2: "In a month",
-  //         },
-  //         {
-  //           btnText: "success.main",
-  //           title: "Top Selling",
-  //           digits: data.top_selling.count,
-  //           subtext: data.top_selling.revenue,
-  //           text: "Cost",
-  //           text2: "In a month",
-  //         },
-  //         {
-  //           btnText: "error.main",
-  //           title: "Low Stocks",
-  //           digits: data.low_stocks.low_stock,
-  //           subtext: data.low_stocks.out_of_stock,
-  //           text: "Not in stock",
-  //           text2: "Ordered",
-  //         },
-  //       ]);
-  //     }
-  //   } catch (error) {
-  //     console.error(error);
-  //     setLoading(false);
-  //   }
-  //   setLoading(false);
-  // };
-  // useEffect(() => {
-  //   fetchOverview();
-  // }, [user.company_id]);
-
-  const theme = useTheme();
-  const borderColor = theme.palette.divider;
 
   const exportProducts = async () => {
     try {
@@ -764,96 +698,6 @@ const ProductList = () => {
           flexDirection: "column",
         }}
       >
-        {/* <Card
-          sx={{
-            p: 0,
-            mb: 3,
-            borderRadius: 0,
-            boxShadow: theme.shadows[9],
-          }}
-        >
-          <Typography className="f-18" pl={4}>
-            Overall Inventory
-          </Typography>
-
-          <Grid container spacing={0}>
-            {sales.map((topcard) => (
-              <Grid
-                key={topcard.digits}
-                size={{
-                  xs: 6,
-                  lg: 3,
-                  sm: 3,
-                }}
-              >
-                {!loading ? (
-                  <CardContent
-                    sx={{
-                      borderRight: {
-                        xs: "0",
-                        sm: `1px solid ${borderColor}`,
-                      },
-                      padding: "30px",
-                      "& :last-child": {
-                        borderRight: "0",
-                      },
-                    }}
-                  >
-                    <Typography
-                      fontWeight={500}
-                      sx={{
-                        color: topcard.btnText,
-                        boxShadow: "none",
-                      }}
-                    >
-                      {topcard.title}
-                    </Typography>
-                    <Box
-                      display="flex"
-                      justifyContent={"space-between"}
-                      alignItems="center"
-                      mt={3}
-                      color="text.secondary"
-                    >
-                      <Typography variant="h3">{topcard.digits}</Typography>
-                      <Typography color="textSecondary" variant="h3">
-                        {topcard.subtext}
-                      </Typography>
-                    </Box>
-                    <Box
-                      display="flex"
-                      justifyContent={"space-between"}
-                      alignItems="end"
-                      mt={1}
-                      color="text.secondary"
-                    >
-                      <Typography variant="h6" fontWeight="400">
-                        {topcard.text2}
-                      </Typography>
-
-                      <Typography
-                        color="textSecondary"
-                        variant="h6"
-                        fontWeight="400"
-                      >
-                        {topcard.text}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                ) : (
-                  <>
-                    {" "}
-                    <CircularProgress
-                      size={22}
-                      color="primary"
-                      sx={{ ml: 5 }}
-                    />
-                  </>
-                )}
-              </Grid>
-            ))}
-          </Grid>
-        </Card> */}
         <Dialog
           open={openPreview}
           onClose={() => setOpenPreview(false)}

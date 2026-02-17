@@ -1,90 +1,95 @@
 import React from "react";
-import { Typography, Box, Stack, Avatar } from "@mui/material";
+import { Typography, Box, Stack } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import dynamic from "next/dynamic";
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 import DashboardCard from "../shared/DashboardCard";
-import { IconCircleFilled } from '@tabler/icons-react';
+import { IconCircleFilled } from "@tabler/icons-react";
 import { ApexOptions } from "apexcharts";
 
 const SalesOverview = () => {
   const theme = useTheme();
-  const primary = theme.palette.primary.main;
-  const secondary = theme.palette.secondary.main;
+  const primaryGradientColors = ["#817AF3", "#74B0FA", "#79D0F1"];
+  const secondaryGradientColors = ["#46A46C", "#51CC5D", "#57DA65"];
 
   const optionssalesoverview: ApexOptions = {
-    grid: {
-      show: false,
-    },
+    grid: { show: false },
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: '42%',
+        columnWidth: "42%",
         borderRadius: 6,
       },
     },
-
-    colors: [primary, secondary],
+    colors: [primaryGradientColors[0], secondaryGradientColors[0]],
     fill: {
-      type: 'solid',
-      opacity: 1,
+      type: "gradient",
+      gradient: {
+        shade: "light",
+        type: "vertical",
+        shadeIntensity: 0.5,
+        inverseColors: false,
+        opacityFrom: 1,
+        opacityTo: 1,
+        stops: [0, 48, 100],
+        gradientToColors: [
+          primaryGradientColors[2],
+          secondaryGradientColors[2],
+        ],
+      },
     },
     chart: {
-      toolbar: {
-        show: false,
-      },
+      toolbar: { show: false },
       height: 290,
-      foreColor: '#adb0bb',
+      foreColor: "#adb0bb",
       fontFamily: "'DM Sans',sans-serif",
     },
-    dataLabels: {
-      enabled: false,
-    },
-    markers: {
-      size: 0,
-    },
-    legend: {
-      show: false,
-    },
+    dataLabels: { enabled: false },
+    markers: { size: 0 },
+    legend: { show: false },
     xaxis: {
-      type: 'category',
-      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-      axisBorder: {
-        show: false,
-      },
-      axisTicks: {
-        show: false,
-      },
+      type: "category",
+      categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+      axisBorder: { show: false },
+      axisTicks: { show: false },
     },
-    yaxis: {
-      show: true,
-    },
+    yaxis: { show: true },
     stroke: {
       show: true,
-      width: 5,
-      lineCap: 'butt',
-      colors: ['transparent'],
+      width: 20,
+      lineCap: "butt",
+      colors: ["transparent"],
     },
-    tooltip: {
-      theme: 'dark',
-    },
+    tooltip: { theme: "dark" },
   };
+
   const seriessalesoverview: ApexAxisChartSeries = [
     {
-      name: 'Ample Admin',
+      name: "Ample Admin",
       data: [355, 390, 300, 350, 390, 180],
     },
     {
-      name: 'Pixel Admin',
+      name: "Pixel Admin",
       data: [280, 250, 325, 215, 250, 310],
     },
   ];
   return (
     <DashboardCard
-      title="Sales Overview"
-      subtitle="Ample Admin Vs Pixel Admin"
+      title="Order in Hand & Purchase"
+      subtitle=""
       action={
         <Stack direction="row" spacing={2}>
+        </Stack>
+      }
+    >
+      <Box height="320px" className="rounded-bars">
+        <Chart
+          options={optionssalesoverview}
+          series={seriessalesoverview}
+          type="bar"
+          height="290px"
+        />
+        <Stack direction="row" spacing={2} ml={5}>
           <Typography
             variant="h6"
             display="flex"
@@ -95,11 +100,11 @@ const SalesOverview = () => {
           >
             <Typography
               sx={{
-                color: 'primary.main',
-                '& svg': {
+                color: "primary.main",
+                "& svg": {
                   fill: () => theme.palette.primary.main,
                 },
-                mr: '5px',
+                mr: "5px",
               }}
             >
               <IconCircleFilled width="10" height="10" />
@@ -116,11 +121,11 @@ const SalesOverview = () => {
           >
             <Typography
               sx={{
-                color: 'secondary.main',
-                '& svg': {
+                color: "secondary.main",
+                "& svg": {
                   fill: () => theme.palette.secondary.main,
                 },
-                mr: '5px',
+                mr: "5px",
               }}
             >
               <IconCircleFilled width="10" height="10" />
@@ -128,15 +133,6 @@ const SalesOverview = () => {
             Pixel Admin
           </Typography>
         </Stack>
-      }
-    >
-      <Box height='290px' className="rounded-bars">
-        <Chart
-          options={optionssalesoverview}
-          series={seriessalesoverview}
-          type="bar"
-          height="290px"
-        />
       </Box>
     </DashboardCard>
   );

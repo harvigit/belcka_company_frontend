@@ -55,7 +55,6 @@ const DashboardCard = ({
               spacing={2}
               justifyContent="space-between"
               alignItems={'center'}
-              mb={3}
             >
               <Box>
                 {title ? <Typography variant="h3">{title}</Typography> : ''}

@@ -26,6 +26,7 @@ interface PayslipFormData {
   invoice_date: string;
   description?: string;
   file_name: File | null;
+  invoice_number?: string;
 }
 
 interface CreateInvoiceProps {
@@ -124,6 +125,18 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
           >
             {/* Form Inputs */}
             <Box className="form_inputs">
+              <Typography variant="body2" mt={2}>
+                Invoice Number
+              </Typography>
+              <CustomTextField
+                type="text"
+                name="invoice_number"
+                fullWidth
+                inputProps={{ maxLength: 50 }}
+                value={formData.invoice_number}
+                onChange={handleChange}
+              />
+
               <Typography variant="body2" mt={2}>
                 Invoice Date
               </Typography>
