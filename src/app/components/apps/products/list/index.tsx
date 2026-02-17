@@ -526,7 +526,6 @@ const ProductList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const isChecked = selectedRowIds.has(item.id);
 
         return (
           <Stack

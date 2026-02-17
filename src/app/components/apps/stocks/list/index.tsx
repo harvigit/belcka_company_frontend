@@ -412,16 +412,17 @@ const StockList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+        const image = "/images/products/product.png";
+
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
-            {item.product_image && (
-              <Image
-                src={item.product_image}
-                alt={"Product image"}
-                width={50}
-                height={50}
-              />
-            )}
+            <Image
+              src={item.product_image || image}
+              style={{ cursor: "pointer" }}
+              alt="Product"
+              width={50}
+              height={50}
+            />
           </Stack>
         );
       },
