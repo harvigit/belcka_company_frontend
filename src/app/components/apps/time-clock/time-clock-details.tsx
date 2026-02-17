@@ -891,6 +891,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     return [{
                         rowType: 'day' as const,
                         date: day.date ?? '--',
+                        has_pending_leave_request: day.has_pending_leave_request ?? false, 
                         timesheet_ids: day.timesheet_ids ?? '--',
                         shift: '--',
                         project: '--',
@@ -928,6 +929,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 return [{
                     rowType: 'day' as const,
                     date: day.date ?? '--',
+                    has_pending_leave_request: day.has_pending_leave_request ?? false,
                     timesheet_ids: day.timesheet_ids ?? null,
                     shift: '--',
                     project: '--',

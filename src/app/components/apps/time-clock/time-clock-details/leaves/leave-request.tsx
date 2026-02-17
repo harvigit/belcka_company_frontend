@@ -307,17 +307,17 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
                                         )}
                                     </Box>
                                 </Box>
-                                {activeTab === 0 && (
-                                    <Button
-                                        onClick={() => handleEdit(request)}
-                                        disabled={isLoading}
-                                        startIcon={<EditIcon fontSize="small" />}
-                                        size="small"
-                                        sx={{ textTransform: 'none' }}
-                                    >
-                                        Edit
-                                    </Button>
-                                )}
+                                {/*{activeTab === 0 && (*/}
+                                {/*    <Button*/}
+                                {/*        onClick={() => handleEdit(request)}*/}
+                                {/*        disabled={isLoading}*/}
+                                {/*        startIcon={<EditIcon fontSize="small" />}*/}
+                                {/*        size="small"*/}
+                                {/*        sx={{ textTransform: 'none' }}*/}
+                                {/*    >*/}
+                                {/*        Edit*/}
+                                {/*    </Button>*/}
+                                {/*)}*/}
                             </Box>
 
                             <Box sx={{ mb: 2 }}>

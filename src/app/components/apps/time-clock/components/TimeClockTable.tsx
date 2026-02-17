@@ -306,7 +306,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             const hasRecords = hasValidWorklogData(rowData) || dateNewRecords.length > 0;
 
                             const hasConflicts = conflictsByDate && conflictsByDate[rowData.date] > 0;
-                            const hasLeaveRequests = leaveRequestCount && leaveRequestCount > 0;
+                            const hasLeaveRequests = rowData.has_pending_leave_request === true;
                             
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {

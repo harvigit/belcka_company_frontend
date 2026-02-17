@@ -40,7 +40,7 @@ interface DigitalIDCardProps {
     isPublicView?: boolean;
 }
 
-const CARD_WIDTH  = 620;
+const CARD_WIDTH  = 500;
 const CARD_HEIGHT = 320;
 
 const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, token, isPublicView = false}) => {

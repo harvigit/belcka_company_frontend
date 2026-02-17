@@ -49,6 +49,7 @@ export type DailyBreakdown = {
     status_color?: string;
     userChecklogs?: CheckLog[];
     allUserChecklogs?: CheckLog[];
+    has_pending_leave_request?: boolean;
 };
 
 export interface TimeClockDetailsProps {
