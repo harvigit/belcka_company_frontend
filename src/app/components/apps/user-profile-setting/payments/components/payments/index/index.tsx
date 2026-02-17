@@ -765,7 +765,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   }}
                 >
                   {/* Net Timesheet */}
-                  {payment?.net_timeclock_amount !== null && (
+                    {payment?.net_timeclock_amount !== null && Number(payment?.net_timeclock_amount) !== 0 && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -790,7 +790,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   )}
 
                   {/* Gross amount */}
-                  {payment?.gross_amount !== null && (
+                    {payment?.gross_amount !== null && Number(payment?.gross_amount) !== 0 && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -815,7 +815,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   )}
 
                   {/* Cis amount */}
-                  {payment?.cis_amount !== null && (
+                    {payment?.cis_amount !== null && Number(payment?.cis_amount) !== 0 && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -840,7 +840,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   )}
 
                   {/* Net PriceWork */}
-                  {payment?.net_pricework_amount !== null && (
+                    {payment?.net_pricework_amount !== null && Number(payment?.net_pricework_amount) !== 0 && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -865,7 +865,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   )}
 
                   {/* Penalty Amount */}
-                  {payment?.net_penalty_amount !== null && (
+                    {payment?.net_penalty_amount !== null && Number(payment?.net_penalty_amount) !== 0 && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -891,7 +891,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                 </Box>
 
                 {/* Expense Paid */}
-                {payment?.net_expense_amount && (
+                  {payment?.net_expense_amount && Number(payment?.net_expense_amount) !== 0 && (
                   <Box
                     mt={2}
                     p={2}

@@ -157,7 +157,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [checklogsSidebar, setChecklogsSidebar] = useState<boolean>(false);
     const [selectedWorkId, setSelectedWorkId] = useState<number>(0);
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
-    const [leaveRequestByDate, setLeaveRequestByDate] = useState<{ [key: string]: number }>({});
     const [leaveRequestSidebar, setLeaveRequestSidebar] = useState<boolean>(false);
 
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
@@ -226,28 +225,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             setConflictsByDate({});
         }
     }, [conflictDetails]);
-
-    // ADD THIS NEW EFFECT FOR LEAVE REQUESTS
-    useEffect(() => {
-        if (data && data.length > 0) {
-            const leaves: { [key: string]: number } = {};
-
-            data.forEach((week: any) => {
-                (week.days || []).forEach((day: any) => {
-                    const worklogs = day.worklogs || [];
-                    const leaveWorklogs = worklogs.filter((log: any) => log.is_leave);
-
-                    if (leaveWorklogs.length > 0) {
-                        leaves[day.date] = leaveWorklogs.length;
-                    }
-                });
-            });
-
-            setLeaveRequestByDate(leaves);
-        } else {
-            setLeaveRequestByDate({});
-        }
-    }, [data]);
 
     // ADD THIS NEW EFFECT FOR PENALTY APPEALS
     useEffect(() => {
@@ -1089,7 +1066,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setPenaltyAppealCount(0);
         setPendingRequestCount(0);
         setConflictsByDate({});
-        setLeaveRequestByDate({});
         setPenaltyAppealByDate({});
         setExpandedWorklogsIds([]);
 
@@ -1107,7 +1083,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setPenaltyAppealCount(0);
         setPendingRequestCount(0);
         setConflictsByDate({});
-        setLeaveRequestByDate({});
         setPenaltyAppealByDate({});
         setExpandedWorklogsIds([]);
 
@@ -1709,7 +1684,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 size: 100,
             },
         ],
-        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect, leaveRequestByDate, penaltyAppealByDate]
+        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect, penaltyAppealByDate]
     );
 
     const table = useReactTable({
@@ -1824,7 +1799,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 saveProjectChanges={saveProjectChanges}
                 onDeleteClick={handleDeleteRecord}
                 conflictsByDate={conflictsByDate}
-                leaveRequestByDate={leaveRequestByDate}
                 penaltyAppealByDate={penaltyAppealByDate}
                 openConflictsSideBar={handleConflicts}
                 openChecklogsSidebar={handleChecklogs}
