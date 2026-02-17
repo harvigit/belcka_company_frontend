@@ -87,22 +87,22 @@ const MenuItems: NavGroup[] = [
   //   icon: IconInfoCircle,
   //   href: "/app-info",
   // },
-  {
-    id: uniqueId(),
-    title: "Dashboard (Buyer)",
-    slug: "purchase",
-    icon: IconKeyframes,
-    href: "/frontend-pages/homepage",
-    children: [
-      {
-        id: uniqueId(),
-        title: "Home",
-        slug: "purchase",
-        icon: IconPoint,
-        href: "/frontend-pages/homepage",
-      },
-    ],
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Dashboard (Buyer)",
+  //   slug: "purchase",
+  //   icon: IconKeyframes,
+  //   href: "/frontend-pages/homepage",
+  //   children: [
+  //     {
+  //       id: uniqueId(),
+  //       title: "Home",
+  //       slug: "purchase",
+  //       icon: IconPoint,
+  //       href: "/frontend-pages/homepage",
+  //     },
+  //   ],
+  // },
 
   {
     id: uniqueId(),
