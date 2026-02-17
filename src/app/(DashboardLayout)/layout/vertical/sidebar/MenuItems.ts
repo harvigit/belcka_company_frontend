@@ -21,6 +21,7 @@ import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
 import { IconBox } from "@tabler/icons-react";
+import { IconPoint } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
   {
@@ -86,6 +87,23 @@ const MenuItems: NavGroup[] = [
   //   icon: IconInfoCircle,
   //   href: "/app-info",
   // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Dashboard (Buyer)",
+  //   slug: "purchase",
+  //   icon: IconKeyframes,
+  //   href: "/frontend-pages/homepage",
+  //   children: [
+  //     {
+  //       id: uniqueId(),
+  //       title: "Home",
+  //       slug: "purchase",
+  //       icon: IconPoint,
+  //       href: "/frontend-pages/homepage",
+  //     },
+  //   ],
+  // },
+
   {
     id: uniqueId(),
     title: "Products",

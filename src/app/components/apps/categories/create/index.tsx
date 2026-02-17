@@ -149,7 +149,7 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
               <Autocomplete
                 fullWidth
                 options={units}
-                value={formData.parent_category_id || null}
+                value={units.find((t) => t.id === formData.parent_category_id) ?? null}
                 onChange={(_, newValue) => {
                   const value =
                     typeof newValue === "string"

@@ -49,6 +49,7 @@ import Image from "next/image";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CreateCategory from "../../categories/create";
 import toast from "react-hot-toast";
+import CreateSupplier from "../../suppliers/create";
 
 export interface ProductFormData {
   id: number;
@@ -75,10 +76,12 @@ export interface ProductFormData {
   length_unit?: number | null;
   tax?: string;
   price?: string;
+  market_price?: string;
   sort_id?: number | null;
   cutoff?: number;
   is_sub_qty?: boolean;
   store_ids?: string;
+  remove_image?: boolean;
 }
 
 interface Category {
@@ -119,6 +122,24 @@ interface CategoryFormData {
   parent_category_name?: string | null;
   status: boolean;
 }
+interface SupplierFormData {
+  id: number;
+  company_id: any;
+  name: string;
+  email?: string;
+  company_name?: string;
+  supplier_image?: File | null;
+  account_number?: string;
+  street?: string;
+  location?: string;
+  town?: string;
+  postcode?: string;
+  phone?: string;
+  extension?: string;
+  weight?: string;
+  weight_unit?: string | null;
+  status: boolean;
+}
 
 const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   open,
@@ -151,12 +172,18 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
   const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
+  const [openSupplierModal, setOpenSupplierModal] = useState(false);
   const [product, setProduct] = useState<any>([]);
   const [totalQty, setTotalQty] = useState("");
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [mainFile, setMainFile] = useState<File | null>(null);
-
+  const [supplierFormData, setSupplierFormData] = useState<SupplierFormData>({
+    id: 0,
+    company_id: companyId,
+    name: "",
+    status: true,
+  });
   const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
     id: 0,
     company_id: companyId,
@@ -207,8 +234,10 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         length_unit: null,
         tax: "",
         price: "",
+        market_price: "",
         sort_id: 0,
         is_sub_qty: false,
+        remove_image: false,
       });
       setBarcodes([""]);
       setSelectedCategories([]);
@@ -246,6 +275,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         length_unit: product?.product_details?.[0]?.lengthtUnits?.name ?? null,
         tax: product?.product_details?.[0]?.tax ?? "",
         price: product.price ?? "",
+        market_price: product.market_price ?? "",
         sort_id: product.sort_id ?? 0,
         cutoff: product.cutoff ?? 0,
         is_sub_qty: Boolean(product.is_sub_qty),
@@ -320,6 +350,34 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
           company_id: companyId,
         });
         setOpenCategoryModal(false);
+        fetchResources();
+      } else {
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+    }
+  };
+
+  const handleSupplierSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        ...supplierFormData,
+      };
+
+      const result = await api.post("suppliers/create", payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setSupplierFormData({
+          id: 0,
+          name: "",
+          status: true,
+          company_id: companyId,
+        });
+        setOpenSupplierModal(false);
         fetchResources();
       } else {
       }
@@ -580,7 +638,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         >
           <form
             style={{ flex: 1 }}
-            className="category-form"
+            className="product-form"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -588,32 +646,117 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
             }}
           >
             <Grid container spacing={3}>
-              {/* Left side */}
-              <Grid size={{ xs: 6 }}>
-                {/* Product Name */}
-                <Typography variant="body2" gutterBottom>
-                  Product Name
-                </Typography>
-                <CustomTextField
-                  fullWidth
-                  value={formData.name || ""}
-                  onChange={(e: any) =>
-                    setFormData((p) => ({ ...p, name: e.target.value }))
-                  }
-                  sx={{ mb: 2 }}
-                />
-                <Box display={"flex"} justifyItems={"center"} gap={2}>
-                  <Box width={"100%"}>
+              <Grid size={{ xs: 12 }}>
+                <Box display={"flex"} justifyItems={"center"} gap={5}>
+                  {/* Main Image Upload */}
+                  <Box
+                    {...mainDropzone.getRootProps()}
+                    sx={{
+                      width: 160,
+                      height: 140,
+                      border: "2px dashed",
+                      borderColor: "primary.main",
+                      borderRadius: 2,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                      mb: 2,
+                      position: "relative",
+                      "&:hover": { backgroundColor: "rgba(0,0,0,0.05)" },
+                    }}
+                  >
+                    <input
+                      {...mainDropzone.getInputProps()}
+                      accept=".jpg,.png,.jpeg"
+                    />
+
+                    {mainPreview ? (
+                      <>
+                        <Avatar
+                          src={mainPreview}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImage(mainPreview);
+                            setOpenPreview(true);
+                          }}
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            cursor: "zoom-in",
+                          }}
+                          variant="square"
+                        />
+
+                        <IconButton
+                          size="small"
+                          color="error"
+                          sx={{
+                            position: "absolute",
+                            top: 6,
+                            right: 6,
+                            backgroundColor: "#fff",
+                            zIndex: 2,
+                            "&:hover": {
+                              backgroundColor: "#fff",
+                              color: "red",
+                            },
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMainPreview(null);
+                            setMainFile(null);
+                            setFormData((p) => ({ ...p, remove_image: true }));
+                          }}
+                        >
+                          <IconTrash size={16} />
+                        </IconButton>
+                      </>
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        color="textSecondary"
+                        align="center"
+                      >
+                        Click or Drag to upload
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Box width={"30%"}>
                     <Typography variant="body2" gutterBottom>
-                      Short Name
+                      Name
                     </Typography>
                     <CustomTextField
+                      className="product_input"
                       fullWidth
                       value={formData.short_name}
                       onChange={(e: any) =>
                         setFormData((p) => ({
                           ...p,
                           short_name: e.target.value,
+                        }))
+                      }
+                      sx={{ mb: 2 }}
+                    />
+                  </Box>
+                </Box>
+                <Box display={"flex"} justifyItems={"center"} gap={3}>
+                  <Box width={"100%"}>
+                    <Typography variant="body2" gutterBottom>
+                      UUID
+                    </Typography>
+
+                    <CustomTextField
+                      className="product_input"
+                      fullWidth
+                      value={formData.uuid || ""}
+                      onChange={(e: any) =>
+                        setFormData((p) => ({
+                          ...p,
+                          uuid: e.target.value || 0,
                         }))
                       }
                       sx={{ mb: 2 }}
@@ -643,6 +786,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         renderInput={(params) => (
                           <TextField {...params} variant="outlined" />
                         )}
+                        className="product_input"
                         sx={{ mb: 2 }}
                       />
                     </Box>
@@ -654,316 +798,6 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       <IconPlus size={14} />
                     </Fab>
                   </Box>
-                </Box>
-                {/* Description */}
-                <Typography variant="body2" gutterBottom>
-                  Description
-                </Typography>
-
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={formData.description || ""}
-                  onChange={(e) =>
-                    setFormData((p) => ({ ...p, description: e.target.value }))
-                  }
-                />
-
-                {/* Pack off */}
-                <Box
-                  sx={{ mb: 2, mt: 2 }}
-                  display={"flex"}
-                  gap={1}
-                  alignItems={"center"}
-                  justifyItems={"center"}
-                >
-                  <Box width={"80%"}>
-                    {/* sub quantity */}
-                    <IOSSwitch
-                      checked={formData.is_sub_qty}
-                      onChange={(e, value) =>
-                        setFormData({
-                          ...formData,
-                          is_sub_qty: value,
-                        })
-                      }
-                    />
-                  </Box>
-                  <Box width={"100%"}>
-                    <CustomTextField
-                      fullWidth
-                      label="Pack off"
-                      value={formData.pack_off_qty || ""}
-                      disabled={!formData.is_sub_qty}
-                      onChange={(e: any) =>
-                        setFormData((p) => ({
-                          ...p,
-                          pack_off_qty: e.target.value,
-                        }))
-                      }
-                    />
-                  </Box>
-                  <Box width={"100%"}>
-                    <Autocomplete
-                      fullWidth
-                      freeSolo
-                      options={packOffs}
-                      disabled={!formData.is_sub_qty}
-                      value={formData.pack_off_unit || null}
-                      onChange={(_, newValue) => {
-                        const value =
-                          typeof newValue === "string"
-                            ? newValue
-                            : newValue?.name || "";
-
-                        if (value && !packOffs.some((u) => u.name === value)) {
-                          setPackOffs((prev) => [
-                            ...prev,
-                            { id: Date.now(), name: value },
-                          ]);
-                        }
-
-                        setFormData((prev) => ({
-                          ...prev,
-                          pack_off_unit: value,
-                        }));
-                      }}
-                      getOptionLabel={(option) =>
-                        typeof option === "string" ? option : option.name
-                      }
-                      renderInput={(params) => (
-                        <CustomTextField
-                          {...params}
-                          placeholder="Select or add unit"
-                        />
-                      )}
-                    />
-                  </Box>
-                </Box>
-                {/* Main Image Upload */}
-                <Box
-                  {...mainDropzone.getRootProps()}
-                  sx={{
-                    width: 140,
-                    height: 140,
-                    border: "2px dashed",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
-                    mb: 2,
-                    position: "relative",
-                    "&:hover": { backgroundColor: "rgba(0,0,0,0.05)" },
-                  }}
-                >
-                  <input
-                    {...mainDropzone.getInputProps()}
-                    accept=".jpg,.png,.jpeg"
-                  />
-
-                  {mainPreview ? (
-                    <>
-                      <Avatar
-                        src={mainPreview}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPreviewImage(mainPreview);
-                          setOpenPreview(true);
-                        }}
-                        sx={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          cursor: "zoom-in",
-                        }}
-                        variant="square"
-                      />
-
-                      <IconButton
-                        size="small"
-                        color="error"
-                        sx={{
-                          position: "absolute",
-                          top: 6,
-                          right: 6,
-                          backgroundColor: "#fff",
-                          zIndex: 2,
-                          "&:hover": {
-                            backgroundColor: "#fff",
-                            color: "red",
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMainPreview(null);
-                          setMainFile(null); 
-                        }}
-                      >
-                        <IconTrash size={16} />
-                      </IconButton>
-                    </>
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      color="textSecondary"
-                      align="center"
-                    >
-                      Click or Drag to upload
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* Gallery Images Upload */}
-                <Typography variant="body2" gutterBottom mb={1}>
-                  Gallery Images
-                </Typography>
-                <Box
-                  {...galleryDropzone.getRootProps()}
-                  sx={{
-                    width: "100%",
-                    minHeight: 140,
-                    border: "2px dashed",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    p: 2,
-                    mb: 2,
-                  }}
-                >
-                  <input
-                    {...galleryDropzone.getInputProps()}
-                    accept=".jpg,.png,.jpeg"
-                  />
-
-                  {galleryPreview.length > 0 ? (
-                    <Grid container spacing={2}>
-                      {galleryPreview.map((item, i) => (
-                        <Grid
-                          size={{ xs: 6, sm: 4, md: 3, lg: 2 }}
-                          key={item.id ?? i}
-                        >
-                          <Box
-                            sx={{
-                              position: "relative",
-                              width: "100%",
-                              aspectRatio: "1 / 1",
-                              overflow: "hidden",
-                              borderRadius: 1,
-                            }}
-                          >
-                            <Image
-                              src={item.src}
-                              alt="Product image"
-                              fill
-                              style={{ objectFit: "cover", cursor: "zoom-in" }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewImage(item.src);
-                                setOpenPreview(true);
-                              }}
-                            />
-
-                            <IconButton
-                              color="error"
-                              size="small"
-                              sx={{
-                                position: "absolute",
-                                top: 4,
-                                right: 4,
-                                backgroundColor: "#fff",
-                                zIndex: 2,
-                                "&:hover": {
-                                  backgroundColor: "#fff",
-                                  color: "red",
-                                },
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveGalleryImage(item, i);
-                              }}
-                            >
-                              <IconTrash size={16} />
-                            </IconButton>
-                          </Box>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  ) : (
-                    <Box
-                      sx={{
-                        height: 140,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Typography variant="body2" color="textSecondary">
-                        Click or Drag to upload multiple images
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-
-                <Dialog
-                  open={openPreview}
-                  onClose={() => setOpenPreview(false)}
-                  fullScreen
-                  PaperProps={{
-                    sx: {
-                      backgroundColor: "transparent",
-                      boxShadow: "none",
-                    },
-                  }}
-                >
-                  <IconButton
-                    onClick={() => setOpenPreview(false)}
-                    color="primary"
-                    sx={{
-                      position: "fixed",
-                      top: 16,
-                      right: 16,
-                      zIndex: 1301,
-                      backgroundColor: "#fff",
-                      "&:hover": {
-                        backgroundColor: "#eee",
-                        color: "#1e4db7",
-                      },
-                    }}
-                  >
-                    <IconX />
-                  </IconButton>
-
-                  <Box
-                    sx={{
-                      width: "100vw",
-                      height: "100vh",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                    onClick={() => setOpenPreview(false)}
-                  >
-                    <img
-                      src={previewImage || ""}
-                      alt="Preview"
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        width: "90% !important",
-                        height: "50%",
-                        objectFit: "contain",
-                      }}
-                    />
-                  </Box>
-                </Dialog>
-              </Grid>
-
-              {/* Right side */}
-              <Grid size={{ xs: 6 }}>
-                <Box display={"flex"} justifyContent={"center"} gap={3}>
                   <Box width={"100%"}>
                     {/* Supplier Code */}
                     <Typography variant="body2" gutterBottom>
@@ -971,6 +805,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     </Typography>
 
                     <CustomTextField
+                      className="product_input"
                       fullWidth
                       value={formData.supplier_code || ""}
                       onChange={(e: any) =>
@@ -982,94 +817,59 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       sx={{ mb: 2 }}
                     />
                   </Box>
-                  <Box width={"100%"}>
-                    <Typography variant="body2" gutterBottom>
-                      Supplier
-                    </Typography>
+                  <Box
+                    width={"100%"}
+                    display={"flex"}
+                    justifyContent={"center"}
+                    alignItems={"center"}
+                    gap={1}
+                  >
+                    <Box width={"100%"}>
+                      <Typography variant="body2" gutterBottom>
+                        Supplier
+                      </Typography>
 
-                    <Autocomplete
-                      fullWidth
-                      options={suppliers}
-                      value={
-                        suppliers.find((s) => s.id === formData.supplier_id) ??
-                        null
-                      }
-                      onChange={(_, newValue) => {
-                        if (newValue) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            supplier_id: newValue.id,
-                          }));
+                      <Autocomplete
+                        className="product_input"
+                        fullWidth
+                        options={suppliers}
+                        value={
+                          suppliers.find(
+                            (s) => s.id === formData.supplier_id,
+                          ) ?? null
                         }
-                      }}
-                      getOptionLabel={(option) => option.name || ""}
-                      renderInput={(params) => <CustomTextField {...params} />}
-                    />
+                        onChange={(_, newValue) => {
+                          if (newValue) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              supplier_id: newValue.id,
+                            }));
+                          }
+                        }}
+                        getOptionLabel={(option) => option.name || ""}
+                        renderInput={(params) => (
+                          <CustomTextField {...params} />
+                        )}
+                        sx={{ mb: 2 }}
+                      />
+                    </Box>
+                    <Fab
+                      color="primary"
+                      size="small"
+                      onClick={() => setOpenSupplierModal(true)}
+                    >
+                      <IconPlus size={14} />
+                    </Fab>
                   </Box>
                 </Box>
-
-                {/* Weight & Unit */}
-                <Grid container spacing={1} sx={{ mb: 2 }}>
-                  <Grid size={{ xs: 6 }}>
-                    <Typography variant="body2" gutterBottom>
-                      Weight
-                    </Typography>
-                    <CustomTextField
-                      fullWidth
-                      value={formData.weight || ""}
-                      onChange={(e: any) =>
-                        setFormData((p) => ({ ...p, weight: e.target.value }))
-                      }
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 6 }}>
-                    <Typography variant="body2" gutterBottom>
-                      Weight Unit
-                    </Typography>
-
-                    <Autocomplete
-                      fullWidth
-                      freeSolo
-                      options={weights}
-                      value={formData.weight_unit || null}
-                      onChange={(_, newValue) => {
-                        const value =
-                          typeof newValue === "string"
-                            ? newValue
-                            : newValue?.name || "";
-
-                        if (value && !weights.some((u) => u.name === value)) {
-                          setWeights((prev) => [
-                            ...prev,
-                            { id: Date.now(), name: value },
-                          ]);
-                        }
-
-                        setFormData((prev) => ({
-                          ...prev,
-                          weight_unit: value,
-                        }));
-                      }}
-                      getOptionLabel={(option) =>
-                        typeof option === "string" ? option : option.name
-                      }
-                      renderInput={(params) => (
-                        <CustomTextField
-                          {...params}
-                          placeholder="Select or add unit"
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-
                 {/* Dimensions (Length, Width, Height, Unit) */}
                 <Typography variant="body2" gutterBottom>
                   Dimensions (Length * Width * Height)
                 </Typography>
-                <Grid container sx={{ mb: 2 }} spacing={2}>
+                <Grid container sx={{ mb: 2 }} spacing={3}>
                   <Grid size={{ xs: 3 }}>
                     <CustomTextField
+                      className="product_input"
                       placeholder="Length"
                       fullWidth
                       value={formData.length || ""}
@@ -1080,6 +880,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                   </Grid>
                   <Grid size={{ xs: 3 }}>
                     <CustomTextField
+                      className="product_input"
                       placeholder="Width"
                       fullWidth
                       value={formData.width || ""}
@@ -1090,6 +891,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                   </Grid>
                   <Grid size={{ xs: 3 }}>
                     <CustomTextField
+                      className="product_input"
                       placeholder="Height"
                       fullWidth
                       value={formData.height || ""}
@@ -1100,6 +902,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                   </Grid>
                   <Grid size={{ xs: 3 }}>
                     <Autocomplete
+                      className="product_input"
                       fullWidth
                       freeSolo
                       options={lengths}
@@ -1135,13 +938,68 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                   </Grid>
                 </Grid>
 
-                <Box display={"flex"} alignContent={"center"} gap={3} mb={2}>
-                  <Box width={"100%"}>
+                {/* Weight & Unit */}
+                <Grid container spacing={3} sx={{ mb: 2 }}>
+                  <Grid size={{ xs: 3 }}>
+                    <Typography variant="body2" gutterBottom>
+                      Weight
+                    </Typography>
+                    <CustomTextField
+                      className="product_input"
+                      fullWidth
+                      value={formData.weight || ""}
+                      onChange={(e: any) =>
+                        setFormData((p) => ({ ...p, weight: e.target.value }))
+                      }
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 3 }}>
+                    <Typography variant="body2" gutterBottom>
+                      Weight Unit
+                    </Typography>
+
+                    <Autocomplete
+                      className="product_input"
+                      fullWidth
+                      freeSolo
+                      options={weights}
+                      value={formData.weight_unit || null}
+                      onChange={(_, newValue) => {
+                        const value =
+                          typeof newValue === "string"
+                            ? newValue
+                            : newValue?.name || "";
+
+                        if (value && !weights.some((u) => u.name === value)) {
+                          setWeights((prev) => [
+                            ...prev,
+                            { id: Date.now(), name: value },
+                          ]);
+                        }
+
+                        setFormData((prev) => ({
+                          ...prev,
+                          weight_unit: value,
+                        }));
+                      }}
+                      getOptionLabel={(option) =>
+                        typeof option === "string" ? option : option.name
+                      }
+                      renderInput={(params) => (
+                        <CustomTextField
+                          {...params}
+                          placeholder="Select or add unit"
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 3 }}>
                     {/* Manufacture */}
                     <Typography variant="body2" gutterBottom>
                       Manufacture
                     </Typography>
                     <Autocomplete
+                      className="product_input"
                       fullWidth
                       options={manufactures}
                       value={
@@ -1160,14 +1018,15 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       getOptionLabel={(option) => option.name || ""}
                       renderInput={(params) => <CustomTextField {...params} />}
                     />
-                  </Box>
-                  <Box width={"100%"}>
+                  </Grid>
+                  <Grid size={{ xs: 3 }}>
                     {/* Model */}
                     <Typography variant="body2" gutterBottom>
                       Model
                     </Typography>
 
                     <Autocomplete
+                      className="product_input"
                       fullWidth
                       options={models}
                       value={
@@ -1184,21 +1043,41 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       getOptionLabel={(option) => option.name || ""}
                       renderInput={(params) => <CustomTextField {...params} />}
                     />
-                  </Box>
-                </Box>
+                  </Grid>
+                </Grid>
 
                 <Box display={"flex"} justifyItems={"center"} gap={3}>
                   <Box width={"100%"}>
                     {/* Price */}
                     <Typography variant="body2" gutterBottom>
-                      Price
+                      Buying Price
                     </Typography>
 
                     <CustomTextField
+                      className="product_input"
                       fullWidth
                       value={formData.price || ""}
                       onChange={(e: any) =>
                         setFormData((p) => ({ ...p, price: e.target.value }))
+                      }
+                      sx={{ mb: 2 }}
+                    />
+                  </Box>
+                  <Box width={"100%"}>
+                    {/* Price */}
+                    <Typography variant="body2" gutterBottom>
+                      Market Price
+                    </Typography>
+
+                    <CustomTextField
+                      className="product_input"
+                      fullWidth
+                      value={formData.market_price || ""}
+                      onChange={(e: any) =>
+                        setFormData((p) => ({
+                          ...p,
+                          market_price: e.target.value,
+                        }))
                       }
                       sx={{ mb: 2 }}
                     />
@@ -1210,6 +1089,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       Tax (%)
                     </Typography>
                     <CustomTextField
+                      className="product_input"
                       fullWidth
                       value={formData.tax || ""}
                       onChange={(e: any) =>
@@ -1218,15 +1098,13 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       sx={{ mb: 2 }}
                     />
                   </Box>
-                </Box>
-
-                <Box display={"flex"} justifyItems={"center"} gap={3}>
                   <Box width={"100%"}>
                     <Typography variant="body2" gutterBottom>
                       Low Stock Indicator
                     </Typography>
 
                     <CustomTextField
+                      className="product_input"
                       fullWidth
                       value={formData.cutoff || ""}
                       onChange={(e: any) =>
@@ -1238,30 +1116,118 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       sx={{ mb: 2 }}
                     />
                   </Box>
-                  <Box width={"100%"}>
-                    <Typography variant="body2" gutterBottom>
-                      UUID
-                    </Typography>
+                </Box>
 
+                {/* Pack off */}
+                <Grid
+                  // sx={{ mb: 2, mt: 2 }}
+                  // display={"flex"}
+                  // container
+                  // gap={3}
+                  // alignItems={"center"}
+                  // justifyItems={"center"}
+                  container
+                  spacing={3}
+                >
+                  <Grid size={{ xs: 3 }}>
+                    <Typography variant="body2" gutterBottom mb={1}>
+                      Pack Off
+                    </Typography>
                     <CustomTextField
+                      className="product_input"
                       fullWidth
-                      value={formData.uuid || ""}
+                      label="Pack off"
+                      value={formData.pack_off_qty || ""}
+                      disabled={!formData.is_sub_qty}
                       onChange={(e: any) =>
                         setFormData((p) => ({
                           ...p,
-                          uuid: e.target.value || 0,
+                          pack_off_qty: e.target.value,
                         }))
                       }
-                      sx={{ mb: 2 }}
                     />
-                  </Box>
-                </Box>
-
-                {/* Barcode inputs */}
-                <Box display={"flex"} justifyContent={"center"} gap={5}>
-                  <Box width={"80%"}>
+                  </Grid>
+                  <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom mb={1}>
-                      Barcode Texts
+                      Pack off unit
+                    </Typography>
+                    <Autocomplete
+                      className="product_input"
+                      fullWidth
+                      freeSolo
+                      options={packOffs}
+                      disabled={!formData.is_sub_qty}
+                      value={formData.pack_off_unit || null}
+                      onChange={(_, newValue) => {
+                        const value =
+                          typeof newValue === "string"
+                            ? newValue
+                            : newValue?.name || "";
+
+                        if (value && !packOffs.some((u) => u.name === value)) {
+                          setPackOffs((prev) => [
+                            ...prev,
+                            { id: Date.now(), name: value },
+                          ]);
+                        }
+
+                        setFormData((prev) => ({
+                          ...prev,
+                          pack_off_unit: value,
+                        }));
+                      }}
+                      getOptionLabel={(option) =>
+                        typeof option === "string" ? option : option.name
+                      }
+                      renderInput={(params) => (
+                        <CustomTextField
+                          {...params}
+                          placeholder="Select or add unit"
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid
+                    size={{ xs: 3 }}
+                    mt={4}
+                    display={"flex"}
+                    justifyContent={"start"}
+                  >
+                    {/* sub quantity */}
+                    <IOSSwitch
+                      checked={formData.is_sub_qty}
+                      onChange={(e, value) =>
+                        setFormData({
+                          ...formData,
+                          is_sub_qty: value,
+                        })
+                      }
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 3 }}></Grid>
+                </Grid>
+                <Grid spacing={3} container>
+                  <Grid size={{ xs: 3 }}>
+                    {/* short_id */}
+                    <Typography variant="body2" gutterBottom>
+                      Sort ID
+                    </Typography>
+
+                    <TextField
+                      className="product_input"
+                      fullWidth
+                      value={formData.sort_id || ""}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          sort_id: Number(e.target.value),
+                        }))
+                      }
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 3 }}>
+                    <Typography variant="body2" gutterBottom mb={1}>
+                      Barcode texts
                     </Typography>
                     {barcodes.map((code, i) => (
                       <Stack
@@ -1269,9 +1235,9 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         spacing={1}
                         alignItems="center"
                         key={i}
-                        mb={1}
                       >
                         <TextField
+                          className="product_input"
                           placeholder="Barcode"
                           value={code}
                           onChange={(e) => updateBarcode(i, e.target.value)}
@@ -1289,260 +1255,414 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         </Button>
                       </Stack>
                     ))}
-                  </Box>
-                  <Box width={"80%"}>
-                    {/* short_id */}
-                    <Typography variant="body2" gutterBottom mb={1}>
-                      Sort ID
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" gutterBottom>
+                      Description
                     </Typography>
 
                     <TextField
+                      className="product_input"
+                      multiline
                       fullWidth
-                      value={formData.sort_id || ""}
+                      rows={3}
+                      value={formData.description || ""}
                       onChange={(e) =>
                         setFormData((p) => ({
                           ...p,
-                          sort_id: Number(e.target.value),
+                          description: e.target.value,
                         }))
                       }
-                      sx={{ mb: 2 }}
                     />
-                  </Box>
-                </Box>
-                <Grid
-                  container
-                  spacing={2}
-                  height="calc(50vh - 100px)"
-                  display="flex"
-                  flexDirection="column"
-                  size={{ xs: 12, md: 8 }}
-                  sx={{
-                    overflowY: "auto",
-                    pl: 1,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: "auto",
-                    }}
-                  >
-                    <TableContainer>
-                      <Table stickyHeader aria-label="sticky table">
-                        <TableHead>
-                          {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                              {headerGroup.headers.map((header) => {
-                                const isActive = header.column.getIsSorted();
-                                const isAsc =
-                                  header.column.getIsSorted() === "asc";
-                                const isSortable = header.column.getCanSort();
+                  </Grid>
+                </Grid>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6 }}>
+                    {/* Gallery Images Upload */}
+                    <Typography variant="body2" gutterBottom mb={1}>
+                      Gallery Images
+                    </Typography>
+                    <Box
+                      {...galleryDropzone.getRootProps()}
+                      sx={{
+                        width: "100%",
+                        minHeight: 140,
+                        border: "2px dashed",
+                        borderColor: "primary.main",
+                        borderRadius: 2,
+                        cursor: "pointer",
+                        p: 2,
+                        mb: 2,
+                      }}
+                    >
+                      <input
+                        {...galleryDropzone.getInputProps()}
+                        accept=".jpg,.png,.jpeg"
+                      />
 
-                                return (
-                                  <TableCell
-                                    key={header.id}
-                                    align="center"
-                                    sx={{
-                                      paddingTop: "10px",
-                                      paddingBottom: "10px",
-                                      width:
-                                        header.column.id === "actions"
-                                          ? 210
-                                          : "auto",
-                                    }}
-                                  >
-                                    <Box
-                                      onClick={header.column.getToggleSortingHandler()}
-                                      p={0}
-                                      sx={{
-                                        cursor: isSortable
-                                          ? "pointer"
-                                          : "default",
-                                        border: "2px solid transparent",
-                                        borderRadius: "6px",
-                                        display: "flex",
-                                        justifyContent: "flex-start",
-                                        "&:hover": { color: "#888" },
-                                        "&:hover .hoverIcon": { opacity: 1 },
-                                      }}
-                                    >
-                                      <Typography variant="subtitle2">
-                                        {flexRender(
-                                          header.column.columnDef.header,
-                                          header.getContext(),
-                                        )}
-                                      </Typography>
-                                      {isSortable && (
-                                        <Box
-                                          component="span"
-                                          className="hoverIcon"
-                                          ml={0.5}
-                                          sx={{
-                                            transition: "opacity 0.2s",
-                                            opacity: isActive ? 1 : 0,
-                                            fontSize: "0.9rem",
-                                            color: isActive ? "#000" : "#888",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                          }}
-                                        >
-                                          {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                                        </Box>
-                                      )}
-                                    </Box>
-                                  </TableCell>
-                                );
-                              })}
-                            </TableRow>
-                          ))}
-                        </TableHead>
-                        <TableBody>
-                          {fetchStore ? (
-                            <SkeletonLoader
-                              columns={simpleColumns}
-                              rowCount={simpleColumns.length}
-                            />
-                          ) : data.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={columns.length}>
-                                <Box
+                      {galleryPreview.length > 0 ? (
+                        <Grid container spacing={2}>
+                          {galleryPreview.map((item, i) => (
+                            <Grid
+                              size={{ xs: 6, sm: 4, md: 3, lg: 2 }}
+                              key={item.id ?? i}
+                            >
+                              <Box
+                                sx={{
+                                  position: "relative",
+                                  width: "100%",
+                                  aspectRatio: "1 / 1",
+                                  overflow: "hidden",
+                                  borderRadius: 1,
+                                }}
+                              >
+                                <Image
+                                  src={item.src}
+                                  alt="Product image"
+                                  fill
+                                  style={{
+                                    objectFit: "cover",
+                                    cursor: "zoom-in",
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewImage(item.src);
+                                    setOpenPreview(true);
+                                  }}
+                                />
+
+                                <IconButton
+                                  color="error"
+                                  size="small"
                                   sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    height: "calc(50vh - 100px)",
+                                    position: "absolute",
+                                    top: 4,
+                                    right: 4,
+                                    backgroundColor: "#fff",
+                                    zIndex: 2,
+                                    "&:hover": {
+                                      backgroundColor: "#fff",
+                                      color: "red",
+                                    },
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveGalleryImage(item, i);
                                   }}
                                 >
-                                  <Image
-                                    src="/images/no-data.png"
-                                    alt="No data"
-                                    style={{
-                                      maxWidth: "100%",
-                                      maxHeight: "100%",
-                                    }}
-                                    width={200}
-                                    height={200}
-                                  />
-                                </Box>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            table.getRowModel().rows.map((row) => (
-                              <TableRow
-                                key={row.id}
-                                hover
-                                sx={{ cursor: "pointer" }}
-                              >
-                                {row.getVisibleCells().map((cell) => (
-                                  <TableCell
-                                    key={cell.id}
-                                    sx={{ padding: "10px" }}
-                                  >
-                                    {flexRender(
-                                      cell.column.columnDef.cell,
-                                      cell.getContext(),
-                                    )}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    {data.length ? <Divider /> : <></>}
-                  </Box>
-                  <Divider />
-                  <Stack
-                    gap={1}
-                    pr={3}
-                    pl={3}
-                    pb={3}
-                    alignItems="center"
-                    direction={{ xs: "column", sm: "row" }}
-                    justifyContent="space-between"
-                  >
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Typography color="textSecondary" className="f-14">
-                        {table.getPrePaginationRowModel().rows.length} Rows
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        display: {
-                          xs: "block",
-                          sm: "flex",
-                        },
-                      }}
-                      alignItems="center"
-                    >
-                      <Stack direction="row" alignItems="center">
-                        <Typography color="textSecondary" className="f-14">
-                          Page
-                        </Typography>
-                        <Typography
-                          color="textSecondary"
-                          className="f-14"
-                          fontWeight={600}
-                          ml={1}
-                        >
-                          {table.getState().pagination.pageIndex + 1} of{" "}
-                          {table.getPageCount()}
-                        </Typography>
-                        <Typography
-                          color="textSecondary"
-                          ml={"3px"}
-                          className="f-14"
-                        >
-                          {" "}
-                          | Entries :{" "}
-                        </Typography>
-                      </Stack>
-                      <Stack
-                        ml={"5px"}
-                        direction="row"
-                        alignItems="center"
-                        color="textSecondary"
-                      >
-                        <CustomSelect
-                          className="custom-select"
-                          value={table.getState().pagination.pageSize}
-                          onChange={(e: { target: { value: any } }) => {
-                            table.setPageSize(Number(e.target.value));
+                                  <IconTrash size={16} />
+                                </IconButton>
+                              </Box>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      ) : (
+                        <Box
+                          sx={{
+                            height: 140,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
                         >
-                          {[50, 100, 250, 500].map((pageSize) => (
-                            <MenuItem key={pageSize} value={pageSize}>
-                              {pageSize}
-                            </MenuItem>
-                          ))}
-                        </CustomSelect>
-                        <IconButton
-                          size="small"
-                          sx={{ width: "30px" }}
-                          onClick={() => table.previousPage()}
-                          disabled={!table.getCanPreviousPage()}
-                        >
-                          <IconChevronLeft />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          sx={{ width: "30px" }}
-                          onClick={() => table.nextPage()}
-                          disabled={!table.getCanNextPage()}
-                        >
-                          <IconChevronRight />
-                        </IconButton>
-                      </Stack>
+                          <Typography variant="body2" color="textSecondary">
+                            Click or Drag to upload multiple images
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
-                  </Stack>
+                  </Grid>
+                  {/* <Grid
+                    size={{ xs: 6 }}
+                    height="calc(50vh - 100px)"
+                    display="flex"
+                    flexDirection="column"
+                    // size={{ xs: 12, md: 8 }}
+                    sx={{
+                      overflowY: "auto",
+                      pl: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        flex: 1,
+                        minHeight: 0,
+                        overflow: "auto",
+                      }}
+                    >
+                      <TableContainer>
+                        <Table stickyHeader aria-label="sticky table">
+                          <TableHead>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                              <TableRow key={headerGroup.id}>
+                                {headerGroup.headers.map((header) => {
+                                  const isActive = header.column.getIsSorted();
+                                  const isAsc =
+                                    header.column.getIsSorted() === "asc";
+                                  const isSortable = header.column.getCanSort();
+
+                                  return (
+                                    <TableCell
+                                      key={header.id}
+                                      align="center"
+                                      sx={{
+                                        paddingTop: "10px",
+                                        paddingBottom: "10px",
+                                        width:
+                                          header.column.id === "actions"
+                                            ? 210
+                                            : "auto",
+                                      }}
+                                    >
+                                      <Box
+                                        onClick={header.column.getToggleSortingHandler()}
+                                        p={0}
+                                        sx={{
+                                          cursor: isSortable
+                                            ? "pointer"
+                                            : "default",
+                                          border: "2px solid transparent",
+                                          borderRadius: "6px",
+                                          display: "flex",
+                                          justifyContent: "flex-start",
+                                          "&:hover": { color: "#888" },
+                                          "&:hover .hoverIcon": { opacity: 1 },
+                                        }}
+                                      >
+                                        <Typography variant="subtitle2">
+                                          {flexRender(
+                                            header.column.columnDef.header,
+                                            header.getContext(),
+                                          )}
+                                        </Typography>
+                                        {isSortable && (
+                                          <Box
+                                            component="span"
+                                            className="hoverIcon"
+                                            ml={0.5}
+                                            sx={{
+                                              transition: "opacity 0.2s",
+                                              opacity: isActive ? 1 : 0,
+                                              fontSize: "0.9rem",
+                                              color: isActive ? "#000" : "#888",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "space-between",
+                                            }}
+                                          >
+                                            {isActive
+                                              ? isAsc
+                                                ? "↑"
+                                                : "↓"
+                                              : "↑"}
+                                          </Box>
+                                        )}
+                                      </Box>
+                                    </TableCell>
+                                  );
+                                })}
+                              </TableRow>
+                            ))}
+                          </TableHead>
+                          <TableBody>
+                            {fetchStore ? (
+                              <SkeletonLoader
+                                columns={simpleColumns}
+                                rowCount={simpleColumns.length}
+                              />
+                            ) : data.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={columns.length}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      height: "calc(50vh - 100px)",
+                                    }}
+                                  >
+                                    <Image
+                                      src="/images/no-data.png"
+                                      alt="No data"
+                                      style={{
+                                        maxWidth: "100%",
+                                        maxHeight: "100%",
+                                      }}
+                                      width={200}
+                                      height={200}
+                                    />
+                                  </Box>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              table.getRowModel().rows.map((row) => (
+                                <TableRow
+                                  key={row.id}
+                                  hover
+                                  sx={{ cursor: "pointer" }}
+                                >
+                                  {row.getVisibleCells().map((cell) => (
+                                    <TableCell
+                                      key={cell.id}
+                                      sx={{ padding: "10px" }}
+                                    >
+                                      {flexRender(
+                                        cell.column.columnDef.cell,
+                                        cell.getContext(),
+                                      )}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      {data.length ? <Divider /> : <></>}
+                    </Box>
+                    <Divider />
+                    <Stack
+                      gap={1}
+                      pr={3}
+                      pl={3}
+                      pb={3}
+                      alignItems="center"
+                      direction={{ xs: "column", sm: "row" }}
+                      justifyContent="space-between"
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography color="textSecondary" className="f-14">
+                          {table.getPrePaginationRowModel().rows.length} Rows
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: {
+                            xs: "block",
+                            sm: "flex",
+                          },
+                        }}
+                        alignItems="center"
+                      >
+                        <Stack direction="row" alignItems="center">
+                          <Typography color="textSecondary" className="f-14">
+                            Page
+                          </Typography>
+                          <Typography
+                            color="textSecondary"
+                            className="f-14"
+                            fontWeight={600}
+                            ml={1}
+                          >
+                            {table.getState().pagination.pageIndex + 1} of{" "}
+                            {table.getPageCount()}
+                          </Typography>
+                          <Typography
+                            color="textSecondary"
+                            ml={"3px"}
+                            className="f-14"
+                          >
+                            {" "}
+                            | Entries :{" "}
+                          </Typography>
+                        </Stack>
+                        <Stack
+                          ml={"5px"}
+                          direction="row"
+                          alignItems="center"
+                          color="textSecondary"
+                        >
+                          <CustomSelect
+                            className="custom-select"
+                            value={table.getState().pagination.pageSize}
+                            onChange={(e: { target: { value: any } }) => {
+                              table.setPageSize(Number(e.target.value));
+                            }}
+                          >
+                            {[50, 100, 250, 500].map((pageSize) => (
+                              <MenuItem key={pageSize} value={pageSize}>
+                                {pageSize}
+                              </MenuItem>
+                            ))}
+                          </CustomSelect>
+                          <IconButton
+                            size="small"
+                            sx={{ width: "30px" }}
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                          >
+                            <IconChevronLeft />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            sx={{ width: "30px" }}
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                          >
+                            <IconChevronRight />
+                          </IconButton>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </Grid> */}
                 </Grid>
               </Grid>
             </Grid>
           </form>
         </Box>
+
+        <Dialog
+          open={openPreview}
+          onClose={() => setOpenPreview(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: "transparent",
+              boxShadow: "none",
+            },
+          }}
+        >
+          <IconButton
+            onClick={() => setOpenPreview(false)}
+            color="primary"
+            sx={{
+              position: "fixed",
+              top: 16,
+              right: 16,
+              zIndex: 1301,
+              backgroundColor: "#fff",
+              "&:hover": {
+                backgroundColor: "#eee",
+                color: "#1e4db7",
+              },
+            }}
+          >
+            <IconX />
+          </IconButton>
+
+          <Box
+            sx={{
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => setOpenPreview(false)}
+          >
+            <img
+              src={previewImage || ""}
+              alt="Preview"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "90% !important",
+                height: "50%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+        </Dialog>
+
         {/* Action Buttons */}
         <Box
           sx={{
@@ -1594,6 +1714,17 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
           formData={categoryFormData}
           setFormData={setCategoryFormData}
           handleSubmit={handleCategorySubmit}
+          isSaving={isSaving}
+          companyId={companyId ?? null}
+        />
+
+        {/* Add supplier */}
+        <CreateSupplier
+          open={openSupplierModal}
+          onClose={() => setOpenSupplierModal(false)}
+          formData={supplierFormData}
+          setFormData={setSupplierFormData}
+          handleSubmit={handleSupplierSubmit}
           isSaving={isSaving}
           companyId={companyId ?? null}
         />

@@ -301,17 +301,17 @@ const CategoryList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+        const image = "/images/products/product.png";
 
         return (
           <Stack direction="row" alignItems="center">
-            {item.category_image && (
-              <Image
-                src={item.category_image}
-                alt={"Category image"}
-                width={50}
-                height={50}
-              />
-            )}
+            <Image
+              src={item.category_image || image}
+              style={{ cursor: "pointer" }}
+              alt="Category"
+              width={50}
+              height={50}
+            />
           </Stack>
         );
       },

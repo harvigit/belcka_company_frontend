@@ -209,7 +209,7 @@ input#project_id::placeholder {
 .team_selection .MuiAutocomplete-endAdornment button svg{
     font-size: 18px !important;
 }
-.address-form ,.task-form , .category-form{
+.address-form ,.task-form , .category-form,.product-form{
     display: flex;
     height: 100%;
     flex-direction: column;
@@ -458,4 +458,7 @@ input[type="range"]::-moz-range-thumb {
 
 .date_range_picker button {
     font-size: 14px !important;
+}
+.product-form .product_input input, .product_input select{
+    height: 18px !important
 }

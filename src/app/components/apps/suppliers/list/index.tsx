@@ -309,12 +309,14 @@ const SupplierList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+        const image = "/images/products/product.png";
 
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Image
-              src={item.supplier_image}
-              alt={"Supplier image"}
+              src={item.supplier_image || image}
+              style={{ cursor: "pointer" }}
+              alt="Supplier"
               width={50}
               height={50}
             />

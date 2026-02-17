@@ -71,6 +71,10 @@ const SidebarItems = () => {
         return true;
       }
       
+      if(item.slug === "purchase"){
+        return true;
+      }
+
       if (item.children && item.children.length > 0) {
         return item.children.some((child: any) =>
           hasWebPermission(child.title)

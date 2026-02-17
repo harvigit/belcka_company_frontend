@@ -1,11 +1,5 @@
 "use client";
-import React, {
-  useEffect,
-  useState,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -35,7 +29,9 @@ import {
   FormControlLabel,
   Checkbox,
   Modal,
-  Avatar,
+  Card,
+  CardContent,
+  CircularProgress,
 } from "@mui/material";
 import {
   flexRender,
@@ -56,6 +52,7 @@ import {
   IconNotes,
   IconSearch,
   IconTrash,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -69,7 +66,6 @@ import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconEdit } from "@tabler/icons-react";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
@@ -78,6 +74,8 @@ import ArchiveProduct from "../archive";
 import { IconEye } from "@tabler/icons-react";
 import { FileDownload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
+import { useTheme } from "@mui/material/styles";
+import ProductView from "../view";
 
 dayjs.extend(customParseFormat);
 
@@ -110,6 +108,7 @@ export interface ProductFormData {
   cutoff?: number;
   is_sub_qty?: boolean;
   store_ids?: string;
+  remove_image?: boolean;
 }
 
 const ProductList = () => {
@@ -126,9 +125,10 @@ const ProductList = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isImport, setIsImport] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [archiveProductList, setArchiveProductList] = useState<boolean>(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
@@ -139,7 +139,11 @@ const ProductList = () => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
+  const [openPreview, setOpenPreview] = useState(false);
 
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [mainFile, setMainFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<ProductFormData>({
     id: 0,
     company_id: user?.company_id,
@@ -222,6 +226,64 @@ const ProductList = () => {
     fetchProducts();
   }, [api]);
 
+  // const fetchOverview = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const res = await api.get(
+  //       `products/inventory-overview?company_id=${user.company_id}`,
+  //     );
+
+  //     if (res.data.IsSuccess) {
+  //       const data = res.data.info;
+
+  //       setSales([
+  //         {
+  //           btnText: "primary.main",
+  //           title: "Categories",
+  //           digits: data.categories.count,
+  //           subtext: "",
+  //           text: "",
+  //           text2: "In a month",
+  //         },
+  //         {
+  //           btnText: "warning.main",
+  //           title: "Total Products",
+  //           digits: data.total_products.count,
+  //           subtext: data.total_products.revenue,
+  //           text: "Revenue",
+  //           text2: "In a month",
+  //         },
+  //         {
+  //           btnText: "success.main",
+  //           title: "Top Selling",
+  //           digits: data.top_selling.count,
+  //           subtext: data.top_selling.revenue,
+  //           text: "Cost",
+  //           text2: "In a month",
+  //         },
+  //         {
+  //           btnText: "error.main",
+  //           title: "Low Stocks",
+  //           digits: data.low_stocks.low_stock,
+  //           subtext: data.low_stocks.out_of_stock,
+  //           text: "Not in stock",
+  //           text2: "Ordered",
+  //         },
+  //       ]);
+  //     }
+  //   } catch (error) {
+  //     console.error(error);
+  //     setLoading(false);
+  //   }
+  //   setLoading(false);
+  // };
+  // useEffect(() => {
+  //   fetchOverview();
+  // }, [user.company_id]);
+
+  const theme = useTheme();
+  const borderColor = theme.palette.divider;
+
   const exportProducts = async () => {
     try {
       const res = await api.get(
@@ -268,6 +330,7 @@ const ProductList = () => {
 
       toast.success(res.data.message);
       fetchProducts();
+      // fetchOverview();
       handleModelClose();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Import failed");
@@ -350,78 +413,6 @@ const ProductList = () => {
     }
   };
 
-  const editSupplier = async (
-    e: React.FormEvent,
-    galleryFiles: File[],
-    barcodes: string[],
-    removedImageIds: number[],
-  ) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    try {
-      const formPayload = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value === undefined || value === null) return;
-
-        if (key === "image") return;
-
-        if (Array.isArray(value)) {
-          value.forEach((v) => {
-            formPayload.append(`${key}[]`, String(v));
-          });
-          return;
-        }
-
-        if (typeof value === "boolean") {
-          formPayload.append(key, value ? "1" : "0");
-          return;
-        }
-
-        formPayload.append(key, String(value));
-      });
-
-      if (formData.image instanceof File) {
-        formPayload.append("image", formData.image);
-      }
-
-      removedImageIds.forEach((id) =>
-        formPayload.append("removed_image_ids[]", String(id)),
-      );
-
-      galleryFiles.forEach((file) => {
-        formPayload.append("files", file);
-      });
-
-      formPayload.append("barcode_text", barcodes.join(","));
-
-      const result = await api.post("products/update", formPayload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          company_id: user?.company_id,
-          name: "",
-          sort_id: 0,
-          short_name: "",
-          description: "",
-          uuid: "",
-          status: true,
-        });
-        setEditDrawerOpen(false);
-        fetchProducts();
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
@@ -451,12 +442,10 @@ const ProductList = () => {
     });
   }, [data, searchTerm, filters]);
 
-  // UseCallback to memoize these functions
-  const handleEdit = useCallback((id: number) => {
+  const handleView = useCallback((id: number) => {
     setSelectedTaskId(id);
-    setEditDrawerOpen(true);
+    setViewDrawerOpen(true);
   }, []);
-
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -537,7 +526,6 @@ const ProductList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const isChecked = selectedRowIds.has(item.id);
 
         return (
           <Stack
@@ -566,16 +554,21 @@ const ProductList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+        const image = "/images/products/product.png";
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
-            {item.product_image && (
-              <Image
-                src={item.product_image}
-                alt={"Product image"}
-                width={50}
-                height={50}
-              />
-            )}
+            <Image
+              src={item.product_image || image}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(item.product_image || image);
+                setOpenPreview(true);
+              }}
+              style={{ cursor: "pointer" }}
+              alt="Product"
+              width={50}
+              height={50}
+            />
           </Stack>
         );
       },
@@ -683,14 +676,30 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor((row) => row?.price, {
-      id: "price",
-      header: () => "Price",
+      id: "buyingPrice",
+      header: () => "Buying Price",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography textTransform="capitalize" className="f-14">
-              {item.price ? item.price : "-"}
+              {item.currency}
+              {item.price ? item.price : "0"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+    columnHelper.accessor((row) => row?.market_price, {
+      id: "marketPrice",
+      header: () => "Market Price",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.currency}
+              {item.market_price ? item.market_price : "0"}
             </Typography>
           </Stack>
         );
@@ -704,9 +713,9 @@ const ProductList = () => {
         const item = row.original;
         return (
           <Stack direction="row" spacing={1}>
-            <Tooltip title="Edit">
-              <IconButton onClick={() => handleEdit(item.id)} color="primary">
-                <IconEdit size={18} />
+            <Tooltip title="View">
+              <IconButton onClick={() => handleView(item.id)} color="primary">
+                <IconEye size={18} />
               </IconButton>
             </Tooltip>
           </Stack>
@@ -755,6 +764,147 @@ const ProductList = () => {
           flexDirection: "column",
         }}
       >
+        {/* <Card
+          sx={{
+            p: 0,
+            mb: 3,
+            borderRadius: 0,
+            boxShadow: theme.shadows[9],
+          }}
+        >
+          <Typography className="f-18" pl={4}>
+            Overall Inventory
+          </Typography>
+
+          <Grid container spacing={0}>
+            {sales.map((topcard) => (
+              <Grid
+                key={topcard.digits}
+                size={{
+                  xs: 6,
+                  lg: 3,
+                  sm: 3,
+                }}
+              >
+                {!loading ? (
+                  <CardContent
+                    sx={{
+                      borderRight: {
+                        xs: "0",
+                        sm: `1px solid ${borderColor}`,
+                      },
+                      padding: "30px",
+                      "& :last-child": {
+                        borderRight: "0",
+                      },
+                    }}
+                  >
+                    <Typography
+                      fontWeight={500}
+                      sx={{
+                        color: topcard.btnText,
+                        boxShadow: "none",
+                      }}
+                    >
+                      {topcard.title}
+                    </Typography>
+                    <Box
+                      display="flex"
+                      justifyContent={"space-between"}
+                      alignItems="center"
+                      mt={3}
+                      color="text.secondary"
+                    >
+                      <Typography variant="h3">{topcard.digits}</Typography>
+                      <Typography color="textSecondary" variant="h3">
+                        {topcard.subtext}
+                      </Typography>
+                    </Box>
+                    <Box
+                      display="flex"
+                      justifyContent={"space-between"}
+                      alignItems="end"
+                      mt={1}
+                      color="text.secondary"
+                    >
+                      <Typography variant="h6" fontWeight="400">
+                        {topcard.text2}
+                      </Typography>
+
+                      <Typography
+                        color="textSecondary"
+                        variant="h6"
+                        fontWeight="400"
+                      >
+                        {topcard.text}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                ) : (
+                  <>
+                    {" "}
+                    <CircularProgress
+                      size={22}
+                      color="primary"
+                      sx={{ ml: 5 }}
+                    />
+                  </>
+                )}
+              </Grid>
+            ))}
+          </Grid>
+        </Card> */}
+        <Dialog
+          open={openPreview}
+          onClose={() => setOpenPreview(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: "transparent",
+              boxShadow: "none",
+            },
+          }}
+        >
+          <IconButton
+            onClick={() => setOpenPreview(false)}
+            color="primary"
+            sx={{
+              position: "fixed",
+              top: 16,
+              right: 16,
+              zIndex: 1301,
+              backgroundColor: "#fff",
+              "&:hover": {
+                backgroundColor: "#eee",
+                color: "#1e4db7",
+              },
+            }}
+          >
+            <IconX />
+          </IconButton>
+
+          <Box
+            sx={{
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => setOpenPreview(false)}
+          >
+            <img
+              src={previewImage || ""}
+              alt="Preview"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "90% !important",
+                height: "50%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+        </Dialog>
         {/* Render the search and table */}
         <Stack
           mr={2}
@@ -800,13 +950,6 @@ const ProductList = () => {
             >
               <IconFileExport width={18} /> Export
             </Button>
-            {/* <input
-              ref={fileInputRef}
-              type="file"
-              hidden
-              accept=".xls,.xlsx"
-              onChange={handleFileChange}
-            /> */}
 
             <Button
               variant="contained"
@@ -909,6 +1052,7 @@ const ProductList = () => {
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Button
                     variant="contained"
+                    disabled={isImport}
                     onClick={(e: any) => {
                       importProducts(e);
                     }}
@@ -1233,17 +1377,16 @@ const ProductList = () => {
           companyId={user?.company_id ?? null}
         />
 
-        {/* Edit product */}
-        <ProductAddEdit
-          open={editDrawerOpen}
-          onClose={() => setEditDrawerOpen(false)}
-          isEdit={true}
-          formData={formData}
+        {/* View product */}
+        <ProductView
+          open={viewDrawerOpen}
+          onClose={() => setViewDrawerOpen(false)}
           productId={selectedTaskId}
+          formData={formData}
           setFormData={setFormData}
-          handleSubmit={editSupplier}
+          handleSubmit={handleSubmit}
           isSaving={isSaving}
-          companyId={user.company_id ?? null}
+          companyId={user?.company_id ?? null}
         />
 
         {/* Archive Product List */}
