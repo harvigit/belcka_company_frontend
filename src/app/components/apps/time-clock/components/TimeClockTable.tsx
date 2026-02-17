@@ -89,7 +89,6 @@ interface TimeClockTableProps {
     openPenaltiesSidebar?: (worklogId: number) => Promise<void>;
     leaveRequestCount: number;
     penaltyAppealCount: number;
-    leaveRequestByDate?: { [key: string]: number };
     penaltyAppealByDate?: { [key: string]: number };
     openLeaveRequestsSideBar?: () => Promise<void>;
 }
@@ -139,7 +138,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            openPenaltiesSidebar,
                                                            leaveRequestCount,
                                                            penaltyAppealCount,
-                                                           leaveRequestByDate,
                                                            penaltyAppealByDate,
                                                            openLeaveRequestsSideBar,
                                                        }) => {
@@ -177,11 +175,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         setConflictAnchorEl(null);
         openLeaveRequestsSideBar?.();
     };
-    
-    const leaveDaysCount = useMemo(() => {
-        if (!leaveRequestByDate) return 0;
-        return Object.keys(leaveRequestByDate).filter(date => leaveRequestByDate[date] > 0).length;
-    }, [leaveRequestByDate]);
     
     const isNewRecordValid = (newRecord: NewRecord) => {
         return (
@@ -313,7 +306,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                             const hasRecords = hasValidWorklogData(rowData) || dateNewRecords.length > 0;
 
                             const hasConflicts = conflictsByDate && conflictsByDate[rowData.date] > 0;
-                            const hasLeaves = leaveRequestByDate && leaveRequestByDate[rowData.date] > 0;
+                            const hasLeaveRequests = leaveRequestCount && leaveRequestCount > 0;
                             
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
@@ -457,16 +450,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             width: `${visibleColumnConfigs.conflicts.width}px`,
                                                         }}
                                                     >
-                                                        {(hasLeaves || hasConflicts) && (
+                                                        {(hasLeaveRequests || hasConflicts) && (
                                                             <Tooltip
-                                                                title={`${conflictDaysCount + leaveDaysCount} Issue${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
+                                                                title={`${conflictDaysCount + leaveRequestCount} Issue${conflictDaysCount + leaveRequestCount !== 1 ? 's' : ''}`}
                                                                 arrow
                                                                 placement="top"
                                                             >
                                                                 <IconButton
                                                                     size="small"
                                                                     color="error"
-                                                                    aria-label={`${conflictDaysCount + leaveDaysCount} scheduling conflict${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
+                                                                    aria-label={`${conflictDaysCount + leaveRequestCount} scheduling conflict${conflictDaysCount + leaveRequestCount !== 1 ? 's' : ''}`}
                                                                     onClick={(e) => setConflictAnchorEl(e.currentTarget)}
                                                                     sx={{
                                                                         p: 0,
@@ -992,7 +985,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            color: (hasLeaves || hasConflicts) ? '#fc4b6c' : ((rowData.isMoreThanWork || rowData.isLessThanWork) ? '#1976d2' : 'inherit')
+                                                            color: (hasLeaveRequests || hasConflicts) ? '#fc4b6c' : ((rowData.isMoreThanWork || rowData.isLessThanWork) ? '#1976d2' : 'inherit')
                                                         }}
                                                     >
                                                         {rowData.dailyTotal}
@@ -1243,16 +1236,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             textAlign: 'center',
                                                         }}
                                                     >
-                                                        {(hasLeaves || hasConflicts) && (
+                                                        {(hasLeaveRequests || hasConflicts) && (
                                                             <Tooltip
-                                                                title={`${conflictDaysCount + leaveDaysCount} Issue${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
+                                                                title={`${conflictDaysCount + leaveRequestCount} Issue${conflictDaysCount + leaveRequestCount !== 1 ? 's' : ''}`}
                                                                 arrow
                                                                 placement="top"
                                                             >
                                                                 <IconButton
                                                                     size="small"
                                                                     color="error"
-                                                                    aria-label={`${conflictDaysCount + leaveDaysCount} scheduling conflict${conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}`}
+                                                                    aria-label={`${conflictDaysCount + leaveRequestCount} scheduling conflict${conflictDaysCount + leaveRequestCount !== 1 ? 's' : ''}`}
                                                                     onClick={(e) => setConflictAnchorEl(e.currentTarget)}
                                                                     sx={{
                                                                         p: 0,
@@ -1498,7 +1491,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         fontWeight={600}
                         sx={{ mb: 1.5 }}
                     >
-                        {conflictDaysCount + leaveDaysCount} unresolved issue{conflictDaysCount + leaveDaysCount !== 1 ? 's' : ''}
+                        {conflictDaysCount + leaveRequestCount} unresolved issue{conflictDaysCount + leaveRequestCount !== 1 ? 's' : ''}
                     </Typography>
                     <Stack direction="column" spacing={1}>
                         {conflictDaysCount > 0 && (
@@ -1522,12 +1515,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                 </Button>
                             </Box>
                         )}
-                        {leaveDaysCount > 0 && (
+                        {leaveRequestCount > 0 && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                     <IconSun size={18} color="#32bf90" />
                                     <Typography variant="body2">
-                                        {leaveDaysCount} Leave request{leaveDaysCount !== 1 ? 's' : ''}
+                                        {leaveRequestCount} Leave request{leaveRequestCount !== 1 ? 's' : ''}
                                     </Typography>
                                 </Box>
                                 <Button
