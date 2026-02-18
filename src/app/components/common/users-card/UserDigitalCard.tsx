@@ -40,8 +40,8 @@ interface DigitalIDCardProps {
     isPublicView?: boolean;
 }
 
-const CARD_WIDTH  = 500;
-const CARD_HEIGHT = 320;
+const CARD_WIDTH  = 450;
+const CARD_HEIGHT = 350;
 
 const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, token, isPublicView = false}) => {
     const [cardData, setCardData] = useState<ApiDigitalCardInfo | null>(null);
@@ -280,12 +280,19 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
                                 {cardData.trade_name}
                             </Typography>
 
-                            {/* Company */}
-                            <Typography
-                                sx={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}
+                            {/* Company Logo */}
+                            <Box
+                                sx={{
+                                    display: 'inline-flex',
+                                    width: 'fit-content',
+                                }}
                             >
-                                {cardData.company_name}
-                            </Typography>
+                                <img
+                                    src={cardData.company_logo}
+                                    alt="Company Logo"
+                                    style={{ width: '100px', height: '60px', objectFit: 'contain', display: 'block' }}
+                                />
+                            </Box>
 
                             {/* Spacer */}
                             <Box sx={{ flex: 1 }} />
