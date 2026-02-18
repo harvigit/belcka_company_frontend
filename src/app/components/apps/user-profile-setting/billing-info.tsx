@@ -344,14 +344,27 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               fullWidth
               className="custom_color"
               disabled={isDisabledField(key)}
-              inputProps={{ maxLength: key == "address" ? 250 : 50 }}
+              inputProps={{
+                maxLength: key === "address" ? 250 : 50,
+                inputMode: "text",
+              }}
               label={key
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (c) => c.toUpperCase())}
               value={(formData as any)[key] ?? ""}
-              onChange={(e) =>
-                handleFieldChange(key as keyof BillingFormData, e.target.value)
-              }
+              onChange={(e) => {
+                let value = e.target.value;
+
+                if (["first_name", "middle_name", "last_name"].includes(key)) {
+                  value = value.replace(/[^a-zA-Z\s]/g, "");
+                }
+
+                if (key === "post_code") {
+                  value = value.replace(/[^0-9]/g, "");
+                }
+
+                handleFieldChange(key as keyof BillingFormData, value);
+              }}
             />
           </Grid>
         ))}
@@ -413,14 +426,30 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               fullWidth
               className="custom_color"
               disabled={isDisabledField(key)}
-              inputProps={{ maxLength: 50 }}
+              inputProps={{
+                maxLength:
+                  key === "utr_number" ? 11 : key === "nin_number" ? 9 : 50,
+              }}
               label={key
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (c) => c.toUpperCase())}
               value={(formData as any)[key] ?? ""}
-              onChange={(e) =>
-                handleFieldChange(key as keyof BillingFormData, e.target.value)
-              }
+              onChange={(e) => {
+                let value = e.target.value;
+
+                if (key === "utr_number") {
+                  value = value.replace(/\D/g, "").slice(0, 11);
+                }
+
+                if (key === "nin_number") {
+                  value = value
+                    .replace(/[^a-zA-Z0-9]/g, "")
+                    .toUpperCase()
+                    .slice(0, 9);
+                }
+
+                handleFieldChange(key as keyof BillingFormData, value);
+              }}
             />
           </Grid>
         ))}
@@ -443,17 +472,36 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 className="custom_color"
                 fullWidth
                 disabled={isDisabledField(key)}
-                inputProps={{ maxLength: 50 }}
+                inputProps={{
+                  maxLength:
+                    key === "short_code" ? 8 : key === "account_no" ? 15 : 50,
+                  inputMode: "text",
+                }}
                 label={key
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (c) => c.toUpperCase())}
                 value={(formData as any)[key] ?? ""}
-                onChange={(e) =>
-                  handleFieldChange(
-                    key as keyof BillingFormData,
-                    e.target.value,
-                  )
-                }
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (key === "account_no") {
+                    value = value.replace(/[^0-9]/g, "");
+                  }
+                  if (["name_on_account", "bank_name"].includes(key)) {
+                    value = value.replace(/[^a-zA-Z\s]/g, "");
+                  }
+                  if (key === "short_code") {
+                    value = value.replace(/[^a-zA-Z0-9]/g, "");
+                    value = value.toUpperCase();
+                    value = value.slice(0, 6);
+                    if (value.length > 4) {
+                      value = `${value.slice(0, 2)}-${value.slice(2, 4)}-${value.slice(4)}`;
+                    } else if (value.length > 2) {
+                      value = `${value.slice(0, 2)}-${value.slice(2)}`;
+                    }
+                  }
+
+                  handleFieldChange(key as keyof BillingFormData, value);
+                }}
               />
             </Grid>
           ),

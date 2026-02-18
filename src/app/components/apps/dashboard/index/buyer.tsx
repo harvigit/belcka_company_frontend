@@ -173,7 +173,7 @@ const BuyerDashboard = () => {
             boxShadow: (theme) => theme.shadows[9],
           }}
         >
-          <Typography className="f-18" pl={4} pt={2}>
+          <Typography pl={4} pt={2} variant="h3">
             Delivery details
           </Typography>
 
@@ -330,7 +330,7 @@ const BuyerDashboard = () => {
           }}
         >
           <Box>
-            <Typography className="f-18" pl={4} pt={2}>
+            <Typography variant="h3" pl={4} pt={2}>
               Inventory Summary
             </Typography>
           </Box>
@@ -520,7 +520,7 @@ const BuyerDashboard = () => {
               alignItems={"center"}
               width={"95%"}
             >
-              <Typography className="f-18" pl={4} pt={2}>
+              <Typography variant="h3" pl={4} pt={2}>
                 Suppliers
               </Typography>
               <Link

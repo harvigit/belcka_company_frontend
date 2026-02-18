@@ -888,7 +888,12 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            sx={{ width: 100 }}
+            noWrap
+          >
             {row.account_no ? row.account_no : "-"}
           </Typography>
         );
@@ -1061,13 +1066,18 @@ const TablePagination = () => {
   }, [table, userId]);
 
   useEffect(() => {
-    const visibleColumns = table
+    const eligibleColumns = table
       .getAllLeafColumns()
-      .filter((col) => col.id !== "conflicts" && col.getIsVisible());
+      .filter((col) => col.id !== "conflicts");
 
-    const allSelected = visibleColumns.every((col) => col.getIsVisible());
+    const allSelected = eligibleColumns.every((col) => col.getIsVisible());
+
+    const visibleCount = eligibleColumns.filter((col) =>
+      col.getIsVisible(),
+    ).length;
+
     setSelectAll(allSelected);
-    setVisibleColumnsCount(visibleColumns.length);
+    setVisibleColumnsCount(visibleCount);
   }, [table.getState().columnVisibility]);
 
   const handleSelectAllChange = (e: any) => {
@@ -1345,7 +1355,7 @@ const TablePagination = () => {
                 {table
                   .getAllLeafColumns()
                   .filter((col) => {
-                    const excludedColumns = ["conflicts"];
+                    const excludedColumns = ["conflicts", "select"];
                     if (excludedColumns.includes(col.id)) return false;
                     return col.id.toLowerCase().includes(search.toLowerCase());
                   })
