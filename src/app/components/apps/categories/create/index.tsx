@@ -180,6 +180,7 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
           <Box height="100%" px={2}>
             <form
               onSubmit={handleSubmit}
+              className="address-form"
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.preventDefault();
               }}
@@ -197,80 +198,122 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
                 />
               </Box>
 
-              <Typography variant="body1">Name</Typography>
-              <CustomTextField
-                name="name"
-                fullWidth
-                value={formData.name}
-                onChange={handleChange}
-              />
+              <Box className="form_inputs">
+                <Typography variant="body1">Name</Typography>
+                <CustomTextField
+                  name="name"
+                  fullWidth
+                  value={formData.name}
+                  onChange={handleChange}
+                />
 
-              <Typography variant="body1" mt={2}>
-                Parent Category
-              </Typography>
+                <Typography variant="body1" mt={2}>
+                  Parent Category
+                </Typography>
+                <Autocomplete
+                  fullWidth
+                  options={units}
+                  value={
+                    units.find((t) => t.id === formData.parent_category_id) ??
+                    null
+                  }
+                  onChange={(_, newValue) => {
+                    const value =
+                      typeof newValue === "string"
+                        ? newValue
+                        : newValue?.name || "";
 
-              <Autocomplete
-                fullWidth
-                options={units}
-                value={
-                  units.find((t) => t.id === formData.parent_category_id) ??
-                  null
-                }
-                onChange={(_, newValue: any) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    parent_category_id: newValue?.id || null,
-                  }));
-                }}
-                getOptionLabel={(option) => option?.name || ""}
-                renderInput={(params) => (
-                  <CustomTextField
-                    {...params}
-                    placeholder="Select parent category"
-                  />
-                )}
-              />
+                    if (value && !units.some((u) => u.name === value)) {
+                      setUnits((prev) => [
+                        ...prev,
+                        { id: Date.now(), name: value },
+                      ]);
+                    }
 
-              {/* File Upload */}
-              <InputLabel sx={{ mt: 2 }}>Upload file</InputLabel>
-
-              <Box mt={2} mb={2} textAlign="center">
-                <Box
-                  {...getRootProps()}
-                  sx={{
-                    width: 180,
-                    height: 180,
-                    mx: "auto",
-                    border: "2px dashed",
-                    borderColor: "primary.main",
-                    borderRadius: 3,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
+                    setFormData((prev) => ({
+                      ...prev,
+                      parent_category_id: newValue.id,
+                    }));
                   }}
-                >
-                  <input {...getInputProps()} />
-                  {preview ? (
-                    <Avatar
-                      src={preview}
-                      sx={{ width: "100%", height: "100%" }}
-                      variant="square"
+                  getOptionLabel={(option) =>
+                    typeof option === "string" ? option : option.name
+                  }
+                  renderInput={(params) => (
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select parent category"
                     />
-                  ) : (
-                    <Typography fontSize="12px" color="primary.main">
-                      Click or Drag Image
-                    </Typography>
                   )}
+                />
+
+                {/* File Upload */}
+                <InputLabel sx={{ mt: 2 }}>Upload file</InputLabel>
+
+                <Box mt={2} mb={2} textAlign="center">
+                  <Box
+                    {...getRootProps()}
+                    sx={{
+                      width: 180,
+                      height: 180,
+                      mx: "auto",
+                      border: "2px dashed",
+                      borderColor: "primary.main",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <input {...getInputProps()} />
+                    {preview ? (
+                      <Avatar
+                        src={preview}
+                        sx={{ width: "100%", height: "100%" }}
+                        variant="square"
+                      />
+                    ) : (
+                      <Typography fontSize="12px" color="primary.main">
+                        Click or Drag Image
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               </Box>
-
-              <Box display="flex" gap={2} mb={2}>
-                <Button type="submit" variant="contained" disabled={isSaving}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                  mt: "auto",
+                  mb: 2,
+                }}
+              >
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  disabled={isSaving}
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                >
                   {isSaving ? "Saving..." : "Save"}
                 </Button>
-                <Button onClick={onClose}>Close</Button>
+                <Button
+                  color="inherit"
+                  onClick={onClose}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
+                </Button>
               </Box>
             </form>
           </Box>

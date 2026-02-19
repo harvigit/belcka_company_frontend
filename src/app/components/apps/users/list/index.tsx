@@ -789,7 +789,7 @@ const TablePagination = () => {
         </Typography>
       ),
       cell: (info) => (
-        <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
+        <Typography className="f-14" color="textPrimary">
           {info.getValue() ?? "-"}
         </Typography>
       ),

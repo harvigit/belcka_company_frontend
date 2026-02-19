@@ -214,8 +214,8 @@ const EditCategory: React.FC<EditCategoryProps> = ({
             </Typography>
           </Box>
 
-          <Box px={2}>
-            <form onSubmit={EditCategory}>
+          <Box height="100%" px={2}>
+            <form onSubmit={EditCategory} className="category-form">
               <Box display="flex" justifyContent="end">
                 <IOSSwitch
                   checked={Boolean(formData.status)}
@@ -228,73 +228,110 @@ const EditCategory: React.FC<EditCategoryProps> = ({
                 />
               </Box>
 
-              <Typography>Name</Typography>
-              <CustomTextField
-                name="name"
-                fullWidth
-                value={formData.name}
-                onChange={handleChange}
-              />
+              <Box className="form_inputs">
+                <Typography variant="body1">Name</Typography>
+                <CustomTextField
+                  name="name"
+                  fullWidth
+                  value={formData.name}
+                  onChange={handleChange}
+                />
 
-              <Typography mt={2}>Parent Category</Typography>
-              <Autocomplete
-                fullWidth
-                options={units}
-                value={
-                  units.find((t) => t.id === formData.parent_category_id) ??
-                  null
-                }
-                onChange={(e, val) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    parent_category_id: val ? val.id : null,
-                  }))
-                }
-                getOptionLabel={(option) => option.name}
-                renderInput={(params) => (
-                  <CustomTextField {...params} placeholder="Select category" />
-                )}
-              />
-
-              {/* Image Upload */}
-              <InputLabel sx={{ mt: 2 }}>Upload file</InputLabel>
-              <Box mt={2} textAlign="center">
-                <Box
-                  {...getRootProps()}
-                  sx={{
-                    width: 180,
-                    height: 180,
-                    mx: "auto",
-                    border: "2px dashed",
-                    borderColor: "primary.main",
-                    borderRadius: 3,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
-                  }}
-                >
-                  <input {...getInputProps()} />
-                  {preview ? (
-                    <Avatar
-                      src={preview}
-                      sx={{ width: "100%", height: "100%" }}
-                      variant="square"
+                <Typography variant="body1" mt={2}>
+                  Parent Category
+                </Typography>
+                <Autocomplete
+                  fullWidth
+                  options={units}
+                  value={
+                    units.find((t) => t.id === formData.parent_category_id) ??
+                    null
+                  }
+                  onChange={(e, val) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      parent_category_id: val ? val.id : null,
+                    }))
+                  }
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderInput={(params) => (
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select category"
                     />
-                  ) : (
-                    <Typography fontSize="12px" color="primary.main">
-                      Click or Drag Image
-                    </Typography>
                   )}
+                />
+
+                {/* Image Upload */}
+                <InputLabel sx={{ mt: 2 }}>Upload file</InputLabel>
+                <Box mt={2} textAlign="center">
+                  <Box
+                    {...getRootProps()}
+                    sx={{
+                      width: 180,
+                      height: 180,
+                      mx: "auto",
+                      border: "2px dashed",
+                      borderColor: "primary.main",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <input {...getInputProps()} />
+                    {preview ? (
+                      <Avatar
+                        src={preview}
+                        sx={{ width: "100%", height: "100%" }}
+                        variant="square"
+                      />
+                    ) : (
+                      <Typography fontSize="12px" color="primary.main">
+                        Click or Drag Image
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               </Box>
-
-              <Box mt={3} display="flex" gap={2}>
-                <Button type="submit" variant="contained" disabled={isSaving}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                  mt: "auto",
+                  mb: 2,
+                }}
+              >
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  disabled={isSaving}
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                >
                   {isSaving ? "Saving..." : "Save"}
                 </Button>
-                <Button onClick={onClose}>Close</Button>
+                <Button
+                  color="inherit"
+                  onClick={onClose}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
+                </Button>
               </Box>
             </form>
           </Box>
