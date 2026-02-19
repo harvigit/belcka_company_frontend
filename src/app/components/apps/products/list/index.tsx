@@ -523,7 +523,8 @@ const ProductList = () => {
               arrow
             >
               <Typography
-              variant="body1"
+                className="f-14"
+                variant="body1"
                 sx={{
                   width: 200,
                   display: "-webkit-box",
