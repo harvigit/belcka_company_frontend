@@ -515,12 +515,29 @@ const ProductList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.short_name ? item.short_name : "-"}
-              <Typography color="textSecondary" className="f-14">
-                {item.name}
+            <Tooltip
+              title={item.short_name ? item.short_name : (item.name ?? "")}
+              placement="top"
+              arrow
+            >
+              <Typography
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.25,
+                  maxWidth: 300,
+                  wordBreak: "break-word",
+                }}
+              >
+                {item.short_name ? item.short_name : "-"}
+                <Typography color="textSecondary" className="f-14">
+                  {item.name}
+                </Typography>
               </Typography>
-            </Typography>
+            </Tooltip>
           </Stack>
         );
       },

@@ -36,6 +36,7 @@ const BuyerDashboard = () => {
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const borderColor = theme.palette.divider;
+  const [currency, setCurrency] = useState("");
 
   const fetchOverview = async () => {
     try {
@@ -98,6 +99,7 @@ const BuyerDashboard = () => {
 
       if (res.data.IsSuccess) {
         const data = res.data.info;
+        setCurrency(res.data.currency);
 
         setInventory([
           {
@@ -313,7 +315,9 @@ const BuyerDashboard = () => {
                   mt={3}
                   color="text.secondary"
                 >
-                  <Typography variant="h3">₹17,432</Typography>
+                  <Typography variant="h3">
+                    {currency ? currency : "£"}17,432
+                  </Typography>
                   <Typography variant="h6">Cost</Typography>
                 </Box>
               </CardContent>

@@ -197,7 +197,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         `products/get?company_id=${companyId}&product_id=${productId}`,
       );
       if (res.data) {
-        setProduct(res.data.info[0]);
+        setProduct(res.data.info);
       }
     } catch (err) {
       console.error("Failed to fetch product", err);
@@ -263,17 +263,17 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         supplier_code: product.supplier_code ?? "",
         supplier_id: product.supplier_id ?? null,
         category_ids: product.category_ids ?? "",
-        model_id: product?.model?.id ?? null,
-        manufacturer_id: product?.manufacturer?.id ?? null,
+        model_id: product?.model_id ?? null,
+        manufacturer_id: product?.manufacturer_id ?? null,
         pack_off_qty: product.pack_off_qty ?? "",
         pack_off_unit: product.pack_off_unit ?? null,
-        weight: product?.product_details?.[0]?.weight ?? "",
-        weight_unit: product?.product_details?.[0]?.weightUnits?.name ?? null,
-        length: product?.product_details?.[0]?.length ?? "",
-        width: product?.product_details?.[0]?.width ?? "",
-        height: product?.product_details?.[0]?.height ?? "",
-        length_unit: product?.product_details?.[0]?.lengthtUnits?.name ?? null,
-        tax: product?.product_details?.[0]?.tax ?? "",
+        weight: product?.weight ?? "",
+        weight_unit: product?.weight_unit ?? null,
+        length: product?.length ?? "",
+        width: product?.width ?? "",
+        height: product?.height ?? "",
+        length_unit: product?.length_unit ?? null,
+        tax: product?.tax ?? "",
         price: product.price ?? "",
         market_price: product.market_price ?? "",
         sort_id: product.sort_id ?? 0,
@@ -304,7 +304,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         setGalleryPreview(
           product.product_images.map((img: any) => ({
             id: img.id,
-            src: img.image,
+            src: img.image_url,
             isExisting: true,
           })),
         );
@@ -731,14 +731,17 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     </Typography>
                     <CustomTextField
                       className="product_input"
+                      placeholder="Name"
+                      inputProps={{ maxLength: 100 }}
                       fullWidth
                       value={formData.short_name}
-                      onChange={(e: any) =>
+                      onChange={(e: any) => {
+                        const value = e.target.value;
                         setFormData((p) => ({
                           ...p,
-                          short_name: e.target.value,
-                        }))
-                      }
+                          short_name: value,
+                        }));
+                      }}
                       sx={{ mb: 2 }}
                     />
                   </Box>
@@ -751,6 +754,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
 
                     <CustomTextField
                       className="product_input"
+                      placeholder="UUID"
                       fullWidth
                       value={formData.uuid || ""}
                       onChange={(e: any) =>
@@ -784,7 +788,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                           setSelectedCategories(newValue)
                         }
                         renderInput={(params) => (
-                          <TextField {...params} variant="outlined" />
+                          <TextField
+                            {...params}
+                            variant="outlined"
+                            placeholder="Select category"
+                          />
                         )}
                         className="product_input"
                         sx={{ mb: 2 }}
@@ -807,6 +815,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       fullWidth
+                      placeholder="Supplier code"
                       value={formData.supplier_code || ""}
                       onChange={(e: any) =>
                         setFormData((p) => ({
@@ -839,16 +848,17 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                           ) ?? null
                         }
                         onChange={(_, newValue) => {
-                          if (newValue) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              supplier_id: newValue.id,
-                            }));
-                          }
+                          setFormData((prev) => ({
+                            ...prev,
+                            supplier_id: newValue ? newValue.id : null,
+                          }));
                         }}
                         getOptionLabel={(option) => option.name || ""}
                         renderInput={(params) => (
-                          <CustomTextField {...params} />
+                          <CustomTextField
+                            {...params}
+                            placeholder="Select supplier"
+                          />
                         )}
                         sx={{ mb: 2 }}
                       />
@@ -947,6 +957,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       fullWidth
+                      placeholder="Weight"
                       value={formData.weight || ""}
                       onChange={(e: any) =>
                         setFormData((p) => ({ ...p, weight: e.target.value }))
@@ -1016,7 +1027,12 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         }
                       }}
                       getOptionLabel={(option) => option.name || ""}
-                      renderInput={(params) => <CustomTextField {...params} />}
+                      renderInput={(params) => (
+                        <CustomTextField
+                          {...params}
+                          placeholder="Select manufacture"
+                        />
+                      )}
                     />
                   </Grid>
                   <Grid size={{ xs: 3 }}>
@@ -1041,7 +1057,12 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         }
                       }}
                       getOptionLabel={(option) => option.name || ""}
-                      renderInput={(params) => <CustomTextField {...params} />}
+                      renderInput={(params) => (
+                        <CustomTextField
+                          {...params}
+                          placeholder="Select model"
+                        />
+                      )}
                     />
                   </Grid>
                 </Grid>
@@ -1057,6 +1078,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       className="product_input"
                       fullWidth
                       value={formData.price || ""}
+                      placeholder="Buying price"
                       onChange={(e: any) =>
                         setFormData((p) => ({ ...p, price: e.target.value }))
                       }
@@ -1072,6 +1094,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       fullWidth
+                      placeholder="Market price"
                       value={formData.market_price || ""}
                       onChange={(e: any) =>
                         setFormData((p) => ({
@@ -1091,6 +1114,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       fullWidth
+                      placeholder="Tax"
                       value={formData.tax || ""}
                       onChange={(e: any) =>
                         setFormData((p) => ({ ...p, tax: e.target.value }))
@@ -1106,6 +1130,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       fullWidth
+                      placeholder="Cutoff"
                       value={formData.cutoff || ""}
                       onChange={(e: any) =>
                         setFormData((p) => ({
@@ -1136,7 +1161,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       fullWidth
-                      label="Pack off"
+                      placeholder="Pack off"
                       value={formData.pack_off_qty || ""}
                       disabled={!formData.is_sub_qty}
                       onChange={(e: any) =>
@@ -1216,6 +1241,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <TextField
                       className="product_input"
                       fullWidth
+                      placeholder="Sort ID"
                       value={formData.sort_id || ""}
                       onChange={(e) =>
                         setFormData((p) => ({
@@ -1264,6 +1290,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <TextField
                       className="product_input"
                       multiline
+                      placeholder="Enter description..."
                       fullWidth
                       rows={3}
                       value={formData.description || ""}

@@ -297,7 +297,7 @@ const SupplierList = () => {
         );
       },
     },
-    columnHelper.accessor("supplier_image", {
+    columnHelper.accessor("image_url", {
       id: "image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -314,7 +314,7 @@ const SupplierList = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Image
-              src={item.supplier_image || image}
+              src={item.image_url || image}
               style={{ cursor: "pointer" }}
               alt="Supplier"
               width={50}

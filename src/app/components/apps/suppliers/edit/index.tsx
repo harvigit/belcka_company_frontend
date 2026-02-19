@@ -115,8 +115,8 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
         });
 
         // Prefill image preview
-        if (supplier.supplier_image) {
-          setPreview(supplier.supplier_image);
+        if (supplier.image_url) {
+          setPreview(supplier.image_url);
         }
       }
     } catch (error) {
