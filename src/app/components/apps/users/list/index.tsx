@@ -729,7 +729,11 @@ const TablePagination = () => {
         </Typography>
       ),
       cell: (info) => (
-        <Typography className="f-14" color="textPrimary" sx={{ width: 100 }}>
+        <Typography
+          className="f-14"
+          color="textPrimary"
+          sx={{ width: 100, ml: 2 }}
+        >
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -747,7 +751,7 @@ const TablePagination = () => {
           <Typography
             className="f-14"
             color="textPrimary"
-            sx={{ width: 100 }}
+            sx={{ width: 100, ml: 2 }}
             noWrap
           >
             {info.getValue() ?? "-"}
@@ -785,7 +789,7 @@ const TablePagination = () => {
         </Typography>
       ),
       cell: (info) => (
-        <Typography className="f-14" color="textPrimary">
+        <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
           {info.getValue() ?? "-"}
         </Typography>
       ),
@@ -872,7 +876,7 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
             {row.bank_name ? row.bank_name : "-"}
           </Typography>
         );
@@ -891,7 +895,7 @@ const TablePagination = () => {
           <Typography
             className="f-14"
             color="textPrimary"
-            sx={{ width: 100 }}
+            sx={{ width: 100, ml: 2 }}
             noWrap
           >
             {row.account_no ? row.account_no : "-"}
@@ -910,7 +914,7 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
             {row.short_code ? row.short_code : "-"}
           </Typography>
         );
@@ -931,7 +935,7 @@ const TablePagination = () => {
             <Typography
               className="f-14"
               color="textPrimary"
-              sx={{ width: 150 }}
+              sx={{ width: 150, ml: 2 }}
               noWrap
             >
               {info.getValue() ?? "-"}
@@ -951,7 +955,7 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
             {row.nin_number ? row.nin_number : "-"}
           </Typography>
         );
@@ -968,7 +972,7 @@ const TablePagination = () => {
       cell: (info) => {
         const row = info.row.original;
         return (
-          <Typography className="f-14" color="textPrimary">
+          <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
             {row.utr_number ? row.utr_number : "-"}
           </Typography>
         );
