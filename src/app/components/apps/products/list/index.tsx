@@ -135,7 +135,8 @@ const ProductList = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [mainFile, setMainFile] = useState<File | null>(null);
+  const [currency, setCurrency] = useState("");
+
   const [formData, setFormData] = useState<ProductFormData>({
     id: 0,
     company_id: user?.company_id,
@@ -206,6 +207,7 @@ const ProductList = () => {
       const res = await api.get(`products/get?company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
+        setCurrency(res.data.info[0].currency);
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -510,7 +512,7 @@ const ProductList = () => {
 
     columnHelper.accessor((row) => row?.short_name, {
       id: "shortName",
-      header: () => "Short Name",
+      header: () => "Name",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -521,7 +523,9 @@ const ProductList = () => {
               arrow
             >
               <Typography
+              variant="body1"
                 sx={{
+                  width: 200,
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
                   WebkitLineClamp: 1,
@@ -545,7 +549,7 @@ const ProductList = () => {
 
     columnHelper.accessor((row) => row?.supplier_name, {
       id: "supplierName",
-      header: () => "Supplier Name",
+      header: () => "Supplier",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -558,7 +562,7 @@ const ProductList = () => {
 
     columnHelper.accessor((row) => row?.supplier_code, {
       id: "supplierCode",
-      header: () => "Supplier Code",
+      header: () => "Code",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -576,7 +580,7 @@ const ProductList = () => {
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
-            QR Code
+            QR
           </Typography>
         </Stack>
       ),
@@ -628,7 +632,13 @@ const ProductList = () => {
 
     columnHelper.accessor((row) => row?.price, {
       id: "buyingPrice",
-      header: () => "Buying Price",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Buying({currency ? currency : "£"})
+          </Typography>
+        </Stack>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -643,7 +653,13 @@ const ProductList = () => {
     }),
     columnHelper.accessor((row) => row?.market_price, {
       id: "marketPrice",
-      header: () => "Market Price",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Market({currency ? currency : "£"})
+          </Typography>
+        </Stack>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         return (
