@@ -15,6 +15,9 @@ export const useTimeClockData = (user_id: any, currency: string) => {
     const [leaveRequestCount, setLeaveRequestCount] = useState<number>(0);
     const [penaltyAppealCount, setPenaltyAppealCount] = useState<number>(0);
 
+    // Pay Rate Permission
+    const [userHasPermission, setUserHasPermission] = useState<boolean>(false);
+    
     const fetchTimeClockData = useCallback(async (start: Date, end: Date): Promise<void> => {
         try {
             const params: Record<string, string> = {
@@ -30,6 +33,7 @@ export const useTimeClockData = (user_id: any, currency: string) => {
                 setPendingRequestCount(response.data.pending_request_count || 0);
                 setLeaveRequestCount(response.data.total_leave_requests || 0);
                 setPenaltyAppealCount(response.data.pending_penalty_appeal_count || 0);
+                setUserHasPermission(response.data.user_rate_permission);
 
                 await fetchConflicts(start, end, user_id);
 
@@ -88,6 +92,8 @@ export const useTimeClockData = (user_id: any, currency: string) => {
         setLeaveRequestCount,
         penaltyAppealCount,
         setPenaltyAppealCount,
+        userHasPermission,
+        setUserHasPermission,
         shifts,
         projects,
         fetchTimeClockData,

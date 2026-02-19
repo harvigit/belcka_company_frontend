@@ -166,6 +166,7 @@ export type TimeClock = {
 };
 
 type TimeClockResponse = {
+    user_rate_permission: boolean;
     conflicts: any[];
     company_id: number;
     IsSuccess: boolean;
@@ -258,6 +259,17 @@ const TimeClock = ({queryParams}: Props) => {
     const [settingOpen, setSettingOpen] = useState(false);
     const [openDrawer, setOpenDrawer] = useState(false);
 
+    // Pay Rate Permission
+    const [userHasPermission, setUserHasPermission] = useState<boolean>(false);
+
+    const amountColumns = [
+        'daylog_payable_amount',
+        'pricework_total_amount',
+        'cis_amount',
+        'gross_amount',
+        'total_payable_amount',
+    ];
+
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
         name_on_account: false,
         sort_code: false,
@@ -265,7 +277,19 @@ const TimeClock = ({queryParams}: Props) => {
         utr_name: false,
         utr_number: false,
         nin_number: false,
+        daylog_payable_amount: false,
+        pricework_total_amount: false,
+        cis_amount: false,
+        gross_amount: false,
+        total_payable_amount: false,
     });
+
+    useEffect(() => {
+        setColumnVisibility((prev) => ({
+            ...prev,
+            ...Object.fromEntries(amountColumns.map((col) => [col, userHasPermission])),
+        }));
+    }, [userHasPermission]);
     
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
@@ -357,6 +381,7 @@ const TimeClock = ({queryParams}: Props) => {
             if (response.data.IsSuccess) {
                 setData(response.data.info);
                 setCompanyId(response.data.company_id);
+                setUserHasPermission(response.data.user_rate_permission);
                 if (response.data.currency !== null) {
                     setCurrency(response.data.currency);
                     setFetchTimesheet(false);
@@ -1021,9 +1046,24 @@ const TimeClock = ({queryParams}: Props) => {
             }
 
             const ids = timesheetIds.join(',');
-            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', {ids, format: option});
+
+            // Map option to format + file extension
+            const formatMap: Record<string, { format: string; ext: string }> = {
+                summary:      { format: 'summary',      ext: 'xlsx' },
+                details:      { format: 'details',      ext: 'xlsx' },
+                summary_pdf:  { format: 'summary_pdf',  ext: 'pdf'  },
+                details_pdf:  { format: 'details_pdf',  ext: 'pdf'  },
+            };
+
+            const selected = formatMap[option] ?? { format: option, ext: 'xlsx' };
+
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export', {
+                ids,
+                format: selected.format,
+            });
+
             if (response.data.IsSuccess) {
-                const {file, filename, contentType} = response.data.data;
+                const { file, filename, contentType } = response.data.data;
 
                 const binaryString = atob(file);
                 const binaryLen = binaryString.length;
@@ -1032,16 +1072,14 @@ const TimeClock = ({queryParams}: Props) => {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                const blob = new Blob([bytes], {type: contentType});
-
+                const blob = new Blob([bytes], { type: contentType });
                 const url = window.URL.createObjectURL(blob);
 
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = filename || `timeclock_export_${new Date().toISOString()}.${option}`;
+                link.download = filename || `timeclock_export_${new Date().toISOString()}.${selected.ext}`;
                 document.body.appendChild(link);
                 link.click();
-
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
 
@@ -1245,64 +1283,196 @@ const TimeClock = ({queryParams}: Props) => {
                     overflow: 'auto',
                 }}
             >
+                {/* ── TOOLBAR ── */}
                 <Box
-                    display={'flex'}
-                    justifyContent={'space-between'}
-                    alignItems="center"
-                    mb={2}
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        mb: 2,
+                        px: 2,
+                    }}
                 >
-                    <Stack
-                        mx={2}
-                        direction={{xs: 'column', sm: 'row'}}
-                        spacing={{xs: 1.5, sm: 2}}
-                        alignItems="center"
-                        flexWrap="wrap"
+                    {/* Left controls */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flexWrap: 'wrap',
+                        }}
                     >
-                        <DateRangePickerBox
-                            from={startDate}
-                            to={endDate}
-                            onChange={handleDateRangeChange}
-                        />
-                        <TextField
-                            placeholder="Search..."
-                            size="small"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconSearch size={16}/>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <Button
-                            color="primary"
-                            variant="outlined"
-                            onClick={() => setOpenDrawer(true)}
-                            sx={{ mt: { xs: 1, sm: 0 } }}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                            <DateRangePickerBox
+                                from={startDate}
+                                to={endDate}
+                                onChange={handleDateRangeChange}
+                            />
+                            <TextField
+                                placeholder="Search..."
+                                size="small"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                sx={{ width: 180 }}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconSearch size={16} />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                            <Button
+                                color="primary"
+                                variant="outlined"
+                                size="small"
+                                onClick={() => setOpenDrawer(true)}
+                                sx={{ whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600 }}
                             >
-                            Activity
-                        </Button>
-                    </Stack>
-                    <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)}/>
+                                Activity
+                            </Button>
+                        </Box>
 
-                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                onClick={handleAddClick}
+                                endIcon={openAddleave ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+                            >
+                                Add
+                            </Button>
+                            <Menu
+                                anchorEl={addDropDown}
+                                open={openAddleave}
+                                onClose={handleAddClose}
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                            >
+                                <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
+                                <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
+                                <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
+                            </Menu>
+                            
+                            {hasAnyConflicts && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={handleConflicts}
+                                    sx={{
+                                        borderColor: '#f28b82',
+                                        px: 1,
+                                        py: 0.5,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        textTransform: 'none',
+                                        whiteSpace: 'nowrap',
+                                        minWidth: 'unset',
+                                        '&:hover': { backgroundColor: 'transparent', borderColor: '#f28b82' },
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            backgroundColor: '#e53935',
+                                            color: 'white',
+                                            fontSize: '11px',
+                                            fontWeight: 'bold',
+                                            width: 18,
+                                            height: 18,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '50%',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {totalConflictsCount}
+                                    </Box>
+                                    <Typography sx={{ fontWeight: 600, color: '#e53935', fontSize: '13px' }}>
+                                        Conflicts
+                                    </Typography>
+                                </Button>
+                            )}
+
+                            <Tooltip title="Column visibility">
+                                <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)} color="primary" size="small">
+                                    <IconEye size={20} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Settings">
+                                <IconButton onClick={handleSettingOpen} color="primary" size="small">
+                                    <IconSettings size={20} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Settings settingOpen={settingOpen} onClose={handleSettingClose} />
+
+                            <IconButton
+                                size="small"
+                                id="basic-button"
+                                aria-controls={openMenu ? 'basic-menu' : undefined}
+                                aria-haspopup="true"
+                                aria-expanded={openMenu ? 'true' : undefined}
+                                onClick={handleClick}
+                            >
+                                <IconDotsVertical width={18} />
+                            </IconButton>
+
+                            <Menu
+                                id="basic-menu"
+                                anchorEl={anchorEl3}
+                                open={openMenu}
+                                onClose={handleClose}
+                                slotProps={{ list: { 'aria-labelledby': 'basic-button' } }}
+                            >
+                                <MenuItem onClick={handleClose}>
+                                    <Link
+                                        color="body1"
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setOpenLeaves(true);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            color: '#11142D',
+                                            textTransform: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <ListItemIcon>
+                                            <IconNotes width={18} />
+                                        </ListItemIcon>
+                                        Leaves List
+                                    </Link>
+                                </MenuItem>
+                            </Menu>
+                        </Box>
+                    </Box>
+
+                    {/* Row 2: Action buttons */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flexWrap: 'wrap',
+                        }}
+                    >
                         {isAnyRowSelected && (
                             <>
                                 <Button
                                     size="small"
                                     variant="outlined"
                                     color="primary"
-                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
                                     onClick={handleExportClick}
-                                    endIcon={
-                                        open ? (
-                                            <IconChevronUp size={20}/>
-                                        ) : (
-                                            <IconChevronDown size={20}/>
-                                        )
-                                    }
+                                    endIcon={open ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
                                 >
                                     Export
                                 </Button>
@@ -1310,41 +1480,34 @@ const TimeClock = ({queryParams}: Props) => {
                                     anchorEl={anchorEl}
                                     open={open}
                                     onClose={() => handleExportClose('')}
-                                    anchorOrigin={{
-                                        vertical: 'bottom',
-                                        horizontal: 'right',
-                                    }}
-                                    transformOrigin={{
-                                        vertical: 'top',
-                                        horizontal: 'right',
-                                    }}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                                 >
-                                    <MenuItem onClick={() => handleExportClose('summary')}>
-                                        Export Summary
-                                    </MenuItem>
-                                    <MenuItem onClick={() => handleExportClose('details')}>
-                                        Export Timeclock Details
-                                    </MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('summary')}>Export Summary (Excel)</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details (Excel)</MenuItem>
+                                    <Divider />
+                                    <MenuItem onClick={() => handleExportClose('summary_pdf')}>Export Summary (PDF)</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('details_pdf')}>Export Timeclock Details (PDF)</MenuItem>
                                 </Menu>
 
                                 <Button
-                                    startIcon={<IconLock size={16}/>}
+                                    startIcon={<IconLock size={15} />}
                                     variant="outlined"
                                     color="success"
                                     size="small"
                                     onClick={handleLock}
-                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
                                 >
                                     Lock
                                 </Button>
 
                                 <Button
-                                    startIcon={<IconLockOpen size={16}/>}
+                                    startIcon={<IconLockOpen size={15} />}
                                     variant="outlined"
                                     color="error"
                                     size="small"
                                     onClick={handleUnlock}
-                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
                                 >
                                     Unlock
                                 </Button>
@@ -1354,141 +1517,16 @@ const TimeClock = ({queryParams}: Props) => {
                                     color="primary"
                                     size="small"
                                     onClick={handleMarkAsPaid}
-                                    sx={{textTransform: 'none', fontWeight: 600}}
+                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
                                 >
                                     Paid
                                 </Button>
                             </>
                         )}
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            sx={{textTransform: 'none', fontWeight: 600}}
-                            onClick={handleAddClick}
-                            endIcon={
-                                openAddleave ? (
-                                    <IconChevronUp size={20}/>
-                                ) : (
-                                    <IconChevronDown size={20}/>
-                                )
-                            }
-                        >
-                            <Typography sx={{fontWeight: 600}}>Add</Typography>
-                        </Button>
-                        <Menu
-                            anchorEl={addDropDown}
-                            open={openAddleave}
-                            onClose={handleAddClose}
-                            anchorOrigin={{
-                                vertical: 'bottom',
-                                horizontal: 'right',
-                            }}
-                            transformOrigin={{
-                                vertical: 'top',
-                                horizontal: 'right',
-                            }}
-                        >
-                            <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
-                            <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
-                            <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
-                        </Menu>
-
-                        {hasAnyConflicts && (
-                            <Button
-                                variant="outlined"
-                                sx={{
-                                    borderColor: '#f28b82',
-                                    px: 1.5,
-                                    py: 0.5,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    textTransform: 'none',
-                                    '&:hover': {backgroundColor: 'transparent', borderColor: '#f28b82'},
-                                }}
-                                onClick={handleConflicts}
-                            >
-                                <Box
-                                    sx={{
-                                        backgroundColor: '#e53935',
-                                        color: 'white',
-                                        fontSize: '12px',
-                                        fontWeight: 'bold',
-                                        width: 20,
-                                        height: 20,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        borderRadius: '50%',
-                                    }}
-                                >
-                                    {totalConflictsCount}
-                                </Box>
-                                <Typography sx={{fontWeight: 600, color: '#e53935', fontSize: '14px'}}>
-                                    Conflicts
-                                </Typography>
-                            </Button>
-                        )}
-
-                        <IconButton onClick={(e) => setAnchorEl2(e.currentTarget)} color='primary'>
-                            <IconEye/>
-                        </IconButton>
-
-                        <IconButton onClick={handleSettingOpen} color='primary'>
-                            <IconSettings/>
-                        </IconButton>
-
-                        <Settings settingOpen={settingOpen} onClose={handleSettingClose} />
-                        
-                        <IconButton
-                            sx={{margin: '0px', marginLeft: '0 !important'}}
-                            id="basic-button"
-                            aria-controls={openMenu ? 'basic-menu' : undefined}
-                            aria-haspopup="true"
-                            aria-expanded={openMenu ? 'true' : undefined}
-                            onClick={handleClick}
-                        >
-                            <IconDotsVertical width={18}/>
-                        </IconButton>
-
-                        <Menu
-                            id="basic-menu"
-                            anchorEl={anchorEl3}
-                            open={openMenu}
-                            onClose={handleClose}
-                            slotProps={{
-                                list: {
-                                    'aria-labelledby': 'basic-button',
-                                },
-                            }}
-                        >
-                            <MenuItem onClick={handleClose}>
-                                <Link
-                                    color="body1"
-                                    href="#"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        setOpenLeaves(true);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        color: '#11142D',
-                                        textTransform: 'none',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyItems: 'center',
-                                    }}
-                                >
-                                    <ListItemIcon>
-                                        <IconNotes width={18}/>
-                                    </ListItemIcon>
-                                    Leaves List
-                                </Link>
-                            </MenuItem>
-                        </Menu>
-                    </Stack>
+                    </Box>
                 </Box>
+
+                <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)} />
 
                 <Popover
                     open={Boolean(anchorEl2)}

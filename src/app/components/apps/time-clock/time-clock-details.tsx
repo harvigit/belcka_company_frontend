@@ -144,7 +144,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     // UI State
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialData.columnVisibility);
+    // const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialData.columnVisibility);
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [expandedWorklogsIds, setExpandedWorklogsIds] = useState<string[]>([]);
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -175,10 +175,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const initialParamsRef = useRef(queryParams);
     const handledRef = useRef(false);
-    // Save columnVisibility to localStorage whenever it changes
-    useEffect(() => {
-        saveDateRangeToStorage(startDate, endDate, columnVisibility);
-    }, [startDate, endDate, columnVisibility]);
 
     // Custom hooks
     const {
@@ -194,11 +190,42 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestCount,
         penaltyAppealCount,
         setPenaltyAppealCount,
+        userHasPermission,
+        setUserHasPermission,
         shifts,
         projects,
         fetchTimeClockData,
     } = useTimeClockData(user_id, currency);
 
+    const amountColumns = [
+        'priceWork',
+        'cis_amount',
+        'gross_amount',
+        'payableAmount',
+        'dailyTotal',
+    ];
+
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+        ...initialData.columnVisibility,
+        priceWork: false,
+        cis_amount: false,
+        gross_amount: false,
+        payableAmount: false,
+        dailyTotal: false,
+    });
+
+    useEffect(() => {
+        setColumnVisibility((prev) => ({
+            ...prev,
+            ...Object.fromEntries(amountColumns.map((col) => [col, userHasPermission])),
+        }));
+    }, [userHasPermission]);
+
+    // Save columnVisibility to localStorage whenever it changes
+    useEffect(() => {
+        saveDateRangeToStorage(startDate, endDate, columnVisibility);
+    }, [startDate, endDate, columnVisibility]); 
+    
     // Process conflicts
     useEffect(() => {
         if (conflictDetails && conflictDetails.length > 0) {
