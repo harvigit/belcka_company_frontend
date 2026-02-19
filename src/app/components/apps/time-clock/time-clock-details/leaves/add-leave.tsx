@@ -715,7 +715,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                     return (
                                         <Box display="flex" alignItems="center" gap={1}>
                                             <Typography sx={{ fontSize: '14px' }} component="span">
-                                                {leave?.name}
+                                                {leave?.name} {leave?.type ?`(${leave.type?.charAt(0).toUpperCase() + leave.type?.slice(1).toLowerCase() || ""})`: ""}
                                             </Typography>
                                         </Box>
                                     );
@@ -745,7 +745,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
                                                         wordBreak: "break-word",
                                                     }}
                                                 >
-                                                    {leave.name}
+                                                    {leave.name} {leave?.type ?`(${leave.type?.charAt(0).toUpperCase() + leave.type?.slice(1).toLowerCase() || ""})`: ""}
                                                 </Typography>
                                             </Box>
                                         </MenuItem>

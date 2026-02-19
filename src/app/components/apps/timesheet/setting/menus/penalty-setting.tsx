@@ -134,7 +134,7 @@ export default function PenaltySettings() {
       : false;
 
   useEffect(() => {
-    if (areAllTeamsDisabled && areAllUsersDisabled) {
+    if (areAllTeamsDisabled && areAllUsersDisabled && isTeamsDirty) {
       handleToggle(false);
       return;
     }
@@ -169,6 +169,10 @@ export default function PenaltySettings() {
         fetchCompanySetting();
         fetchTeams();
         fetchUsers();
+        setSwTeamsDirty(false);
+        setSwUsersDirty(false);
+        setIsUsersDirty(false);
+        setIsTeamsDirty(false);
       }
     } finally {
     }
@@ -234,7 +238,7 @@ export default function PenaltySettings() {
     users.length > 0 ? users.every((u) => !u.is_autostop_work_penalty) : false;
 
   useEffect(() => {
-    if (TeamsDisabled && UsersDisabled) {
+    if (TeamsDisabled && UsersDisabled && swTeamsDirty) {
       handleToggleStopWork(false);
       return;
     }
@@ -266,6 +270,10 @@ export default function PenaltySettings() {
         fetchCompanySetting();
         fetchTeams();
         fetchUsers();
+        setSwTeamsDirty(false);
+        setSwUsersDirty(false);
+        setIsUsersDirty(false);
+        setIsTeamsDirty(false);
       }
     } finally {
     }
