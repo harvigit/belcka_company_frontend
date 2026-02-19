@@ -447,7 +447,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         const item = row.original;
         return (
           <Stack direction="row" spacing={1} alignItems="center">
-            {item.status === 3 ? (
+            {item.status === 3  && user.user_role_id == 1 ? (
               <>
                 <Tooltip title="Approve">
                   <IconButton
@@ -493,7 +493,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                         ? "success"
                         : item.status == 12
                           ? "error"
-                          : "default"
+                          : "warning"
                     }
                     size="small"
                     variant="outlined"

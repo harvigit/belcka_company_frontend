@@ -436,7 +436,10 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
               value={(formData as any)[key] ?? ""}
               onChange={(e) => {
                 let value = e.target.value;
-
+                if (["name_on_utr"].includes(key)) {
+                  value = value.replace(/[^a-zA-Z\s]/g, "");
+                }
+                
                 if (key === "utr_number") {
                   value = value.replace(/\D/g, "").slice(0, 11);
                 }

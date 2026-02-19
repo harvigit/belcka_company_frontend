@@ -1206,7 +1206,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                   </Grid>
                   <Grid size={{ xs: 3 }}></Grid>
                 </Grid>
-                <Grid spacing={3} container>
+                <Grid spacing={3} container mt={2}>
                   <Grid size={{ xs: 3 }}>
                     {/* short_id */}
                     <Typography variant="body2" gutterBottom>

@@ -151,7 +151,7 @@ const AddressesList = ({
   const [address, setAddress] = useState<any>(null);
   const [radius, setRadius] = useState(0);
   const fetched = useRef(false);
-  const [isIconHovered, setIsIconHovered] = useState(false);
+  const [progress, setProgress] = useState(false);
 
   const isIEPostcode = (value: string) =>
     /^(D6W|[AC-FHKNPRTV-Y]\d{2})\s?[A-Z0-9]{4}$/i.test(value.trim());
@@ -377,6 +377,7 @@ const AddressesList = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setProgress(true);
     try {
       const payload = {
         id: sidebarData?.addressId,
@@ -394,6 +395,7 @@ const AddressesList = ({
     } catch (error) {
       console.error("Download failed", error);
     }
+    setProgress(false);
   };
 
   useEffect(() => {
@@ -1448,11 +1450,11 @@ const AddressesList = ({
                   variant="contained"
                   size="large"
                   type="submit"
-                  disabled={isSaving}
+                  disabled={progress}
                   sx={{ borderRadius: 3 }}
                   className="drawer_buttons"
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  {progress ? "Saving..." : "Save"}
                 </Button>
                 <Button
                   color="inherit"
