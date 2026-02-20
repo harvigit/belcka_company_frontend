@@ -527,12 +527,9 @@ const TablePagination = () => {
     const filteredData = useMemo(() => {
         return data.filter((item) => {
             const matchesTeam = filters.team ? item.team_name === filters.team : true;
-            const matchesTrade = filters.trade
-                ? item.trade_name === filters.trade
-                : true;
-            const matchesSupervisor = filters.supervisor
-                ? item.supervisor_name === filters.supervisor
-                : true;
+            const matchesTrade = filters.trade ? item.trade_name === filters.trade : true;
+            const matchesSupervisor = filters.supervisor ? item.supervisor_name === filters.supervisor : true;
+            
             const search = searchTerm.toLowerCase();
             const matchesSearch =
                 item.name?.toLowerCase().includes(search) ||
@@ -547,10 +544,7 @@ const TablePagination = () => {
         if (!selectedUserPermissions) return [];
         const uniquePermissions = Array.from(
             new Map(
-                selectedUserPermissions.permissions
-                    .filter((p) =>
-                        p.name.toLowerCase().includes(permissionSearch.toLowerCase()),
-                    )
+                selectedUserPermissions.permissions.filter((p) => p.name.toLowerCase().includes(permissionSearch.toLowerCase()),)
                     .map((p) => [p.id, p]),
             ).values(),
         );
@@ -565,17 +559,9 @@ const TablePagination = () => {
 
     const columnHelper = createColumnHelper<UserList>();
 
-    const allWebSelected =
-        filteredPermissions.length > 0 &&
-        filteredPermissions.every((p) => tempPermissions.web.has(p.id));
+    const allWebSelected = filteredPermissions.length > 0 && filteredPermissions.every((p) => tempPermissions.web.has(p.id));
 
-    const allAppSelected =
-        filteredPermissions.length > 0 &&
-        filteredPermissions.every((p) => tempPermissions.app.has(p.id));
-
-    // Determine whether ANY permission has web / app to decide if columns should show
-    const hasWebPermissions = filteredPermissions.some((p) => p.is_web !== false);
-    const hasAppPermissions = filteredPermissions.some((p) => p.is_app !== false);
+    const allAppSelected = filteredPermissions.length > 0 && filteredPermissions.every((p) => tempPermissions.app.has(p.id));
 
     const columns = [
         {
