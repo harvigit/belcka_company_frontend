@@ -289,7 +289,7 @@ const CategoryList = () => {
         );
       },
     },
-    columnHelper.accessor("category_image", {
+    columnHelper.accessor("image_url", {
       id: "image",
       header: () => (
         <Stack direction="row" alignItems="center">
@@ -306,7 +306,7 @@ const CategoryList = () => {
         return (
           <Stack direction="row" alignItems="center">
             <Image
-              src={item.category_image || image}
+              src={item.image_url || image}
               style={{ cursor: "pointer" }}
               alt="Category"
               width={50}

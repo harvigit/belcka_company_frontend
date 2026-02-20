@@ -157,7 +157,7 @@ const ProductView: React.FC<ProductViewProps> = ({
         `products/get?company_id=${companyId}&product_id=${productId}`,
       );
       if (res.data) {
-        setProduct(res.data.info[0]);
+        setProduct(res.data.info);
       }
     } catch (err) {
       console.error("Failed to fetch product", err);
@@ -349,44 +349,6 @@ const ProductView: React.FC<ProductViewProps> = ({
     }
   }, [open, product, categories]);
 
-  const handleRemoveGalleryImage = (item: GalleryImage, index: number) => {
-    setGalleryPreview((prev) => prev.filter((_, i) => i !== index));
-
-    if (item.isExisting && item.id) {
-      setRemovedImageIds((prev: any) => [...prev, item.id]);
-    } else {
-      setGalleryFiles((prev) => prev.filter((_, i) => i !== index));
-    }
-  };
-
-  const handleCategorySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...categoryFormData,
-      };
-
-      const result = await api.post("categories/create", payload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setCategoryFormData({
-          id: 0,
-          name: "",
-          status: true,
-          company_id: companyId,
-        });
-        setOpenCategoryModal(false);
-        fetchResources();
-      } else {
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-    }
-  };
-
   const fetchResources = async () => {
     setFetchStore(true);
 
@@ -416,47 +378,6 @@ const ProductView: React.FC<ProductViewProps> = ({
   useEffect(() => {
     fetchResources();
   }, [api]);
-  const mainDropzone = useDropzone({
-    accept: {
-      "image/*": [".jpg", ".jpeg", ".png"],
-    },
-    multiple: false,
-    onDrop: (acceptedFiles) => {
-      const file = acceptedFiles[0];
-      if (!file) return;
-      setFormData((p) => ({ ...p, image: file }));
-      setMainFile(file);
-      setMainPreview(URL.createObjectURL(file));
-    },
-  });
-
-  const galleryDropzone = useDropzone({
-    accept: { "image/*": [] },
-    multiple: true,
-    onDrop: (files) => {
-      setGalleryFiles((p) => [...p, ...files]);
-      setGalleryPreview((p) => [
-        ...p,
-        ...files.map((file) => ({
-          src: URL.createObjectURL(file),
-          isExisting: false,
-        })),
-      ]);
-    },
-  });
-
-  // Barcode handlers
-  const addBarcode = () => setBarcodes((prev) => [...prev, ""]);
-  const updateBarcode = (index: number, val: string) => {
-    const copy = [...barcodes];
-    copy[index] = val;
-    setBarcodes(copy);
-  };
-  const removeBarcode = (index: number) => {
-    const copy = [...barcodes];
-    copy.splice(index, 1);
-    setBarcodes(copy);
-  };
 
   useEffect(() => {
     setFormData((p) => ({
@@ -653,7 +574,20 @@ const ProductView: React.FC<ProductViewProps> = ({
           </Box>
           <Grid container spacing={2}>
             <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.25,
+                  maxWidth: 400,
+                  wordBreak: "break-word",
+                }}
+              >
                 Product name
               </Typography>
               <Typography>{product?.short_name || "-"}</Typography>
@@ -704,6 +638,14 @@ const ProductView: React.FC<ProductViewProps> = ({
               </Typography>
               <Typography>{product?.qty || 0}</Typography>
             </Grid>
+            {product?.description && (
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Description
+                </Typography>
+                <Typography>{product?.description || ""}</Typography>
+              </Grid>
+            )}
           </Grid>
 
           <Box mt={4}>
@@ -727,7 +669,7 @@ const ProductView: React.FC<ProductViewProps> = ({
               </Grid>
             </Grid>
           </Box>
-{/* 
+          {/* 
           <Box mt={4} width={"70%"}>
             <Typography fontWeight={600} mb={2}>
               Stock Locations
