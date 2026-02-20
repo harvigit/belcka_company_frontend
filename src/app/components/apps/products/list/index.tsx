@@ -999,14 +999,19 @@ const ProductList = () => {
                       }
                       sx={{ textTransform: "none" }}
                       label={
-                        col.columnDef.meta?.label ||
-                        (typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
-                          ? col.columnDef.header
-                          : col.id
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str: string) => str.toUpperCase())
-                              .trim())
+                        col.id === "QR"
+                          ? "QR"
+                          : col.columnDef.meta?.label
+                            ? col.columnDef.meta.label
+                            : typeof col.columnDef.header === "string" &&
+                                col.columnDef.header.trim() !== ""
+                              ? col.columnDef.header
+                              : col.id
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}

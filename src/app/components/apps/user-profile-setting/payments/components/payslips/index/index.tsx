@@ -474,8 +474,11 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
                 }}
               >
                 {isPdf ? (
-                  <PictureAsPdf
-                    style={{ width: 50, height: 50, cursor: "pointer" }}
+                  <Image
+                    src={item.thumb_image}
+                    alt={"Payslip"}
+                    width={50}
+                    height={50}
                   />
                 ) : (
                   <Image
