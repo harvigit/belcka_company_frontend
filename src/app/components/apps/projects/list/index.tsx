@@ -920,7 +920,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 <FormGroup>
                   {currentTable
                     ?.getAllLeafColumns()
-                    .filter((col: any) => !["conflicts","select"].includes(col.id)) // Exclude conflicts
+                    .filter(
+                      (col: any) => !["conflicts", "select"].includes(col.id),
+                    ) // Exclude conflicts
                     .filter(
                       (col: any) =>
                         col.id.toLowerCase().includes(search.toLowerCase()), // Filter by search term
@@ -1834,7 +1836,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             position="absolute"
                             top="-10px"
                             left="15px"
-                            bgcolor="#FF7F00"
+                            bgcolor={
+                              addr.request_type === 102 && addr.status_int == 3
+                                ? "#FF7F00"
+                                : addr.request_type === 102 &&
+                                    addr.status_int == 4
+                                  ? "#4cbc6d"
+                                  : "#FF7F00"
+                            }
                             px={1.5}
                             borderRadius="10px"
                             zIndex={1}
@@ -1845,7 +1854,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                               fontSize={"12px !important"}
                               color="#fff"
                             >
-                              {addr.type_name}
+                              {addr.request_type === 102 && addr.status_int == 3
+                                ? "Start shift"
+                                : addr.request_type === 102 &&
+                                    addr.status_int == 4
+                                  ? "End shift"
+                                  : addr.type_name}
                             </Typography>
                           </Box>
                           <Box

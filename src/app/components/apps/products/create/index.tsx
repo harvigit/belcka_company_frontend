@@ -296,8 +296,8 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         setSelectedRowIds(new Set(storeIds));
       }
 
-      if (product.product_image) {
-        setMainPreview(product.product_image);
+      if (product.image_url) {
+        setMainPreview(product.image_url);
       }
 
       if (product.product_images?.length) {
@@ -1260,6 +1260,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         direction="row"
                         spacing={1}
                         alignItems="center"
+                        mb={1}
                         key={i}
                       >
                         <TextField

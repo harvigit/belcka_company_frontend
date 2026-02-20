@@ -384,30 +384,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             inputProps={{ required: true }}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            select
-            label="Cis"
-            fullWidth
-            disabled={isDisabledField("cis")}
-            value={(formData as any)["cis"] ?? ""}
-            onChange={(e) =>
-              handleFieldChange("cis" as keyof BillingFormData, e.target.value)
-            }
-            SelectProps={{
-              sx: {
-                color: "#7297be",
-              },
-            }}
-          >
-            <MenuItem value="20" className="custom_color">
-              20%
-            </MenuItem>
-            <MenuItem value="30" className="custom_color">
-              30%
-            </MenuItem>
-          </TextField>
-        </Grid>
       </Grid>
       <Divider />
 
@@ -439,7 +415,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 if (["name_on_utr"].includes(key)) {
                   value = value.replace(/[^a-zA-Z\s]/g, "");
                 }
-                
+
                 if (key === "utr_number") {
                   value = value.replace(/\D/g, "").slice(0, 11);
                 }
@@ -456,6 +432,30 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
             />
           </Grid>
         ))}
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            select
+            label="Cis"
+            fullWidth
+            disabled={isDisabledField("cis")}
+            value={(formData as any)["cis"] ?? ""}
+            onChange={(e) =>
+              handleFieldChange("cis" as keyof BillingFormData, e.target.value)
+            }
+            SelectProps={{
+              sx: {
+                color: "#7297be",
+              },
+            }}
+          >
+            <MenuItem value="20" className="custom_color">
+              20%
+            </MenuItem>
+            <MenuItem value="30" className="custom_color">
+              30%
+            </MenuItem>
+          </TextField>
+        </Grid>
       </Grid>
       <Divider />
 

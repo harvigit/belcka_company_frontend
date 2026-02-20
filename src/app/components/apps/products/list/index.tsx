@@ -222,8 +222,10 @@ const ProductList = () => {
 
   const exportProducts = async () => {
     try {
+      const selectedIds = Array.from(selectedRowIds);
+      const ids = selectedIds.join(",");
       const res = await api.get(
-        `products/export?company_id=${user.company_id}`,
+        `products/export?company_id=${user.company_id}&ids=${ids}`,
         {
           responseType: "blob",
         },
@@ -244,6 +246,7 @@ const ProductList = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       fetchProducts();
+      setSelectedRowIds(new Set());
     } catch (err) {
       console.error("Failed to export products", err);
     }
@@ -478,7 +481,7 @@ const ProductList = () => {
       },
     }),
 
-    columnHelper.accessor("product_image", {
+    columnHelper.accessor("image_url", {
       id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -494,10 +497,10 @@ const ProductList = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Image
-              src={item.product_image || image}
+              src={item.image_url || image}
               onClick={(e) => {
                 e.stopPropagation();
-                setPreviewImage(item.product_image || image);
+                setPreviewImage(item.image_url || image);
                 setOpenPreview(true);
               }}
               style={{ cursor: "pointer" }}
@@ -511,7 +514,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor((row) => row?.short_name, {
-      id: "shortName",
+      id: "name",
       header: () => "Name",
       cell: ({ row }) => {
         const item = row.original;
@@ -549,7 +552,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor((row) => row?.supplier_name, {
-      id: "supplierName",
+      id: "supplier",
       header: () => "Supplier",
       cell: ({ row }) => {
         const item = row.original;
@@ -562,7 +565,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor((row) => row?.supplier_code, {
-      id: "supplierCode",
+      id: "code",
       header: () => "Code",
       cell: ({ row }) => {
         const item = row.original;
@@ -577,7 +580,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor("qr_code_url", {
-      id: "QrCode",
+      id: "qr",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
@@ -632,7 +635,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor((row) => row?.price, {
-      id: "buyingPrice",
+      id: "buying",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
@@ -653,7 +656,7 @@ const ProductList = () => {
       },
     }),
     columnHelper.accessor((row) => row?.market_price, {
-      id: "marketPrice",
+      id: "market",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
@@ -669,23 +672,6 @@ const ProductList = () => {
               {item.currency}
               {item.market_price ? item.market_price : "0"}
             </Typography>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.display({
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="View">
-              <IconButton onClick={() => handleView(item.id)} color="primary">
-                <IconEye size={18} />
-              </IconButton>
-            </Tooltip>
           </Stack>
         );
       },
@@ -1116,6 +1102,25 @@ const ProductList = () => {
               <MenuItem onClick={handleClose}>
                 <Link
                   color="body1"
+                  href="/apps/purchase-orders/list"
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconPlus width={18} />
+                  </ListItemIcon>
+                  Purchase Order
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
@@ -1387,18 +1392,33 @@ const ProductList = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                  table.getRowModel().rows.map((row) => {
+                    const item = row.original;
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        hover
+                        sx={{
+                          cursor: "pointer",
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          return (
+                            <TableCell
+                              key={cell.id}
+                              onClick={() => handleView(item.id)}
+                            >
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

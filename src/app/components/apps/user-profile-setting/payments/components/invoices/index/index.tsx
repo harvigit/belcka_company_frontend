@@ -123,8 +123,6 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-  const [openPreview, setOpenPreview] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const today = new Date();
   const defaultStart = new Date(today);
@@ -160,7 +158,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     to_date: "",
     invoice_date: "",
     description: "",
-    invoice_number: ""
+    invoice_number: "",
   });
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -262,7 +260,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
       to_date: "",
       invoice_date: "",
       description: "",
-      invoice_number:""
+      invoice_number: "",
     });
     setDrawerOpen(true);
   };
@@ -412,17 +410,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             {item.image && (
-              <Image
-                src={item.image}
-                alt={"Payslip"}
-                width={50}
-                height={50}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewImage(item.image);
-                  setOpenPreview(true);
-                }}
-              />
+              <Image src={item.image} alt={"Payslip"} width={50} height={50} />
             )}
           </Stack>
         );
@@ -824,58 +812,6 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
         </Stack>
       </Stack>
       <Divider />
-
-      <Dialog
-        open={openPreview}
-        onClose={() => setOpenPreview(false)}
-        fullScreen
-        PaperProps={{
-          sx: {
-            backgroundColor: "transparent",
-            boxShadow: "none",
-          },
-        }}
-      >
-        <IconButton
-          onClick={() => setOpenPreview(false)}
-          color="primary"
-          sx={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 1301,
-            backgroundColor: "#fff",
-            "&:hover": {
-              backgroundColor: "#eee",
-              color: "#1e4db7",
-            },
-          }}
-        >
-          <IconX />
-        </IconButton>
-
-        <Box
-          sx={{
-            width: "100vw",
-            height: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onClick={() => setOpenPreview(false)}
-        >
-          <img
-            src={previewImage || ""}
-            alt="Preview"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "90% !important",
-              height: "50%",
-              objectFit: "contain",
-            }}
-          />
-        </Box>
-      </Dialog>
 
       {/* Add Invoice */}
       <CreateInvoice

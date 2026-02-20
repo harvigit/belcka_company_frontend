@@ -128,13 +128,13 @@ const MenuItems: NavGroup[] = [
     href: "/apps/stores/list",
   },
 
-  {
-    id: uniqueId(),
-    title: "Purchase Order",
-    slug: "purchase_order",
-    icon: IconShoppingBag,
-    href: "/apps/purchase-orders/list",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Purchase Order",
+  //   slug: "purchase_order",
+  //   icon: IconShoppingBag,
+  //   href: "/apps/purchase-orders/list",
+  // },
 
   {
     id: uniqueId(),

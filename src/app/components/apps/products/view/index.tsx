@@ -136,12 +136,10 @@ const ProductView: React.FC<ProductViewProps> = ({
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
   const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
-  const [openCategoryModal, setOpenCategoryModal] = useState(false);
   const [product, setProduct] = useState<any>([]);
   const [totalQty, setTotalQty] = useState("");
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [mainFile, setMainFile] = useState<File | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
@@ -324,15 +322,15 @@ const ProductView: React.FC<ProductViewProps> = ({
         setSelectedRowIds(new Set(storeIds));
       }
 
-      if (product.product_image) {
-        setMainPreview(product.product_image);
+      if (product.image_url) {
+        setMainPreview(product.image_url);
       }
 
       if (product.product_images?.length) {
         setGalleryPreview(
           product.product_images.map((img: any) => ({
             id: img.id,
-            src: img.image,
+            src: img.image_url,
             isExisting: true,
           })),
         );
@@ -522,7 +520,7 @@ const ProductView: React.FC<ProductViewProps> = ({
           boxShadow: "none",
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,
-          overflow: "hidden",
+          // overflow: "hidden",
           p: 4,
           backgroundColor: "#f9fafb",
         },
@@ -574,23 +572,23 @@ const ProductView: React.FC<ProductViewProps> = ({
           </Box>
           <Grid container spacing={2}>
             <Grid size={{ xs: 6 }}>
+              <Typography variant="body2" color="text.secondary">
+                Product name
+              </Typography>
               <Typography
-                variant="body2"
-                color="text.secondary"
                 sx={{
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 3,
+                  WebkitLineClamp: 4,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
-                  maxWidth: 400,
+                  mr: 1,
                   wordBreak: "break-word",
                 }}
               >
-                Product name
+                {product?.short_name || "-"}
               </Typography>
-              <Typography>{product?.short_name || "-"}</Typography>
             </Grid>
 
             <Grid size={{ xs: 6 }}>
@@ -733,6 +731,51 @@ const ProductView: React.FC<ProductViewProps> = ({
               <Typography>No Image</Typography>
             )}
           </Box>
+          {galleryPreview.length > 0 ? (
+            <Grid
+              container
+              spacing={2}
+              mt={2}
+              sx={{
+                border: "1px dashed #d1d5db",
+                borderRadius: 2,
+                p: 3,
+                textAlign: "center",
+                backgroundColor: "#fff",
+              }}
+            >
+              {galleryPreview.map((item, i) => (
+                <Grid size={{ xs: 6, sm: 4, md: 4, lg: 3 }} key={item.id ?? i}>
+                  <Box
+                    sx={{
+                      position: "relative",
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      overflow: "hidden",
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Image
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(item.src);
+                        setOpenPreview(true);
+                      }}
+                      src={item.src}
+                      alt="Product image"
+                      fill
+                      style={{
+                        objectFit: "cover",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <></>
+          )}
         </Grid>
       </Grid>
       <Dialog

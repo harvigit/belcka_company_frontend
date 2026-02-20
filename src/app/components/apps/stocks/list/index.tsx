@@ -400,7 +400,7 @@ const StockList = () => {
       },
     }),
 
-    columnHelper.accessor("product_image", {
+    columnHelper.accessor("image_url", {
       id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -417,7 +417,7 @@ const StockList = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Image
-              src={item.product_image || image}
+              src={item.image_url || image}
               style={{ cursor: "pointer" }}
               alt="Product"
               width={50}

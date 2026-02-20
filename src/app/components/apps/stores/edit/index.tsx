@@ -148,10 +148,6 @@ const EditStore: React.FC<EditStoreProps> = ({
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, [open == true]);
-
   // Fetch product
   const fetchProducts = async () => {
     setFetchProject(true);
@@ -170,8 +166,9 @@ const EditStore: React.FC<EditStoreProps> = ({
   };
 
   useEffect(() => {
+    fetchUsers();
     fetchProducts();
-  }, [companyId]);
+  }, [open == true]);
 
   useEffect(() => {
     if (open && formData.postcode) {
@@ -239,7 +236,7 @@ const EditStore: React.FC<EditStoreProps> = ({
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("product_image", {
+    columnHelper.accessor("image_url", {
       id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -312,8 +309,8 @@ const EditStore: React.FC<EditStoreProps> = ({
               }}
             />
             <Image
-              src={item.product_image}
-              alt={"Supplier image"}
+              src={item.image_url}
+              alt={"Product image"}
               width={50}
               height={50}
             />

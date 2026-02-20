@@ -318,7 +318,7 @@ const CategoryList = () => {
     }),
 
     columnHelper.accessor((row) => row?.parent_category_name, {
-      id: "parentCategoryName",
+      id: "mainCategory",
       header: () => "Main Category",
       cell: ({ row }) => {
         const item = row.original;
@@ -333,8 +333,8 @@ const CategoryList = () => {
     }),
 
     columnHelper.accessor((row) => row?.name, {
-      id: "name",
-      header: () => "Category Name",
+      id: "category",
+      header: () => "Category",
       cell: ({ row }) => {
         const item = row.original;
         return (

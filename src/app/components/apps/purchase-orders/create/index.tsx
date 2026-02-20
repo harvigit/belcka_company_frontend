@@ -34,7 +34,7 @@ interface Product {
   id: number;
   short_name: string;
   price: number;
-  product_image?: string | null;
+  image_url?: string | null;
   uuid: string;
 }
 
@@ -45,7 +45,7 @@ interface ProductRow {
   price: number | string;
   line_total: number;
   checked: boolean;
-  product_image?: string | null;
+  image_url?: string | null;
   uuid: string;
 }
 
@@ -119,7 +119,7 @@ const PurchaseOrder: React.FC<Props> = ({
             price,
             line_total: qty * price,
             checked: true,
-            product_image: p.product_image,
+            image_url: p.image_url,
             uuid: p.uuid,
           };
         },
@@ -203,7 +203,7 @@ const PurchaseOrder: React.FC<Props> = ({
           >
             <Box>
               <Image
-                src={item.product_image || ""}
+                src={item.image_url || ""}
                 alt={"product"}
                 width={50}
                 height={50}
@@ -389,28 +389,45 @@ const PurchaseOrder: React.FC<Props> = ({
             <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
-                  Store
+                  Date
                 </Typography>
-                <Autocomplete
+                <CustomTextField
+                  id="date"
+                  type="date"
                   fullWidth
-                  options={stores}
-                  value={stores.find((p) => p.id === formData.store_id) || null}
-                  onChange={(event, newValue) =>
-                    setFormData((prev: any) => ({
-                      ...prev,
-                      store_id: newValue ? newValue.id : null,
+                  InputLabelProps={{ shrink: true }}
+                  value={formData.date || ""}
+                  onChange={(e: any) =>
+                    setFormData((p: any) => ({
+                      ...p,
+                      date: e.target.value,
                     }))
                   }
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField {...params} placeholder="Select Store" />
-                  )}
                 />
               </Box>
+
               <Box className="form_inputs">
+                <Typography variant="body2" gutterBottom>
+                  Expected Delivery Date
+                </Typography>
+                <CustomTextField
+                  id="expected_delivery_date"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{
+                    min: formData.date || undefined,
+                  }}
+                  value={formData.expected_delivery_date || ""}
+                  onChange={(e: any) =>
+                    setFormData((p: any) => ({
+                      ...p,
+                      expected_delivery_date: e.target.value,
+                    }))
+                  }
+                />
+              </Box>
+              {/* <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   received By
                 </Typography>
@@ -437,7 +454,7 @@ const PurchaseOrder: React.FC<Props> = ({
                     />
                   )}
                 />
-              </Box>
+              </Box> */}
             </Box>
 
             <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
@@ -507,7 +524,7 @@ const PurchaseOrder: React.FC<Props> = ({
                           qty: 1,
                           line_total: Number(p.price) || 0,
                           checked: true,
-                          product_image: p.product_image,
+                          image_url: p.image_url,
                           uuid: p.uuid,
                         }));
 
@@ -526,42 +543,25 @@ const PurchaseOrder: React.FC<Props> = ({
               </Box>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
-                  Date
+                  Store
                 </Typography>
-                <CustomTextField
-                  id="date"
-                  type="date"
+                <Autocomplete
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  value={formData.date || ""}
-                  onChange={(e: any) =>
-                    setFormData((p: any) => ({
-                      ...p,
-                      date: e.target.value,
+                  options={stores}
+                  value={stores.find((p) => p.id === formData.store_id) || null}
+                  onChange={(event, newValue) =>
+                    setFormData((prev: any) => ({
+                      ...prev,
+                      store_id: newValue ? newValue.id : null,
                     }))
                   }
-                />
-              </Box>
-
-              <Box className="form_inputs">
-                <Typography variant="body2" gutterBottom>
-                  Expected Delivery Date
-                </Typography>
-                <CustomTextField
-                  id="expected_delivery_date"
-                  type="date"
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{
-                    min: formData.date || undefined,
-                  }}
-                  value={formData.expected_delivery_date || ""}
-                  onChange={(e: any) =>
-                    setFormData((p: any) => ({
-                      ...p,
-                      expected_delivery_date: e.target.value,
-                    }))
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
                   }
+                  renderInput={(params) => (
+                    <CustomTextField {...params} placeholder="Select Store" />
+                  )}
                 />
               </Box>
             </Box>

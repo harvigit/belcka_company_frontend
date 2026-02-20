@@ -604,44 +604,141 @@ const PurchaseOrderList = () => {
         );
       },
     },
-    columnHelper.accessor("date", {
-      id: "date",
+    columnHelper.accessor("uuid", {
+      id: "Id",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
-            Date
+            ID
           </Typography>
         </Stack>
       ),
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4}>
-            <Typography
-              variant="subtitle2"
-              textTransform="capitalize"
-              className="f-14"
-            >
-              {item.date ? item.date : ""}
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.3 }}
+          >
+            <Typography textTransform="capitalize" className="f-14">
+              {item.uuid ? item.uuid : "-"}
             </Typography>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.order_id, {
-      id: "orderId",
-      header: () => "Order ID",
+    columnHelper.accessor("image_url", {
+      id: "Image",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Image
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const image = "/images/products/product.png";
+        return (
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Image
+              src={item.image_url || image}
+              // onClick={(e) => {
+              //   e.stopPropagation();
+              //   setPreviewImage(item.image_url || image);
+              //   setOpenPreview(true);
+              // }}
+              style={{ cursor: "pointer" }}
+              alt="Product"
+              width={50}
+              height={50}
+            />
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.short_name, {
+      id: "shortName",
+      header: () => "Name",
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <Typography className="f-14" variant="subtitle2">
-              {item.order_id ? item.order_id : "-"}
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Tooltip
+              title={item.short_name ? item.short_name : (item.name ?? "")}
+              placement="top"
+              arrow
+            >
+              <Typography
+                className="f-14"
+                variant="body1"
+                sx={{
+                  width: 400,
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.25,
+                  // maxWidth: 300,
+                  wordBreak: "break-word",
+                }}
+              >
+                {item.short_name ? item.short_name : "-"}
+                <Typography color="textSecondary" className="f-14">
+                  {item.name}
+                </Typography>
+              </Typography>
+            </Tooltip>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.price, {
+      id: "buyingPrice",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Buying Price
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.currency}
+              {item.price ? item.price : "0"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.total_qty, {
+      id: "qty",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Qty
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.total_qty ? item.total_qty : "0"} {item.is_sub_qty ? `${item.pack_off_unit}`:""}
             </Typography>
           </Stack>
         );
@@ -654,60 +751,31 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              variant="subtitle2"
-            >
-              {item.supplier_name ? item.supplier_name : "-"}
-            </Typography>
-          </Stack>
+          <Typography textTransform="capitalize" className="f-14">
+            {item.supplier_name ? item.supplier_name : "-"}
+          </Typography>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.order_qty, {
-      id: "orderQty",
-      header: () => "Ordered QTY",
+    columnHelper.accessor((row) => row?.supplier_code, {
+      id: "code",
+      header: () => "Code",
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              variant="subtitle2"
-            >
-              {item.order_qty ? item.order_qty : "-"}
+          <Stack direction="row" alignItems="center">
+            <Typography textTransform="capitalize" className="f-14">
+              {item.supplier_code ? item.supplier_code : "-"}
             </Typography>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.receive_qty, {
-      id: "receiveQty",
-      header: () => "Received QTY",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <Typography
-              textTransform="capitalize"
-              className="f-14"
-              variant="subtitle2"
-            >
-              {item.receive_qty ? item.receive_qty : "-"}
-            </Typography>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.status_text, {
-      id: "status",
-      header: () => "Status",
+    columnHelper.accessor((row) => row?.stock_status, {
+      id: "availability",
+      header: () => "Availability",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -718,62 +786,47 @@ const PurchaseOrderList = () => {
               color={item.status_color}
               fontWeight={500}
             >
-              {item.status_text ? item.status_text : "-"}
+              {item.stock_status ? item.stock_status : "-"}
             </Typography>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.ref, {
-      id: "ref",
-      header: () => "Ref",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.ref ? item.ref : "-"}
-            </Typography>
-          </Stack>
-        );
-      },
-    }),
+    // columnHelper.display({
+    //   id: "actions",
+    //   header: "Actions",
+    //   cell: ({ row }) => {
+    //     const item = row.original;
+    //     return (
+    //       <Stack direction="row" sx={{ pl: 1 }} display={"flex"}>
+    //         <Tooltip title="Edit">
+    //           <IconButton
+    //             onClick={() => {
+    //               setSelectedPurchaseOrder(item);
+    //               setEditDrawerOpen(true);
+    //             }}
+    //             color="primary"
+    //           >
+    //             <IconEdit size={18} />
+    //           </IconButton>
+    //         </Tooltip>
+    //         <Tooltip title="Preview / Print">
+    //           <IconButton
+    //             color="primary"
+    //             onClick={() => handlePreview(item.id)}
+    //           >
+    //             <IconPrinter size={18} />
+    //           </IconButton>
+    //         </Tooltip>
 
-    columnHelper.display({
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" sx={{ pl: 1 }} display={"flex"}>
-            <Tooltip title="Edit">
-              <IconButton
-                onClick={() => {
-                  setSelectedPurchaseOrder(item);
-                  setEditDrawerOpen(true);
-                }}
-                color="primary"
-              >
-                <IconEdit size={18} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Preview / Print">
-              <IconButton
-                color="primary"
-                onClick={() => handlePreview(item.id)}
-              >
-                <IconPrinter size={18} />
-              </IconButton>
-            </Tooltip>
-
-            {item.status !== 2 && (
-              <Button href={`/apps/receive-orders/${item.id}`}>Receive</Button>
-            )}
-          </Stack>
-        );
-      },
-    }),
+    //         {item.status !== 2 && (
+    //           <Button href={`/apps/receive-orders/${item.id}`}>Receive</Button>
+    //         )}
+    //       </Stack>
+    //     );
+    //   },
+    // }),
   ];
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -1477,7 +1530,7 @@ const PurchaseOrderList = () => {
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
-                            width: header.column.id === "select" ? 30 : "auto",
+                            width: header.column.id === "select" ? 30 :header.column.id === "shortName" ? 400 : "auto",
                           }}
                         >
                           <Box

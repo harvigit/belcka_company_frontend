@@ -153,10 +153,6 @@ const CreateStore: React.FC<CreateStoreProps> = ({
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, [companyId]);
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -179,22 +175,23 @@ const CreateStore: React.FC<CreateStoreProps> = ({
 
   useEffect(() => {
     fetchUsers();
+    fetchProducts();
   }, [open == true]);
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
+      // const search = searchTerm.toLowerCase();
 
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.email?.toLocaleLowerCase().includes(search);
+      // const matchesSearch =
+      //   item.name?.toLowerCase().includes(search) ||
+      //   item.email?.toLocaleLowerCase().includes(search);
 
-      return matchesSearch;
+      return item;
     });
   }, [data, searchTerm]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
-    columnHelper.accessor("product_image", {
+    columnHelper.accessor("image_url", {
       id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -267,7 +264,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
               }}
             />
             <Image
-              src={item.product_image}
+              src={item.image_url}
               alt={"Supplier image"}
               width={50}
               height={50}
@@ -351,12 +348,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
         },
       }}
     >
-      <Box
-        display="flex"
-        justifyContent={"flex-end"}
-        m={1}
-        mb={0}
-      >
+      <Box display="flex" justifyContent={"flex-end"} m={1} mb={0}>
         <IconButton onClick={onClose}>
           <IconX />
         </IconButton>
