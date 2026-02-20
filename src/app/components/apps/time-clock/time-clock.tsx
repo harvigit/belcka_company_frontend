@@ -481,11 +481,9 @@ const TimeClock = ({queryParams}: Props) => {
     const closeConflictSidebar = async () => {
         setConflictSidebar(false);
         try {
-            // if (conflictDetails?.length > 0) {
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
             await fetchData(defaultStartDate, defaultEndDate);
-            // }
         } catch (error) {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }
@@ -649,7 +647,6 @@ const TimeClock = ({queryParams}: Props) => {
                                 aria-label={`${conflictCount} scheduling conflict${conflictCount !== 1 ? 's' : ''}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    // open conflict sidebar for this user if needed
                                 }}
                                 sx={{
                                     p: 0.5,
@@ -1589,13 +1586,13 @@ const TimeClock = ({queryParams}: Props) => {
                 <TableContainer
                     sx={{
                         width: '100%',
-                        overflowX: 'auto', 
+                        overflowX: 'visible', 
                     }}
                 >
                     <Table
                         stickyHeader
                         sx={{
-                            minWidth: 1600,    // ✅ force wider table
+                            minWidth: 1600,
                             tableLayout: 'auto',
                         }}
                     >
@@ -1614,7 +1611,6 @@ const TimeClock = ({queryParams}: Props) => {
                                                     position: 'sticky',
                                                     top: 0,
                                                     zIndex: 11,
-                                                    // backgroundColor: '#fff',
                                                     p: 0,
                                                     whiteSpace: 'nowrap',
                                                 }}
@@ -1628,7 +1624,6 @@ const TimeClock = ({queryParams}: Props) => {
                                                         py: 1.5,
                                                         ml: 0.5,
                                                         fontWeight: isActive ? 600 : 500,
-                                                        // color: '#000',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
