@@ -835,8 +835,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
             },
         }),
-
-
+        
         columnHelper.accessor('name_on_account', {
             id: 'name_on_account',
             header: 'Name On Account',
