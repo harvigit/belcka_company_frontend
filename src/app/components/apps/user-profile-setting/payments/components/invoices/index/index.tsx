@@ -66,6 +66,8 @@ import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { format } from "date-fns";
 import CreateInvoice from "../create";
 import { DateTime } from "luxon";
+import { PictureAsPdf } from "@mui/icons-material";
+
 dayjs.extend(customParseFormat);
 
 interface Props {
@@ -123,6 +125,8 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const today = new Date();
   const defaultStart = new Date(today);
@@ -245,10 +249,12 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     }
   };
 
-  const viewPdf = (pdf: string) => {
-    if (!pdf) return;
-    const url = `${pdf}`;
-    window.open(url, "_blank");
+  const viewPdf = (pdfPath: string) => {
+    if (pdfPath) {
+      window.open(pdfPath, "_blank");
+    } else {
+      console.error("PDF path is missing");
+    }
   };
 
   const handleOpenCreateDrawer = () => {
@@ -394,6 +400,7 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
         );
       },
     },
+
     columnHelper.accessor("image", {
       id: "Image",
       header: () => (
@@ -407,10 +414,34 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
       cell: ({ row }) => {
         const item = row.original;
 
+        const isPdf = item.extension === ".pdf";
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             {item.image && (
-              <Image src={item.image} alt={"Payslip"} width={50} height={50} />
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isPdf) {
+                    viewPdf(item.image);
+                  } else {
+                    setPreviewImage(item.image);
+                    setOpenPreview(true);
+                  }
+                }}
+              >
+                {isPdf ? (
+                  <PictureAsPdf
+                    style={{ width: 50, height: 50, cursor: "pointer" }}
+                  />
+                ) : (
+                  <Image
+                    src={item.image}
+                    alt={"Payslip"}
+                    width={50}
+                    height={50}
+                  />
+                )}
+              </div>
             )}
           </Stack>
         );
@@ -528,23 +559,6 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
           <Typography textTransform="capitalize" className="f-14">
             {item.date ? item.date : "-"}
           </Typography>
-        );
-      },
-    }),
-
-    columnHelper.display({
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="View">
-              <IconButton onClick={() => viewPdf(item.pdf)} color="primary">
-                <IconEye size={18} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
         );
       },
     }),
@@ -812,6 +826,58 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
         </Stack>
       </Stack>
       <Divider />
+
+      <Dialog
+        open={openPreview}
+        onClose={() => setOpenPreview(false)}
+        fullScreen
+        PaperProps={{
+          sx: {
+            backgroundColor: "transparent",
+            boxShadow: "none",
+          },
+        }}
+      >
+        <IconButton
+          onClick={() => setOpenPreview(false)}
+          color="primary"
+          sx={{
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 1301,
+            backgroundColor: "#fff",
+            "&:hover": {
+              backgroundColor: "#eee",
+              color: "#1e4db7",
+            },
+          }}
+        >
+          <IconX />
+        </IconButton>
+
+        <Box
+          sx={{
+            width: "100vw",
+            height: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setOpenPreview(false)}
+        >
+          <img
+            src={previewImage || ""}
+            alt="Preview"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "90% !important",
+              height: "50%",
+              objectFit: "contain",
+            }}
+          />
+        </Box>
+      </Dialog>
 
       {/* Add Invoice */}
       <CreateInvoice

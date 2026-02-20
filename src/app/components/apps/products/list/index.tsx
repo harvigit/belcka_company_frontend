@@ -580,7 +580,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor("qr_code_url", {
-      id: "qr",
+      id: "QR",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">

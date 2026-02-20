@@ -1838,10 +1838,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             left="15px"
                             bgcolor={
                               addr.request_type === 102 && addr.status_int == 3
-                                ? "#FF7F00"
+                                ? "#7d54f0ff"
                                 : addr.request_type === 102 &&
                                     addr.status_int == 4
-                                  ? "#4cbc6d"
+                                  ? "#f53c3cff"
                                   : "#FF7F00"
                             }
                             px={1.5}
@@ -1858,7 +1858,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                                 ? "Start shift"
                                 : addr.request_type === 102 &&
                                     addr.status_int == 4
-                                  ? "End shift"
+                                  ? "Stop shift"
                                   : addr.type_name}
                             </Typography>
                           </Box>

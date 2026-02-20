@@ -346,7 +346,7 @@ const Company = () => {
     const unsubscribe = onForegroundMessage((payload) => {
       console.log("📩 New FCM message:", payload);
       if (Notification.permission === "granted") {
-        new Notification(payload?.notification?.title || "Notification", {
+        new Notification("", {
           body: payload?.notification?.body || "",
           icon: "/favicon.svg",
         });
