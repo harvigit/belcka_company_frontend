@@ -260,7 +260,7 @@ const TimeClock = ({queryParams}: Props) => {
     const [openDrawer, setOpenDrawer] = useState(false);
 
     // Pay Rate Permission
-    const [userHasPermission, setUserHasPermission] = useState<boolean>(false);
+    const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
 
     const amountColumns = [
         'daylog_payable_amount',
@@ -287,9 +287,9 @@ const TimeClock = ({queryParams}: Props) => {
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
-            ...Object.fromEntries(amountColumns.map((col) => [col, userHasPermission])),
+            ...Object.fromEntries(amountColumns.map((col) => [col, userHasRatePermission])),
         }));
-    }, [userHasPermission]);
+    }, [userHasRatePermission]);
     
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
@@ -381,7 +381,7 @@ const TimeClock = ({queryParams}: Props) => {
             if (response.data.IsSuccess) {
                 setData(response.data.info);
                 setCompanyId(response.data.company_id);
-                setUserHasPermission(response.data.user_rate_permission);
+                setUserHasRatePermission(response.data.user_rate_permission);
                 if (response.data.currency !== null) {
                     setCurrency(response.data.currency);
                     setFetchTimesheet(false);
@@ -1550,6 +1550,9 @@ const TimeClock = ({queryParams}: Props) => {
                             .filter((col: any) => {
                                 const excludedColumns = ['select'];
                                 if (excludedColumns.includes(col.id)) return false;
+
+                                if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
+
                                 return col.id.toLowerCase().includes(search.toLowerCase());
                             })
                             .map((col: any) => (

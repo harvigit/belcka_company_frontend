@@ -13,6 +13,8 @@ interface TimeClockStatsProps {
     anchorEl: HTMLElement | null;
     handlePopoverOpen: (event: React.MouseEvent<HTMLElement>) => void;
     handlePopoverClose: () => void;
+    userHasRatePermission: boolean;
+    amountColumns: string[];
 }
 
 const TimeClockStats: React.FC<TimeClockStatsProps> = ({
@@ -25,6 +27,8 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                            anchorEl,
                                                            handlePopoverOpen,
                                                            handlePopoverClose,
+                                                           userHasRatePermission,
+                                                           amountColumns,
                                                        }) => {
     const headerDetails = [
         { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
@@ -86,6 +90,9 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                 .filter((col: any) => {
                                     const excludedColumns = ['conflicts'];
                                     if (excludedColumns.includes(col.id)) return false;
+
+                                    if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
+
                                     return col.id.toLowerCase().includes(search.toLowerCase());
                                 })
                                 .map((col: any) => (

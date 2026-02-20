@@ -190,8 +190,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setLeaveRequestCount,
         penaltyAppealCount,
         setPenaltyAppealCount,
-        userHasPermission,
-        setUserHasPermission,
+        userHasRatePermission,
+        setUserHasRatePermission,
         shifts,
         projects,
         fetchTimeClockData,
@@ -217,9 +217,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
-            ...Object.fromEntries(amountColumns.map((col) => [col, userHasPermission])),
+            ...Object.fromEntries(amountColumns.map((col) => [col, userHasRatePermission])),
         }));
-    }, [userHasPermission]);
+    }, [userHasRatePermission]);
 
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
@@ -1785,6 +1785,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 anchorEl={anchorEl}
                 handlePopoverOpen={handlePopoverOpen}
                 handlePopoverClose={handlePopoverClose}
+                userHasRatePermission={userHasRatePermission}
+                amountColumns={amountColumns}
             />
 
             <TimeClockTable
