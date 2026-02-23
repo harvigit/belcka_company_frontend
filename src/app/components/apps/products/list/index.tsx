@@ -1108,25 +1108,6 @@ const ProductList = () => {
               <MenuItem onClick={handleClose}>
                 <Link
                   color="body1"
-                  href="/apps/purchase-orders/list"
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconShoppingBag width={18} />
-                  </ListItemIcon>
-                  Purchase Order
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();

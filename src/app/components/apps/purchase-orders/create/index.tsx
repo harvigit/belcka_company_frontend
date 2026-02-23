@@ -388,8 +388,7 @@ const PurchaseOrder: React.FC<Props> = ({
                   }
                 />
               </Box>
-              <Box className="form_inputs"></Box>
-              {/* <Box className="form_inputs">
+              <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Supplier
                 </Typography>
@@ -416,7 +415,7 @@ const PurchaseOrder: React.FC<Props> = ({
                     />
                   )}
                 />
-              </Box> */}
+              </Box>
             </Box>
             <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
               <Box className="form_inputs">
@@ -530,39 +529,45 @@ const PurchaseOrder: React.FC<Props> = ({
                 </Typography>
                 <Autocomplete
                   multiple
-                  options={products}
+                  options={
+                    ids
+                      ? ids?.length > 0
+                        ? products
+                        : allProducts
+                      : allProducts
+                  }
                   value={selectedProducts}
                   isOptionEqualToValue={(option, value) =>
                     option.id === value.id
                   }
-                  // onChange={(_, value) => {
-                  //   setSelectedProducts(value);
+                  onChange={(_, value) => {
+                    setSelectedProducts(value);
 
-                  //   setProducts((prev) => {
-                  //     const selectedIds = new Set(value.map((p) => p.id));
+                    setProducts((prev) => {
+                      const selectedIds = new Set(value.map((p) => p.id));
 
-                  //     const remaining = prev.filter((p) =>
-                  //       selectedIds.has(p.id),
-                  //     );
+                      const remaining = prev.filter((p) =>
+                        selectedIds.has(p.id),
+                      );
 
-                  //     const existingIds = new Set(remaining.map((p) => p.id));
+                      const existingIds = new Set(remaining.map((p) => p.id));
 
-                  //     const added = value
-                  //       .filter((p) => !existingIds.has(p.id))
-                  //       .map((p) => ({
-                  //         id: p.id,
-                  //         short_name: p.short_name,
-                  //         price: p.price ?? "",
-                  //         qty: 1,
-                  //         line_total: Number(p.price) || 0,
-                  //         checked: true,
-                  //         image_url: p.image_url,
-                  //         uuid: p.uuid,
-                  //       }));
+                      const added = value
+                        .filter((p) => !existingIds.has(p.id))
+                        .map((p) => ({
+                          id: p.id,
+                          short_name: p.short_name,
+                          price: p.price ?? "",
+                          qty: 1,
+                          line_total: Number(p.price) || 0,
+                          checked: true,
+                          image_url: p.image_url,
+                          uuid: p.uuid,
+                        }));
 
-                  //     return [...remaining, ...added];
-                  //   });
-                  // }}
+                      return [...remaining, ...added];
+                    });
+                  }}
                   getOptionLabel={(option) => option.short_name}
                   renderInput={(params) => (
                     <CustomTextField

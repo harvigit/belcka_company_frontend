@@ -46,7 +46,6 @@ import {
   IconChevronRight,
   IconEye,
   IconFilter,
-  IconMinus,
   IconPrinter,
   IconSearch,
   IconTrash,
@@ -68,7 +67,7 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import PurchaseOrder from "../create";
-import { filter } from "lodash";
+import PurchaseProductList from "../products";
 
 dayjs.extend(customParseFormat);
 
@@ -87,11 +86,11 @@ const PurchaseOrderList = () => {
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [productDrawerOpen, setProductDrawerOpen] = useState(false);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -167,6 +166,7 @@ const PurchaseOrderList = () => {
         toast.success(result.data.message);
         setDrawerOpen(false);
         setSelectedRowIds(new Set());
+        setProductDrawerOpen(false);
         fetchOrders();
       }
     } finally {
@@ -206,6 +206,7 @@ const PurchaseOrderList = () => {
     } finally {
       setIsSaving(false);
     }
+    setSelectedRowIds(new Set());
   };
 
   const handlePreview = async (orderId: number) => {
@@ -616,73 +617,35 @@ const PurchaseOrderList = () => {
       },
     },
 
-    columnHelper.accessor((row) => row?.total_qty, {
-      id: "add",
+    columnHelper.accessor((row) => row?.date, {
+      id: "date",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2">Add</Typography>
+          <Typography variant="subtitle2">Date</Typography>
         </Stack>
       ),
       cell: ({ row }) => {
         const item = row.original;
-
-        const updateQty = (newQty: number) => {
-          setData((prev: any[]) =>
-            prev.map((p) =>
-              p.id === item.id
-                ? { ...p, total_qty: newQty > 0 ? newQty : null }
-                : p,
-            ),
-          );
-        };
-
-        // If no quantity → show plus icon
-        if (!item.total_qty) {
-          return (
-            <IconButton onClick={() => updateQty(1)} size="small">
-              +
-            </IconButton>
-          );
-        }
-
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <IconButton
-              size="small"
-              onClick={() => updateQty(Number(item.total_qty) - 1)}
+          <Stack direction="row" alignItems="center" spacing={4}>
+            <Typography
+              variant="subtitle2"
+              textTransform="capitalize"
+              className="f-14"
             >
-              <IconMinus size={17} />
-            </IconButton>
-
-            <TextField
-              size="small"
-              value={item.total_qty}
-              inputProps={{ style: { textAlign: "center" } }}
-              sx={{ width: 60 }}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (!/^\d*$/.test(value)) return;
-                updateQty(Number(value));
-              }}
-            />
-
-            <IconButton
-              size="small"
-              onClick={() => updateQty(Number(item.total_qty) + 1)}
-            >
-              <IconPlus size={17} />
-            </IconButton>
+              {item.date ? item.date : ""}
+            </Typography>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor("uuid", {
-      id: "Id",
+    columnHelper.accessor("order_id", {
+      id: "orderId",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
-            ID
+            orderID
           </Typography>
         </Stack>
       ),
@@ -698,120 +661,7 @@ const PurchaseOrderList = () => {
             sx={{ pl: 0.3 }}
           >
             <Typography textTransform="capitalize" className="f-14">
-              {item.uuid ? item.uuid : "-"}
-            </Typography>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor("image_url", {
-      id: "Image",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Image
-          </Typography>
-        </Stack>
-      ),
-      enableSorting: true,
-      cell: ({ row }) => {
-        const item = row.original;
-        const image = "/images/products/product.png";
-        return (
-          <Stack direction="row" alignItems="center" spacing={4}>
-            <Image
-              src={item.image_url || image}
-              // onClick={(e) => {
-              //   e.stopPropagation();
-              //   setPreviewImage(item.image_url || image);
-              //   setOpenPreview(true);
-              // }}
-              style={{ cursor: "pointer" }}
-              alt="Product"
-              width={50}
-              height={50}
-            />
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.short_name, {
-      id: "products",
-      header: () => "Products",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Tooltip
-              title={item.short_name ? item.short_name : (item.name ?? "")}
-              placement="top"
-              arrow
-            >
-              <Typography
-                className="f-14"
-                variant="body1"
-                sx={{
-                  width: 400,
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: 1.25,
-                  wordBreak: "break-word",
-                }}
-              >
-                {item.short_name ? item.short_name : "-"}
-                <Typography color="textSecondary" className="f-14">
-                  {item.name}
-                </Typography>
-              </Typography>
-            </Tooltip>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.price, {
-      id: "buyingPrice",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Buying Price
-          </Typography>
-        </Stack>
-      ),
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.currency}
-              {item.price ? item.price : "0"}
-            </Typography>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.total_qty, {
-      id: "qty",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Qty
-          </Typography>
-        </Stack>
-      ),
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.total_qty ? item.total_qty : "0"}{" "}
-              {item.is_sub_qty ? `${item.pack_off_unit}` : ""}
+              {item.order_id ? item.order_id : "-"}
             </Typography>
           </Stack>
         );
@@ -831,24 +681,39 @@ const PurchaseOrderList = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.supplier_code, {
-      id: "code",
-      header: () => "Code",
+    columnHelper.accessor((row) => row?.order_qty, {
+      id: "orderQty",
+      header: () => "Order QTY",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center">
             <Typography textTransform="capitalize" className="f-14" ml={1}>
-              {item.supplier_code ? item.supplier_code : "-"}
+              {item.order_qty ? item.order_qty : "-"}
             </Typography>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor((row) => row?.stock_status, {
-      id: "availability",
-      header: () => "Availability",
+    columnHelper.accessor((row) => row?.receive_qty, {
+      id: "receiveQty",
+      header: () => "Receive QTY",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center">
+            <Typography textTransform="capitalize" className="f-14" ml={1}>
+              {item.receive_qty ? item.receive_qty : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.status_text, {
+      id: "status",
+      header: () => "Status",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -858,47 +723,62 @@ const PurchaseOrderList = () => {
               color={item.status_color}
               fontWeight={500}
             >
-              {item.stock_status ? item.stock_status : "-"}
+              {item.status_text ? item.status_text : "-"}
             </Typography>
           </Stack>
         );
       },
     }),
 
-    // columnHelper.display({
-    //   id: "actions",
-    //   header: "Actions",
-    //   cell: ({ row }) => {
-    //     const item = row.original;
-    //     return (
-    //       <Stack direction="row" sx={{ pl: 1 }} display={"flex"}>
-    //         <Tooltip title="Edit">
-    //           <IconButton
-    //             onClick={() => {
-    //               setSelectedPurchaseOrder(item);
-    //               setEditDrawerOpen(true);
-    //             }}
-    //             color="primary"
-    //           >
-    //             <IconEdit size={18} />
-    //           </IconButton>
-    //         </Tooltip>
-    //         <Tooltip title="Preview / Print">
-    //           <IconButton
-    //             color="primary"
-    //             onClick={() => handlePreview(item.id)}
-    //           >
-    //             <IconPrinter size={18} />
-    //           </IconButton>
-    //         </Tooltip>
+    columnHelper.accessor((row) => row?.ref, {
+      id: "ref",
+      header: () => "Ref",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+            <Typography className="f-14" fontWeight={500}>
+              {item.ref ? item.ref : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
 
-    //         {item.status !== 2 && (
-    //           <Button href={`/apps/receive-orders/${item.id}`}>Receive</Button>
-    //         )}
-    //       </Stack>
-    //     );
-    //   },
-    // }),
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" sx={{ pl: 1 }} display={"flex"}>
+            <Tooltip title="Edit">
+              <IconButton
+                onClick={() => {
+                  setSelectedPurchaseOrder(item);
+                  setEditDrawerOpen(true);
+                }}
+                color="primary"
+              >
+                <IconEdit size={18} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Preview / Print">
+              <IconButton
+                color="primary"
+                onClick={() => handlePreview(item.id)}
+              >
+                <IconPrinter size={18} />
+              </IconButton>
+            </Tooltip>
+
+            {item.status !== 2 && (
+              <Button href={`/apps/receive-orders/${item.id}`}>Receive</Button>
+            )}
+          </Stack>
+        );
+      },
+    }),
   ];
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -1162,7 +1042,9 @@ const PurchaseOrderList = () => {
                                   variant="caption"
                                   color="text.secondary"
                                 >
-                                  ({product.product.description})
+                                  {product.product.description
+                                    ? product.product.description
+                                    : ""}
                                 </Typography>
                               </TableCell>
                               <TableCell className="font-14">
@@ -1394,7 +1276,7 @@ const PurchaseOrderList = () => {
           >
             {selectedRowIds.size > 0 && (
               <>
-                {/* <Button
+                <Button
                   variant="outlined"
                   color="error"
                   startIcon={<IconTrash width={18} />}
@@ -1406,21 +1288,21 @@ const PurchaseOrderList = () => {
                   }}
                 >
                   Remove
-                </Button> */}
-
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<IconPlus width={18} />}
-                  sx={{ marginRight: "5px" }}
-                  onClick={() => {
-                    handleOpenCreateDrawer();
-                  }}
-                >
-                  Purchase Order
                 </Button>
               </>
             )}
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<IconPlus width={18} />}
+              sx={{ marginRight: "5px" }}
+              onClick={() => {
+                handleOpenCreateDrawer();
+              }}
+            >
+              Purchase Order
+            </Button>
+
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -1520,7 +1402,7 @@ const PurchaseOrderList = () => {
                 </Button>
               </DialogActions>
             </Dialog>
-            {/* <IconButton
+            <IconButton
               sx={{ margin: "0px" }}
               id="basic-button"
               aria-controls={openMenu ? "basic-menu" : undefined}
@@ -1529,7 +1411,42 @@ const PurchaseOrderList = () => {
               onClick={handleClick}
             >
               <IconDotsVertical width={18} />
-            </IconButton> */}
+            </IconButton>
+            <Menu
+              id="basic-menu"
+              anchorEl={anchorEl}
+              open={openMenu}
+              onClose={handleClose}
+              slotProps={{
+                list: {
+                  "aria-labelledby": "basic-button",
+                },
+              }}
+            >
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setProductDrawerOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconPlus width={18} />
+                  </ListItemIcon>
+                  Add Purchase Order
+                </Link>
+              </MenuItem>
+            </Menu>
           </Stack>
         </Stack>
         <Divider />
@@ -1559,6 +1476,17 @@ const PurchaseOrderList = () => {
           editData={selectedPurchaseOrder}
         />
 
+        <PurchaseProductList
+          open={productDrawerOpen}
+          onClose={() => setProductDrawerOpen(false)}
+          ids={selectedProductsWithQty}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleSubmit}
+          isSaving={isSaving}
+          companyId={user.company_id ?? null}
+          mode="create"
+        />
         <Box
           sx={{
             flex: 1,
