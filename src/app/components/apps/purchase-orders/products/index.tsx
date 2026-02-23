@@ -719,21 +719,6 @@ const PurchaseProductList: React.FC<Props> = ({
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-            {selectedRowIds.size > 0 && (
-              <>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<IconPlus width={18} />}
-                  sx={{ marginRight: "5px" }}
-                  onClick={() => {
-                    handleOpenCreateDrawer();
-                  }}
-                >
-                  Purchase Order
-                </Button>
-              </>
-            )}
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -970,60 +955,20 @@ const PurchaseProductList: React.FC<Props> = ({
             }}
             alignItems="center"
           >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
+            {selectedRowIds.size > 0 && (
+              <>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  sx={{ marginRight: "5px" }}
+                  onClick={() => {
+                    handleOpenCreateDrawer();
+                  }}
+                >
+                  Next
+                </Button>
+              </>
+            )}
           </Box>
         </Stack>
       </Box>
