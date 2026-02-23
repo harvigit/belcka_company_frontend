@@ -40,12 +40,12 @@ export default function NotificationClient() {
 
         // listen for foreground messages
         unsub = onForegroundMessage((payload: any) => {
-          const title = payload?.notification?.title || "Notification";
+          // const title = payload?.notification?.title || "Notification";
           const body = payload?.notification?.body || "";
           const icon = "/favicon.svg";
 
           if (Notification.permission === "granted") {
-            new Notification(title, {
+            new Notification("",{
               body,
               icon,
             });

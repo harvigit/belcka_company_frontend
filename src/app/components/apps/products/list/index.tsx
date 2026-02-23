@@ -48,6 +48,7 @@ import {
   IconFilter,
   IconNotes,
   IconSearch,
+  IconShoppingBag,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -580,7 +581,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor("qr_code_url", {
-      id: "qr",
+      id: "QR",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
@@ -999,14 +1000,19 @@ const ProductList = () => {
                       }
                       sx={{ textTransform: "none" }}
                       label={
-                        col.columnDef.meta?.label ||
-                        (typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
-                          ? col.columnDef.header
-                          : col.id
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str: string) => str.toUpperCase())
-                              .trim())
+                        col.id === "QR"
+                          ? "QR"
+                          : col.columnDef.meta?.label
+                            ? col.columnDef.meta.label
+                            : typeof col.columnDef.header === "string" &&
+                                col.columnDef.header.trim() !== ""
+                              ? col.columnDef.header
+                              : col.id
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}
@@ -1113,7 +1119,7 @@ const ProductList = () => {
                   }}
                 >
                   <ListItemIcon>
-                    <IconPlus width={18} />
+                    <IconShoppingBag width={18} />
                   </ListItemIcon>
                   Purchase Order
                 </Link>

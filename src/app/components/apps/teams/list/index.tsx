@@ -298,7 +298,9 @@ const TablePagination = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.team_id)));
+                setSelectedRowIds(
+                  new Set(filteredData.map((row) => row.team_id)),
+                );
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -311,7 +313,9 @@ const TablePagination = () => {
         const isChecked = selectedRowIds.has(item.team_id);
         const isHovered = hoveredRow === item.team_id;
         const showCheckbox = isChecked || isHovered;
-
+        const subcontractor =
+          item.is_subcontractor === true &&
+          item.company_id !== item.subcontractor_company_id;
         return (
           <Stack
             direction="row"
@@ -323,6 +327,7 @@ const TablePagination = () => {
             <CustomCheckbox
               checked={isChecked}
               onClick={(e) => e.stopPropagation()}
+              disabled={subcontractor}
               onChange={(e) => {
                 e.stopPropagation();
                 e.preventDefault();

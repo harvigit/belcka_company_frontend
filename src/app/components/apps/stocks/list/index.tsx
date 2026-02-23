@@ -429,13 +429,27 @@ const StockList = () => {
     }),
 
     columnHelper.accessor((row) => row?.short_name, {
-      id: "shortName",
-      header: () => "Short Name",
+      id: "name",
+      header: () => "Name",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              className="f-14"
+              variant="body1"
+              sx={{
+                width: 200,
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: 1.25,
+                maxWidth: 300,
+                wordBreak: "break-word",
+              }}
+            >
               {item.short_name ? item.short_name : "-"}
               <Typography color="textSecondary" className="f-14">
                 {item.name}
@@ -447,8 +461,8 @@ const StockList = () => {
     }),
 
     columnHelper.accessor((row) => row?.supplier_name, {
-      id: "supplierName",
-      header: () => "Supplier Name",
+      id: "supplier",
+      header: () => "Supplier",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -460,8 +474,8 @@ const StockList = () => {
     }),
 
     columnHelper.accessor((row) => row?.supplier_code, {
-      id: "supplierCode",
-      header: () => "Supplier Code",
+      id: "code",
+      header: () => "Code",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -547,11 +561,11 @@ const StockList = () => {
     }),
 
     columnHelper.accessor("qr_code_url", {
-      id: "QrCode",
+      id: "QR",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
-            QR Code
+            QR
           </Typography>
         </Stack>
       ),
@@ -756,14 +770,19 @@ const StockList = () => {
                       }
                       sx={{ textTransform: "none" }}
                       label={
-                        col.columnDef.meta?.label ||
-                        (typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
-                          ? col.columnDef.header
-                          : col.id
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str: string) => str.toUpperCase())
-                              .trim())
+                        col.id === "QR"
+                          ? "QR"
+                          : col.columnDef.meta?.label
+                            ? col.columnDef.meta.label
+                            : typeof col.columnDef.header === "string" &&
+                                col.columnDef.header.trim() !== ""
+                              ? col.columnDef.header
+                              : col.id
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}

@@ -419,7 +419,7 @@ const StoreList = () => {
     }),
 
     columnHelper.accessor((row) => row?.manager_name, {
-      id: "managerName",
+      id: "storeManager",
       header: () => "Store Manager",
       cell: ({ row }) => {
         const item = row.original;

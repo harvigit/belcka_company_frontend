@@ -346,7 +346,7 @@ const Company = () => {
     const unsubscribe = onForegroundMessage((payload) => {
       console.log("📩 New FCM message:", payload);
       if (Notification.permission === "granted") {
-        new Notification(payload?.notification?.title || "Notification", {
+        new Notification("", {
           body: payload?.notification?.body || "",
           icon: "/favicon.svg",
         });
@@ -517,6 +517,7 @@ const Company = () => {
                       <MenuItem value="Leave">Leave</MenuItem>
                       <MenuItem value="Expense">Expense</MenuItem>
                       <MenuItem value="Zone">Zone</MenuItem>
+                      <MenuItem value="Order">Order</MenuItem>
                     </TextField>
                   </Box>
                   <Box

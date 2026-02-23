@@ -27,7 +27,6 @@ import {
 } from "@tanstack/react-table";
 import { Grid, Stack } from "@mui/system";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { useDropzone } from "react-dropzone";
 import api from "@/utils/axios";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import Image from "next/image";
@@ -96,16 +95,6 @@ type GalleryImage = {
   isExisting?: boolean;
 };
 
-interface CategoryFormData {
-  id: number;
-  company_id: any;
-  name: string;
-  image?: File | null;
-  parent_category_id?: number | null;
-  parent_category_name?: string | null;
-  status: boolean;
-}
-
 const ProductView: React.FC<ProductViewProps> = ({
   open,
   onClose,
@@ -135,19 +124,11 @@ const ProductView: React.FC<ProductViewProps> = ({
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
-  const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
   const [product, setProduct] = useState<any>([]);
   const [totalQty, setTotalQty] = useState("");
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-
-  const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
-    id: 0,
-    company_id: companyId,
-    name: "",
-    status: true,
-  });
 
   const fetchProducts = async () => {
     try {
@@ -335,7 +316,6 @@ const ProductView: React.FC<ProductViewProps> = ({
           })),
         );
         setGalleryFiles([]);
-        setRemovedImageIds([]);
       }
     } else {
       setBarcodes([""]);

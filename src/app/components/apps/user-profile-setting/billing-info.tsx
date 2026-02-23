@@ -435,7 +435,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             select
-            label="Cis"
+            label="CIS"
             fullWidth
             disabled={isDisabledField("cis")}
             value={(formData as any)["cis"] ?? ""}
