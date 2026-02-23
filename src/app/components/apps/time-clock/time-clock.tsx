@@ -1586,7 +1586,7 @@ const TimeClock = ({queryParams}: Props) => {
                 <TableContainer
                     sx={{
                         width: '100%',
-                        overflowX: 'visible', 
+                        overflowX: 'auto',
                     }}
                 >
                     <Table

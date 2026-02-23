@@ -506,8 +506,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                     payload.reason = comment || '';
                 }
 
-                const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> =
-                    await api.post(endpoint, payload);
+                const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> = await api.post(endpoint, payload);
 
                 if (response.data.IsSuccess) {
                     showAlert(`Request ${action == 'approve' ? `approved` : action == 'reject' ? 'rejected' :""} successfully`, 'success');
@@ -526,8 +525,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                     showAlert(response.data.message || `Error ${action}ing request`, 'error');
                 }
             } catch (error) {
-                console.error(`Error ${action}ing request:`, error);
-                showAlert(`Error ${action}ing request`, 'error');
+                // showAlert(`Error ${action}ing request`, 'error');
             } finally {
                 setProcessingIds(prev => {
                     const newSet = new Set(prev);
@@ -562,8 +560,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 payload.reason = reason || '';
             }
 
-            const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> =
-                await api.post(endpoint, payload);
+            const response: AxiosResponse<{ IsSuccess: boolean; message?: string }> = await api.post(endpoint, payload);
 
             if (response.data.IsSuccess) {
                 showAlert(`All requests ${action == 'approve' ? `approved` : action == 'reject' ? 'rejected' :""} successfully`, 'success');
@@ -582,8 +579,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 showAlert(response.data.message || `Error ${action}ing all requests`, 'error');
             }
         } catch (error) {
-            console.error(`Error ${action}ing all requests:`, error);
-            showAlert(`Error ${action}ing all requests`, 'error');
+            // showAlert(`Error ${action}ing all requests`, 'error');
         } finally {
             setLoading(false);
         }
