@@ -20,6 +20,7 @@ import api from '@/utils/axios';
 import { IconHelp, IconX } from '@tabler/icons-react';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
+import toast from 'react-hot-toast';
 
 interface ShiftBreak {
     id?: number;
@@ -433,6 +434,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
             const response = await api.post('/setting/save-shift-setting', payload);
 
             if (response.data?.IsSuccess) {
+                toast.success(response.data.message)
                 setDeletedBreakIds([]);
                 onSaveSuccess();
             } else {

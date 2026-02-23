@@ -59,7 +59,7 @@ interface Props {
 
   handleSubmit: (e: React.FormEvent) => void;
   isSaving: boolean;
-
+  ids?: { id: number; qty: number }[];
   mode?: "create" | "edit";
   editData?: any;
 }
@@ -71,18 +71,48 @@ const PurchaseOrder: React.FC<Props> = ({
   formData,
   setFormData,
   handleSubmit,
+  ids,
   isSaving,
   mode = "create",
   editData,
 }) => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [orderId, setOrderId] = useState<number>(0);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const TAX_PERCENT = 20;
+
+  useEffect(() => {
+    if (!ids || ids.length === 0 || allProducts.length === 0) return;
+
+    const mappedProducts: ProductRow[] = ids
+      .map((selected) => {
+        const product = allProducts.find((p) => p.id === selected.id);
+        const items = allProducts.filter((product) =>
+          ids.some((x) => x.id === product.id),
+        );
+
+        setSelectedProducts(items);
+        if (!product) return null;
+
+        return {
+          id: product.id,
+          short_name: product.short_name,
+          price: product.price ?? "",
+          qty: selected.qty,
+          line_total: (Number(product.price) || 0) * selected.qty,
+          checked: true,
+          image_url: product.image_url,
+          uuid: product.uuid,
+        };
+      })
+      .filter(Boolean) as ProductRow[];
+
+    setProducts(mappedProducts);
+  }, [ids, allProducts]);
 
   useEffect(() => {
     if (!open) return;
@@ -226,6 +256,7 @@ const PurchaseOrder: React.FC<Props> = ({
           type="text"
           inputMode="numeric"
           value={row.original.qty ?? ""}
+          sx={{ width: 100 }}
           onChange={(e) => {
             const value = e.target.value;
             if (!/^\d*$/.test(value)) return;
@@ -357,7 +388,8 @@ const PurchaseOrder: React.FC<Props> = ({
                   }
                 />
               </Box>
-              <Box className="form_inputs">
+              <Box className="form_inputs"></Box>
+              {/* <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Supplier
                 </Typography>
@@ -384,7 +416,7 @@ const PurchaseOrder: React.FC<Props> = ({
                     />
                   )}
                 />
-              </Box>
+              </Box> */}
             </Box>
             <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
               <Box className="form_inputs">
@@ -498,39 +530,39 @@ const PurchaseOrder: React.FC<Props> = ({
                 </Typography>
                 <Autocomplete
                   multiple
-                  options={allProducts}
+                  options={products}
                   value={selectedProducts}
                   isOptionEqualToValue={(option, value) =>
                     option.id === value.id
                   }
-                  onChange={(_, value) => {
-                    setSelectedProducts(value);
+                  // onChange={(_, value) => {
+                  //   setSelectedProducts(value);
 
-                    setProducts((prev) => {
-                      const selectedIds = new Set(value.map((p) => p.id));
+                  //   setProducts((prev) => {
+                  //     const selectedIds = new Set(value.map((p) => p.id));
 
-                      const remaining = prev.filter((p) =>
-                        selectedIds.has(p.id),
-                      );
+                  //     const remaining = prev.filter((p) =>
+                  //       selectedIds.has(p.id),
+                  //     );
 
-                      const existingIds = new Set(remaining.map((p) => p.id));
+                  //     const existingIds = new Set(remaining.map((p) => p.id));
 
-                      const added = value
-                        .filter((p) => !existingIds.has(p.id))
-                        .map((p) => ({
-                          id: p.id,
-                          short_name: p.short_name,
-                          price: p.price ?? "",
-                          qty: 1,
-                          line_total: Number(p.price) || 0,
-                          checked: true,
-                          image_url: p.image_url,
-                          uuid: p.uuid,
-                        }));
+                  //     const added = value
+                  //       .filter((p) => !existingIds.has(p.id))
+                  //       .map((p) => ({
+                  //         id: p.id,
+                  //         short_name: p.short_name,
+                  //         price: p.price ?? "",
+                  //         qty: 1,
+                  //         line_total: Number(p.price) || 0,
+                  //         checked: true,
+                  //         image_url: p.image_url,
+                  //         uuid: p.uuid,
+                  //       }));
 
-                      return [...remaining, ...added];
-                    });
-                  }}
+                  //     return [...remaining, ...added];
+                  //   });
+                  // }}
                   getOptionLabel={(option) => option.short_name}
                   renderInput={(params) => (
                     <CustomTextField
@@ -625,7 +657,11 @@ const PurchaseOrder: React.FC<Props> = ({
               <Box mt={4} display="flex" justifyContent="flex-end">
                 <Box width={300}>
                   <Stack spacing={2}>
-                    <TextField label="Unit Total" value={unitTotal} disabled />
+                    <TextField
+                      label="Unit Total"
+                      value={unitTotal.toFixed(2)}
+                      disabled
+                    />
                     <TextField
                       label={`Tax (${TAX_PERCENT}%)`}
                       value={taxAmount.toFixed(2)}

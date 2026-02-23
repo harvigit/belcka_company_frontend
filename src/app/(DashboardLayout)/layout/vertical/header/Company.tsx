@@ -517,6 +517,7 @@ const Company = () => {
                       <MenuItem value="Leave">Leave</MenuItem>
                       <MenuItem value="Expense">Expense</MenuItem>
                       <MenuItem value="Zone">Zone</MenuItem>
+                      <MenuItem value="Order">Order</MenuItem>
                     </TextField>
                   </Box>
                   <Box

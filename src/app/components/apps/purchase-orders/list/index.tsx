@@ -46,6 +46,7 @@ import {
   IconChevronRight,
   IconEye,
   IconFilter,
+  IconMinus,
   IconPrinter,
   IconSearch,
   IconTrash,
@@ -103,7 +104,6 @@ const PurchaseOrderList = () => {
   const [tempFilters, setTempFilters] = useState(filters);
   const [formData, setFormData] = useState({
     company_id: Number(user?.company_id),
-    supplier_id: "",
     order_id: "",
     checked_product: false,
     id: 0,
@@ -139,7 +139,6 @@ const PurchaseOrderList = () => {
   const handleOpenCreateDrawer = () => {
     setFormData({
       company_id: Number(user?.company_id),
-      supplier_id: "",
       order_id: "",
       checked_product: false,
       id: 0,
@@ -167,6 +166,7 @@ const PurchaseOrderList = () => {
       if (result.data.IsSuccess) {
         toast.success(result.data.message);
         setDrawerOpen(false);
+        setSelectedRowIds(new Set());
         fetchOrders();
       }
     } finally {
@@ -192,12 +192,12 @@ const PurchaseOrderList = () => {
         toast.success(result.data.message);
         setFormData({
           company_id: Number(user?.company_id),
-          supplier_id: "",
           order_id: "",
           checked_product: false,
           id: 0,
         });
         setEditDrawerOpen(false);
+        setSelectedRowIds(new Set());
         fetchOrders();
       } else {
       }
@@ -535,6 +535,17 @@ const PurchaseOrderList = () => {
     });
   }, [data, searchTerm, filters]);
 
+  const selectedProductsWithQty = useMemo(() => {
+    return data
+      .filter(
+        (item) => selectedRowIds.has(item.id) && Number(item.total_qty) > 0,
+      )
+      .map((item) => ({
+        id: item.id,
+        qty: Number(item.total_qty),
+      }));
+  }, [data, selectedRowIds]);
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -604,6 +615,68 @@ const PurchaseOrderList = () => {
         );
       },
     },
+
+    columnHelper.accessor((row) => row?.total_qty, {
+      id: "add",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2">Add</Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+
+        const updateQty = (newQty: number) => {
+          setData((prev: any[]) =>
+            prev.map((p) =>
+              p.id === item.id
+                ? { ...p, total_qty: newQty > 0 ? newQty : null }
+                : p,
+            ),
+          );
+        };
+
+        // If no quantity → show plus icon
+        if (!item.total_qty) {
+          return (
+            <IconButton onClick={() => updateQty(1)} size="small">
+              +
+            </IconButton>
+          );
+        }
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <IconButton
+              size="small"
+              onClick={() => updateQty(Number(item.total_qty) - 1)}
+            >
+              <IconMinus size={17} />
+            </IconButton>
+
+            <TextField
+              size="small"
+              value={item.total_qty}
+              inputProps={{ style: { textAlign: "center" } }}
+              sx={{ width: 60 }}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (!/^\d*$/.test(value)) return;
+                updateQty(Number(value));
+              }}
+            />
+
+            <IconButton
+              size="small"
+              onClick={() => updateQty(Number(item.total_qty) + 1)}
+            >
+              <IconPlus size={17} />
+            </IconButton>
+          </Stack>
+        );
+      },
+    }),
+
     columnHelper.accessor("uuid", {
       id: "Id",
       header: () => (
@@ -665,8 +738,8 @@ const PurchaseOrderList = () => {
     }),
 
     columnHelper.accessor((row) => row?.short_name, {
-      id: "shortName",
-      header: () => "Name",
+      id: "products",
+      header: () => "Products",
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -687,7 +760,6 @@ const PurchaseOrderList = () => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
-                  // maxWidth: 300,
                   wordBreak: "break-word",
                 }}
               >
@@ -714,7 +786,7 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
               {item.currency}
               {item.price ? item.price : "0"}
@@ -736,9 +808,10 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
-              {item.total_qty ? item.total_qty : "0"} {item.is_sub_qty ? `${item.pack_off_unit}`:""}
+              {item.total_qty ? item.total_qty : "0"}{" "}
+              {item.is_sub_qty ? `${item.pack_off_unit}` : ""}
             </Typography>
           </Stack>
         );
@@ -751,7 +824,7 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Typography textTransform="capitalize" className="f-14">
+          <Typography textTransform="capitalize" className="f-14" ml={1}>
             {item.supplier_name ? item.supplier_name : "-"}
           </Typography>
         );
@@ -765,7 +838,7 @@ const PurchaseOrderList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center">
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography textTransform="capitalize" className="f-14" ml={1}>
               {item.supplier_code ? item.supplier_code : "-"}
             </Typography>
           </Stack>
@@ -781,7 +854,6 @@ const PurchaseOrderList = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
             <Typography
-              textTransform="capitalize"
               className="f-14"
               color={item.status_color}
               fontWeight={500}
@@ -1321,19 +1393,33 @@ const PurchaseOrderList = () => {
             direction={{ xs: "column", sm: "row" }}
           >
             {selectedRowIds.size > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<IconTrash width={18} />}
-                sx={{ marginRight: "5px" }}
-                onClick={() => {
-                  const selectedIds = Array.from(selectedRowIds);
-                  setUsersToDelete(selectedIds);
-                  setConfirmOpen(true);
-                }}
-              >
-                Remove
-              </Button>
+              <>
+                {/* <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<IconTrash width={18} />}
+                  sx={{ marginRight: "5px" }}
+                  onClick={() => {
+                    const selectedIds = Array.from(selectedRowIds);
+                    setUsersToDelete(selectedIds);
+                    setConfirmOpen(true);
+                  }}
+                >
+                  Remove
+                </Button> */}
+
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<IconPlus width={18} />}
+                  sx={{ marginRight: "5px" }}
+                  onClick={() => {
+                    handleOpenCreateDrawer();
+                  }}
+                >
+                  Purchase Order
+                </Button>
+              </>
             )}
             <IconButton
               onClick={handlePopoverOpen}
@@ -1434,7 +1520,7 @@ const PurchaseOrderList = () => {
                 </Button>
               </DialogActions>
             </Dialog>
-            <IconButton
+            {/* <IconButton
               sx={{ margin: "0px" }}
               id="basic-button"
               aria-controls={openMenu ? "basic-menu" : undefined}
@@ -1443,42 +1529,7 @@ const PurchaseOrderList = () => {
               onClick={handleClick}
             >
               <IconDotsVertical width={18} />
-            </IconButton>
-            <Menu
-              id="basic-menu"
-              anchorEl={anchorEl}
-              open={openMenu}
-              onClose={handleClose}
-              slotProps={{
-                list: {
-                  "aria-labelledby": "basic-button",
-                },
-              }}
-            >
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleOpenCreateDrawer();
-                  }}
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconPlus width={18} />
-                  </ListItemIcon>
-                  Add Purchase Order
-                </Link>
-              </MenuItem>
-            </Menu>
+            </IconButton> */}
           </Stack>
         </Stack>
         <Divider />
@@ -1486,6 +1537,7 @@ const PurchaseOrderList = () => {
         <PurchaseOrder
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
+          ids={selectedProductsWithQty}
           formData={formData}
           setFormData={setFormData}
           handleSubmit={handleSubmit}
@@ -1499,6 +1551,7 @@ const PurchaseOrderList = () => {
           onClose={() => setEditDrawerOpen(false)}
           formData={formData}
           setFormData={setFormData}
+          ids={selectedProductsWithQty}
           handleSubmit={editOrder}
           isSaving={isSaving}
           companyId={user.company_id ?? null}
@@ -1530,7 +1583,12 @@ const PurchaseOrderList = () => {
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
-                            width: header.column.id === "select" ? 30 :header.column.id === "shortName" ? 400 : "auto",
+                            width:
+                              header.column.id === "select"
+                                ? 30
+                                : header.column.id === "shortName"
+                                  ? 400
+                                  : "auto",
                           }}
                         >
                           <Box

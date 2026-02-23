@@ -541,12 +541,10 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
+          <Stack direction="row" alignItems="center" spacing={1} textTransform={"capitalize"} className="f-14">
               {item.date ? item.date : "-"}
-              <Typography color="textSecondary" className="f-14">
+              <Typography color="textSecondary">
                 {item.name}
-              </Typography>
             </Typography>
           </Stack>
         );

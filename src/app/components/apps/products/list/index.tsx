@@ -48,6 +48,7 @@ import {
   IconFilter,
   IconNotes,
   IconSearch,
+  IconShoppingBag,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -1118,7 +1119,7 @@ const ProductList = () => {
                   }}
                 >
                   <ListItemIcon>
-                    <IconPlus width={18} />
+                    <IconShoppingBag width={18} />
                   </ListItemIcon>
                   Purchase Order
                 </Link>
