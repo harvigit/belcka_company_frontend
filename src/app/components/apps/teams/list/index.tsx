@@ -868,6 +868,8 @@ const TablePagination = () => {
             </Menu>
 
             <GenerateCodeDialog
+              title="Generate Code"
+              mode="generate"
               open={openGenerateDialog}
               onClose={() => setOpenGenerateDialog(false)}
               onGenerate={handleGenerateCode}

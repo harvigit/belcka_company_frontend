@@ -36,6 +36,8 @@ interface Product {
   price: number;
   image_url?: string | null;
   uuid: string;
+  supplier_name: string | null;
+  currency: string;
 }
 
 interface ProductRow {
@@ -47,6 +49,7 @@ interface ProductRow {
   checked: boolean;
   image_url?: string | null;
   uuid: string;
+  supplier_name: String | null;
 }
 
 interface Props {
@@ -59,7 +62,7 @@ interface Props {
 
   handleSubmit: (e: React.FormEvent) => void;
   isSaving: boolean;
-  ids?: { id: number; qty: number }[];
+  ids?: { id: number; qty: number; supplier_id: number }[];
   mode?: "create" | "edit";
   editData?: any;
 }
@@ -84,10 +87,16 @@ const PurchaseOrder: React.FC<Props> = ({
   const [stores, setStores] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const TAX_PERCENT = 20;
+  const [currency, setCurrency] = useState("");
 
   useEffect(() => {
     if (!ids || ids.length === 0 || allProducts.length === 0) return;
+    const uniqueSupplierIds = [...new Set(ids.map((item) => item.supplier_id))];
 
+    setFormData((prev: any) => ({
+      ...prev,
+      supplier_id: uniqueSupplierIds,
+    }));
     const mappedProducts: ProductRow[] = ids
       .map((selected) => {
         const product = allProducts.find((p) => p.id === selected.id);
@@ -97,6 +106,7 @@ const PurchaseOrder: React.FC<Props> = ({
 
         setSelectedProducts(items);
         if (!product) return null;
+        setCurrency(product.currency);
 
         return {
           id: product.id,
@@ -107,6 +117,7 @@ const PurchaseOrder: React.FC<Props> = ({
           checked: true,
           image_url: product.image_url,
           uuid: product.uuid,
+          supplier_name: product.supplier_name,
         };
       })
       .filter(Boolean) as ProductRow[];
@@ -121,12 +132,22 @@ const PurchaseOrder: React.FC<Props> = ({
       fetchResources(true);
 
       setOrderId(editData.order_id);
+      setCurrency(editData.currency);
+
+      const supplierIdsFromPO = [
+        ...new Set(editData.purchase_orders.map((po: any) => po.supplier_id)),
+      ];
 
       setFormData((prev: any) => ({
         id: editData.id,
         company_id: editData.company_id,
         order_id: editData.order_id,
-        supplier_id: editData.supplier_id,
+        supplier_id:
+          supplierIdsFromPO.length > 0
+            ? supplierIdsFromPO
+            : Array.isArray(editData.supplier_id)
+              ? editData.supplier_id
+              : [editData.supplier_id || 0],
         store_id: editData.store_id,
         received_by: editData.received_by,
         note: editData.note,
@@ -137,6 +158,7 @@ const PurchaseOrder: React.FC<Props> = ({
         tax: editData.tax,
       }));
 
+      // Map products for the table
       const mappedProducts: ProductRow[] = editData.purchase_orders.map(
         (p: any) => {
           const qty = Number(p.qty) || 0;
@@ -151,19 +173,20 @@ const PurchaseOrder: React.FC<Props> = ({
             checked: true,
             image_url: p.image_url,
             uuid: p.uuid,
+            supplier_name: p.supplier_name,
           };
         },
       );
 
       setProducts(mappedProducts);
 
+      // Select products from allProducts that match purchase_orders
       const selected = allProducts.filter((product) =>
         editData.purchase_orders.some(
           (po: any) => po.product_id === product.id,
         ),
       );
-      setProducts(mappedProducts);
-      console.log(selected);
+
       setSelectedProducts(selected);
     } else {
       fetchResources(false);
@@ -222,6 +245,7 @@ const PurchaseOrder: React.FC<Props> = ({
       header: "ITEM",
       cell: ({ row }) => {
         const item = row.original;
+        console.log(item)
         return (
           <Stack
             direction="row"
@@ -240,12 +264,17 @@ const PurchaseOrder: React.FC<Props> = ({
               />
             </Box>
             <Box display={"block"}>
-              <Typography>{item.short_name}</Typography>
-              <Typography>Code: {item.uuid}</Typography>
+              <Typography className="f-14">{item.short_name}</Typography>
+              <Typography variant="caption">Code: {item.uuid}</Typography>
             </Box>
           </Stack>
         );
       },
+    }),
+
+    columnHelper.accessor("supplier_name", {
+      header: "SUPPLIER",
+      cell: (info) => <Typography ml={1}>{info.getValue() ?? "-"}</Typography>,
     }),
 
     columnHelper.accessor("qty", {
@@ -279,7 +308,7 @@ const PurchaseOrder: React.FC<Props> = ({
     }),
 
     columnHelper.accessor("price", {
-      header: "PRICE",
+      header: `PRICE(${currency})`,
       cell: ({ row }) => (
         <TextField
           size="small"
@@ -310,7 +339,7 @@ const PurchaseOrder: React.FC<Props> = ({
 
     columnHelper.accessor("line_total", {
       header: "LINE TOTAL",
-      cell: (info) => info.getValue(),
+      cell: (info) => `${currency}${info.getValue().toFixed(2)}`,
     }),
   ];
 
@@ -370,8 +399,8 @@ const PurchaseOrder: React.FC<Props> = ({
             }
           }}
         >
-          <Box p={3}>
-            <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
+          <Box p={3} pt={0}>
+            <Box display={"flex"} alignItems={"center"} gap={2}>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Order ID
@@ -388,55 +417,6 @@ const PurchaseOrder: React.FC<Props> = ({
                   }
                 />
               </Box>
-              <Box className="form_inputs">
-                <Typography variant="body2" gutterBottom>
-                  Supplier
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  options={suppliers}
-                  value={
-                    suppliers.find((p) => p.id === formData.supplier_id) || null
-                  }
-                  onChange={(event, newValue) =>
-                    setFormData((prev: any) => ({
-                      ...prev,
-                      supplier_id: newValue ? newValue.id : null,
-                    }))
-                  }
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField
-                      {...params}
-                      placeholder="Select Supplier"
-                    />
-                  )}
-                />
-              </Box>
-            </Box>
-            <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
-              <Box className="form_inputs">
-                <Typography variant="body2" gutterBottom>
-                  Date
-                </Typography>
-                <CustomTextField
-                  id="date"
-                  type="date"
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  value={formData.date || ""}
-                  onChange={(e: any) =>
-                    setFormData((p: any) => ({
-                      ...p,
-                      date: e.target.value,
-                    }))
-                  }
-                />
-              </Box>
-
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Expected Delivery Date
@@ -458,6 +438,23 @@ const PurchaseOrder: React.FC<Props> = ({
                   }
                 />
               </Box>
+              <Box className="form_inputs">
+                <Typography variant="body2" gutterBottom>
+                  Ref
+                </Typography>
+                <CustomTextField
+                  fullWidth
+                  value={formData.ref}
+                  onChange={(e: any) =>
+                    setFormData((p: any) => ({
+                      ...p,
+                      ref: e.target.value,
+                    }))
+                  }
+                />
+              </Box>
+            </Box>
+            <Box display={"flex"} alignItems="center" gap={2} mb={2}>
               {/* <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   received By
@@ -488,96 +485,7 @@ const PurchaseOrder: React.FC<Props> = ({
               </Box> */}
             </Box>
 
-            <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
-              <Box className="form_inputs">
-                <Typography variant="body2" gutterBottom>
-                  Ref
-                </Typography>
-                <CustomTextField
-                  fullWidth
-                  value={formData.ref}
-                  onChange={(e: any) =>
-                    setFormData((p: any) => ({
-                      ...p,
-                      ref: e.target.value,
-                    }))
-                  }
-                  sx={{ mb: 2 }}
-                />
-              </Box>
-              <Box className="form_inputs">
-                <Typography variant="body2" gutterBottom>
-                  Note
-                </Typography>
-                <CustomTextField
-                  fullWidth
-                  value={formData.note}
-                  onChange={(e: any) =>
-                    setFormData((p: any) => ({
-                      ...p,
-                      note: e.target.value,
-                    }))
-                  }
-                  sx={{ mb: 2 }}
-                />
-              </Box>
-            </Box>
-            <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
-              <Box className="form_inputs">
-                <Typography variant="body2" gutterBottom>
-                  Select products
-                </Typography>
-                <Autocomplete
-                  multiple
-                  options={
-                    ids
-                      ? ids?.length > 0
-                        ? products
-                        : allProducts
-                      : allProducts
-                  }
-                  value={selectedProducts}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  onChange={(_, value) => {
-                    setSelectedProducts(value);
-
-                    setProducts((prev) => {
-                      const selectedIds = new Set(value.map((p) => p.id));
-
-                      const remaining = prev.filter((p) =>
-                        selectedIds.has(p.id),
-                      );
-
-                      const existingIds = new Set(remaining.map((p) => p.id));
-
-                      const added = value
-                        .filter((p) => !existingIds.has(p.id))
-                        .map((p) => ({
-                          id: p.id,
-                          short_name: p.short_name,
-                          price: p.price ?? "",
-                          qty: 1,
-                          line_total: Number(p.price) || 0,
-                          checked: true,
-                          image_url: p.image_url,
-                          uuid: p.uuid,
-                        }));
-
-                      return [...remaining, ...added];
-                    });
-                  }}
-                  getOptionLabel={(option) => option.short_name}
-                  renderInput={(params) => (
-                    <CustomTextField
-                      {...params}
-                      placeholder="Select products"
-                      className="product_selection"
-                    />
-                  )}
-                />
-              </Box>
+            <Box display={"flex"} alignItems={"flex-start"} gap={2} mb={2}>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Store
@@ -599,6 +507,52 @@ const PurchaseOrder: React.FC<Props> = ({
                   renderInput={(params) => (
                     <CustomTextField {...params} placeholder="Select Store" />
                   )}
+                />
+              </Box>
+              <Box className="form_inputs">
+                <Typography variant="body2" gutterBottom>
+                  Supplier
+                </Typography>
+                <Autocomplete
+                  fullWidth
+                  multiple
+                  options={suppliers?.filter(
+                    (supplier) =>
+                      Array.isArray(formData.supplier_id) &&
+                      formData.supplier_id.includes(supplier.id),
+                  )}
+                  value={suppliers?.filter(
+                    (supplier) =>
+                      Array.isArray(formData.supplier_id) &&
+                      formData.supplier_id.includes(supplier.id),
+                  )}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderInput={(params) => (
+                    <CustomTextField
+                      {...params}
+                      // placeholder="Select Supplier"
+                    />
+                  )}
+                />
+              </Box>
+
+              <Box className="form_inputs">
+                <Typography variant="body2" gutterBottom>
+                  Note
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  value={formData.note ?? null}
+                  onChange={(e: any) =>
+                    setFormData((p: any) => ({
+                      ...p,
+                      note: e.target.value,
+                    }))
+                  }
                 />
               </Box>
             </Box>
@@ -624,7 +578,7 @@ const PurchaseOrder: React.FC<Props> = ({
                   {table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell key={cell.id} sx={{ p: 1 }}>
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -664,17 +618,17 @@ const PurchaseOrder: React.FC<Props> = ({
                   <Stack spacing={2}>
                     <TextField
                       label="Unit Total"
-                      value={unitTotal.toFixed(2)}
+                      value={`${currency}${unitTotal.toFixed(2)}`}
                       disabled
                     />
                     <TextField
                       label={`Tax (${TAX_PERCENT}%)`}
-                      value={taxAmount.toFixed(2)}
+                      value={`${currency}${taxAmount.toFixed(2)}`}
                       disabled
                     />
                     <TextField
                       label="Total Amount"
-                      value={totalAmount.toFixed(2)}
+                      value={`${currency}${totalAmount.toFixed(2)}`}
                       disabled
                     />
                   </Stack>

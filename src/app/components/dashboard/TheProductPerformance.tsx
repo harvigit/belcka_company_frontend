@@ -19,8 +19,6 @@ const items = [
     imgsrc: "/images/products/1.jpg",
     name: "Is it good butterscotch ice-cream?",
     tags: "Ice-Cream, Milk, Powder",
-    review: "good",
-    percent: 65,
     earnings: "546,000",
   },
   {
@@ -28,18 +26,7 @@ const items = [
     imgsrc: "/images/products/2.jpg",
     name: "Supreme fresh tomato available",
     tags: "Market, Mall",
-    review: "excellent",
-    percent: 98,
     earnings: "780,000",
-  },
-  {
-    id: 3,
-    imgsrc: "/images/products/3.jpg",
-    name: "Red color candy from Gucci",
-    tags: "Chocolate, Yummy",
-    review: "average",
-    percent: 46,
-    earnings: "457,000",
   },
 ];
 
@@ -111,42 +98,6 @@ const PerformanceTable = () => {
                       </Typography>
                     </Box>
                   </Box>
-                </TableCell>
-                <TableCell
-                  sx={{
-                    pl: 0,
-                  }}
-                >
-                  <Typography variant="h6" mb={1}>
-                    {Capitalize(product.review)}
-                  </Typography>
-                  <LinearProgress
-                    value={product.percent}
-                    variant="determinate"
-                    sx={{
-                      "& span": {
-                        backgroundColor:
-                          product.review === "good"
-                            ? (theme) => theme.palette.primary.main
-                            : product.review === "excellent"
-                              ? (theme) => theme.palette.success.main
-                              : product.review === "average"
-                                ? (theme) => theme.palette.warning.main
-                                : product.review === "poor"
-                                  ? (theme) => theme.palette.error.main
-                                  : (theme) => theme.palette.primary.main,
-                      },
-                    }}
-                  />
-                  <Typography
-                    color="textSecondary"
-                    variant="h6"
-                    fontWeight="400"
-                    mt={1}
-                    whiteSpace="nowrap"
-                  >
-                    {product.percent}% sold
-                  </Typography>
                 </TableCell>
                 <TableCell>
                   <Typography
