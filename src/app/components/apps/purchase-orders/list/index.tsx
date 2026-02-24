@@ -791,14 +791,17 @@ const PurchaseOrderList = () => {
             <Tooltip title="Preview / Print">
               <IconButton
                 color="primary"
-                onClick={() => handlePreview(item.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handlePreview(item.id)
+                }}
               >
                 <IconPrinter size={18} />
               </IconButton>
             </Tooltip>
 
             {item.status !== 2 && (
-              <Button href={`/apps/receive-orders/${item.id}`}>Receive</Button>
+              <Button href={`/apps/receive-orders/${item.id}`} onClick={(e) => e.stopPropagation()}>Receive</Button>
             )}
           </Stack>
         );

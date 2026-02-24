@@ -104,6 +104,9 @@ const ReceivePurchaseOrder = () => {
     }
   }, [open, orderId]);
 
+  const supplierIdsFromPO = [
+    ...new Set(order?.purchase_orders.map((po: any) => po.supplier_name)),
+  ];
   const onClose = () => {
     setOpen(false);
     router.push("/apps/purchase-orders/list");
@@ -189,11 +192,7 @@ const ReceivePurchaseOrder = () => {
         {/* ORDER INFO */}
         <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={3}>
           <TextField label="Order ID" value={order?.order_id || ""} disabled />
-          <TextField
-            label="Supplier"
-            value={order?.supplier?.name || ""}
-            disabled
-          />
+          <TextField label="Supplier" value={supplierIdsFromPO.join(", ")} disabled />
           <TextField label="Store" value={order?.store?.name || ""} disabled />
           <TextField
             label="Received By"
@@ -263,7 +262,7 @@ const ReceivePurchaseOrder = () => {
                       <Box display={"block"} width={"70%"}>
                         <Typography>{p.short_name}</Typography>
                         <Typography color="text.secondary" variant="caption">
-                          ({p.description})
+                          {p.description ? p.description : ""}
                         </Typography>
                         <Typography>Code: {p.uuid}</Typography>
                       </Box>

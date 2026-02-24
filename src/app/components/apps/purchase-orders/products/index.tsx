@@ -384,6 +384,7 @@ const PurchaseProductList: React.FC<Props> = ({
             <TextField
               size="small"
               value={item.total_qty}
+              className="qty_input"
               inputProps={{ style: { textAlign: "center" } }}
               sx={{ width: 60 }}
               onChange={(e) => {
@@ -455,6 +456,29 @@ const PurchaseProductList: React.FC<Props> = ({
               width={50}
               height={50}
             />
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor("user_name", {
+      id: "orderBy",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Order By
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ ml: 1 }}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.user_name ? item.user_name : "-"}
+            </Typography>
           </Stack>
         );
       },
