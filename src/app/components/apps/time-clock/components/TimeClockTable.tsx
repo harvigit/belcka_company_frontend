@@ -166,6 +166,22 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         return Object.keys(conflictsByDate).filter(date => conflictsByDate[date] > 0).length;
     }, [conflictsByDate]);
 
+    const hasAnyConflictOrLeave = useMemo(() => {
+        if (conflictDaysCount > 0) return true;
+        return dailyData.some(row => row.rowType === 'day' && (row as any).has_pending_leave_request === true);
+    }, [conflictDaysCount, dailyData]);
+
+    const hasAnyExclamation = useMemo(() => {
+        return dailyData.some(row => {
+            if (row.rowType !== 'day') return false;
+            const rowsData = (row as any).rowsData;
+            if (Array.isArray(rowsData)) {
+                return rowsData.some((log: any) => log.is_requested || log.is_penalty_appealed);
+            }
+            return (row as any).is_requested;
+        });
+    }, [dailyData]);
+    
     const handleConflicts = () => {
         setConflictAnchorEl(null);
         openConflictsSideBar?.();
@@ -201,7 +217,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             position: 'relative'
         }}>
             <TableContainer sx={{
-                maxHeight: '100%',
+                height: '100%',
                 overflow: 'auto',
             }}>
                 <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', paddingBottom: '2rem' }}>
@@ -212,14 +228,27 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                     <TableCell
                                         key={header.id}
                                         sx={{
-                                            backgroundColor: '#fafafa',
+                                            backgroundColor: '#f6f7f7',
                                             fontSize: '0.875rem',
                                             position: 'sticky',
                                             top: 0,
-                                            zIndex: 999,
-                                            width: `${header.column.columnDef.size}px`,
-                                            minWidth: `${header.column.columnDef.size || 100}px`,
-                                            maxWidth: `${header.column.columnDef.size || 100}px`,
+                                            width: header.id === 'conflicts'
+                                                ? (hasAnyConflictOrLeave ? `${header.column.columnDef.size}px` : '0px')
+                                                : header.id === 'exclamation'
+                                                    ? (hasAnyExclamation ? `${header.column.columnDef.size}px` : '0px')
+                                                    : `${header.column.columnDef.size}px`,
+                                            minWidth: header.id === 'conflicts'
+                                                ? (hasAnyConflictOrLeave ? `${header.column.columnDef.size || 100}px` : '0px')
+                                                : header.id === 'exclamation'
+                                                    ? (hasAnyExclamation ? `${header.column.columnDef.size || 100}px` : '0px')
+                                                    : `${header.column.columnDef.size || 100}px`,
+                                            maxWidth: header.id === 'conflicts'
+                                                ? (hasAnyConflictOrLeave ? `${header.column.columnDef.size || 100}px` : '0px')
+                                                : header.id === 'exclamation'
+                                                    ? (hasAnyExclamation ? `${header.column.columnDef.size || 100}px` : '0px')
+                                                    : `${header.column.columnDef.size || 100}px`,
+                                            overflow: 'hidden',
+                                            padding: (header.id === 'conflicts' && !hasAnyConflictOrLeave) || (header.id === 'exclamation' && !hasAnyExclamation) ? 0 : undefined,
                                             textAlign: 'center',
                                             verticalAlign: 'middle',
                                             p: 1
@@ -247,7 +276,9 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 </Typography>
                                             ) : null
                                         ) : (
-                                            <Typography>{flexRender(header.column.columnDef.header, header.getContext())}</Typography>
+                                            <Typography sx={{ color: '#203040' }}>
+                                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                            </Typography>                                        
                                         )}
                                     </TableCell>
                                 ))}
@@ -255,7 +286,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         ))}
                     </TableHead>
 
-                    <TableBody>
+                    <TableBody
+                        sx={{
+                            '& tr:last-child > td': {
+                                borderBottom: '1px solid rgba(224, 224, 224, 1) !important',
+                            },
+                            '& tr:last-child > th': {
+                                borderBottom: '1px solid rgba(224, 224, 224, 1) !important',
+                            }
+                        }}
+                    >
                         {table.getRowModel().rows.map((row: any) => {
                             const rowData = row.original;
                             const rowId = `row-${row.index}`;
@@ -269,10 +309,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                         <TableCell
                                             colSpan={visibleColumnsCount}
                                             sx={{
-                                                backgroundColor: '#f0f0f0',
+                                                backgroundColor: '#f0f1f2',
                                                 fontWeight: 600,
                                                 textAlign: 'center',
-                                                py: 1.5,
+                                                color: '#8b939c'
                                             }}
                                         >
                                             <Stack direction="row" alignItems="center" sx={{ width: '100%', position: 'relative' }}>
@@ -331,7 +371,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     '& td': {
                                                         textAlign: 'center',
                                                         verticalAlign: 'middle',
-                                                        borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                                                        borderBottom: '1px solid rgba(224, 224, 224, 1) !important',
                                                     },
                                                     backgroundColor: isLogLocked ? 'rgba(244, 67, 54, 0.02)' : 'transparent',
                                                     cursor: 'pointer',
@@ -1150,7 +1190,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             textAlign: 'center',
                                                         }}
                                                     >
@@ -1179,7 +1218,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             textAlign: 'center',
                                                         }}
                                                     >
@@ -1232,8 +1270,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             textAlign: 'center',
+                                                            width: hasAnyConflictOrLeave ? '60px' : '0px',
+                                                            minWidth: hasAnyConflictOrLeave ? '60px' : '0px',
+                                                            maxWidth: hasAnyConflictOrLeave ? '60px' : '0px',
+                                                            padding: hasAnyConflictOrLeave ? undefined : 0,
+                                                            overflow: 'hidden',
                                                         }}
                                                     >
                                                         {(hasLeaveRequests || hasConflicts) && (
@@ -1279,7 +1321,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 py: 0.5,
                                                                 width: '100%',
                                                                 minHeight: '45px',
-                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             }}
                                                         >
                                                             <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
@@ -1327,7 +1368,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 width: '100%',
                                                                 minHeight: '45px',
                                                                 padding: '6px',
-                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             }}
                                                         >
                                                             <FormControl size="small" sx={{ minWidth: '100px', width: '100%', maxWidth: '100px' }}>
@@ -1376,7 +1416,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             align="center"
                                                             sx={{
                                                                 py: 0.5,
-                                                                borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                             }}
                                                         >
                                                             <TextField
@@ -1422,7 +1461,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         fontSize: '0.875rem',
                                                         height: '45px',
                                                         verticalAlign: 'middle',
-                                                        borderBottom: '1px solid rgba(224, 224, 224, 1)',
                                                         textAlign: 'center',
                                                     }}
                                                     className={column.id === 'action' ? 'action-cell' : ''}

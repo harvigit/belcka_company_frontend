@@ -1264,19 +1264,18 @@ const TimeClock = ({queryParams}: Props) => {
     return (
         <Box
             sx={{
-                position: 'relative',
-                overflow: 'hidden',
-                height: 'calc(93vh - 100px)',
+                height: 'calc(100vh - 100px)',
                 display: 'flex',
                 flexDirection: 'column',
             }}
         >
             <Box
                 sx={{
-                    transition: 'height 0.3s ease-in-out',
                     flex: 1,
                     minHeight: 0,
-                    overflow: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
                 }}
             >
                 {/* ── TOOLBAR ── */}
@@ -1285,7 +1284,6 @@ const TimeClock = ({queryParams}: Props) => {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 1,
-                        mb: 2,
                         px: 2,
                     }}
                 >
@@ -1585,8 +1583,10 @@ const TimeClock = ({queryParams}: Props) => {
 
                 <TableContainer
                     sx={{
-                        width: '100%',
+                        flex: 1,
+                        minHeight: 0,
                         overflowX: 'auto',
+                        overflowY: 'auto',
                     }}
                 >
                     <Table
@@ -1721,7 +1721,6 @@ const TimeClock = ({queryParams}: Props) => {
                 </TableContainer>
                 {data.length ? <Divider/> : <></>}
             </Box>
-            <Divider/>
 
             <Stack
                 gap={1}

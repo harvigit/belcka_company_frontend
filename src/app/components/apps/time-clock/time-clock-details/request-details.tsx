@@ -593,8 +593,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         openRejectDialog(requestId, false);
     }, [openRejectDialog]);
 
-    const handleApproveAll = useCallback(() =>
-        handleBulkAction('approve'), [handleBulkAction]);
+    const handleApproveAll = useCallback(() => handleBulkAction('approve'), [handleBulkAction]);
 
     const handleRejectAll = useCallback(() => {
         openRejectDialog(null, true);

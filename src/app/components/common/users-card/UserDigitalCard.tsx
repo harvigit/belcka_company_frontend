@@ -50,6 +50,20 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
 
     const cardRef = useRef<HTMLDivElement | null>(null);
 
+    const [scale, setScale] = useState(1);
+
+    useEffect(() => {
+        const computeScale = () => {
+            const padding = 48;
+            const available = window.innerWidth - padding;
+            
+            setScale(Math.min(1, available / CARD_WIDTH));
+        };
+        computeScale();
+        window.addEventListener('resize', computeScale);
+        return () => window.removeEventListener('resize', computeScale);
+    }, []);
+    
     useEffect(() => {
         if (!userId) {
             setError('User ID is required');
@@ -200,166 +214,175 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
             PaperProps={{
                 sx: {
                     margin: { xs: '12px', sm: '32px' },
-                    maxHeight: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 64px)' },
+                    maxHeight: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 14px)' },
                 },
             }}
         >
-            <DialogTitle sx={{ pb: 1 }}>{cardData.name}&apos;s ID Card</DialogTitle>
+            {/*<DialogTitle sx={{ pb: 1 }}>{cardData.name}&apos;s ID Card</DialogTitle>*/}
 
-            <DialogContent sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <DialogContent sx={{ p: { xs: 0, sm: 0 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Box
                     sx={{
                         display: 'flex',
                         justifyContent: 'center',
-                        overflow: 'auto',
+                        alignItems: 'center',
+                        overflow: 'hidden',
                     }}
                 >
                     <Box
-                        ref={cardRef}
                         sx={{
-                            width: `${CARD_WIDTH}px`,
-                            height: `${CARD_HEIGHT}px`,
-                            minWidth: `${CARD_WIDTH}px`,  
-                            borderRadius: '20px',
-                            backgroundColor: '#ffffff',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                            padding: '32px',
-                            boxSizing: 'border-box',
-                            display: 'flex',
-                            flexDirection: 'row',
-                            gap: '32px',
-                            fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif',
+                            transformOrigin: 'top center',
+                            transform: `scale(${scale})`,
+                            mb: `-${CARD_HEIGHT - CARD_HEIGHT * scale}px`,
                         }}
                     >
                         <Box
+                            ref={cardRef}
                             sx={{
+                                width: `${CARD_WIDTH}px`,
+                                height: `${CARD_HEIGHT}px`,
+                                minWidth: `${CARD_WIDTH}px`,  
+                                borderRadius: '20px',
+                                backgroundColor: '#ffffff',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                padding: '32px',
+                                boxSizing: 'border-box',
                                 display: 'flex',
-                                flexDirection: 'column',
-                                flex: 1,
-                                minWidth: 0,
+                                flexDirection: 'row',
+                                gap: '32px',
+                                fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif',
                             }}
                         >
-                            {/* Avatar */}
                             <Box
                                 sx={{
-                                    width: '100px',
-                                    height: '100px',
-                                    borderRadius: '50%',
-                                    overflow: 'hidden',
-                                    flexShrink: 0,
-                                    border: '3px solid #f0f0f0',
-                                    backgroundColor: '#e5e7eb',
-                                    mb: '16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    flex: 1,
+                                    minWidth: 0,
                                 }}
                             >
-                                <img
-                                    src={cardData.user_image || '/images/users/user.png'}
-                                    alt="User"
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                />
-                            </Box>
-
-                            {/* USER ID */}
-                            <Typography
-                                sx={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em', mb: '6px' }}
-                            >
-                                USER ID: {cardData.user_code}
-                            </Typography>
-
-                            {/* Full Name */}
-                            <Typography
-                                sx={{ fontSize: '30px', fontWeight: 700, color: '#111827', lineHeight: 1.2, mb: '10px', wordBreak: 'break-word' }}
-                            >
-                                {cardData.first_name} {cardData.last_name}
-                            </Typography>
-
-                            {/* Role / Trade */}
-                            <Typography
-                                sx={{ fontSize: '16px', fontWeight: 600, color: '#374151', mb: '4px' }}
-                            >
-                                {cardData.trade_name}
-                            </Typography>
-
-                            {/* Company Logo */}
-                            <Box
-                                sx={{
-                                    display: 'inline-flex',
-                                    width: 'fit-content',
-                                }}
-                            >
-                                <img
-                                    src={cardData.company_logo}
-                                    alt="Company Logo"
-                                    style={{ width: '100px', height: '60px', objectFit: 'contain', display: 'block' }}
-                                />
-                            </Box>
-
-                            {/* Spacer */}
-                            <Box sx={{ flex: 1 }} />
-
-                            {/* Valid Until */}
-                            {validUntilDisplay && (
-                                <Typography
-                                    sx={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.02em' }}
-                                >
-                                    VALID UNTIL {validUntilDisplay}
-                                </Typography>
-                            )}
-                        </Box>
-
-                        {/* RIGHT COLUMN */}
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-end',
-                                flexShrink: 0,
-                                width: '140px',
-                            }}
-                        >
-                            {/* Belcka Logo */}
-                            <img
-                                src="/belcka.svg"
-                                alt="Belcka Logo"
-                                style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }}
-                            />
-
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                                {/* QR Code */}
+                                {/* Avatar */}
                                 <Box
                                     sx={{
-                                        background: '#fff',
-                                        padding: '5px',
-                                        borderRadius: '6px',
-                                        border: '1px solid #e5e7eb',
-                                        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                                        width: '100px',
+                                        height: '100px',
+                                        borderRadius: '50%',
+                                        overflow: 'hidden',
+                                        flexShrink: 0,
+                                        border: '3px solid #f0f0f0',
+                                        backgroundColor: '#e5e7eb',
+                                        mb: '16px',
                                     }}
                                 >
                                     <img
-                                        src={cardData.qr_code_url}
-                                        alt="QR Code"
-                                        style={{ width: '110px', height: '110px', display: 'block' }}
+                                        src={cardData.user_image || '/images/users/user.png'}
+                                        alt="User"
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                     />
                                 </Box>
-
-                                {/* Active / Inactive */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    {!cardData.is_expired ? (
-                                        <>
-                                            <CheckCircleIcon sx={{ fontSize: '22px', color: '#22c55e' }} />
-                                            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
-                                                Active
-                                            </Typography>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CancelIcon sx={{ fontSize: '22px', color: '#ef4444' }} />
-                                            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#ef4444' }}>
-                                                Inactive
-                                            </Typography>
-                                        </>
-                                    )}
+    
+                                {/* USER ID */}
+                                <Typography
+                                    sx={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em', mb: '6px' }}
+                                >
+                                    USER ID: {cardData.user_code}
+                                </Typography>
+    
+                                {/* Full Name */}
+                                <Typography
+                                    sx={{ fontSize: '30px', fontWeight: 700, color: '#111827', lineHeight: 1.2, mb: '10px', wordBreak: 'break-word' }}
+                                >
+                                    {cardData.first_name} {cardData.last_name}
+                                </Typography>
+    
+                                {/* Role / Trade */}
+                                <Typography
+                                    sx={{ fontSize: '16px', fontWeight: 600, color: '#374151', mb: '4px' }}
+                                >
+                                    {cardData.trade_name}
+                                </Typography>
+    
+                                {/* Company Logo */}
+                                <Box
+                                    sx={{
+                                        display: 'inline-flex',
+                                        width: 'fit-content',
+                                    }}
+                                >
+                                    <img
+                                        src={cardData.company_logo}
+                                        alt="Company Logo"
+                                        style={{ width: '100px', height: '60px', objectFit: 'contain', display: 'block' }}
+                                    />
+                                </Box>
+    
+                                {/* Spacer */}
+                                <Box sx={{ flex: 1 }} />
+    
+                                {/* Valid Until */}
+                                {validUntilDisplay && (
+                                    <Typography
+                                        sx={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.02em' }}
+                                    >
+                                        VALID UNTIL {validUntilDisplay}
+                                    </Typography>
+                                )}
+                            </Box>
+    
+                            {/* RIGHT COLUMN */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-end',
+                                    flexShrink: 0,
+                                    width: '140px',
+                                }}
+                            >
+                                {/* Belcka Logo */}
+                                <img
+                                    src="/belcka.svg"
+                                    alt="Belcka Logo"
+                                    style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }}
+                                />
+    
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                                    {/* QR Code */}
+                                    <Box
+                                        sx={{
+                                            background: '#fff',
+                                            padding: '5px',
+                                            borderRadius: '6px',
+                                            border: '1px solid #e5e7eb',
+                                            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                                        }}
+                                    >
+                                        <img
+                                            src={cardData.qr_code_url}
+                                            alt="QR Code"
+                                            style={{ width: '110px', height: '110px', display: 'block' }}
+                                        />
+                                    </Box>
+    
+                                    {/* Active / Inactive */}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {!cardData.is_expired ? (
+                                            <>
+                                                <CheckCircleIcon sx={{ fontSize: '22px', color: '#22c55e' }} />
+                                                <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+                                                    Active
+                                                </Typography>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CancelIcon sx={{ fontSize: '22px', color: '#ef4444' }} />
+                                                <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#ef4444' }}>
+                                                    Inactive
+                                                </Typography>
+                                            </>
+                                        )}
+                                    </Box>
                                 </Box>
                             </Box>
                         </Box>
