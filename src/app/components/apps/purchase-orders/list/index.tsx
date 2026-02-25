@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -66,8 +66,8 @@ import { IconEdit } from "@tabler/icons-react";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import PurchaseOrder from "../create";
 import PurchaseProductList from "../products";
+import PurchaseOrder from "../create";
 
 dayjs.extend(customParseFormat);
 
@@ -105,6 +105,7 @@ const PurchaseOrderList = () => {
     company_id: Number(user?.company_id),
     order_id: "",
     checked_product: false,
+    supplier_id: "",
     id: 0,
   });
 
@@ -140,6 +141,7 @@ const PurchaseOrderList = () => {
       company_id: Number(user?.company_id),
       order_id: "",
       checked_product: false,
+      supplier_id: "",
       id: 0,
     });
     setDrawerOpen(true);
@@ -194,6 +196,7 @@ const PurchaseOrderList = () => {
           company_id: Number(user?.company_id),
           order_id: "",
           checked_product: false,
+          supplier_id: "",
           id: 0,
         });
         setEditDrawerOpen(false);
@@ -512,6 +515,11 @@ const PurchaseOrderList = () => {
     setTimeout(() => printWindow.print(), 500);
   };
 
+  const handleEdit = useCallback((item: any) => {
+    setSelectedPurchaseOrder(item);
+    setEditDrawerOpen(true);
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
@@ -529,7 +537,7 @@ const PurchaseOrderList = () => {
         item.town?.toLowerCase().includes(search) ||
         item.postcode?.toLowerCase().includes(search) ||
         item.manager_name?.toLowerCase().includes(search) ||
-        item.supplier_name?.toLowerCase().includes(search) ||
+        // item.supplier_name?.toLowerCase().includes(search) ||
         item.company_name?.toLowerCase().includes(search);
 
       return matchesSearch && matchStatus;
@@ -544,6 +552,7 @@ const PurchaseOrderList = () => {
       .map((item) => ({
         id: item.id,
         qty: Number(item.total_qty),
+        supplier_id: Number(item.supplier_id),
       }));
   }, [data, selectedRowIds]);
 
@@ -617,35 +626,12 @@ const PurchaseOrderList = () => {
       },
     },
 
-    columnHelper.accessor((row) => row?.date, {
-      id: "date",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2">Date</Typography>
-        </Stack>
-      ),
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" alignItems="center" spacing={4}>
-            <Typography
-              variant="subtitle2"
-              textTransform="capitalize"
-              className="f-14"
-            >
-              {item.date ? item.date : ""}
-            </Typography>
-          </Stack>
-        );
-      },
-    }),
-
     columnHelper.accessor("order_id", {
       id: "orderId",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
-            orderID
+            Order ID
           </Typography>
         </Stack>
       ),
@@ -668,18 +654,46 @@ const PurchaseOrderList = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.supplier_name, {
-      id: "supplier",
-      header: () => "Supplier",
+    columnHelper.accessor("user_name", {
+      id: "orderby",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Order By
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+
         return (
-          <Typography textTransform="capitalize" className="f-14" ml={1}>
-            {item.supplier_name ? item.supplier_name : "-"}
-          </Typography>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.3 }}
+          >
+            <Typography textTransform="capitalize" className="f-14">
+              {item.user_name ? item.user_name : "-"}
+            </Typography>
+          </Stack>
         );
       },
     }),
+
+    // columnHelper.accessor((row) => row?.supplier_name, {
+    //   id: "supplier",
+    //   header: () => "Supplier",
+    //   cell: ({ row }) => {
+    //     const item = row.original;
+    //     return (
+    //       <Typography textTransform="capitalize" className="f-14" ml={1}>
+    //         {item.supplier_name ? item.supplier_name : "-"}
+    //       </Typography>
+    //     );
+    //   },
+    // }),
 
     columnHelper.accessor((row) => row?.order_qty, {
       id: "orderQty",
@@ -711,6 +725,28 @@ const PurchaseOrderList = () => {
       },
     }),
 
+    columnHelper.accessor((row) => row?.expected_delivery_date, {
+      id: "expectedDeliveryDate",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2">Expect Delivery Date</Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} ml={1}>
+            <Typography
+              variant="subtitle2"
+              textTransform="capitalize"
+              className="f-14"
+            >
+              {item.expected_delivery_date ? item.expected_delivery_date : ""}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
     columnHelper.accessor((row) => row?.status_text, {
       id: "status",
       header: () => "Status",
@@ -752,28 +788,20 @@ const PurchaseOrderList = () => {
         const item = row.original;
         return (
           <Stack direction="row" sx={{ pl: 1 }} display={"flex"}>
-            <Tooltip title="Edit">
-              <IconButton
-                onClick={() => {
-                  setSelectedPurchaseOrder(item);
-                  setEditDrawerOpen(true);
-                }}
-                color="primary"
-              >
-                <IconEdit size={18} />
-              </IconButton>
-            </Tooltip>
             <Tooltip title="Preview / Print">
               <IconButton
                 color="primary"
-                onClick={() => handlePreview(item.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handlePreview(item.id)
+                }}
               >
                 <IconPrinter size={18} />
               </IconButton>
             </Tooltip>
 
             {item.status !== 2 && (
-              <Button href={`/apps/receive-orders/${item.id}`}>Receive</Button>
+              <Button href={`/apps/receive-orders/${item.id}`} onClick={(e) => e.stopPropagation()}>Receive</Button>
             )}
           </Stack>
         );
@@ -1012,7 +1040,7 @@ const PurchaseOrderList = () => {
                         <TableRow>
                           <TableCell className="item-col">Item</TableCell>
                           <TableCell className="description-col">
-                            Description
+                            Products
                           </TableCell>
                           <TableCell className="qty-col">Qty</TableCell>
                           <TableCell className="rate-col">Rate</TableCell>
@@ -1129,7 +1157,7 @@ const PurchaseOrderList = () => {
                           {purchaseOrder?.currency}
                           {(
                             (Number(purchaseOrder?.total_amount) || 0) +
-                            (Number(purchaseOrder?.tax_amount) || 0)
+                            (Number(purchaseOrder?.tax) || 0)
                           ).toFixed(2)}
                         </Typography>
                       </Box>
@@ -1291,17 +1319,6 @@ const PurchaseOrderList = () => {
                 </Button>
               </>
             )}
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<IconPlus width={18} />}
-              sx={{ marginRight: "5px" }}
-              onClick={() => {
-                handleOpenCreateDrawer();
-              }}
-            >
-              Purchase Order
-            </Button>
 
             <IconButton
               onClick={handlePopoverOpen}
@@ -1594,18 +1611,27 @@ const PurchaseOrderList = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                  table.getRowModel().rows.map((row) => {
+                    const item = row.original;
+                    return (
+                      <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell
+                            key={cell.id}
+                            sx={{ padding: "10px" }}
+                            onClick={() =>
+                              item.status !== 2 && handleEdit(item)
+                            }
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

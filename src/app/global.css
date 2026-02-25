@@ -462,3 +462,6 @@ input[type="range"]::-moz-range-thumb {
 .product-form .product_input input, .product_input select{
     height: 18px !important
 }
+.qty_input input {
+    height: 13px;
+}

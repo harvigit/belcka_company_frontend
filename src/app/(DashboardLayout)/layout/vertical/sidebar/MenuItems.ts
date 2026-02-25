@@ -105,7 +105,7 @@ const MenuItems: NavGroup[] = [
         id: uniqueId(),
         title: "Purchase Order",
         slug: "purchase_order",
-        icon: IconShoppingBag,
+        icon: IconPoint,
         href: "/apps/purchase-orders/list",
       },
     ],

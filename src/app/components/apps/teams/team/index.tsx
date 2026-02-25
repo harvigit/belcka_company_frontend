@@ -360,7 +360,7 @@ const TablePagination = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row,i) => i)));
+                setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -823,6 +823,8 @@ const TablePagination = () => {
                 </FormGroup>
               </Popover>
               <GenerateCodeDialog
+                title="Create Code"
+                mode="create"
                 open={openGenerateDialog}
                 onClose={() => setOpenGenerateDialog(false)}
                 onGenerate={handleGenerateCode}

@@ -17,10 +17,14 @@ interface GenerateCodeDialogProps {
   open: boolean;
   onClose: () => void;
   onGenerate: () => Promise<string | null>;
+  title: string;
+  mode: string;
 }
 
 const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   open,
+  title,
+  mode,
   onClose,
   onGenerate,
 }) => {
@@ -132,7 +136,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
   return (
     <Dialog open={open} onClose={handleDialogClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ pr: 4 }}>
-        Generate Code
+        {title}
         <IconButton
           aria-label="close"
           onClick={handleDialogClose}
@@ -144,7 +148,7 @@ const GenerateCodeDialog: React.FC<GenerateCodeDialogProps> = ({
 
       <DialogContent sx={{ textAlign: "center", minHeight: 120 }}>
         {!code && !isGenerating && (
-          <Typography>Are you sure you want to generate a new code?</Typography>
+          <Typography>Are you sure you want to {mode} a new code?</Typography>
         )}
 
         {isGenerating && <Typography>Generating code...</Typography>}
