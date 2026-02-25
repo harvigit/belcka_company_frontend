@@ -195,6 +195,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         shifts,
         projects,
         fetchTimeClockData,
+        payrollCycle,
+        fetchPayrollCycle,
     } = useTimeClockData(user_id, currency);
 
     const amountColumns = [
@@ -214,6 +216,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         dailyTotal: false,
     });
 
+    useEffect(() => { fetchPayrollCycle(); }, []);
+    
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
@@ -1773,6 +1777,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onExportData={handleExportData}
                 onAddLeave={handleAddLeave}
                 onAddExpense={handleAddExpense}
+                payrollCycle={payrollCycle}
             />
 
             <TimeClockStats

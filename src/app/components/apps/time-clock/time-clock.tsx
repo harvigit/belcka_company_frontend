@@ -1456,6 +1456,7 @@ const TimeClock = ({queryParams}: Props) => {
                             alignItems: 'center',
                             gap: 1,
                             flexWrap: 'wrap',
+                            mb: 2
                         }}
                     >
                         {isAnyRowSelected && (

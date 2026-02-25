@@ -26,6 +26,7 @@ import {
 } from '@tabler/icons-react';
 import GeneralSetting from './menus/general';
 import ShiftLists from './menus/shift/index';
+import Payroll from './menus/payroll';
 import Geofence from "./menus/geofence";
 import RateSetting from "./menus/rate-setting";
 import PenaltySettings from "./menus/penalty-setting";
@@ -34,6 +35,7 @@ import BookkeeperSetting from "./menus/bookkeeper-setting";
 const menuItems = [
     { icon: <IconSettings size={18} />, label: "General" },
     { icon: <IconTiltShift size={18} />, label: "Shift" },
+    { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
     { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
     { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
     { icon: <IconUserCog size={18} />, label: "Bookkeeper Setting" },
@@ -166,10 +168,12 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                         {activeMenuItem === "Shift" && (
                             <ShiftLists />
                         )}
+                        {activeMenuItem === "Payroll" && (
+                            <Payroll />
+                        )}
                         {activeMenuItem === "Rate Settings" && (
                             <RateSetting />
                         )}
-
                         {activeMenuItem === "Penalty Setting" && (
                             <PenaltySettings />
                         )}

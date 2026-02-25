@@ -43,6 +43,7 @@ interface TimeClockHeaderProps {
     onExportData: (option: string) => void;
     onAddLeave: () => void;
     onAddExpense: () => void;
+    payrollCycle?: string;
 }
 
 const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
@@ -64,6 +65,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                                              onExportData,
                                                              onAddLeave,
                                                              onAddExpense,
+                                                             payrollCycle,
                                                          }) => {
     const canGoToPrevious = currentUserIndex > 0;
     const canGoToNext = currentUserIndex >= 0 && currentUserIndex < allUsers.length - 1;
@@ -72,7 +74,6 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
     const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedExportOption, setSelectedExportOption] = useState<string | null>(null);
-
 
     const open = Boolean(anchorEl);
     const openAddleave = Boolean(addDropDown);
@@ -97,7 +98,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
         setAddDropDown(null);
         onAddLeave();
     };
-    
+
     const handleExpenseClick = () => {
         setAddDropDown(null);
         onAddExpense();
@@ -213,9 +214,16 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                             {timeClock.trade_name}
                         </Typography>
                     </Box>
+
                     <Stack mt={3} mx={2} mb={3} direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1.5, sm: 2 }} alignItems="center">
-                        <DateRangePickerBox from={startDate} to={endDate} onChange={onDateRangeChange} />
+                        <DateRangePickerBox
+                            from={startDate}
+                            to={endDate}
+                            onChange={onDateRangeChange}
+                            payrollCycle={payrollCycle}
+                        />
                     </Stack>
+
                     <Stack mt={3} mx={2} mb={3} direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1.5, sm: 2 }} alignItems="center">
                         <Select
                             value={filterValue}
@@ -258,22 +266,14 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                         onClick={handleAddClick}
                         endIcon={openAddleave ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}
                     >
-                        <Typography sx={{ fontWeight: 600 }}>
-                            Add
-                        </Typography>
+                        <Typography sx={{ fontWeight: 600 }}>Add</Typography>
                     </Button>
                     <Menu
                         anchorEl={addDropDown}
                         open={openAddleave}
                         onClose={handleAddClose}
-                        anchorOrigin={{
-                            vertical: 'bottom',
-                            horizontal: 'right',
-                        }}
-                        transformOrigin={{
-                            vertical: 'top',
-                            horizontal: 'right',
-                        }}
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                     >
                         <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
                         <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
@@ -297,22 +297,14 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 onClick={handleExportClick}
                                 endIcon={open ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}
                             >
-                                <Typography sx={{ fontWeight: 600 }}>
-                                    Export
-                                </Typography>
+                                <Typography sx={{ fontWeight: 600 }}>Export</Typography>
                             </Button>
                             <Menu
                                 anchorEl={anchorEl}
                                 open={open}
                                 onClose={() => handleExportClose('')}
-                                anchorOrigin={{
-                                    vertical: 'bottom',
-                                    horizontal: 'right',
-                                }}
-                                transformOrigin={{
-                                    vertical: 'top',
-                                    horizontal: 'right',
-                                }}
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                             >
                                 <MenuItem onClick={() => handleExportClose('excel')}>Excel</MenuItem>
                                 <MenuItem onClick={() => handleExportClose('pdf')}>PDF</MenuItem>
@@ -396,12 +388,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                     <IconButton
                         aria-label="Close dialog"
                         onClick={handleDialogClose}
-                        sx={{
-                            position: 'absolute',
-                            right: 8,
-                            top: 8,
-                            color: '#999',
-                        }}
+                        sx={{ position: 'absolute', right: 8, top: 8, color: '#999' }}
                     >
                         <IconX />
                     </IconButton>
@@ -425,23 +412,12 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
 
                         <Typography
                             variant="h6"
-                            sx={{
-                                fontWeight: 600,
-                                fontSize: '20px',
-                                color: '#1a1a1a',
-                                marginBottom: '12px',
-                            }}
+                            sx={{ fontWeight: 600, fontSize: '20px', color: '#1a1a1a', marginBottom: '12px' }}
                         >
                             {totalConflicts + pendingRequestCount} unresolved issues
                         </Typography>
 
-                        <DialogContentText
-                            sx={{
-                                color: '#666',
-                                fontSize: '14px',
-                                lineHeight: '1.5',
-                            }}
-                        >
+                        <DialogContentText sx={{ color: '#666', fontSize: '14px', lineHeight: '1.5' }}>
                             Resolve conflicts and pending requests before exporting, or choose to ignore and proceed with exporting.
                         </DialogContentText>
                     </DialogContent>
@@ -456,10 +432,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 fontSize: '14px',
                                 fontWeight: 500,
                                 padding: '8px 24px',
-                                '&:hover': {
-                                    backgroundColor: '#E7ECF7',
-                                    color: '#666',
-                                },
+                                '&:hover': { backgroundColor: '#E7ECF7', color: '#666' },
                             }}
                         >
                             Cancel
@@ -475,10 +448,7 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
                                 padding: '8px 24px',
                                 borderRadius: '6px',
                                 boxShadow: 'none',
-                                '&:hover': {
-                                    backgroundColor: '#0081d5',
-                                    boxShadow: 'none',
-                                },
+                                '&:hover': { backgroundColor: '#0081d5', boxShadow: 'none' },
                             }}
                         >
                             Export anyway

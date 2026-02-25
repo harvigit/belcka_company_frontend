@@ -5,7 +5,6 @@ import {
     Box,
     Dialog,
     DialogContent,
-    DialogTitle,
     Typography,
     CircularProgress,
     Button,
@@ -43,27 +42,25 @@ interface DigitalIDCardProps {
 const CARD_WIDTH  = 450;
 const CARD_HEIGHT = 350;
 
-const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, token, isPublicView = false}) => {
+const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, token, isPublicView = false }) => {
     const [cardData, setCardData] = useState<ApiDigitalCardInfo | null>(null);
     const [loading,  setLoading]  = useState(true);
     const [error,    setError]    = useState<string | null>(null);
 
     const cardRef = useRef<HTMLDivElement | null>(null);
-
     const [scale, setScale] = useState(1);
 
     useEffect(() => {
         const computeScale = () => {
-            const padding = 48;
+            const padding = window.innerWidth < 600 ? 0 : 64;
             const available = window.innerWidth - padding;
-            
             setScale(Math.min(1, available / CARD_WIDTH));
         };
         computeScale();
         window.addEventListener('resize', computeScale);
         return () => window.removeEventListener('resize', computeScale);
     }, []);
-    
+
     useEffect(() => {
         if (!userId) {
             setError('User ID is required');
@@ -127,10 +124,10 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
                 convertImageToBase64(cardData.qr_code_url),
             ]);
 
-            const el          = cardRef.current;
-            const logoEl      = el.querySelector('img[alt="Belcka Logo"]')  as HTMLImageElement;
-            const avatarEl    = el.querySelector('img[alt="User"]')         as HTMLImageElement;
-            const qrEl        = el.querySelector('img[alt="QR Code"]')      as HTMLImageElement;
+            const el       = cardRef.current;
+            const logoEl   = el.querySelector('img[alt="Belcka Logo"]') as HTMLImageElement;
+            const avatarEl = el.querySelector('img[alt="User"]')        as HTMLImageElement;
+            const qrEl     = el.querySelector('img[alt="QR Code"]')     as HTMLImageElement;
 
             const origLogo   = logoEl?.src;
             const origAvatar = avatarEl?.src;
@@ -205,6 +202,9 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
         })
         : null;
 
+    const scaledWidth  = CARD_WIDTH  * scale;
+    const scaledHeight = CARD_HEIGHT * scale;
+
     return (
         <Dialog
             open={open}
@@ -213,35 +213,53 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
             fullWidth
             PaperProps={{
                 sx: {
-                    margin: { xs: '12px', sm: '32px' },
-                    maxHeight: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 14px)' },
+                    margin: { xs: '16px', sm: '32px' },
+                    width: { xs: 'calc(100% - 32px)', sm: 'auto' },
+                    maxWidth: { xs: '100%', sm: '960px' },
+                    maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
+                    borderRadius: '16px',
+                    alignSelf: 'center',
                 },
             }}
         >
-            {/*<DialogTitle sx={{ pb: 1 }}>{cardData.name}&apos;s ID Card</DialogTitle>*/}
-
-            <DialogContent sx={{ p: { xs: 0, sm: 0 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <DialogContent
+                sx={{
+                    p: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    pb: { xs: 2, sm: 2 },
+                }}
+            >
                 <Box
                     sx={{
                         display: 'flex',
                         justifyContent: 'center',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
+                        width: '100%',
                         overflow: 'hidden',
+                        pt: { sm: 2 },
+                        px: { xs: 0, sm: 2 },
                     }}
                 >
                     <Box
                         sx={{
-                            transformOrigin: 'top center',
-                            transform: `scale(${scale})`,
-                            mb: `-${CARD_HEIGHT - CARD_HEIGHT * scale}px`,
+                            width: `${scaledWidth}px`,
+                            height: `${scaledHeight}px`,
+                            flexShrink: 0,
+                            position: 'relative',
                         }}
                     >
                         <Box
                             ref={cardRef}
                             sx={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                transformOrigin: 'top left',
+                                transform: `scale(${scale})`,
                                 width: `${CARD_WIDTH}px`,
                                 height: `${CARD_HEIGHT}px`,
-                                minWidth: `${CARD_WIDTH}px`,  
                                 borderRadius: '20px',
                                 backgroundColor: '#ffffff',
                                 boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -280,45 +298,40 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
                                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                     />
                                 </Box>
-    
+
                                 {/* USER ID */}
                                 <Typography
                                     sx={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em', mb: '6px' }}
                                 >
                                     USER ID: {cardData.user_code}
                                 </Typography>
-    
+
                                 {/* Full Name */}
                                 <Typography
                                     sx={{ fontSize: '30px', fontWeight: 700, color: '#111827', lineHeight: 1.2, mb: '10px', wordBreak: 'break-word' }}
                                 >
                                     {cardData.first_name} {cardData.last_name}
                                 </Typography>
-    
+
                                 {/* Role / Trade */}
                                 <Typography
                                     sx={{ fontSize: '16px', fontWeight: 600, color: '#374151', mb: '4px' }}
                                 >
                                     {cardData.trade_name}
                                 </Typography>
-    
+
                                 {/* Company Logo */}
-                                <Box
-                                    sx={{
-                                        display: 'inline-flex',
-                                        width: 'fit-content',
-                                    }}
-                                >
+                                <Box sx={{ display: 'inline-flex', width: 'fit-content' }}>
                                     <img
                                         src={cardData.company_logo}
                                         alt="Company Logo"
                                         style={{ width: '100px', height: '60px', objectFit: 'contain', display: 'block' }}
                                     />
                                 </Box>
-    
+
                                 {/* Spacer */}
                                 <Box sx={{ flex: 1 }} />
-    
+
                                 {/* Valid Until */}
                                 {validUntilDisplay && (
                                     <Typography
@@ -328,8 +341,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
                                     </Typography>
                                 )}
                             </Box>
-    
-                            {/* RIGHT COLUMN */}
+
                             <Box
                                 sx={{
                                     display: 'flex',
@@ -346,7 +358,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
                                     alt="Belcka Logo"
                                     style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }}
                                 />
-    
+
                                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                                     {/* QR Code */}
                                     <Box
@@ -364,7 +376,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
                                             style={{ width: '110px', height: '110px', display: 'block' }}
                                         />
                                     </Box>
-    
+
                                     {/* Active / Inactive */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         {!cardData.is_expired ? (
@@ -391,7 +403,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({open, onClose, userId, tok
 
                 {/* ── Save PDF button ── */}
                 {!isPublicView && (
-                    <Box display="flex" justifyContent="flex-end">
+                    <Box display="flex" justifyContent="flex-end" px={2}>
                         <Button onClick={handleDownloadPdf} variant="contained" color="primary" size="medium">
                             Save PDF
                         </Button>

@@ -51,12 +51,6 @@ interface ShiftSettingProps {
     onClose: () => void;
 }
 
-const parseTimeString = (timeString: string | null): Dayjs | null => {
-    if (!timeString) return null;
-    const parsed = dayjs(timeString, 'HH:mm');
-    return parsed.isValid() ? parsed : null;
-};
-
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const DAY_NAMES = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -257,10 +251,7 @@ const ShiftSetting: React.FC<ShiftSettingProps> = ({ shiftId, onSaveSuccess, onC
             fetchShiftSettings();
         }
     }, [shiftId, isNewShift]);
-
-    const startTimeObj = useMemo(() => parseTimeString(shiftDetail.default_start_time), [shiftDetail.default_start_time]);
-    const endTimeObj = useMemo(() => parseTimeString(shiftDetail.default_end_time), [shiftDetail.default_end_time]);
-
+    
     const updateShiftSettings = useCallback((updates: Partial<ShiftDetails>) => {
         setShiftDetail((prev) => ({ ...prev, ...updates }));
     }, []);

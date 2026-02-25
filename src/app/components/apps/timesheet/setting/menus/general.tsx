@@ -84,12 +84,6 @@ const generateTimeOptions = (): string[] => {
     return options;
 };
 
-const parseTimeString = (timeString: string | null): Dayjs | null => {
-    if (!timeString) return null;
-    const parsed = dayjs(timeString, 'HH:mm');
-    return parsed.isValid() ? parsed : null;
-};
-
 const getDefaultSettings = (): Omit<SettingsState, 'isSaving'> => ({
     dailyLimit: '12:00 Hours',
     autoClockOut: 1,

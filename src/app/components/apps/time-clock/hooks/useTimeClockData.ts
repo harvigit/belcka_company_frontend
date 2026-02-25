@@ -17,7 +17,21 @@ export const useTimeClockData = (user_id: any, currency: string) => {
 
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
-    
+
+    // Payroll cycle
+    const [payrollCycle, setPayrollCycle] = useState<string>('');
+
+    const fetchPayrollCycle = useCallback(async (): Promise<void> => {
+        try {
+            const response = await api.get('/setting/get-payroll-settings');
+            if (response.data?.IsSuccess) {
+                setPayrollCycle(response.data.data?.payroll_cycle || '');
+            }
+        } catch (error) {
+            console.error('Error fetching payroll cycle:', error);
+        }
+    }, []);
+
     const fetchTimeClockData = useCallback(async (start: Date, end: Date): Promise<void> => {
         try {
             const params: Record<string, string> = {
@@ -98,5 +112,8 @@ export const useTimeClockData = (user_id: any, currency: string) => {
         projects,
         fetchTimeClockData,
         fetchConflicts,
+        payrollCycle,
+        setPayrollCycle,
+        fetchPayrollCycle,
     };
 };
