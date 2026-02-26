@@ -242,7 +242,9 @@ const ProductList = () => {
 
   const { getRootProps: getImageRootProps, getInputProps: getImageInputProps } =
     useDropzone({
-      accept: { "image/*": [] },
+      accept: {
+        "image/*": [".jpg", ".jpeg", ".png", ".webp"],
+      },
       onDrop: onDrop,
     });
 
@@ -304,14 +306,16 @@ const ProductList = () => {
     }
 
     if (newImages.length > 0) {
-      formData.append("image", newImages[0]);
-
-      newImages.slice(1).forEach((file) => {
-        formData.append("files", file);
-      });
-
       if (userRemovedMain) {
+        formData.append("image", newImages[0]);
+        newImages.slice(1).forEach((file) => {
+          formData.append("files", file);
+        });
         formData.append("remove_image", "1");
+      } else {
+        newImages.forEach((file) => {
+          formData.append("files", file);
+        });
       }
     }
 
@@ -692,7 +696,7 @@ const ProductList = () => {
                 setOpenImageManager(true);
               }}
             >
-              <AddCircleOutlineIcon />
+              <AddCircleOutlineIcon fontSize="small" />
             </IconButton>
           </Stack>
         );
@@ -925,7 +929,7 @@ const ProductList = () => {
               }}
             >
               <input {...getImageInputProps()} />
-              <Typography>Drag & drop or click to upload images</Typography>
+              <Typography>Drag & drop or past images</Typography>
             </div>
 
             <Grid container spacing={2}>
@@ -939,7 +943,7 @@ const ProductList = () => {
                   />
 
                   {/* Main image selector */}
-                  <button
+                  <div
                     style={{
                       position: "absolute",
                       bottom: 0,
@@ -952,13 +956,13 @@ const ProductList = () => {
                       padding: "2px 4px",
                       cursor: "pointer",
                     }}
-                    onClick={() => {
-                      setMainImageId(img.id);
-                      setNewMainImage(null);
-                    }}
+                    // onClick={() => {
+                    //   setMainImageId(img.id);
+                    //   setNewMainImage(null);
+                    // }}
                   >
-                    {img.isMain ? "Main" : "Images"}
-                  </button>
+                    {img.isMain ? "Primary" : "Images"}
+                  </div>
 
                   {/* Delete button */}
                   <IconButton
@@ -996,7 +1000,7 @@ const ProductList = () => {
                   />
 
                   {/* Main selector for new files */}
-                  <button
+                  <div
                     style={{
                       position: "absolute",
                       bottom: 0,
@@ -1010,13 +1014,13 @@ const ProductList = () => {
                       padding: "2px 4px",
                       cursor: "pointer",
                     }}
-                    onClick={() => {
-                      setNewMainImage(file);
-                      setMainImageId(null);
-                    }}
+                    // onClick={() => {
+                    //   setNewMainImage(file);
+                    //   setMainImageId(null);
+                    // }}
                   >
-                    Main
-                  </button>
+                    {/* Main */}
+                  </div>
 
                   <IconButton
                     size="small"
