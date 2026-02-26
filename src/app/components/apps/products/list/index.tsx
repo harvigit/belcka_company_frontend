@@ -929,7 +929,7 @@ const ProductList = () => {
               }}
             >
               <input {...getImageInputProps()} />
-              <Typography>Drag & drop or past images</Typography>
+              <Typography>Drag & drop or paste images</Typography>
             </div>
 
             <Grid container spacing={2}>
