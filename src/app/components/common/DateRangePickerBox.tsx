@@ -30,33 +30,37 @@ const generatePayrollRanges = (cycle: PayrollCycle, count: number = 10): { from:
     const today = new Date();
     const ranges: { from: Date; to: Date }[] = [];
 
-    if (cycle === '1_week') {
-        let weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const normalizedCycle = cycle?.replace(/s$/, '');
+
+    if (normalizedCycle === '1_week') {
+        const weekStart = startOfWeek(today, { weekStartsOn: 1 });
         for (let i = 0; i < count; i++) {
             const from = subWeeks(weekStart, i);
             const to = endOfWeek(from, { weekStartsOn: 1 });
             ranges.push({ from, to });
         }
-    } else if (cycle === '2_week') {
-        let blockStart = startOfWeek(today, { weekStartsOn: 1 });
-        const weekNum = Math.floor((today.getTime() - blockStart.getTime()) / (14 * 24 * 60 * 60 * 1000));
+    } else if (normalizedCycle === '2_week') {
+        const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+        const daysSinceEpochMonday = Math.floor(weekStart.getTime() / (7 * 24 * 60 * 60 * 1000));
+        const blockOffset = daysSinceEpochMonday % 2 === 0 ? 0 : 7;
+        const blockStart = addDays(weekStart, -blockOffset);
         for (let i = 0; i < count; i++) {
             const from = addDays(blockStart, -i * 14);
             const to = addDays(from, 13);
             ranges.push({ from, to });
         }
-    } else if (cycle === '4_week') {
-        let blockStart = startOfWeek(today, { weekStartsOn: 1 });
-        for (let i = 0; i < count; i++) {
-            const from = addDays(blockStart, -i * 28);
-            const to = addDays(from, 27);
-            ranges.push({ from, to });
-        }
-    } else if (cycle === '1_month') {
+    } else if (normalizedCycle === '1_month') {
         for (let i = 0; i < count; i++) {
             const ref = subMonths(today, i);
             const from = startOfMonth(ref);
             const to = endOfMonth(ref);
+            ranges.push({ from, to });
+        }
+    } else if (normalizedCycle === '3_month') {
+        for (let i = 0; i < count; i++) {
+            const ref = subMonths(today, i * 3);
+            const from = startOfMonth(ref);
+            const to = endOfMonth(subMonths(ref, -2));
             ranges.push({ from, to });
         }
     }
@@ -230,7 +234,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply, payr
                                 setTempRange(range ?? { from: undefined, to: undefined });
                                 setSelectedPresetIndex(null);
                             }}
-                            numberOfMonths={payrollCycle ? 2 : 1}
+                            numberOfMonths={payrollCycle && presetRanges.length > 0 ? 2 : 1}
                             className="custom-day-picker"
                             locale={{ ...enGB, options: { ...enGB.options, weekStartsOn: 1 } }}
                         />
