@@ -415,12 +415,8 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
             user_id: Number(formData.userId),
             leave_id: Number(formData.leaveId),
             is_allday_leave: formData.isAllDay,
-            start_date: formData.isAllDay
-                ? dateRange?.from ? format(dateRange.from, 'dd/MM/yyyy') : null
-                : format(singleDate!, 'dd/MM/yyyy'),
-            end_date: formData.isAllDay
-                ? dateRange?.to ? format(dateRange.to, 'dd/MM/yyyy') : null
-                : format(singleDate!, 'dd/MM/yyyy'),
+            start_date: formData.isAllDay ? dateRange?.from ? format(dateRange.from, 'dd/MM/yyyy') : null : format(singleDate!, 'dd/MM/yyyy'),
+            end_date: formData.isAllDay ? dateRange?.to ? format(dateRange.to, 'dd/MM/yyyy') : null : format(singleDate!, 'dd/MM/yyyy'),
             start_time: formData.isAllDay ? null : startTime,
             end_time: formData.isAllDay ? null : endTime,
             total_time_of_days: calculateTotalDays(),

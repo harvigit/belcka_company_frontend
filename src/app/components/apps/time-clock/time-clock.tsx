@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     Avatar,
     Box,
@@ -51,7 +51,7 @@ import {
     flexRender,
     VisibilityState
 } from '@tanstack/react-table';
-import {format} from 'date-fns';
+import {format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays} from 'date-fns';
 import {AxiosResponse} from 'axios';
 
 import api from '@/utils/axios';
@@ -125,6 +125,30 @@ const loadDateRangeFromStorage = () => {
     return null;
 };
 
+const getRangeForCycle = (cycle: string): { from: Date; to: Date } => {
+    const today      = new Date();
+    const normalized = cycle.replace(/s$/, '');
+
+    if (normalized === '1_month') {
+        return { from: startOfMonth(today), to: endOfMonth(today) };
+    }
+    if (normalized === '2_week') {
+        const weekStart            = startOfWeek(today, { weekStartsOn: 1 });
+        const daysSinceEpochMonday = Math.floor(weekStart.getTime() / (7 * 24 * 60 * 60 * 1000));
+        const blockOffset          = daysSinceEpochMonday % 2 === 0 ? 0 : 7;
+        const from                 = addDays(weekStart, -blockOffset);
+        return { from, to: addDays(from, 13) };
+    }
+    if (normalized === '3_month') {
+        const from = startOfMonth(today);
+        return { from, to: endOfMonth(addDays(from, 89)) };
+    }
+    return {
+        from: startOfWeek(today, { weekStartsOn: 1 }),
+        to:   endOfWeek(today,   { weekStartsOn: 1 }),
+    };
+};
+
 export type TimeClock = {
     company_id: string;
     week_range: any;
@@ -186,16 +210,16 @@ interface Props {
 }
 
 const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
-  try {
-    const dateRange = {
-      startDate: startDate ? startDate.toDateString() : null,
-      endDate: endDate ? endDate.toDateString() : null,
-      columnVisibility: {},
-    };
-    localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
-  } catch (error) {
-    console.log("Error saving date range to localStorage:", error);
-  }
+    try {
+        const dateRange = {
+            startDate: startDate ? startDate.toDateString() : null,
+            endDate: endDate ? endDate.toDateString() : null,
+            columnVisibility: {},
+        };
+        localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
+    } catch (error) {
+        console.log("Error saving date range to localStorage:", error);
+    }
 };
 
 const TimeClock = ({queryParams}: Props) => {
@@ -206,31 +230,14 @@ const TimeClock = ({queryParams}: Props) => {
     const defaultEnd = new Date(today);
     defaultEnd.setDate(today.getDate() - today.getDay() + 7);
 
-    // Load from localStorage or use defaults
-    const getInitialDates = () => {
-        const stored = loadDateRangeFromStorage();
-
-        if (stored && stored.startDate && stored.endDate) {
-            return {
-                startDate: stored.startDate,
-                endDate: stored.endDate,
-            };
-        } else {
-            return {
-                startDate: defaultStart,
-                endDate: defaultEnd,
-            };
-        }
-    };
-
-    const initialDates = getInitialDates();
+    const [startDate, setStartDate] = useState<Date | null>(null);
+    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [cycleReady, setCycleReady] = useState<boolean>(false);
 
     // State management
     const [data, setData] = useState<TimeClock[]>([]);
     const [currency, setCurrency] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
-    const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
-    const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [selectedTimeClock, setSelectedTimeClock] = useState<TimeClock | null>(null);
@@ -290,7 +297,7 @@ const TimeClock = ({queryParams}: Props) => {
             ...Object.fromEntries(amountColumns.map((col) => [col, userHasRatePermission])),
         }));
     }, [userHasRatePermission]);
-    
+
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
         actionType: 'lock' | 'unlock' | 'paid';
@@ -398,14 +405,57 @@ const TimeClock = ({queryParams}: Props) => {
         }
         return [];
     };
+    
+    const [payrollCycle, setPayrollCycle] = useState<string>('');
 
-      useEffect(() => {
-        if (
-        !queryParams?.user_id ||
-        !queryParams?.start_date ||
-        !queryParams?.end_date
-        )
-        return;
+    useEffect(() => {
+        (async () => {
+            try {
+                const response = await api.get('/setting/get-payroll-settings');
+                const cycle = response.data?.IsSuccess
+                    ? (response.data.data?.payroll_cycle || '')
+                    : '';
+
+                setPayrollCycle(cycle);
+
+                let from: Date;
+                let to: Date;
+
+                if (cycle) {
+                    const range = getRangeForCycle(cycle);
+                    from = range.from;
+                    to   = range.to;
+                } else {
+                    const stored = loadDateRangeFromStorage();
+                    if (stored && stored.startDate && stored.endDate) {
+                        from = stored.startDate;
+                        to   = stored.endDate;
+                    } else {
+                        from = defaultStart;
+                        to   = defaultEnd;
+                    }
+                }
+
+                setStartDate(from);
+                setEndDate(to);
+                saveDateRangeToStorage(from, to);
+            } catch (error) {
+                console.error('Error fetching payroll cycle:', error);
+                setStartDate(defaultStart);
+                setEndDate(defaultEnd);
+            } finally {
+                setCycleReady(true);
+            }
+        })();
+    }, []);
+
+    useEffect(() => {
+        if (!cycleReady || !startDate || !endDate) return;
+        fetchData(startDate, endDate);
+    }, [cycleReady, startDate, endDate]);
+
+    useEffect(() => {
+        if (!queryParams?.user_id || !queryParams?.start_date || !queryParams?.end_date) return;
 
         const startDateObj = new Date(queryParams.start_date);
         const endDateObj = new Date(queryParams.end_date);
@@ -413,26 +463,26 @@ const TimeClock = ({queryParams}: Props) => {
         setStartDate(startDateObj);
         setEndDate(endDateObj);
 
-    (async () => {
-      try {
-        const fetchedData = await fetchData(startDateObj, endDateObj);
+        (async () => {
+            try {
+                const fetchedData = await fetchData(startDateObj, endDateObj);
 
-        const foundUser = fetchedData.find(
-          (item) =>
-            Number(item.user_id) === Number(queryParams.user_id)
-        );
+                const foundUser = fetchedData.find(
+                    (item) =>
+                        Number(item.user_id) === Number(queryParams.user_id)
+                );
 
-        if (!foundUser) return;
+                if (!foundUser) return;
 
-        saveDateToStorage(startDateObj, endDateObj);
-        setSelectedTimeClock(foundUser);
+                saveDateToStorage(startDateObj, endDateObj);
+                setSelectedTimeClock(foundUser);
 
-        if (queryParams?.type) {
-          setDetailsOpen(true);
-        }
-      } catch (err) {
-        console.error("Failed to load data from query params:", err);
-      }
+                if (queryParams?.type) {
+                    setDetailsOpen(true);
+                }
+            } catch (err) {
+                console.error('Failed to load data from query params:', err);
+            }
         })();
     }, [
         queryParams?.user_id,
@@ -440,7 +490,6 @@ const TimeClock = ({queryParams}: Props) => {
         queryParams?.end_date,
         queryParams?.type,
     ]);
-
 
     const fetchConflictsData = async (start: Date, end: Date) => {
         try {
@@ -458,10 +507,7 @@ const TimeClock = ({queryParams}: Props) => {
             setConflictDetails([]);
         }
     };
-
-    useEffect(() => {
-        if (startDate && endDate) fetchData(startDate, endDate);
-    }, [startDate, endDate]);
+    
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
 
     // Conflicts count
@@ -518,16 +564,14 @@ const TimeClock = ({queryParams}: Props) => {
         setDetailsOpen(false);
         setSelectedTimeClock(null);
 
-        const initialDates = getInitialDates();
-
-        if (initialDates) {
-            try {
-                handleDateRangeChange({from: initialDates.startDate, to: initialDates.endDate,});
-                await fetchData(initialDates.startDate, initialDates.endDate);
-                setHasDataChanged(false);
-            } catch (error) {
-                setErrorMessage('Failed to refresh data. Please try again.');
-            }
+        const s = startDate || defaultStart;
+        const e = endDate   || defaultEnd;
+        try {
+            handleDateRangeChange({ from: s, to: e });
+            await fetchData(s, e);
+            setHasDataChanged(false);
+        } catch (error) {
+            setErrorMessage('Failed to refresh data. Please try again.');
         }
     };
 
@@ -693,7 +737,7 @@ const TimeClock = ({queryParams}: Props) => {
                 );
             },
         }),
-        
+
         columnHelper.accessor('user_code', {
             id: 'user_code',
             header: 'User Code',
@@ -710,7 +754,7 @@ const TimeClock = ({queryParams}: Props) => {
                 );
             },
         }),
-        
+
         columnHelper.accessor('total_hours', {
             id: 'total_hours',
             header: 'Total Hours',
@@ -823,7 +867,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
             },
         }),
-        
+
         columnHelper.accessor('total_payable_amount', {
             id: 'total_payable_amount',
             header: 'Total Payable Amount',
@@ -832,7 +876,7 @@ const TimeClock = ({queryParams}: Props) => {
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
             },
         }),
-        
+
         columnHelper.accessor('name_on_account', {
             id: 'name_on_account',
             header: 'Name On Account',
@@ -934,7 +978,7 @@ const TimeClock = ({queryParams}: Props) => {
                 );
             },
         }),
-        
+
         columnHelper.accessor('status_text', {
             id: 'status_text',
             header: 'Status',
@@ -1297,11 +1341,14 @@ const TimeClock = ({queryParams}: Props) => {
                         }}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-                            <DateRangePickerBox
-                                from={startDate}
-                                to={endDate}
-                                onChange={handleDateRangeChange}
-                            />
+                            {cycleReady && (
+                                <DateRangePickerBox
+                                    from={startDate}
+                                    to={endDate}
+                                    onChange={handleDateRangeChange}
+                                    payrollCycle={payrollCycle}
+                                />
+                            )}
                             <TextField
                                 placeholder="Search..."
                                 size="small"
@@ -1349,7 +1396,7 @@ const TimeClock = ({queryParams}: Props) => {
                                 <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
                                 <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
                             </Menu>
-                            
+
                             {hasAnyConflicts && (
                                 <Button
                                     variant="outlined"
