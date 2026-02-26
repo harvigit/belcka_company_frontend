@@ -436,12 +436,14 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
 
         try {
             const endpoint = isEditMode ? '/user-leaves/update-leave' : '/user-leaves/add-leave';
-            const response: AxiosResponse<any> = await api.post(endpoint, params);
+            const response: AxiosResponse<any> = await api.post(endpoint, params, {
+                skipToast: true,
+            } as any);
 
             if (response.data.IsSuccess) {
                 onClose();
             } else {
-                setError(`Failed to ${isEditMode ? 'update' : 'add'} leave. Please try again.`);
+                setError(response.data.message || `Failed to ${isEditMode ? 'update' : 'add'} leave. Please try again.`);
             }
         } catch (error: any) {
             const errorMessage =
