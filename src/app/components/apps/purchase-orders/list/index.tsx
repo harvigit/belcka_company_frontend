@@ -1,5 +1,10 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   TableContainer,
   Table,
@@ -44,8 +49,10 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconDownload,
   IconEye,
   IconFilter,
+  IconNotes,
   IconPrinter,
   IconSearch,
   IconTrash,
@@ -62,14 +69,45 @@ import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconEdit } from "@tabler/icons-react";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import PurchaseProductList from "../products";
 import PurchaseOrder from "../create";
+import { DayPicker } from "react-day-picker";
+import { styled } from "@mui/material/styles";
+import ArchivePurchaseOrder from "../archive";
 
 dayjs.extend(customParseFormat);
+
+const StyledDayPicker = styled(Box)(({ theme }) => ({
+  "& .rdp": {
+    "--rdp-cell-size": "36px",
+    "--rdp-accent-color": "#50ABFF",
+    "--rdp-background-color": "#e6f3ff",
+    "--rdp-selected-color": "#fff",
+    "--rdp-selected-background": "#50ABFF",
+    "--rdp-today-background": "#f0f0f0",
+    fontSize: "14px",
+    padding: theme.spacing(1),
+    backgroundColor: "#fff",
+  },
+  "& .rdp-day": {
+    borderRadius: "4px",
+  },
+  "& .rdp-day_selected": {
+    backgroundColor: "#50ABFF",
+    color: "#fff",
+  },
+  "& .rdp-day:hover": {
+    backgroundColor: "#e6f3ff",
+  },
+}));
+
+interface TableRow {
+  id: number;
+  expected_delivery_date?: string;
+}
 
 const PurchaseOrderList = () => {
   const [data, setData] = useState<any[]>([]);
@@ -94,6 +132,42 @@ const PurchaseOrderList = () => {
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [selectedRow, setSelectedRow] = React.useState<TableRow | null>(null);
+  const [singleDate, setSingleDate] = React.useState<Date | undefined>(
+    undefined,
+  );
+  const [archivePurchaseList, setArchivePurchaseList] =
+    useState<boolean>(false);
+
+  function formatDateLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  const parseDDMMYYYY = (dateString: string | null) => {
+    if (!dateString) return undefined;
+
+    const [day, month, year] = dateString.split("/");
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  };
+
+  const handleOpenModal = (row: TableRow) => {
+    setSelectedRow(row);
+    setSingleDate(
+      row.expected_delivery_date
+        ? parseDDMMYYYY(row.expected_delivery_date)
+        : undefined,
+    );
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedRow(null);
+  };
   const [purchaseOrder, setPurchaseOrder] = useState<any | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -114,6 +188,21 @@ const PurchaseOrderList = () => {
   };
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const updateExpectedDate = async (rowId: number, date: any) => {
+    try {
+      const res = await api.post("purchase-orders/change-delivery-date", {
+        id: rowId,
+        date: date,
+      });
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchOrders();
+      }
+    } catch (error) {
+      console.error("Date update failed", error);
+    }
   };
 
   // Fetch data
@@ -655,11 +744,11 @@ const PurchaseOrderList = () => {
     }),
 
     columnHelper.accessor("user_name", {
-      id: "orderby",
+      id: "receivedBy",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
-            Order By
+            Received By
           </Typography>
         </Stack>
       ),
@@ -724,6 +813,20 @@ const PurchaseOrderList = () => {
         );
       },
     }),
+    columnHelper.accessor((row) => row?.store_name, {
+      id: "deliveryAddress",
+      header: () => "Delivery address",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center">
+            <Typography textTransform="capitalize" className="f-14" ml={1}>
+              {item.store_name ? item.store_name : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
 
     columnHelper.accessor((row) => row?.expected_delivery_date, {
       id: "expectedDeliveryDate",
@@ -734,19 +837,45 @@ const PurchaseOrderList = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
+
         return (
           <Stack direction="row" alignItems="center" spacing={4} ml={1}>
-            <Typography
-              variant="subtitle2"
-              textTransform="capitalize"
-              className="f-14"
+            <Box
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenModal(item);
+              }}
+              sx={{
+                minWidth: 50,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  border: "1px solid #1976d2",
+                },
+              }}
             >
-              {item.expected_delivery_date ? item.expected_delivery_date : ""}
-            </Typography>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontSize: 14,
+                  textAlign: "center",
+                  color: item.expected_delivery_date
+                    ? "inherit"
+                    : "text.secondary",
+                }}
+              >
+                {item.expected_delivery_date || "Select Date"}
+              </Typography>
+            </Box>
           </Stack>
         );
       },
     }),
+
     columnHelper.accessor((row) => row?.status_text, {
       id: "status",
       header: () => "Status",
@@ -788,20 +917,60 @@ const PurchaseOrderList = () => {
         const item = row.original;
         return (
           <Stack direction="row" sx={{ pl: 1 }} display={"flex"}>
-            <Tooltip title="Preview / Print">
+            {/* <Tooltip title="Preview / Print">
               <IconButton
                 color="primary"
                 onClick={(e) => {
-                  e.stopPropagation()
-                  handlePreview(item.id)
+                  e.stopPropagation();
+                  handlePreview(item.id);
                 }}
               >
                 <IconPrinter size={18} />
               </IconButton>
-            </Tooltip>
+            </Tooltip> */}
+
+            <IconButton
+              color="primary"
+              onClick={async (e) => {
+                e.stopPropagation();
+
+                try {
+                  setLoading(true);
+
+                  await api.post(
+                    `purchase-orders/invoice?company_id=${user.company_id}&id=${item.id}`,
+                  );
+
+                  const res = await api.get(
+                    `purchase-orders/get?company_id=${user.company_id}&id=${item.id}`,
+                  );
+
+                  if (res.data.IsSuccess) {
+                    const invoiceUrl = res.data.info[0]?.invoice;
+
+                    if (!invoiceUrl) {
+                      return;
+                    }
+
+                    window.open(invoiceUrl, "_blank", "noopener,noreferrer");
+                  }
+                } catch (error) {
+                  console.error("Failed to open invoice:", error);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <IconDownload size={18} />
+            </IconButton>
 
             {item.status !== 2 && (
-              <Button href={`/apps/receive-orders/${item.id}`} onClick={(e) => e.stopPropagation()}>Receive</Button>
+              <Button
+                href={`/apps/receive-orders/${item.id}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                Receive
+              </Button>
             )}
           </Stack>
         );
@@ -1183,7 +1352,6 @@ const PurchaseOrderList = () => {
             </Button>
           </DialogActions>
         </Dialog>
-
         {/* Render the search and table */}
         <Stack
           mr={2}
@@ -1194,10 +1362,6 @@ const PurchaseOrderList = () => {
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Grid display="flex" gap={1} alignItems={"center"}>
-            <Button variant="contained" color="primary">
-              PURCHASE ORDERS ({table.getPrePaginationRowModel().rows.length}
-              ){" "}
-            </Button>
             <TextField
               id="search"
               type="text"
@@ -1315,7 +1479,7 @@ const PurchaseOrderList = () => {
                     setConfirmOpen(true);
                   }}
                 >
-                  Remove
+                  Archive
                 </Button>
               </>
             )}
@@ -1381,7 +1545,7 @@ const PurchaseOrderList = () => {
               <DialogTitle>Confirm Deletion</DialogTitle>
               <DialogContent>
                 <Typography color="textSecondary">
-                  Are you sure you want to delete {usersToDelete.length} order
+                  Are you sure you want to archive {usersToDelete.length} order
                   product
                   {usersToDelete.length > 1 ? "s" : ""} from the orders?
                 </Typography>
@@ -1401,7 +1565,7 @@ const PurchaseOrderList = () => {
                         order_ids: usersToDelete.join(","),
                       };
                       const response = await api.post(
-                        "purchase-orders/delete",
+                        "purchase-orders/archive",
                         payload,
                       );
                       toast.success(response.data.message);
@@ -1415,7 +1579,7 @@ const PurchaseOrderList = () => {
                   variant="outlined"
                   color="error"
                 >
-                  Remove
+                  Archive
                 </Button>
               </DialogActions>
             </Dialog>
@@ -1463,11 +1627,33 @@ const PurchaseOrderList = () => {
                   Add Purchase Order
                 </Link>
               </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setArchivePurchaseList(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconNotes width={18} />
+                  </ListItemIcon>
+                  Archived Purchase Order
+                </Link>
+              </MenuItem>
             </Menu>
           </Stack>
         </Stack>
         <Divider />
-
         <PurchaseOrder
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
@@ -1479,7 +1665,6 @@ const PurchaseOrderList = () => {
           companyId={user.company_id ?? null}
           mode="create"
         />
-
         <PurchaseOrder
           open={editDrawerOpen}
           onClose={() => setEditDrawerOpen(false)}
@@ -1492,7 +1677,6 @@ const PurchaseOrderList = () => {
           mode="edit"
           editData={selectedPurchaseOrder}
         />
-
         <PurchaseProductList
           open={productDrawerOpen}
           onClose={() => setProductDrawerOpen(false)}
@@ -1503,6 +1687,14 @@ const PurchaseOrderList = () => {
           isSaving={isSaving}
           companyId={user.company_id ?? null}
           mode="create"
+        />
+
+        {/* Archive Product List */}
+        <ArchivePurchaseOrder
+          open={archivePurchaseList}
+          companyId={Number(user.company_id)}
+          onClose={() => setArchivePurchaseList(false)}
+          onWorkUpdated={fetchOrders}
         />
         <Box
           sx={{
@@ -1719,6 +1911,39 @@ const PurchaseOrderList = () => {
             </Stack>
           </Box>
         </Stack>
+
+        <Dialog open={modalOpen} onClose={handleCloseModal}>
+          <DialogTitle>Select Delivery Date</DialogTitle>
+          <DialogContent>
+            <StyledDayPicker>
+              <DayPicker
+                mode="single"
+                selected={singleDate}
+                onSelect={setSingleDate}
+                showOutsideDays
+                defaultMonth={singleDate || new Date()}
+                modifiersClassNames={{
+                  selected: "rdp-day_selected",
+                }}
+              />
+            </StyledDayPicker>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseModal}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                if (selectedRow && singleDate) {
+                  const formattedDate = formatDateLocal(singleDate);
+                  await updateExpectedDate(selectedRow.id, formattedDate);
+                  handleCloseModal();
+                }
+              }}
+            >
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </PermissionGuard>
   );

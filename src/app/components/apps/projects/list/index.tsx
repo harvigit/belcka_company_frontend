@@ -74,6 +74,7 @@ import MapGantt from "@/app/components/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 import Link from "next/link";
 import { IconNotes } from "@tabler/icons-react";
+import { IconDatabase } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -177,8 +178,10 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   );
   const [trade, setTrade] = useState<TradeList[]>([]);
   const [data, setData] = useState<ProjectList[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [project, setProject] = useState<ProjectList[]>([]);
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [productDrawer, setProductDrawer] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
@@ -221,7 +224,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     company_id: user.company_id,
     name: "",
   });
-
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   // For create
   const initialCreateState: ProjectFormData = {
     name: "",
@@ -302,7 +305,41 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }));
     }
   }, [projectId]);
+  const handleProductToggle = (productId: number) => {
+    setSelectedProducts((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId],
+    );
+  };
+  const fetchResources = async () => {
+    try {
+      const res = await api.get(
+        `get-inventory-resources?company_id=${user.company_id}`,
+      );
+      if (res.data) {
+        setProducts(res.data.products);
+      }
+    } catch (err) {
+      console.error("Failed to fetch inventory resource", err);
+    }
+  };
+  const handleSaveProducts = async () => {
+    try {
+      const productIdsString = selectedProducts.join(",");
 
+      const response = await api.post("project/favorite-products", {
+        id: Number(projectID),
+        product_ids: productIdsString,
+      });
+      if (response.data.IsSuccess) {
+        toast.success(response.data.message);
+        setProductDrawer(false);
+      }
+    } catch (error) {
+      console.error("Save failed:", error);
+    }
+  };
   const fetchProjects = async () => {
     try {
       setLoading(true);
@@ -328,6 +365,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   useEffect(() => {
     if (user.company_id) {
       fetchProjects();
+      fetchResources();
     }
   }, [projectID]);
 
@@ -1599,7 +1637,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           onClose={() => setDialogOpen(false)}
           PaperProps={{
             sx: {
-              width: 350,
+              width: 400,
               maxWidth: "100%",
             },
           }}
@@ -1726,6 +1764,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   >
                     <IconTrash size={18} />
                   </IconButton>
+                  {/* <IconButton
+                    color="success"
+                    onClick={() => {
+                      setDialogOpen(false);
+                      setProductDrawer(true);
+                    }}
+                  >
+                    <IconDatabase size={18} />
+                  </IconButton> */}
                 </Grid>
               ))}
             </Grid>
@@ -1916,6 +1963,135 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 </>
               )}
             </Grid>
+          </Box>
+        </Drawer>
+
+        {/* Product list */}
+        <Drawer
+          anchor="right"
+          open={productDrawer}
+          onClose={() => setProductDrawer(false)}
+          PaperProps={{
+            sx: {
+              width: 500,
+              maxWidth: "100%",
+              "& .MuiDrawer-paper": {
+                width: 500,
+                padding: 2,
+                backgroundColor: "#f9f9f9",
+                display: "flex",
+                flexDirection: "column",
+              },
+            },
+          }}
+        >
+          <Box
+            display={"flex"}
+            alignContent={"center"}
+            alignItems={"center"}
+            flexWrap={"wrap"}
+            p={2}
+          >
+            <Box display={"flex"} alignContent={"center"} alignItems={"center"}>
+              <IconButton onClick={() => setProductDrawer(false)}>
+                <IconArrowLeft />
+              </IconButton>
+              <Typography variant="h6" fontWeight={700}>
+                Favorite products
+              </Typography>
+            </Box>
+            {/* Close Button */}
+            <IconButton
+              aria-label="close"
+              onClick={() => setProductDrawer(false)}
+              size="small"
+              sx={{
+                position: "absolute",
+                right: 0,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <IconX size={18} />
+            </IconButton>
+          </Box>
+          <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+            {/* Product List */}
+            <Grid container spacing={2} display="block">
+              {products.length > 0 ? (
+                <Box>
+                  {products.map((product) => (
+                    <Box
+                      key={product.id}
+                      display="flex"
+                      alignItems={"center"}
+                      mb={2}
+                      p={2}
+                      sx={{
+                        borderRadius: "12px",
+                        border: "1px solid #eee",
+                        background: "#fff",
+                      }}
+                    >
+                      <Checkbox
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={() => handleProductToggle(product.id)}
+                      />
+                      <Typography
+                        fontSize="14px"
+                        fontWeight={500}
+                        // sx={{ maxWidth: 270 }}
+                      >
+                        {product.short_name ? product.short_name : product.name}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography mt={2}>No products found</Typography>
+              )}
+            </Grid>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "start",
+              gap: 2,
+              m: 2,
+              pl: 2,
+            }}
+          >
+            <Button
+              color="primary"
+              onClick={handleSaveProducts}
+              variant="contained"
+              size="large"
+              type="submit"
+              sx={{ borderRadius: 3 }}
+              className="drawer_buttons"
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              color="inherit"
+              onClick={() => {
+                setSelectedProducts([]);
+                setProductDrawer(false);
+              }}
+              variant="contained"
+              size="large"
+              sx={{
+                backgroundColor: "transparent",
+                borderRadius: 3,
+                color: "GrayText",
+              }}
+            >
+              Cancel
+            </Button>
           </Box>
         </Drawer>
       </Box>

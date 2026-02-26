@@ -24,6 +24,7 @@ import api from '@/utils/axios';
 import { debounce } from 'lodash';
 import SearchIcon from '@mui/icons-material/Search';
 import { AxiosResponse } from 'axios';
+import toast from 'react-hot-toast';
 
 interface Project { id: number; name: string; }
 interface Address { id: number; name: string; project_id: number;}
@@ -235,6 +236,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             });
 
             if (response.data.IsSuccess) {
+                toast.success(response.data.message)
                 onClose();
             } else {
                 setError(response.data.message || 'Failed to add expense.');

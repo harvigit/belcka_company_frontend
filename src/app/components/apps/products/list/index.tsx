@@ -29,6 +29,8 @@ import {
   FormControlLabel,
   Checkbox,
   Modal,
+  LinearProgress,
+  CircularProgress,
 } from "@mui/material";
 import {
   flexRender,
@@ -72,9 +74,15 @@ import { IconEye } from "@tabler/icons-react";
 import { FileDownload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
 import ProductView from "../view";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
 dayjs.extend(customParseFormat);
-
+interface TableRow {
+  id: number;
+  image_url?: string;
+  images?: string[];
+  [key: string]: any;
+}
 export interface ProductFormData {
   id: number;
   company_id: any;
@@ -137,7 +145,8 @@ const ProductList = () => {
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currency, setCurrency] = useState("");
-
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     id: 0,
     company_id: user?.company_id,
@@ -152,6 +161,54 @@ const ProductList = () => {
   const [openModel, setOpenModel] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<any | null>(null);
+  const [openImageManager, setOpenImageManager] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<TableRow | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<
+    { id: number; url: string; isMain: boolean }[]
+  >([]);
+
+  const [newMainImage, setNewMainImage] = useState<File | null>(null);
+  const [newOtherImages, setNewOtherImages] = useState<File[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [mainImageId, setMainImageId] = useState<number | null>(null);
+  const [originalUploadedImages, setOriginalUploadedImages] = useState([]);
+  useEffect(() => {
+    if (selectedRow) {
+      setUploadedImages(selectedRow.product_images || []);
+      setOriginalUploadedImages(selectedRow.product_images || []);
+    }
+  }, [selectedRow]);
+  // Load images when row is selected
+  useEffect(() => {
+    if (!selectedRow) return;
+
+    const existingImages = [
+      selectedRow.image_url
+        ? { id: 0, image_url: selectedRow.image_url }
+        : null,
+      ...(selectedRow.product_images || []),
+    ]
+      .filter((img): img is { id: number; image_url: string } => !!img)
+      .map((img) => ({
+        id: img.id,
+        url: img.image_url,
+        isMain: img.image_url === selectedRow.image_url,
+      }));
+
+    setUploadedImages(existingImages);
+
+    const mainIdx = existingImages.findIndex((img) => img.isMain);
+    setMainImageId(mainIdx >= 0 ? mainIdx : null);
+
+    setNewImages([]);
+    setNewOtherImages([]);
+    setNewMainImage(null);
+  }, [selectedRow]);
+
+  const onDrop = (acceptedFiles: File[]) => {
+    setNewImages((prev) => [...prev, ...acceptedFiles]);
+    setNewOtherImages((prev) => [...prev, ...acceptedFiles]);
+  };
 
   const handleModelOpen = () => {
     setPreview(null);
@@ -172,13 +229,22 @@ const ProductList = () => {
     link.click();
   };
 
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: {
-      "application/xlsx": [".xlsx"],
-      "application/xls": [".xls"],
-    },
-    onDrop: handleFileChange,
-  });
+  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
+    useDropzone({
+      accept: {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx",
+        ],
+        "application/vnd.ms-excel": [".xls"],
+      },
+      onDrop: handleFileChange,
+    });
+
+  const { getRootProps: getImageRootProps, getInputProps: getImageInputProps } =
+    useDropzone({
+      accept: { "image/*": [] },
+      onDrop: onDrop,
+    });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -187,7 +253,94 @@ const ProductList = () => {
     setAnchorEl(null);
   };
 
-  const fetchResorces = async () => {
+  useEffect(() => {
+    if (!openImageManager) return;
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles: File[] = [];
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+
+        if (item.type.startsWith("image")) {
+          const file = item.getAsFile();
+          if (file) {
+            imageFiles.push(file);
+          }
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        setNewImages((prev) => [...prev, ...imageFiles]);
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+
+    return () => {
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, [openImageManager]);
+
+  const handleSaveImages = async () => {
+    if (!selectedRow) return;
+
+    const formData = new FormData();
+    formData.append("id", String(selectedRow.id));
+
+    const originalMainImage = selectedRow.image_url;
+
+    const mainStillExists = uploadedImages.some(
+      (img) => img.url === originalMainImage,
+    );
+
+    const userRemovedMain = originalMainImage && !mainStillExists;
+
+    if (userRemovedMain && newImages.length === 0) {
+      formData.append("remove_image", "1");
+    }
+
+    if (newImages.length > 0) {
+      formData.append("image", newImages[0]);
+
+      newImages.slice(1).forEach((file) => {
+        formData.append("files", file);
+      });
+
+      if (userRemovedMain) {
+        formData.append("remove_image", "1");
+      }
+    }
+
+    const removedIds = originalUploadedImages
+      .filter((orig: any) => !uploadedImages.some((u) => u.id === orig.id))
+      .map((img: any) => img.id);
+
+    if (removedIds.length > 0) {
+      removedIds.forEach((id) =>
+        formData.append("removed_image_ids[]", String(id)),
+      );
+    }
+
+    try {
+      const res = await api.post(`products/new-images`, formData, {
+        headers: { "Content-Type": undefined },
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+        setOpenImageManager(false);
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+    }
+  };
+
+  const fetchResources = async () => {
     try {
       const res = await api.get(
         `get-inventory-resources?company_id=${user.company_id}`,
@@ -217,7 +370,7 @@ const ProductList = () => {
   };
 
   useEffect(() => {
-    fetchResorces();
+    fetchResources();
     fetchProducts();
   }, [api]);
 
@@ -253,8 +406,16 @@ const ProductList = () => {
     }
   };
 
-  const importProducts = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importProducts = async () => {
+    if (!file) {
+      toast.error("Please select a file");
+      return;
+    }
+
     setIsImport(true);
+    setUploadProgress(0);
+    setIsProcessing(false);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -266,18 +427,34 @@ const ProductList = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
+            setUploadProgress(percent);
+
+            if (percent === 100) {
+              setIsProcessing(true);
+            }
+          }
+        },
       });
 
       toast.success(res.data.message);
+
       fetchProducts();
-      // fetchOverview();
-      handleModelClose();
+
+      setTimeout(() => {
+        handleModelClose();
+        setUploadProgress(0);
+        setIsProcessing(false);
+      }, 1000);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Import failed");
     } finally {
-      e.target.value = "";
+      setIsImport(false);
     }
-    setIsImport(false);
   };
 
   const handleOpenCreateDrawer = () => {
@@ -486,29 +663,37 @@ const ProductList = () => {
       id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Image
-          </Typography>
+          <Typography variant="subtitle2">Image</Typography>
         </Stack>
       ),
-      enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const image = "/images/products/product.png";
+        const placeholder = "/images/products/product.png";
+
         return (
-          <Stack direction="row" alignItems="center" spacing={4}>
+          <Stack direction="row" alignItems="center" spacing={1}>
             <Image
-              src={item.image_url || image}
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewImage(item.image_url || image);
-                setOpenPreview(true);
-              }}
-              style={{ cursor: "pointer" }}
+              src={item.image_url || placeholder}
               alt="Product"
               width={50}
               height={50}
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(item.image_url || placeholder);
+                setOpenPreview(true);
+              }}
             />
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedRow(item);
+                setOpenImageManager(true);
+              }}
+            >
+              <AddCircleOutlineIcon />
+            </IconButton>
           </Stack>
         );
       },
@@ -719,6 +904,152 @@ const ProductList = () => {
           flexDirection: "column",
         }}
       >
+        {/* for handling image upload */}
+        <Dialog
+          open={openImageManager}
+          onClose={() => setOpenImageManager(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Image</DialogTitle>
+          <DialogContent>
+            <div
+              {...getImageRootProps()}
+              style={{
+                border: "2px dashed #1976d2",
+                borderRadius: 8,
+                padding: 40,
+                textAlign: "center",
+                cursor: "pointer",
+                marginBottom: 20,
+              }}
+            >
+              <input {...getImageInputProps()} />
+              <Typography>Drag & drop or click to upload images</Typography>
+            </div>
+
+            <Grid container spacing={2}>
+              {uploadedImages.map((img) => (
+                <Grid key={img.id} style={{ position: "relative" }}>
+                  <img
+                    src={img.url}
+                    width={80}
+                    height={80}
+                    style={{ objectFit: "cover", borderRadius: 4 }}
+                  />
+
+                  {/* Main image selector */}
+                  <button
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      background: img.isMain ? "#1976d2" : "rgba(0,0,0,0.4)",
+                      color: "white",
+                      fontSize: 12,
+                      border: "none",
+                      borderRadius: "0 4px 0 0",
+                      padding: "2px 4px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setMainImageId(img.id);
+                      setNewMainImage(null);
+                    }}
+                  >
+                    {img.isMain ? "Main" : "Images"}
+                  </button>
+
+                  {/* Delete button */}
+                  <IconButton
+                    color="error"
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: -10,
+                      right: -10,
+                      backgroundColor: "#fff",
+                      zIndex: 2,
+                      "&:hover": {
+                        backgroundColor: "#fff",
+                        color: "red",
+                      },
+                    }}
+                    onClick={() =>
+                      setUploadedImages(
+                        uploadedImages.filter((i) => i.id !== img.id),
+                      )
+                    }
+                  >
+                    <IconTrash size={16} />
+                  </IconButton>
+                </Grid>
+              ))}
+
+              {newImages.map((file, index) => (
+                <Grid key={index} style={{ position: "relative" }}>
+                  <img
+                    src={URL.createObjectURL(file)}
+                    width={80}
+                    height={80}
+                    style={{ objectFit: "cover", borderRadius: 4 }}
+                  />
+
+                  {/* Main selector for new files */}
+                  <button
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      background:
+                        newMainImage === file ? "#1976d2" : "rgba(0,0,0,0.4)",
+                      color: "white",
+                      fontSize: 12,
+                      border: "none",
+                      borderRadius: "0 4px 0 0",
+                      padding: "2px 4px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setNewMainImage(file);
+                      setMainImageId(null);
+                    }}
+                  >
+                    Main
+                  </button>
+
+                  <IconButton
+                    size="small"
+                    color="error"
+                    sx={{
+                      position: "absolute",
+                      top: -10,
+                      right: -10,
+                      backgroundColor: "#fff",
+                      zIndex: 2,
+                      "&:hover": {
+                        backgroundColor: "#fff",
+                        color: "red",
+                      },
+                    }}
+                    onClick={() =>
+                      setNewImages(newImages.filter((_, i) => i !== index))
+                    }
+                  >
+                    <IconTrash size={16} />
+                  </IconButton>
+                </Grid>
+              ))}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenImageManager(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveImages}>
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <Dialog
           open={openPreview}
           onClose={() => setOpenPreview(false)}
@@ -862,7 +1193,7 @@ const ProductList = () => {
                 </IconButton>
               </DialogTitle>
               <Box
-                {...getRootProps()}
+                {...getExcelRootProps()}
                 sx={{
                   width: 350,
                   height: 100,
@@ -881,7 +1212,7 @@ const ProductList = () => {
                   },
                 }}
               >
-                <input {...getInputProps()} accept=".xls,.xlsx" />
+                <input {...getExcelInputProps()} accept=".xls,.xlsx" />
                 {preview ? (
                   preview
                 ) : (
@@ -893,7 +1224,29 @@ const ProductList = () => {
               <Typography fontSize="12px" color="text.secondary">
                 Upload Excel Files
               </Typography>
-
+              {isImport && (
+                <Box sx={{ mt: 2 }}>
+                  {!isProcessing ? (
+                    <>
+                      <Typography variant="body2" mb={1}>
+                        Uploading... {uploadProgress}%
+                      </Typography>
+                      <LinearProgress
+                        variant="determinate"
+                        value={uploadProgress}
+                        sx={{ height: 8, borderRadius: 5 }}
+                      />
+                    </>
+                  ) : (
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CircularProgress size={18} />
+                      <Typography variant="body2">
+                        Processing file...
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
               {/* Action buttons */}
               <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
                 <Link
@@ -919,7 +1272,7 @@ const ProductList = () => {
                     variant="contained"
                     disabled={isImport}
                     onClick={(e: any) => {
-                      importProducts(e);
+                      importProducts();
                     }}
                   >
                     Save

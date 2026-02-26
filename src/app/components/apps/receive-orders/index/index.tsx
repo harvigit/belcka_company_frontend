@@ -33,9 +33,10 @@ interface ReceiveProductRow {
   received_qty: number;
   remaining_qty: number;
   receive_now: number;
-  product_image?: string | null;
+  image_url?: string | null;
   uuid?: string;
   description?: string | null;
+  supplier_code?: string | null;
 }
 
 const ReceivePurchaseOrder = () => {
@@ -78,11 +79,12 @@ const ReceivePurchaseOrder = () => {
             return {
               product_id: p.product_id,
               short_name: p.short_name,
+              supplier_code: p.supplier_code,
               ordered_qty: ordered,
               received_qty: received,
               remaining_qty: ordered - received,
               receive_now: ordered - received > 0 ? 1 : 0,
-              product_image: p.product_image,
+              image_url: p.image_url,
               uuid: p.uuid,
               description: p.description,
             };
@@ -196,7 +198,7 @@ const ReceivePurchaseOrder = () => {
           <TextField label="Store" value={order?.store?.name || ""} disabled />
           <TextField
             label="Received By"
-            value={order?.user_name || ""}
+            value={user.name || ""}
             disabled
           />
           <Box className="form_inputs">
@@ -233,6 +235,8 @@ const ReceivePurchaseOrder = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Item & Description</TableCell>
+                <TableCell>ID</TableCell>
+                <TableCell>Code</TableCell>
                 <TableCell>Ordered</TableCell>
                 <TableCell>Received</TableCell>
                 <TableCell>Qty to Receive</TableCell>
@@ -253,7 +257,7 @@ const ReceivePurchaseOrder = () => {
                     >
                       <Box>
                         <Image
-                          src={p.product_image || ""}
+                          src={p.image_url || ""}
                           alt={"product"}
                           width={50}
                           height={50}
@@ -264,11 +268,12 @@ const ReceivePurchaseOrder = () => {
                         <Typography color="text.secondary" variant="caption">
                           {p.description ? p.description : ""}
                         </Typography>
-                        <Typography>Code: {p.uuid}</Typography>
                       </Box>
                     </Stack>
                   </TableCell>
 
+                  <TableCell>{p.product_id}</TableCell>
+                  <TableCell>{p.supplier_code}</TableCell>
                   <TableCell>{p.ordered_qty}</TableCell>
                   <TableCell>{p.received_qty}</TableCell>
 

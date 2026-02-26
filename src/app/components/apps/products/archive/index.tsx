@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Drawer,
   Box,
-  Grid,
   IconButton,
   Typography,
   Button,
@@ -11,11 +10,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  FormControlLabel,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
 import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 interface ArchiveProductProps {
   open: boolean;
@@ -32,11 +33,15 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
 }) => {
   const [data, setData] = useState<any[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{
-    id: number;
-    action: "restore" | "delete";
-  } | null>(null);
-  // Fetch data
+  const [isSaving, setIsSaving] = useState(false);
+  const [actionType, setActionType] = useState<"restore" | "delete" | null>(
+    null,
+  );
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const isAllSelected = data.length > 0 && selectedIds.length === data.length;
+
+  const isIndeterminate =
+    selectedIds.length > 0 && selectedIds.length < data.length;
   const fetchProjects = useCallback(async () => {
     if (!companyId) return;
 
@@ -44,30 +49,44 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
       const res = await api.get(
         `products/archive-list?company_id=${companyId}`,
       );
-
-      if (res.data) {
-        setData(res.data.info);
-      }
+      if (res.data) setData(res.data.info);
     } catch (err) {
       console.error("Failed to fetch archive products", err);
     }
   }, [companyId]);
 
   useEffect(() => {
-    if (open == true) {
+    if (open) {
       fetchProjects();
+      setSelectedIds([]);
     }
   }, [open]);
 
+  const handleCheckboxChange = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      const allIds = data.map((item) => item.id);
+      setSelectedIds(allIds);
+    }
+  };
+
   const handleConfirmAction = async () => {
-    if (!selectedItem) return;
+    if (!actionType || selectedIds.length === 0) return;
 
     try {
+      setIsSaving(true);
       const payload = {
-        id: selectedItem.id,
+        product_ids: selectedIds.join(","),
       };
 
-      if (selectedItem.action === "restore") {
+      if (actionType === "restore") {
         const response = await api.post("products/unarchive", payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
@@ -75,17 +94,23 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
           onWorkUpdated?.();
           onClose?.();
         }
-      } else if (selectedItem.action === "delete") {
-        const response = await api.post(`products/delete`, payload);
+      } else {
+        const response = await api.post("products/delete", payload);
         if (response.data.IsSuccess) {
           toast.success(response.data.message);
           fetchProjects();
           onWorkUpdated?.();
         }
       }
+
+      fetchProjects();
+      onWorkUpdated?.();
+      setSelectedIds([]);
+      setIsSaving(false);
     } catch (err) {
       console.error("Action failed", err);
     }
+    setIsSaving(false);
   };
 
   return (
@@ -94,10 +119,9 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 400,
-        flexShrink: 0,
+        width: 450,
         "& .MuiDrawer-paper": {
-          width: 400,
+          width: 450,
           padding: 2,
           backgroundColor: "#f9f9f9",
           display: "flex",
@@ -105,104 +129,106 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
         },
       }}
     >
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          paddingRight: 1,
-        }}
-      >
-        <Box className="task-form">
-          <Grid container>
-            <Grid size={{ xs: 12, lg: 12 }}>
-              <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
-                <IconButton onClick={onClose}>
-                  <IconArrowLeft />
-                </IconButton>
-                <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Product List
-                </Typography>
-              </Box>
-
-              {data.map((item, index) => (
-                <Box
-                  key={index}
-                  mt={2}
-                  p={2}
-                  position="relative"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    border: "1px solid #999999",
-                    borderRadius: "15px",
-                  }}
-                >
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    width="100%"
-                  >
-                    <Box display={"flex"} alignItems={"center"} gap={1}>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        Name:
-                      </Typography>
-                      <Typography
-                        color="textSecondary"
-                        variant="body1"
-                        fontWeight={600}
-                        className="f-14"
-                        sx={{
-                          display: "-webkit-box",
-                          WebkitBoxOrient: "vertical",
-                          WebkitLineClamp: 3,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          lineHeight: 1.25,
-                          maxWidth: 180,
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {item.name ? item.name : item.sort_name}
-                      </Typography>
-                    </Box>
-                    <Box display={"flex"} fontSize="10px">
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        onClick={() => {
-                          setSelectedItem({ id: item.id, action: "restore" });
-                          setOpenDialog(true);
-                        }}
-                      >
-                        <IconArrowBackUp />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => {
-                          setSelectedItem({ id: item.id, action: "delete" });
-                          setOpenDialog(true);
-                        }}
-                      >
-                        <IconTrash />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                </Box>
-              ))}
-            </Grid>
-          </Grid>
+      {/* Product List */}
+      <Box sx={{ flex: 1, overflowY: "auto" }}>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
+          <Box display="flex" alignItems="center">
+            <IconButton onClick={onClose}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700}>
+              Archive Product List
+            </Typography>
+          </Box>
+          {data.length > 0 && (
+            <Box display="flex" alignItems="center">
+              <FormControlLabel
+                label="Select All"
+                control={
+                  <CustomCheckbox
+                    checked={isAllSelected}
+                    indeterminate={isIndeterminate}
+                    onChange={handleSelectAll}
+                  />
+                }
+              />
+            </Box>
+          )}
         </Box>
+
+        {data.map((item) => (
+          <Box
+            key={item.id}
+            mt={2}
+            p={2}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{
+              border: "1px solid #999999",
+              borderRadius: "15px",
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              {/* Checkbox */}
+              <CustomCheckbox
+                checked={selectedIds.includes(item.id)}
+                onChange={() => handleCheckboxChange(item.id)}
+              />
+
+              <Typography
+                variant="body1"
+                fontWeight={600}
+                sx={{ maxWidth: 270 }}
+              >
+                {item.name ? item.name : item.sort_name}
+              </Typography>
+            </Box>
+          </Box>
+        ))}
       </Box>
 
-      <Box mt={2}>
+      {/* Bottom Action Buttons */}
+      <Box mt={2} display="flex" gap={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ borderRadius: 3 }}
+          className="drawer_buttons"
+          startIcon={<IconArrowBackUp />}
+          disabled={selectedIds.length === 0}
+          onClick={() => {
+            setActionType("restore");
+            setOpenDialog(true);
+          }}
+        >
+          Restore
+        </Button>
+
+        <Button
+          variant="contained"
+          color="error"
+          sx={{ borderRadius: 3 }}
+          className="drawer_buttons"
+          startIcon={<IconTrash />}
+          disabled={selectedIds.length === 0}
+          onClick={() => {
+            setActionType("delete");
+            setOpenDialog(true);
+          }}
+        >
+          Delete
+        </Button>
+
         <Button
           color="inherit"
           onClick={onClose}
           variant="contained"
-          size="large"
           sx={{
             backgroundColor: "transparent",
             borderRadius: 3,
@@ -213,26 +239,19 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
         </Button>
       </Box>
 
+      {/* Confirmation Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
-          {selectedItem?.action === "restore"
-            ? "Restore Task"
-            : "Confirm Deletion"}
+          {actionType === "restore" ? "Confirm Restore" : "Confirm Deletion"}
         </DialogTitle>
         <DialogContent>
-          <Typography color="textSecondary">
-            Are you sure you want to <strong>{selectedItem?.action}</strong>{" "}
-            this product?
+          <Typography>
+            Are you sure you want to <strong>{actionType}</strong> selected
+            products?
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => setOpenDialog(false)}
-            variant="outlined"
-            color="primary"
-          >
-            Cancel
-          </Button>
+          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
           <Button
             color="error"
             variant="contained"
@@ -240,8 +259,9 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
               handleConfirmAction();
               setOpenDialog(false);
             }}
+            disabled={isSaving}
           >
-            {selectedItem?.action === "restore" ? "Confirm" : "Delete"}
+            Confirm
           </Button>
         </DialogActions>
       </Dialog>
