@@ -205,6 +205,23 @@ const ProductList = () => {
     setNewMainImage(null);
   }, [selectedRow]);
 
+  const handleSetMainExisting = (id: number) => {
+    setUploadedImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        isMain: img.id === id,
+      })),
+    );
+    setMainImageId(id);
+    setNewMainImage(null); // deselect new images if any
+  };
+
+  const handleSetMainNew = (file: File) => {
+    setNewMainImage(file);
+    setMainImageId(null); // clear existing main
+    setUploadedImages((prev) => prev.map((img) => ({ ...img, isMain: false })));
+  };
+
   const onDrop = (acceptedFiles: File[]) => {
     setNewImages((prev) => [...prev, ...acceptedFiles]);
     setNewOtherImages((prev) => [...prev, ...acceptedFiles]);
@@ -290,45 +307,61 @@ const ProductList = () => {
   const handleSaveImages = async () => {
     if (!selectedRow) return;
 
+    setIsSaving(true);
+
     const formData = new FormData();
     formData.append("id", String(selectedRow.id));
 
     const originalMainImage = selectedRow.image_url;
 
-    const mainStillExists = uploadedImages.some(
-      (img) => img.url === originalMainImage,
-    );
-
-    const userRemovedMain = originalMainImage && !mainStillExists;
-
-    if (userRemovedMain && newImages.length === 0) {
-      formData.append("remove_image", "1");
-    }
-
-    if (newImages.length > 0) {
-      if (userRemovedMain) {
-        formData.append("image", newImages[0]);
-        newImages.slice(1).forEach((file) => {
-          formData.append("files", file);
-        });
-        formData.append("remove_image", "1");
-      } else {
-        newImages.forEach((file) => {
-          formData.append("files", file);
-        });
-      }
-    }
-
+    /* -------------------------------
+     1️⃣ Removed gallery images
+  ------------------------------- */
     const removedIds = originalUploadedImages
       .filter((orig: any) => !uploadedImages.some((u) => u.id === orig.id))
       .map((img: any) => img.id);
 
-    if (removedIds.length > 0) {
-      removedIds.forEach((id) =>
-        formData.append("removed_image_ids[]", String(id)),
+    removedIds.forEach((id) => {
+      formData.append("removed_image_ids[]", String(id));
+    });
+
+    /* -------------------------------
+     2️⃣ If NEW image selected as main
+  ------------------------------- */
+    if (newMainImage) {
+      formData.append("image", newMainImage);
+
+      newImages
+        .filter((file) => file !== newMainImage)
+        .forEach((file) => {
+          formData.append("files", file);
+        });
+    } else {
+      /* -------------------------------
+       3️⃣ If EXISTING image selected as main
+    ------------------------------- */
+      if (mainImageId !== null) {
+        formData.append("main_image_id", String(mainImageId));
+      }
+
+      // Upload normal new images
+      newImages.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      // If main image was deleted
+      const mainStillExists = uploadedImages.some(
+        (img) => img.url === originalMainImage,
       );
+
+      if (!mainStillExists && originalMainImage) {
+        formData.append("remove_image", "1");
+      }
     }
 
+    /* -------------------------------
+     4️⃣ API Call
+  ------------------------------- */
     try {
       const res = await api.post(`products/new-images`, formData, {
         headers: { "Content-Type": undefined },
@@ -338,10 +371,15 @@ const ProductList = () => {
         toast.success(res.data.message);
         fetchProducts();
         setOpenImageManager(false);
+      } else {
+        toast.error(res.data.message);
       }
     } catch (err) {
       console.error("Upload failed:", err);
+      toast.error("Failed to save images!");
     }
+
+    setIsSaving(false);
   };
 
   const fetchResources = async () => {
@@ -943,7 +981,7 @@ const ProductList = () => {
                   />
 
                   {/* Main image selector */}
-                  <div
+                  <button
                     style={{
                       position: "absolute",
                       bottom: 0,
@@ -956,13 +994,10 @@ const ProductList = () => {
                       padding: "2px 4px",
                       cursor: "pointer",
                     }}
-                    // onClick={() => {
-                    //   setMainImageId(img.id);
-                    //   setNewMainImage(null);
-                    // }}
+                    onClick={() => handleSetMainExisting(img.id)}
                   >
                     {img.isMain ? "Primary" : "Images"}
-                  </div>
+                  </button>
 
                   {/* Delete button */}
                   <IconButton
@@ -1000,7 +1035,7 @@ const ProductList = () => {
                   />
 
                   {/* Main selector for new files */}
-                  <div
+                  <button
                     style={{
                       position: "absolute",
                       bottom: 0,
@@ -1014,13 +1049,10 @@ const ProductList = () => {
                       padding: "2px 4px",
                       cursor: "pointer",
                     }}
-                    // onClick={() => {
-                    //   setNewMainImage(file);
-                    //   setMainImageId(null);
-                    // }}
+                    onClick={() => handleSetMainNew(file)}
                   >
-                    {/* Main */}
-                  </div>
+                    Primary
+                  </button>
 
                   <IconButton
                     size="small"
@@ -1048,7 +1080,11 @@ const ProductList = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenImageManager(false)}>Cancel</Button>
-            <Button variant="contained" onClick={handleSaveImages}>
+            <Button
+              variant="contained"
+              onClick={handleSaveImages}
+              disabled={isSaving}
+            >
               Save
             </Button>
           </DialogActions>
