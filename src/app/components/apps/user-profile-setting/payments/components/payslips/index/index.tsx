@@ -541,11 +541,15 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1} textTransform={"capitalize"} className="f-14">
-              {item.date ? item.date : "-"}
-              <Typography color="textSecondary">
-                {item.name}
-            </Typography>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            textTransform={"capitalize"}
+            className="f-14"
+          >
+            {item.date ? item.date : "-"}
+            <Typography color="textSecondary">{item.name}</Typography>
           </Stack>
         );
       },
@@ -640,9 +644,6 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
           alignItems={{ xs: "stretch", sm: "center" }}
           sx={{ flex: 1, minWidth: 0 }}
         >
-          <Button variant="contained" color="primary" sx={{ flexShrink: 0 }}>
-            PAYSLIPS ({table.getPrePaginationRowModel().rows.length}){" "}
-          </Button>
           <Box className={isShow ? "" : "date_range_picker"}>
             <DateRangePickerBox
               from={startDate}

@@ -405,9 +405,6 @@ const HistoryList = () => {
         spacing={{ xs: 1, sm: 2, md: 4 }}
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
-          <Button variant="contained" color="primary">
-            HISTORIES ({table.getPrePaginationRowModel().rows.length}){" "}
-          </Button>
           <DateRangePickerBox
             from={startDate}
             to={endDate}

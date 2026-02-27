@@ -447,7 +447,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         const item = row.original;
         return (
           <Stack direction="row" spacing={1} alignItems="center">
-            {item.status === 3  && user.user_role_id == 1 ? (
+            {item.status === 3 && user.user_role_id == 1 ? (
               <>
                 <Tooltip title="Approve">
                   <IconButton
@@ -568,14 +568,6 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
               alignItems={{ xs: "stretch", sm: "center" }}
               sx={{ flex: 1, minWidth: 0 }}
             >
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{ flexShrink: 0 }}
-              >
-                LEAVES ({table.getPrePaginationRowModel().rows.length})
-              </Button>
-
               <Box className="date_range_picker">
                 <DateRangePickerBox
                   from={startDate}

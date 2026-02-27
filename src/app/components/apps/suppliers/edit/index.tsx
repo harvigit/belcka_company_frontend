@@ -305,48 +305,6 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 enableSearch
                 inputProps={{ required: true }}
               />
-
-              <Typography variant="body1" mt={2}>
-                Weight
-              </Typography>
-              <Stack direction="row" spacing={2}>
-                <CustomTextField
-                  name="weight"
-                  value={formData.weight || ""}
-                  onChange={handleChange}
-                />
-
-                <Autocomplete
-                  fullWidth
-                  freeSolo
-                  options={units}
-                  value={formData.weight_unit || null}
-                  onChange={(_, newValue) => {
-                    const value =
-                      typeof newValue === "string"
-                        ? newValue
-                        : newValue?.name || "";
-
-                    if (value && !units.some((u) => u.name === value)) {
-                      setUnits((prev) => [
-                        ...prev,
-                        { id: Date.now(), name: value },
-                      ]);
-                    }
-
-                    setFormData((prev) => ({ ...prev, weight_unit: value }));
-                  }}
-                  getOptionLabel={(option) =>
-                    typeof option === "string" ? option : option.name
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField
-                      {...params}
-                      placeholder="Select or add unit"
-                    />
-                  )}
-                />
-              </Stack>
               {/* File Upload */}
               <InputLabel htmlFor="file-upload" sx={{ mt: 2 }}>
                 Upload file

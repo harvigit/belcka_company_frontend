@@ -1,5 +1,11 @@
 "use client";
-import React, { ChangeEvent, useEffect, useRef, useState } from "react";
+import React, {
+  ChangeEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Typography,
   Box,
@@ -75,6 +81,7 @@ import { IconMapPin } from "@tabler/icons-react";
 import Link from "next/link";
 import { IconNotes } from "@tabler/icons-react";
 import { IconDatabase } from "@tabler/icons-react";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 dayjs.extend(customParseFormat);
 
@@ -187,6 +194,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [history, setHistory] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const limit = 20;
+  const productLimit = 50;
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
@@ -216,6 +224,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     lng: number;
   } | null>(null);
   const [predictions, setPredictions] = useState<UnifiedPrediction[]>([]);
+  const [searchProduct, setSearchProduct] = useState("");
 
   const [radius, setRadius] = useState(100);
   const [typedAddress, setTypedAddress] = useState(false);
@@ -305,13 +314,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }));
     }
   }, [projectId]);
-  const handleProductToggle = (productId: number) => {
+
+  const handleProductToggle = (id: any) => {
     setSelectedProducts((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId],
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
+
   const fetchResources = async () => {
     try {
       const res = await api.get(
@@ -326,20 +335,44 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
   const handleSaveProducts = async () => {
     try {
+      setIsSaving(true);
+
       const productIdsString = selectedProducts.join(",");
 
       const response = await api.post("project/favorite-products", {
         id: Number(projectID),
         product_ids: productIdsString,
       });
+
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
         setProductDrawer(false);
       }
     } catch (error) {
       console.error("Save failed:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  const fetchFavoriteProducts = async () => {
+    try {
+      const response = await api.get(
+        `project/get-favorite?company_id=${user.company_id}&project_id=${projectID}`,
+      );
+
+      if (response.data?.IsSuccess) {
+        const savedIds =
+          response.data?.info[0]?.products?.map(
+            (item: any) => item.product_id,
+          ) || [];
+        setSelectedProducts(savedIds);
+      }
+    } catch (error) {
+      console.error("Failed to fetch favorite products:", error);
+    }
+  };
+
   const fetchProjects = async () => {
     try {
       setLoading(true);
@@ -366,6 +399,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (user.company_id) {
       fetchProjects();
       fetchResources();
+      fetchFavoriteProducts();
     }
   }, [projectID]);
 
@@ -780,6 +814,20 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       setSelectedLocation(null);
     }
   }, [sidebar]);
+
+  const filteredData = useMemo(() => {
+    return products.filter((item) => {
+      const search = searchProduct.toLowerCase();
+
+      const matchesSearch =
+        item.short_name?.toLowerCase().includes(search) ||
+        item.name?.toLowerCase().includes(search);
+
+      return matchesSearch;
+    });
+  }, [products, searchProduct]);
+
+  const paginatedProduct = filteredData?.slice(0, page * productLimit) || [];
 
   return (
     <PermissionGuard permission="Projects">
@@ -1764,7 +1812,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   >
                     <IconTrash size={18} />
                   </IconButton>
-                  {/* <IconButton
+                  <IconButton
                     color="success"
                     onClick={() => {
                       setDialogOpen(false);
@@ -1772,7 +1820,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     }}
                   >
                     <IconDatabase size={18} />
-                  </IconButton> */}
+                  </IconButton>
                 </Grid>
               ))}
             </Grid>
@@ -1991,6 +2039,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             alignItems={"center"}
             flexWrap={"wrap"}
             p={2}
+            pb={0}
           >
             <Box display={"flex"} alignContent={"center"} alignItems={"center"}>
               <IconButton onClick={() => setProductDrawer(false)}>
@@ -2019,12 +2068,35 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
               <IconX size={18} />
             </IconButton>
           </Box>
+          <TextField
+            id="search"
+            type="text"
+            size="small"
+            variant="outlined"
+            placeholder="Search..."
+            value={searchProduct}
+            fullWidth
+            sx={{
+              width: "90%",
+              ml: 2,
+            }}
+            onChange={(e) => setSearchProduct(e.target.value)}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconSearch size={"16"} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
             {/* Product List */}
-            <Grid container spacing={2} display="block">
-              {products.length > 0 ? (
+            <Grid container spacing={2} display="block" mt={1}>
+              {filteredData.length > 0 ? (
                 <Box>
-                  {products.map((product) => (
+                  {paginatedProduct.map((product) => (
                     <Box
                       key={product.id}
                       display="flex"
@@ -2037,19 +2109,39 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                         background: "#fff",
                       }}
                     >
-                      <Checkbox
-                        checked={selectedProducts.includes(product.id)}
-                        onChange={() => handleProductToggle(product.id)}
+                      <FormControlLabel
+                        label={
+                          <Typography fontSize="14px" fontWeight={500}>
+                            {product.short_name
+                              ? product.short_name
+                              : product.name}
+                          </Typography>
+                        }
+                        control={
+                          <CustomCheckbox
+                            checked={selectedProducts.includes(product.id)}
+                            onChange={() => handleProductToggle(product.id)}
+                          />
+                        }
                       />
-                      <Typography
-                        fontSize="14px"
-                        fontWeight={500}
-                        // sx={{ maxWidth: 270 }}
-                      >
-                        {product.short_name ? product.short_name : product.name}
-                      </Typography>
                     </Box>
                   ))}
+                  {paginatedProduct.length < filteredData.length && (
+                    <Box display="flex" justifyContent="center" my={2}>
+                      <Button
+                        variant="outlined"
+                        startIcon={
+                          loading ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : null
+                        }
+                        onClick={() => setPage((prev) => prev + 1)}
+                        disabled={loading}
+                      >
+                        See More
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
               ) : (
                 <Typography mt={2}>No products found</Typography>

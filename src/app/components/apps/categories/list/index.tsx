@@ -458,9 +458,6 @@ const CategoryList = () => {
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Grid display="flex" gap={1} alignItems={"center"}>
-            <Button variant="contained" color="primary">
-              CATEGORIES ({table.getPrePaginationRowModel().rows.length}){" "}
-            </Button>
             <TextField
               id="search"
               type="text"

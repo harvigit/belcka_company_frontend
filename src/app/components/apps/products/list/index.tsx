@@ -75,6 +75,7 @@ import { FileDownload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
 import ProductView from "../view";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import ProductHistory from "../history";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -172,6 +173,8 @@ const ProductList = () => {
   const [newImages, setNewImages] = useState<File[]>([]);
   const [mainImageId, setMainImageId] = useState<number | null>(null);
   const [originalUploadedImages, setOriginalUploadedImages] = useState([]);
+  const [openDrawer, setOpenDrawer] = useState(false);
+
   useEffect(() => {
     if (selectedRow) {
       setUploadedImages(selectedRow.product_images || []);
@@ -904,6 +907,24 @@ const ProductList = () => {
         );
       },
     }),
+    columnHelper.accessor((row) => row?.stock_status, {
+      id: "availability",
+      header: () => "Availability",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+            <Typography
+              className="f-14"
+              color={item.status_color}
+              fontWeight={500}
+            >
+              {item.stock_status ? item.stock_status : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
   ];
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -1151,9 +1172,6 @@ const ProductList = () => {
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Grid display="flex" gap={1} alignItems={"center"}>
-            <Button variant="contained" color="primary">
-              PRODUCTS ({table.getPrePaginationRowModel().rows.length}){" "}
-            </Button>
             <TextField
               id="search"
               type="text"
@@ -1334,12 +1352,26 @@ const ProductList = () => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
+            <Button
+              color="primary"
+              variant="outlined"
+              size="small"
+              onClick={() => setOpenDrawer(true)}
+              sx={{
+                whiteSpace: "nowrap",
+                textTransform: "none",
+                fontWeight: 600,
+              }}
+            >
+              Activity
+            </Button>
+
             {selectedRowIds.size > 0 && (
               <Button
                 variant="outlined"
                 color="error"
                 startIcon={<IconTrash width={18} />}
-                sx={{ marginRight: "5px" }}
+                sx={{ marginRight: "5px",marginLeft: 1 }}
                 onClick={() => {
                   const selectedIds = Array.from(selectedRowIds);
                   setUsersToDelete(selectedIds);
@@ -1660,6 +1692,10 @@ const ProductList = () => {
           onWorkUpdated={fetchProducts}
         />
 
+        <ProductHistory
+          open={openDrawer}
+          onClose={() => setOpenDrawer(false)}
+        />
         <Box
           sx={{
             flex: 1,
