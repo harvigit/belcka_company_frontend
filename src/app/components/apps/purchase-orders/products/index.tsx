@@ -28,6 +28,9 @@ import {
   Checkbox,
   Drawer,
   Fab,
+  Modal,
+  LinearProgress,
+  CircularProgress,
 } from "@mui/material";
 import {
   flexRender,
@@ -43,6 +46,7 @@ import {
   IconArrowRight,
   IconChevronRight,
   IconEye,
+  IconFileImport,
   IconFilter,
   IconMinus,
   IconSearch,
@@ -62,6 +66,9 @@ import PurchaseOrder from "../create";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { IconChevronLeft } from "@tabler/icons-react";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
+import Link from "next/link";
+import { FileDownload } from "@mui/icons-material";
+import { useDropzone } from "react-dropzone";
 
 dayjs.extend(customParseFormat);
 interface Props {
@@ -111,6 +118,89 @@ const PurchaseProductList: React.FC<Props> = ({
   const [addresses, setAddresses] = useState<any[]>([]);
   const [tempFilters, setTempFilters] = useState(filters);
   const [allProductsChecked, setAllProductsChecked] = useState(false);
+  const [openModel, setOpenModel] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<any | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isImport, setIsImport] = useState(false);
+
+  const handleModelOpen = () => {
+    setPreview(null);
+    setOpenModel(true);
+  };
+  const handleModelClose = () => setOpenModel(false);
+  const handleFileChange = (acceptedFiles: File[]) => {
+    const selectedFile = acceptedFiles[0];
+    setFile(selectedFile);
+    setPreview(selectedFile.name);
+  };
+
+  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
+    useDropzone({
+      accept: {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx",
+        ],
+        "application/vnd.ms-excel": [".xls"],
+      },
+      onDrop: handleFileChange,
+    });
+
+  const downloadSampleFile = () => {
+    const link = document.createElement("a");
+    link.href = "/files/purchase_order_export.xlsx";
+    link.download = "purchase-order-sample-file.xlsx";
+    link.click();
+  };
+  const importProducts = async () => {
+    if (!file) {
+      toast.error("Please select a file");
+      return;
+    }
+
+    setIsImport(true);
+    setUploadProgress(0);
+    setIsProcessing(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await api.post("purchase-orders/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
+            setUploadProgress(percent);
+
+            if (percent === 100) {
+              setIsProcessing(true);
+            }
+          }
+        },
+      });
+
+      toast.success(res.data.message);
+
+      fetchOrders();
+
+      setTimeout(() => {
+        handleModelClose();
+        setUploadProgress(0);
+        setIsProcessing(false);
+      }, 1000);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Import failed");
+    } finally {
+      setIsImport(false);
+    }
+  };
+
   const fetchResources = async () => {
     try {
       const res = await api.get(
@@ -405,7 +495,14 @@ const PurchaseProductList: React.FC<Props> = ({
               </Fab>
             </Box>
             {item.pending_qty ? (
-              <Typography fontSize={12} color="error" variant="h6" fontWeight={500} mt={1} ml={4}>
+              <Typography
+                fontSize={12}
+                color="error"
+                variant="h6"
+                fontWeight={500}
+                mt={1}
+                ml={"18px"}
+              >
                 Requested Qty: {item.pending_qty}
               </Typography>
             ) : (
@@ -955,6 +1052,14 @@ const PurchaseProductList: React.FC<Props> = ({
                 }
               />
             </Box>
+
+            <Button
+              variant="contained"
+              startIcon={<IconFileImport width={18} />}
+              onClick={handleModelOpen}
+            >
+              Import
+            </Button>
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -1015,6 +1120,132 @@ const PurchaseProductList: React.FC<Props> = ({
           </Stack>
         </Stack>
         <Divider />
+
+        {/* Modal for File Upload */}
+        <Modal open={openModel} onClose={handleModelClose} disableEscapeKeyDown>
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              bgcolor: "background.paper",
+              p: 3,
+              borderRadius: 2,
+              boxShadow: 24,
+              width: 400,
+            }}
+          >
+            <DialogTitle sx={{ p: 0 }}>
+              <Typography color="GrayText" fontWeight={700}>
+                Upload Your File
+              </Typography>
+              <IconButton
+                onClick={() => handleModelClose()}
+                sx={{
+                  position: "absolute",
+                  right: 8,
+                  top: 10,
+                  backgroundColor: "transparent",
+                }}
+              >
+                <IconX size={40} />
+              </IconButton>
+            </DialogTitle>
+            <Box
+              {...getExcelRootProps()}
+              sx={{
+                width: 350,
+                height: 100,
+                mt: 2,
+                border: "2px dashed",
+                borderColor: "primary.main",
+                borderRadius: 1,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+                overflow: "hidden",
+                "&:hover": {
+                  backgroundColor: "primary.light",
+                },
+              }}
+            >
+              <input {...getExcelInputProps()} accept=".xls,.xlsx" />
+              {preview ? (
+                preview
+              ) : (
+                <Typography fontSize="12px" color="primary.main">
+                  Click or Drag File
+                </Typography>
+              )}
+            </Box>
+            <Typography fontSize="12px" color="text.secondary">
+              Upload Excel Files
+            </Typography>
+            {isImport && (
+              <Box sx={{ mt: 2 }}>
+                {!isProcessing ? (
+                  <>
+                    <Typography variant="body2" mb={1}>
+                      Uploading... {uploadProgress}%
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={uploadProgress}
+                      sx={{ height: 8, borderRadius: 5 }}
+                    />
+                  </>
+                ) : (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CircularProgress size={18} />
+                    <Typography variant="body2">Processing file...</Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+            {/* Action buttons */}
+            <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
+              <Link
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  downloadSampleFile();
+                }}
+                style={{
+                  width: "100%",
+                  color: "#1e4db7",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <FileDownload />
+                Download Sample File
+              </Link>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  variant="contained"
+                  disabled={isImport}
+                  onClick={(e: any) => {
+                    importProducts();
+                  }}
+                >
+                  Save
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={handleModelClose}
+                  color="error"
+                >
+                  Cancel
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </Modal>
 
         <PurchaseOrder
           open={drawerOpen}
