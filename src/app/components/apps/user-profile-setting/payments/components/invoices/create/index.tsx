@@ -57,6 +57,7 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
         accept: {
             "image/jpeg": [".jpg", ".jpeg"],
             "image/png": [".png"],
+            "image/heic": [".heic"],
             "image/webp": [".webp"],
             "application/pdf": [".pdf"],
         },
@@ -237,7 +238,7 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
                     },
                   }}
                 >
-                  <input {...getInputProps()} accept=".pdf,.jpg,.jpeg,.png,.webp"/>
+                  <input {...getInputProps()} accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"/>
                   {preview ? (
                     <Avatar
                       src={preview}
