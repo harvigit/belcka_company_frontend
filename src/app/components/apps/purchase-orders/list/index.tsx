@@ -1,10 +1,5 @@
 "use client";
-import React, {
-  useEffect,
-  useState,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -77,6 +72,7 @@ import PurchaseOrder from "../create";
 import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
 import ArchivePurchaseOrder from "../archive";
+import PurchaseOrderHistory from "../history";
 
 dayjs.extend(customParseFormat);
 
@@ -133,6 +129,8 @@ const PurchaseOrderList = () => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [openDrawer, setOpenDrawer] = useState(false);
+
   const [selectedRow, setSelectedRow] = React.useState<TableRow | null>(null);
   const [singleDate, setSingleDate] = React.useState<Date | undefined>(
     undefined,
@@ -1466,6 +1464,19 @@ const PurchaseOrderList = () => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
+            <Button
+              color="primary"
+              variant="outlined"
+              size="small"
+              onClick={() => setOpenDrawer(true)}
+              sx={{
+                whiteSpace: "nowrap",
+                textTransform: "none",
+                fontWeight: 600,
+              }}
+            >
+              Activity
+            </Button>
             {selectedRowIds.size > 0 && (
               <>
                 <Button
@@ -1696,6 +1707,12 @@ const PurchaseOrderList = () => {
           onClose={() => setArchivePurchaseList(false)}
           onWorkUpdated={fetchOrders}
         />
+
+        <PurchaseOrderHistory
+          open={openDrawer}
+          onClose={() => setOpenDrawer(false)}
+        />
+
         <Box
           sx={{
             flex: 1,

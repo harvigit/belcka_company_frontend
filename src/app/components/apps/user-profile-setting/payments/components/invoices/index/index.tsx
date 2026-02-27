@@ -619,9 +619,6 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
           alignItems={{ xs: "stretch", sm: "center" }}
           sx={{ flex: 1, minWidth: 0 }}
         >
-          <Button variant="contained" color="primary" sx={{ flexShrink: 0 }}>
-            INVOICES ({table.getPrePaginationRowModel().rows.length}){" "}
-          </Button>
           <Box className={isShow ? "" : "date_range_picker"}>
             <DateRangePickerBox
               from={startDate}

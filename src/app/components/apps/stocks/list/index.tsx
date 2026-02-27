@@ -28,6 +28,7 @@ import {
   Checkbox,
   Drawer,
   CircularProgress,
+  Avatar,
 } from "@mui/material";
 import {
   flexRender,
@@ -60,7 +61,6 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { IconEye } from "@tabler/icons-react";
-import { useDropzone } from "react-dropzone";
 import ProductAddEdit from "../../products/create";
 
 dayjs.extend(customParseFormat);
@@ -106,18 +106,22 @@ const StockList = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl);
+
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [filters, setFilters] = useState({ supplier: "", category: "" });
+  const [filters, setFilters] = useState({
+    supplier: "",
+    category: "",
+    store: "",
+  });
   const [tempFilters, setTempFilters] = useState(filters);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [stores, setStores] = useState<any[]>([]);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -134,13 +138,6 @@ const StockList = () => {
     status: true,
   });
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
   const fetchResorces = async () => {
     try {
       const res = await api.get(
@@ -149,6 +146,7 @@ const StockList = () => {
       if (res.data) {
         setSuppliers(res.data.suppliers);
         setCategories(res.data.categories);
+        setStores(res.data.stores);
       }
     } catch (err) {
       console.error("Failed to fetch inventory resource", err);
@@ -294,6 +292,12 @@ const StockList = () => {
             .includes(filters.category.toLowerCase())
         : true;
 
+      const matchesStore = filters.store
+        ? item.product_stock?.some(
+            (stock: any) => stock.store_name === filters.store,
+          )
+        : true;
+
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.short_name?.toLowerCase().includes(search) ||
@@ -304,7 +308,9 @@ const StockList = () => {
         item.barcode_text?.toLowerCase().includes(search) ||
         item.supplier_name?.toLowerCase().includes(search);
 
-      return matchesSearch && matchesCategory && matchesSupplier;
+      return (
+        matchesSearch && matchesCategory && matchesSupplier && matchesStore
+      );
     });
   }, [data, searchTerm, filters]);
 
@@ -691,9 +697,6 @@ const StockList = () => {
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Grid display="flex" gap={1} alignItems={"center"}>
-            <Button variant="contained" color="primary">
-              STOCKS ({table.getPrePaginationRowModel().rows.length}){" "}
-            </Button>
             <TextField
               id="search"
               type="text"
@@ -859,6 +862,26 @@ const StockList = () => {
                       </MenuItem>
                     ))}
                   </TextField>
+
+                  <TextField
+                    select
+                    label="Store"
+                    value={tempFilters.store}
+                    onChange={(e) =>
+                      setTempFilters({
+                        ...tempFilters,
+                        store: e.target.value,
+                      })
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    {stores.map((item, i) => (
+                      <MenuItem key={i} value={item.name}>
+                        {item.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </Stack>
               </DialogContent>
 
@@ -868,10 +891,12 @@ const StockList = () => {
                     setTempFilters({
                       supplier: "",
                       category: "",
+                      store: "",
                     });
                     setFilters({
                       supplier: "",
                       category: "",
+                      store: "",
                     });
                     setOpen(false);
                   }}
@@ -1127,8 +1152,8 @@ const StockList = () => {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           sx={{
-            width: 600,
-            "& .MuiDrawer-paper": { width: 600, backgroundColor: "#f9f9f9" },
+            width: 630,
+            "& .MuiDrawer-paper": { width: 630, backgroundColor: "#f9f9f9" },
           }}
         >
           <Box
@@ -1187,6 +1212,7 @@ const StockList = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
+                  <TableCell></TableCell>
                   <TableCell>Date</TableCell>
                   <TableCell>Qty</TableCell>
                   <TableCell>Reference</TableCell>
@@ -1201,24 +1227,60 @@ const StockList = () => {
                     qtyNum > 0 ? "#1a8f03ff" : qtyNum < 0 ? "red" : "inherit";
                   return (
                     <TableRow key={h.id}>
-                      <TableCell>{h.date}</TableCell>
+                      <TableCell>
+                        {h.action && (
+                          <Tooltip title={h.action?.name || "Select Company"}>
+                            <Avatar
+                              src={h.action?.image || ""}
+                              alt={h.action?.name || ""}
+                              sx={{
+                                width: 30,
+                                height: 30,
+                                margin: "0 auto",
+                                cursor: "pointer",
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </TableCell>
+
+                      <TableCell>{h.date || "-"}</TableCell>
+
                       <TableCell
-                        style={{
+                        sx={{
                           color: qtyColor,
                           fontWeight: "bold",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 2,
                         }}
                       >
-                        {h.qty}{" "}
-                        <Typography color="text.secondary">
-                          ({h.sub_qty})
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip title={h.reference} placement="top" arrow>
+                        <Box display="flex" alignItems="center">
                           <Typography
+                            className="f-14"
+                            sx={{
+                              color: qtyColor,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {h.qty ?? 0}
+                          </Typography>
+
+                          <Typography
+                            color="text.secondary"
+                            className="f-14"
+                            fontWeight={"bold"}
+                          >
+                            ({h.sub_qty ?? 0})
+                          </Typography>
+                        </Box>
+                      </TableCell>
+
+                      <TableCell>
+                        <Tooltip
+                          title={h.reference || "-"}
+                          placement="top"
+                          arrow
+                        >
+                          <Typography
+                            className="f-14"
                             sx={{
                               display: "-webkit-box",
                               WebkitBoxOrient: "vertical",
@@ -1230,13 +1292,15 @@ const StockList = () => {
                               wordBreak: "break-word",
                             }}
                           >
-                            {h.reference}
+                            {h.reference || "-"}
                           </Typography>
                         </Tooltip>
                       </TableCell>
-                      <TableCell>{h.price}</TableCell>
-                      <TableCell style={{ fontWeight: "bold" }}>
-                        ({h.new_qty.toFixed(2)})
+
+                      <TableCell>{h.price ?? "-"}</TableCell>
+
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        ({Number(h.new_qty || 0).toFixed(2)})
                       </TableCell>
                     </TableRow>
                   );

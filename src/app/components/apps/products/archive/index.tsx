@@ -175,19 +175,23 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
             }}
           >
             <Box display="flex" alignItems="center" gap={1}>
-              {/* Checkbox */}
-              <CustomCheckbox
-                checked={selectedIds.includes(item.id)}
-                onChange={() => handleCheckboxChange(item.id)}
+              <FormControlLabel
+                label={
+                  <Typography
+                    variant="body1"
+                    fontWeight={600}
+                    sx={{ maxWidth: 350 }}
+                  >
+                    {item.name ? item.name : item.sort_name}
+                  </Typography>
+                }
+                control={
+                  <CustomCheckbox
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => handleCheckboxChange(item.id)}
+                  />
+                }
               />
-
-              <Typography
-                variant="body1"
-                fontWeight={600}
-                sx={{ maxWidth: 270 }}
-              >
-                {item.name ? item.name : item.sort_name}
-              </Typography>
             </Box>
           </Box>
         ))}

@@ -409,9 +409,6 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
           alignItems={{ xs: "stretch", sm: "center" }}
           sx={{ flex: 1, minWidth: 0 }}
         >
-          <Button variant="contained" color="primary" sx={{ flexShrink: 0 }}>
-            PAYMENTS ({table.getPrePaginationRowModel().rows.length}){" "}
-          </Button>
           <Box className={isShow ? "" : "date_range_picker"}>
             <DateRangePickerBox
               from={startDate}
@@ -765,161 +762,167 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                   }}
                 >
                   {/* Net Timesheet */}
-                    {payment?.net_timeclock_amount !== null && Number(payment?.net_timeclock_amount) !== 0 && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
+                  {payment?.net_timeclock_amount !== null &&
+                    Number(payment?.net_timeclock_amount) !== 0 && (
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
                       >
-                        Net Timesheet
-                      </Typography>
-                      <Typography
-                        color="success"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        {payment.currency}
-                        {payment.net_timeclock_amount}
-                      </Typography>
-                    </Box>
-                  )}
+                        <Typography
+                          variant="subtitle1"
+                          color="textSecondary"
+                          fontWeight={500}
+                        >
+                          Net Timesheet
+                        </Typography>
+                        <Typography
+                          color="success"
+                          variant="subtitle1"
+                          fontWeight={600}
+                        >
+                          {payment.currency}
+                          {payment.net_timeclock_amount}
+                        </Typography>
+                      </Box>
+                    )}
 
                   {/* Gross amount */}
-                    {payment?.gross_amount !== null && Number(payment?.gross_amount) !== 0 && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
+                  {payment?.gross_amount !== null &&
+                    Number(payment?.gross_amount) !== 0 && (
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
                       >
-                        Gross Amount
-                      </Typography>
-                      <Typography
-                        color="success"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        {payment.currency}
-                        {payment.gross_amount}
-                      </Typography>
-                    </Box>
-                  )}
+                        <Typography
+                          variant="subtitle1"
+                          color="textSecondary"
+                          fontWeight={500}
+                        >
+                          Gross Amount
+                        </Typography>
+                        <Typography
+                          color="success"
+                          variant="subtitle1"
+                          fontWeight={600}
+                        >
+                          {payment.currency}
+                          {payment.gross_amount}
+                        </Typography>
+                      </Box>
+                    )}
 
                   {/* Cis amount */}
-                    {payment?.cis_amount !== null && Number(payment?.cis_amount) !== 0 && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
+                  {payment?.cis_amount !== null &&
+                    Number(payment?.cis_amount) !== 0 && (
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
                       >
-                        Cis Amount
-                      </Typography>
-                      <Typography
-                        color="error"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        -{payment.currency}
-                        {payment.cis_amount}
-                      </Typography>
-                    </Box>
-                  )}
+                        <Typography
+                          variant="subtitle1"
+                          color="textSecondary"
+                          fontWeight={500}
+                        >
+                          Cis Amount
+                        </Typography>
+                        <Typography
+                          color="error"
+                          variant="subtitle1"
+                          fontWeight={600}
+                        >
+                          -{payment.currency}
+                          {payment.cis_amount}
+                        </Typography>
+                      </Box>
+                    )}
 
                   {/* Net PriceWork */}
-                    {payment?.net_pricework_amount !== null && Number(payment?.net_pricework_amount) !== 0 && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
+                  {payment?.net_pricework_amount !== null &&
+                    Number(payment?.net_pricework_amount) !== 0 && (
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
                       >
-                        Net PriceWork
-                      </Typography>
-                      <Typography
-                        color="success"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        {payment.currency}
-                        {payment.net_pricework_amount}
-                      </Typography>
-                    </Box>
-                  )}
+                        <Typography
+                          variant="subtitle1"
+                          color="textSecondary"
+                          fontWeight={500}
+                        >
+                          Net PriceWork
+                        </Typography>
+                        <Typography
+                          color="success"
+                          variant="subtitle1"
+                          fontWeight={600}
+                        >
+                          {payment.currency}
+                          {payment.net_pricework_amount}
+                        </Typography>
+                      </Box>
+                    )}
 
                   {/* Penalty Amount */}
-                    {payment?.net_penalty_amount !== null && Number(payment?.net_penalty_amount) !== 0 && (
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        color="textSecondary"
-                        fontWeight={500}
+                  {payment?.net_penalty_amount !== null &&
+                    Number(payment?.net_penalty_amount) !== 0 && (
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
                       >
-                        Penalty Amount
-                      </Typography>
-                      <Typography
-                        color="error"
-                        variant="subtitle1"
-                        fontWeight={600}
-                      >
-                        -{payment.currency}
-                        {payment.net_penalty_amount}
-                      </Typography>
-                    </Box>
-                  )}
+                        <Typography
+                          variant="subtitle1"
+                          color="textSecondary"
+                          fontWeight={500}
+                        >
+                          Penalty Amount
+                        </Typography>
+                        <Typography
+                          color="error"
+                          variant="subtitle1"
+                          fontWeight={600}
+                        >
+                          -{payment.currency}
+                          {payment.net_penalty_amount}
+                        </Typography>
+                      </Box>
+                    )}
                 </Box>
 
                 {/* Expense Paid */}
-                  {payment?.net_expense_amount && Number(payment?.net_expense_amount) !== 0 && (
-                  <Box
-                    mt={2}
-                    p={2}
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{
-                      backgroundColor: "rgb(238, 238, 238)",
-                      borderRadius: "5px",
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle1"
-                      color="textSecondary"
-                      fontWeight={500}
+                {payment?.net_expense_amount &&
+                  Number(payment?.net_expense_amount) !== 0 && (
+                    <Box
+                      mt={2}
+                      p={2}
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      sx={{
+                        backgroundColor: "rgb(238, 238, 238)",
+                        borderRadius: "5px",
+                      }}
                     >
-                      Expense Paid
-                    </Typography>
-                    <Typography
-                      color="success"
-                      variant="subtitle1"
-                      fontWeight={600}
-                    >
-                      {payment.currency}
-                      {payment.net_expense_amount}
-                    </Typography>
-                  </Box>
-                )}
+                      <Typography
+                        variant="subtitle1"
+                        color="textSecondary"
+                        fontWeight={500}
+                      >
+                        Expense Paid
+                      </Typography>
+                      <Typography
+                        color="success"
+                        variant="subtitle1"
+                        fontWeight={600}
+                      >
+                        {payment.currency}
+                        {payment.net_expense_amount}
+                      </Typography>
+                    </Box>
+                  )}
 
                 {/* Total Paid */}
                 {payment?.total_payable_amount !== null && (

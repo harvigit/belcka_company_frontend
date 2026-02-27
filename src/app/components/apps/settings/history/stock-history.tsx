@@ -340,8 +340,8 @@ const StockHistoryList = () => {
     }),
 
     columnHelper.accessor((row) => row?.total_amount, {
-      id: "totalAmount",
-      header: () => "Total Amount",
+      id: "amount",
+      header: () => "Amount",
       cell: (info) => {
         const item = info.row.original;
         return (
@@ -350,6 +350,7 @@ const StockHistoryList = () => {
             color="textSecondary"
             fontSize={16}
             fontWeight={500}
+            ml={1}
           >
             {item.currency}
             {info.getValue() ?? "0"}
@@ -367,6 +368,7 @@ const StockHistoryList = () => {
           <Typography
             fontSize={16}
             fontWeight={500}
+            ml={2}
             sx={{
               color:
                 Number(info.getValue()) > 0
@@ -395,6 +397,7 @@ const StockHistoryList = () => {
             color="textPrimary"
             fontSize={16}
             fontWeight={500}
+            ml={2}
           >
             {info.getValue() ?? "-"}
           </Typography>
@@ -453,10 +456,6 @@ const StockHistoryList = () => {
         spacing={{ xs: 1, sm: 2, md: 4 }}
       >
         <Grid display="flex" gap={1} alignItems={"center"}>
-          <Button variant="contained" color="primary">
-            STOCK HISTORIES ({table.getPrePaginationRowModel().rows.length}
-            ){" "}
-          </Button>
           <DateRangePickerBox
             from={startDate}
             to={endDate}
