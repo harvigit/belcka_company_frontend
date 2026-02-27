@@ -1008,7 +1008,7 @@ const PurchaseOrderList = () => {
   }));
 
   return (
-    <PermissionGuard permission="Purchase Order">
+    <PermissionGuard permission="Purchasing">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
