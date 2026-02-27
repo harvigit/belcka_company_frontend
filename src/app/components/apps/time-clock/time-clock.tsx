@@ -266,6 +266,8 @@ const TimeClock = ({queryParams}: Props) => {
     const [settingOpen, setSettingOpen] = useState(false);
     const [openDrawer, setOpenDrawer] = useState(false);
 
+    const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
+    
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
 
@@ -303,79 +305,7 @@ const TimeClock = ({queryParams}: Props) => {
         actionType: 'lock' | 'unlock' | 'paid';
         conflictCount: number;
     } | null>(null);
-
-    const handleSettingOpen = () => {
-        setSettingOpen(true);
-    };
-
-    const handleSettingClose = () => {
-        setSettingOpen(false);
-    };
-
-    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        setAnchorEl3(event.currentTarget);
-    };
-
-    const handleClose = () => {
-        setAnchorEl3(null);
-    };
-
-    const handleAddClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        setAddDropDown(event.currentTarget);
-    };
-
-    const handleAddClose = () => {
-        setAddDropDown(null);
-    };
-
-    const handleAddLeaveClick = () => {
-        setAddDropDown(null);
-        setAddLeaveSidebar(true);
-    };
-
-    const handleExpenseClick = () => {
-        setAddDropDown(null);
-        setAddExpenseSidebar(true);
-    };
-
-    const handleWorklogClick = () => {
-        setAddDropDown(null);
-        setAddWorklogSidebar(true);
-    };
-
-    const closeAddLeaveSidebar = async () => {
-        setAddLeaveSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchData(defaultStartDate, defaultEndDate);
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add leave sidebar:', error);
-        }
-    };
-
-    const closeAddWorklogSidebar = async () => {
-        setAddWorklogSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchData(defaultStartDate, defaultEndDate);
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add leave sidebar:', error);
-        }
-    };
-
-    const closeAddExpenseSidebar = async () => {
-        setAddExpenseSidebar(false);
-        try {
-            const defaultStartDate = startDate || defaultStart;
-            const defaultEndDate = endDate || defaultEnd;
-            await fetchData(defaultStartDate, defaultEndDate);
-        } catch (error) {
-            console.error('Error fetching time clock data after closing add leave sidebar:', error);
-        }
-    };
-
+    
     const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
         try {
             setFetchTimesheet(true);
@@ -404,6 +334,23 @@ const TimeClock = ({queryParams}: Props) => {
             setFetchTimesheet(false);
         }
         return [];
+    };
+
+    const fetchConflictsData = async (start: Date, end: Date) => {
+        try {
+            const params: Record<string, string> = {
+                start_date: format(start, 'dd/MM/yyyy'),
+                end_date: format(end, 'dd/MM/yyyy'),
+            };
+
+            const response = await api.get('/time-clock/conflicts', {params});
+            if (response.data.IsSuccess) {
+                setConflictDetails(response.data.conflicts || []);
+            }
+        } catch (error) {
+            console.error('Error fetching conflicts:', error);
+            setConflictDetails([]);
+        }
     };
     
     const [payrollCycle, setPayrollCycle] = useState<string>('');
@@ -449,6 +396,17 @@ const TimeClock = ({queryParams}: Props) => {
         })();
     }, []);
 
+    const refreshTimeClockData = useCallback(async () => {
+        if (!startDate || !endDate) return;
+
+        try {
+            await fetchData(startDate, endDate);
+            await fetchConflictsData(startDate, endDate);
+        } catch (err) {
+            setErrorMessage("Failed to refresh data.");
+        }
+    }, [startDate, endDate, fetchData, fetchConflictsData]);
+    
     useEffect(() => {
         if (!cycleReady || !startDate || !endDate) return;
         fetchData(startDate, endDate);
@@ -491,25 +449,6 @@ const TimeClock = ({queryParams}: Props) => {
         queryParams?.type,
     ]);
 
-    const fetchConflictsData = async (start: Date, end: Date) => {
-        try {
-            const params: Record<string, string> = {
-                start_date: format(start, 'dd/MM/yyyy'),
-                end_date: format(end, 'dd/MM/yyyy'),
-            };
-
-            const response = await api.get('/time-clock/conflicts', {params});
-            if (response.data.IsSuccess) {
-                setConflictDetails(response.data.conflicts || []);
-            }
-        } catch (error) {
-            console.error('Error fetching conflicts:', error);
-            setConflictDetails([]);
-        }
-    };
-    
-    const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
-
     // Conflicts count
     const totalConflictsCount = useMemo(() => {
         return conflictDetails.reduce((count, item) => {
@@ -534,6 +473,90 @@ const TimeClock = ({queryParams}: Props) => {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }
     };
+
+    const handleSettingOpen = () => {
+        setSettingOpen(true);
+    };
+
+    const handleSettingClose = async () => {
+        setSettingOpen(false);
+
+        try {
+            // 1. Re-fetch payroll settings (cycle may have changed)
+            const response = await api.get('/setting/get-payroll-settings');
+            const cycle = response.data?.IsSuccess
+                ? (response.data.data?.payroll_cycle || '')
+                : '';
+
+            setPayrollCycle(cycle);
+
+            let from: Date;
+            let to: Date;
+
+            if (cycle) {
+                const range = getRangeForCycle(cycle);
+                from = range.from;
+                to   = range.to;
+            } else {
+                from = startDate || defaultStart;
+                to   = endDate   || defaultEnd;
+            }
+
+            setStartDate(from);
+            setEndDate(to);
+            saveDateRangeToStorage(from, to);
+
+            await fetchData(from, to);
+            await fetchConflictsData(from, to);
+        } catch (error) {
+            console.error('Error refreshing data after settings close:', error);
+            setErrorMessage('Failed to refresh data after saving settings.');
+        }
+    };
+
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl3(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl3(null);
+    };
+
+    const handleAddClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAddDropDown(event.currentTarget);
+    };
+
+    const handleAddClose = () => {
+        setAddDropDown(null);
+    };
+
+    const handleAddLeaveClick = () => {
+        setAddDropDown(null);
+        setAddLeaveSidebar(true);
+    };
+
+    const handleExpenseClick = () => {
+        setAddDropDown(null);
+        setAddExpenseSidebar(true);
+    };
+
+    const handleWorklogClick = () => {
+        setAddDropDown(null);
+        setAddWorklogSidebar(true);
+    };
+
+    const closeAddLeaveSidebar = async () => {
+        setAddLeaveSidebar(false);
+    };
+
+    const closeAddWorklogSidebar = async () => {
+        setAddWorklogSidebar(false);
+    };
+
+    const closeAddExpenseSidebar = async () => {
+        setAddExpenseSidebar(false);
+    };
+
 
     const handleDateRangeChange = (range: {
         from: Date | null;
