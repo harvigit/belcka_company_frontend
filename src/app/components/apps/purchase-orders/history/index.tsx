@@ -109,12 +109,12 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
               </Typography>
             </Box>
 
-            {history.length > 0 ? (
+            {paginatedFeeds.length > 0 ? (
               <Box sx={{ flex: 1, overflowY: "auto" }}>
                 <Box
                   sx={{
-                    maxHeight: history.length > 3 ? "auto" : "auto",
-                    overflow: history.length > 3 ? "auto" : "visible",
+                    maxHeight: paginatedFeeds.length > 3 ? "auto" : "auto",
+                    overflow: paginatedFeeds.length > 3 ? "auto" : "visible",
                     pr: 0,
                   }}
                 >
@@ -124,7 +124,7 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
                       return (
                         <Box
                           key={addr.id ?? index}
-                          mb={index === history.length - 1 ? 0 : 2}
+                          mb={index === paginatedFeeds.length - 1 ? 0 : 2}
                           pl={2}
                           pr={2}
                           mt={2}
