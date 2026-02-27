@@ -154,16 +154,18 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     initialDates.startDate,
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
-  const [formData, setFormData] = useState<any>({
-    id: 0,
-    company_id: user?.company_id,
-    user_id: userId,
-    from_date: "",
-    to_date: "",
-    invoice_date: "",
-    description: "",
-    invoice_number: "",
-  });
+    const [formData, setFormData] = useState<any>({
+        id: 0,
+        company_id: user?.company_id,
+        user_id: userId,
+        from_date: '',
+        to_date: '',
+        invoice_date: '',
+        description: '',
+        invoice_number: '',
+        file: null,
+
+    });
   const handleDateRangeChange = (range: {
     from: Date | null;
     to: Date | null;
@@ -220,34 +222,51 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     if (startDate && endDate) fetchInvoices(startDate, endDate);
   }, [api, startDate, endDate]);
 
-  const handleZip = async () => {
-    if (!selectedRowIds.size) {
-      toast.error("Please select at least one invoice");
-      return;
-    }
+    const handleZip = async () => {
+        if (!selectedRowIds.size) {
+            toast.error('Please select at least one invoice');
+            return;
+        }
 
-    try {
-      const res = await api.post(
-        "bookkeeper-invoices/zip",
-        { ids: Array.from(selectedRowIds) },
-        { responseType: "blob" },
-      );
+        try {
+            const res = await api.post('bookkeeper-invoices/zip', {
+                ids: Array.from(selectedRowIds),
+            });
 
-      const blob = new Blob([res.data], { type: "application/zip" });
-      const url = window.URL.createObjectURL(blob);
+            if (!res.data?.IsSuccess) {
+                toast.error(res.data?.message || 'Failed to create zip');
+                return;
+            }
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "invoices.zip";
-      document.body.appendChild(a);
-      a.click();
+            const zipUrl = res.data?.data?.url;
+            if (!zipUrl) {
+                toast.error('No zip URL returned from server');
+                return;
+            }
 
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+            const fileRes = await fetch(zipUrl);
+            if (!fileRes.ok) {
+                toast.error('Failed to download zip file');
+                return;
+            }
+
+            const blob = await fileRes.blob();
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'invoices.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Invoices downloaded!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Something went wrong');
+        }
+    };
 
   const viewPdf = (pdfPath: string) => {
     if (pdfPath) {
@@ -257,55 +276,77 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
     }
   };
 
-  const handleOpenCreateDrawer = () => {
-    setFormData({
-      id: 0,
-      company_id: user?.company_id,
-      user_id: userId,
-      from_date: "",
-      to_date: "",
-      invoice_date: "",
-      description: "",
-      invoice_number: "",
-    });
-    setDrawerOpen(true);
-  };
+    const handleOpenCreateDrawer = () => {
+        setFormData({
+            id: 0,
+            company_id: user?.company_id,
+            user_id: userId,
+            from_date: '',
+            to_date: '',
+            invoice_date: '',
+            description: '',
+            invoice_number: '',
+            file: null,
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
+        });
+        setDrawerOpen(true);
+    };
 
-    try {
-      const formatDateForBE = (date?: string) =>
-        date ? DateTime.fromISO(date).toFormat("dd/MM/yyyy") : "";
-      const payload = {
-        ...formData,
-        from_date: formatDateForBE(formData.from_date),
-        to_date: formatDateForBE(formData.to_date),
-        invoice_date: formatDateForBE(formData.invoice_date),
-      };
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
 
-      const result = await api.post("bookkeeper-invoices/store", payload, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+        try {
+            const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
 
-      if (result.data.IsSuccess) {
-        toast.success(result.data.message);
-        setDrawerOpen(false);
-        if (startDate && endDate) {
-          fetchInvoices(startDate, endDate);
+            if (formData.file) {
+                const ext = '.' + formData.file.name.split('.').pop()?.toLowerCase();
+                if (!ALLOWED_EXTENSIONS.includes(ext)) {
+                    toast.error('Only PDF, JPG, PNG, WEBP files are allowed');
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
+            const formatDateForBE = (date?: string) =>
+                date ? DateTime.fromISO(date).toFormat('dd/MM/yyyy') : '';
+
+            const payload = new FormData();
+            payload.append('id', formData.id ?? 0);
+            payload.append('company_id', formData.company_id ?? '');
+            payload.append('user_id', formData.user_id ?? '');
+            payload.append('invoice_number', formData.invoice_number ?? '');
+            payload.append('description', formData.description ?? '');
+            payload.append('from_date', formatDateForBE(formData.from_date));
+            payload.append('to_date', formatDateForBE(formData.to_date));
+            payload.append('invoice_date', formatDateForBE(formData.invoice_date));
+
+            if (formData.file) {
+                payload.append('file', formData.file);
+            }
+
+            const result = await api.post('bookkeeper-invoices/store', payload, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (result.data.IsSuccess) {
+                toast.success(result.data.message);
+                setDrawerOpen(false);
+                if (startDate && endDate) {
+                    fetchInvoices(startDate, endDate);
+                }
+            } else {
+                toast.error(result.data.message);
+            }
+        } catch (error) {
+            console.error('Invoice upload failed:', error);
+            toast.error('Something went wrong');
+        } finally {
+            setIsSaving(false);
         }
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.error("Invoice upload failed:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    };
 
   const flattenedData = useMemo(() => {
     if (!data) return [];
@@ -619,9 +660,9 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
           alignItems={{ xs: "stretch", sm: "center" }}
           sx={{ flex: 1, minWidth: 0 }}
         >
-          <Button variant="contained" color="primary" sx={{ flexShrink: 0 }}>
-            INVOICES ({table.getPrePaginationRowModel().rows.length}){" "}
-          </Button>
+          {/*<Button variant="contained" color="primary" sx={{ flexShrink: 0 }}>*/}
+          {/*  INVOICES ({table.getPrePaginationRowModel().rows.length}){" "}*/}
+          {/*</Button>*/}
           <Box className={isShow ? "" : "date_range_picker"}>
             <DateRangePickerBox
               from={startDate}

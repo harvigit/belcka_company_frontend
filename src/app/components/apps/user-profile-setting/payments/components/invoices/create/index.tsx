@@ -53,24 +53,28 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
   const [preview, setPreview] = useState<string | null>(null);
   const [users, setUsers] = useState<any[]>([]);
 
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: {
-      "image/jpeg": [".jpeg", ".jpg"],
-      "image/png": [".png"],
-      "application/pdf": [".pdf"],
-    },
-    multiple: false,
-    onDrop: (acceptedFiles) => {
-      const selectedFile = acceptedFiles[0];
-      if (!selectedFile) return;
+    const { getRootProps, getInputProps } = useDropzone({
+        accept: {
+            "image/jpeg": [".jpg", ".jpeg"],
+            "image/png": [".png"],
+            "image/webp": [".webp"],
+            "application/pdf": [".pdf"],
+        },
+        multiple: false,
+        onDrop: (acceptedFiles) => {
+            const selectedFile = acceptedFiles[0];
+            if (!selectedFile) return;
 
-      setFormData((prev) => ({ ...prev, file_name: selectedFile }));
-      setPreview(URL.createObjectURL(selectedFile));
-    },
-    onDropRejected: () => {
-      toast.error("Please upload a valid PDF file");
-    },
-  });
+            setFormData((prev: any) => ({ ...prev, file: selectedFile }));
+
+            const ext = selectedFile.name.split(".").pop()?.toLowerCase();
+            if (ext === "pdf") {
+                setPreview("/icons/pdf-icon.png");
+            } else {
+                setPreview(URL.createObjectURL(selectedFile));
+            }
+        },
+    });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -233,7 +237,7 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
                     },
                   }}
                 >
-                  <input {...getInputProps()} accept=".png,.jpg,.jpeg,.pdf" />
+                  <input {...getInputProps()} accept=".pdf,.jpg,.jpeg,.png,.webp"/>
                   {preview ? (
                     <Avatar
                       src={preview}
