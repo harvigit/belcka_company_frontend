@@ -245,7 +245,6 @@ const PurchaseOrder: React.FC<Props> = ({
       header: "ITEM",
       cell: ({ row }) => {
         const item = row.original;
-        console.log(item)
         return (
           <Stack
             direction="row"

@@ -58,6 +58,13 @@ const MenuItems: NavGroup[] = [
   },
   {
     id: uniqueId(),
+    title: "Payments",
+    slug: "payments",
+    icon: IconCurrencyDollar,
+    href: "/apps/payments/index",
+  },
+  {
+    id: uniqueId(),
     title: "Projects",
     slug: "projects",
     icon: IconFiles,
@@ -157,14 +164,6 @@ const MenuItems: NavGroup[] = [
     slug: "suppliers",
     icon: IconBox,
     href: "/apps/suppliers/list",
-  },
-
-  {
-    id: uniqueId(),
-    title: "Payments",
-    slug: "payments",
-    icon: IconCurrencyDollar,
-    href: "/apps/payments/index",
   },
 
   {

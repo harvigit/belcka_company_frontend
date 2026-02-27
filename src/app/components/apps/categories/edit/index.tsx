@@ -74,8 +74,8 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     imageSrc: string,
     pixelCrop: any,
   ): Promise<File> => {
-    // Convert remote image to blob first (fix black image issue)
-    const response = await fetch(imageSrc);
+    // Fetch remote image
+    const response = await fetch(imageSrc, { mode: "cors" });
     const blob = await response.blob();
 
     const imageBitmap = await createImageBitmap(blob);
@@ -83,8 +83,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
+    // Square crop, based on pixelCrop size
+    const size = Math.min(pixelCrop.width, pixelCrop.height);
+    canvas.width = size;
+    canvas.height = size;
 
     ctx?.drawImage(
       imageBitmap,
@@ -94,14 +96,14 @@ const EditCategory: React.FC<EditCategoryProps> = ({
       pixelCrop.height,
       0,
       0,
-      pixelCrop.width,
-      pixelCrop.height,
+      size,
+      size,
     );
 
     return new Promise((resolve) => {
-      canvas.toBlob((newBlob) => {
-        if (!newBlob) return;
-        resolve(new File([newBlob], "cropped.png", { type: "image/png" }));
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        resolve(new File([blob], "cropped.png", { type: "image/png" }));
       }, "image/png");
     });
   };
@@ -114,12 +116,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     if (!preview || !croppedAreaPixels) return;
 
     const croppedFile = await getCroppedImg(preview, croppedAreaPixels);
-
     setFormData((prev) => ({ ...prev, image: croppedFile }));
     setPreview(URL.createObjectURL(croppedFile));
     setShowCrop(false);
   };
-
   // Dropzone
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
@@ -130,11 +130,8 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     onDrop: (acceptedFiles) => {
       const selectedFile = acceptedFiles[0];
       if (!selectedFile) return;
-
-      const imageUrl = URL.createObjectURL(selectedFile);
-
-      setPreview(imageUrl);
-      setShowCrop(true);
+      setPreview(URL.createObjectURL(selectedFile));
+      setShowCrop(true); // Crop modal opens automatically
     },
     onDropRejected: () => {
       toast.error("Please upload a valid image file");
@@ -347,8 +344,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
               crop={crop}
               zoom={zoom}
               aspect={1}
-              showGrid
-              objectFit="cover"
+              cropShape="rect"
+              showGrid={true}
+              objectFit="contain"
+              restrictPosition={false} 
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
@@ -359,7 +358,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
             <Typography gutterBottom>Zoom</Typography>
             <Slider
               value={zoom}
-              min={1}
+              min={0.5}
               max={3}
               step={0.1}
               onChange={(_, value) => setZoom(value as number)}

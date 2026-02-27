@@ -141,6 +141,7 @@ const PurchaseProductList: React.FC<Props> = ({
 
       if (res.data) {
         setData(res.data.info);
+        setSelectedRowIds(new Set());
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -370,37 +371,46 @@ const PurchaseProductList: React.FC<Props> = ({
         }
 
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Fab
-              size="small"
-              onClick={() => {
-                const newQty = Number(item.total_qty) - 1;
-                updateQty(newQty > 0 ? newQty : 0);
-              }}
-            >
-              <IconMinus size={16} />
-            </Fab>
+          <Stack display={"block"}>
+            <Box display="flex" flexDirection="row" alignItems="center" gap={1}>
+              <Fab
+                size="small"
+                onClick={() => {
+                  const newQty = Number(item.total_qty) - 1;
+                  updateQty(newQty > 0 ? newQty : 0);
+                }}
+              >
+                <IconMinus size={16} />
+              </Fab>
 
-            <TextField
-              size="small"
-              value={item.total_qty}
-              className="qty_input"
-              inputProps={{ style: { textAlign: "center" } }}
-              sx={{ width: 60 }}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (!/^\d*$/.test(value)) return;
-                const num = Number(value);
-                updateQty(num >= 0 ? num : 0);
-              }}
-            />
+              <TextField
+                size="small"
+                value={item.total_qty}
+                className="qty_input"
+                inputProps={{ style: { textAlign: "center" } }}
+                sx={{ width: 60 }}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!/^\d*$/.test(value)) return;
+                  const num = Number(value);
+                  updateQty(num >= 0 ? num : 0);
+                }}
+              />
 
-            <Fab
-              size="small"
-              onClick={() => updateQty(Number(item.total_qty) + 1)}
-            >
-              <IconPlus size={16} />
-            </Fab>
+              <Fab
+                size="small"
+                onClick={() => updateQty(Number(item.total_qty) + 1)}
+              >
+                <IconPlus size={16} />
+              </Fab>
+            </Box>
+            {item.pending_qty ? (
+              <Typography fontSize={12} color="error" variant="h6" fontWeight={500} mt={1} ml={4}>
+                Requested Qty: {item.pending_qty}
+              </Typography>
+            ) : (
+              <></>
+            )}
           </Stack>
         );
       },
@@ -750,44 +760,50 @@ const PurchaseProductList: React.FC<Props> = ({
               <IconFilter width={18} />
             </Button>
             <Box display={"flex"} gap={2}>
-              <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
-                <b>Project</b>
-                <p
-                  style={{
-                    margin: "0px",
-                    alignItems: "flex-start",
-                    display: "flex",
-                  }}
-                >
-                  {tempFilters.project} <IconChevronRight />
-                </p>
-              </Typography>
-              <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
-                <b>Supplier</b>{" "}
-                <p
-                  style={{
-                    margin: "0px",
-                    alignItems: "flex-start",
-                    display: "flex",
-                  }}
-                >
-                  {tempFilters.supplier}
-                  <IconChevronRight />
-                </p>
-              </Typography>
-              <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
-                <b>Address</b>{" "}
-                <p
-                  style={{
-                    margin: "0px",
-                    alignItems: "flex-start",
-                    display: "flex",
-                  }}
-                >
-                  {tempFilters.address}
-                  <IconChevronRight />
-                </p>
-              </Typography>
+              {tempFilters.project && (
+                <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
+                  <b>Project</b>
+                  <p
+                    style={{
+                      margin: "0px",
+                      alignItems: "flex-start",
+                      display: "flex",
+                    }}
+                  >
+                    {tempFilters.project} <IconChevronRight />
+                  </p>
+                </Typography>
+              )}
+              {tempFilters.supplier && (
+                <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
+                  <b>Supplier</b>{" "}
+                  <p
+                    style={{
+                      margin: "0px",
+                      alignItems: "flex-start",
+                      display: "flex",
+                    }}
+                  >
+                    {tempFilters.supplier}
+                    <IconChevronRight />
+                  </p>
+                </Typography>
+              )}
+              {tempFilters.address && (
+                <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
+                  <b>Address</b>{" "}
+                  <p
+                    style={{
+                      margin: "0px",
+                      alignItems: "flex-start",
+                      display: "flex",
+                    }}
+                  >
+                    {tempFilters.address}
+                    <IconChevronRight />
+                  </p>
+                </Typography>
+              )}
             </Box>
             <Dialog
               open={filterOpen}

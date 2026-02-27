@@ -28,6 +28,7 @@ import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import api from '@/utils/axios';
 import { AxiosResponse } from 'axios';
+import toast from 'react-hot-toast';
 
 interface User {
     id: number;
@@ -437,6 +438,7 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
             } as any);
 
             if (response.data.IsSuccess) {
+                toast.success(response.data.message)
                 onClose();
             } else {
                 setError(response.data.message || `Failed to ${isEditMode ? 'update' : 'add'} leave. Please try again.`);
