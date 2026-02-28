@@ -551,6 +551,25 @@ const InvoicesList: React.FC<Props> = ({ userId, isShow }) => {
       },
     }),
 
+      columnHelper.accessor((row) => row?.amount, {
+          id: "amount",
+          header: () => "Amount",
+          cell: ({ row }) => {
+              const item = row.original;
+              return (
+                  <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={1}
+                      textTransform={"capitalize"}
+                      className="f-14"
+                  >
+                      <Typography>{item.currency} {item.amount}</Typography>
+                  </Stack>
+              );
+          },
+      }),
+      
     columnHelper.accessor((row) => row?.description, {
       id: "description",
       header: () => "Description",
