@@ -317,9 +317,6 @@ const ProductList = () => {
 
     const originalMainImage = selectedRow.image_url;
 
-    /* -------------------------------
-     1️⃣ Removed gallery images
-  ------------------------------- */
     const removedIds = originalUploadedImages
       .filter((orig: any) => !uploadedImages.some((u) => u.id === orig.id))
       .map((img: any) => img.id);
@@ -328,9 +325,6 @@ const ProductList = () => {
       formData.append("removed_image_ids[]", String(id));
     });
 
-    /* -------------------------------
-     2️⃣ If NEW image selected as main
-  ------------------------------- */
     if (newMainImage) {
       formData.append("image", newMainImage);
 
@@ -340,9 +334,6 @@ const ProductList = () => {
           formData.append("files", file);
         });
     } else {
-      /* -------------------------------
-       3️⃣ If EXISTING image selected as main
-    ------------------------------- */
       if (mainImageId !== null) {
         formData.append("main_image_id", String(mainImageId));
       }
@@ -362,17 +353,16 @@ const ProductList = () => {
       }
     }
 
-    /* -------------------------------
-     4️⃣ API Call
-  ------------------------------- */
     try {
+      const currentPage = table.getState().pagination.pageIndex;
+
       const res = await api.post(`products/new-images`, formData, {
         headers: { "Content-Type": undefined },
       });
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchProducts();
+        fetchProducts(currentPage);
         setOpenImageManager(false);
       } else {
         toast.error(res.data.message);
@@ -400,16 +390,23 @@ const ProductList = () => {
   };
 
   // Fetch data
-  const fetchProducts = async () => {
+  const fetchProducts = async (restorePage?: number) => {
+    console.log(restorePage, "restorePage");
     setFetchProduct(true);
     try {
       const res = await api.get(`products/get?company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
         setCurrency(res.data.info[0].currency);
+
+        if (restorePage !== undefined) {
+          setTimeout(() => {
+            table.setPageIndex(restorePage);
+          }, 0);
+        }
       }
     } catch (err) {
-      console.error("Failed to fetch supplier", err);
+      console.error("Failed to fetch products", err);
     }
     setFetchProduct(false);
   };
@@ -417,7 +414,7 @@ const ProductList = () => {
   useEffect(() => {
     fetchResources();
     fetchProducts();
-  }, [api]);
+  }, []);
 
   const exportProducts = async () => {
     try {
@@ -935,6 +932,7 @@ const ProductList = () => {
     data: filteredData,
     columns,
     state: { columnFilters, sorting },
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -951,7 +949,7 @@ const ProductList = () => {
   // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
-  }, [searchTerm, table]);
+  }, [searchTerm]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -1371,7 +1369,7 @@ const ProductList = () => {
                 variant="outlined"
                 color="error"
                 startIcon={<IconTrash width={18} />}
-                sx={{ marginRight: "5px",marginLeft: 1 }}
+                sx={{ marginRight: "5px", marginLeft: 1 }}
                 onClick={() => {
                   const selectedIds = Array.from(selectedRowIds);
                   setUsersToDelete(selectedIds);
