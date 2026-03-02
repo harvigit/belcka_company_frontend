@@ -84,6 +84,8 @@ interface SupplierFormData {
   weight?: string;
   weight_unit?: string | null;
   status: boolean;
+  contact_person_email?: string;
+  contact_person_name?: string;
 }
 
 const SupplierList = () => {

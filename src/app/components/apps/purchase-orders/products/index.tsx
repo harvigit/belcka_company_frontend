@@ -568,7 +568,7 @@ const PurchaseProductList: React.FC<Props> = ({
       },
     }),
 
-    columnHelper.accessor("user_name", {
+    columnHelper.accessor("order_users", {
       id: "orderBy",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -584,7 +584,7 @@ const PurchaseProductList: React.FC<Props> = ({
         return (
           <Stack direction="row" alignItems="center" spacing={4} sx={{ ml: 1 }}>
             <Typography textTransform="capitalize" className="f-14">
-              {item.user_name ? item.user_name : "-"}
+              {item.order_users ? item.order_users : "-"}
             </Typography>
           </Stack>
         );

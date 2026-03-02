@@ -5,9 +5,7 @@ import {
   IconButton,
   Typography,
   Button,
-  Stack,
   InputLabel,
-  Autocomplete,
   Avatar,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -36,6 +34,8 @@ interface SupplierFormData {
   weight?: string;
   weight_unit?: string | null;
   status: boolean;
+  contact_person_email?: string;
+  contact_person_name?: string;
 }
 
 interface EditSupplierProps {
@@ -112,6 +112,8 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
           weight: supplier.weight || "",
           weight_unit: supplier.unit_name || "",
           status: supplier.status ?? true,
+          contact_person_email: supplier.contact_person_email || "",
+          contact_person_name: supplier.contact_person_name || "",
         });
 
         // Prefill image preview
@@ -207,6 +209,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
               <Typography variant="body1">Supplier Name</Typography>
               <CustomTextField
                 name="name"
+                className="f-14"
                 fullWidth
                 value={formData.name}
                 onChange={handleChange}
@@ -238,6 +241,29 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 name="account_number"
                 value={formData.account_number || ""}
+                onChange={handleChange}
+              />
+
+              <Typography variant="body1" mt={2}>
+                Contact Person Name
+              </Typography>
+
+              <CustomTextField
+                fullWidth
+                name="contact_person_name"
+                value={formData.contact_person_name || ""}
+                onChange={handleChange}
+              />
+
+              <Typography variant="body1" mt={2}>
+                Contact Person Email
+              </Typography>
+
+              <CustomTextField
+                fullWidth
+                type="email"
+                name="contact_person_email"
+                value={formData.contact_person_email || ""}
                 onChange={handleChange}
               />
 

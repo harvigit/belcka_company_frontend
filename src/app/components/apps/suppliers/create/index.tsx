@@ -36,6 +36,8 @@ interface SupplierFormData {
   weight?: string;
   weight_unit?: string | null;
   status: boolean;
+  contact_person_email?: string;
+  contact_person_name?: string;
 }
 
 interface CreateSupplierProps {
@@ -189,6 +191,29 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 fullWidth
                 name="account_number"
                 value={formData.account_number || ""}
+                onChange={handleChange}
+              />
+
+              <Typography variant="body1" mt={2}>
+                Contact Person Name
+              </Typography>
+
+              <CustomTextField
+                fullWidth
+                name="contact_person_name"
+                value={formData.contact_person_name || ""}
+                onChange={handleChange}
+              />
+
+              <Typography variant="body1" mt={2}>
+                Contact Person Email
+              </Typography>
+
+              <CustomTextField
+                fullWidth
+                type="email"
+                name="contact_person_email"
+                value={formData.contact_person_email || ""}
                 onChange={handleChange}
               />
 

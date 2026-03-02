@@ -1268,7 +1268,7 @@ const StockList = () => {
                             className="f-14"
                             fontWeight={"bold"}
                           >
-                            ({h.sub_qty ?? 0})
+                            ({h.sub_qty ?? 0} {h.pack_off_unit_name ?? ""})
                           </Typography>
                         </Box>
                       </TableCell>
