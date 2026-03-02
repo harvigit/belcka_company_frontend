@@ -40,15 +40,15 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconEye,
-  IconFilter,
-  IconNotes,
-  IconRotate,
-  IconSearch,
-  IconTrash,
-} from "@tabler/icons-react";
+    IconChevronLeft,
+    IconChevronRight,
+    IconEye,
+    IconFilter,
+    IconNotes,
+    IconRotate,
+    IconSearch,
+    IconTrash, IconUsersGroup,
+} from '@tabler/icons-react';
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
@@ -69,6 +69,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ArchiveTeam from "../archive";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import CreateTeam from "../create";
+import TeamMembersLimit from "../team-members-limit";
 import EditTeam from "../edit";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
@@ -143,7 +144,8 @@ const TablePagination = () => {
   const [createDrawer, setCreateDrawer] = useState(false);
   const [editDrawer, setEditDrawer] = useState(false);
   const [editTeamId, setEditTeamId] = useState<number | null>(null);
-
+    const [teamMembersLimit, setTeamMembersLimit] = useState(false);
+    
   const handleEditClick = (teamId: number) => {
     setEditTeamId(teamId);
     setEditDrawer(true);
@@ -828,6 +830,30 @@ const TablePagination = () => {
                   Add Team
                 </Link>
               </MenuItem>
+                <MenuItem onClick={handleClose}>
+                    <Link
+                        color="body1"
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setTeamMembersLimit(true);
+                        }}
+                        style={{
+                            width: "100%",
+                            color: "#11142D",
+                            textTransform: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyItems: "center",
+                        }}
+                    >
+                        <ListItemIcon>
+                            <IconUsersGroup width={18} />
+                        </ListItemIcon>
+                        Team Members Limit
+                    </Link>
+                </MenuItem>
+                
               <MenuItem onClick={handleClose}>
                 <Link
                   color="body1"
@@ -886,6 +912,13 @@ const TablePagination = () => {
         <CreateTeam
           open={createDrawer}
           onClose={() => setCreateDrawer(false)}
+          onWorkUpdated={fetchTeams}
+        />
+          
+          {/* Team Members Limit */}
+        <TeamMembersLimit
+          open={teamMembersLimit}
+          onClose={() => setTeamMembersLimit(false)}
           onWorkUpdated={fetchTeams}
         />
 

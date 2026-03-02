@@ -6,18 +6,28 @@ import {Grid, Tabs, Tab, Box, Stack} from '@mui/material';
 import CreateWork from '@/app/components/apps/settings/tasks/list';
 import LocationList from '@/app/components/apps/settings/locations/list';
 import LeaveList from '@/app/components/apps/settings/leaves/list';
-import {IconBell, IconMap, IconNotebook, IconDoorExit, IconLock, IconExclamationCircle, IconCategory2, IconClock, IconUsers} from '@tabler/icons-react';
+import {
+    IconBell,
+    IconMap,
+    IconNotebook,
+    IconDoorExit,
+    IconLock,
+    IconExclamationCircle,
+    IconCategory2,
+    IconClock,
+    IconUsers
+} from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
-import PermissionGuard from "@/app/auth/PermissionGuard";
+import PermissionGuard from '@/app/auth/PermissionGuard';
 import CategoryList from '@/app/components/apps/settings/expense-categories/list';
-import { useSession } from 'next-auth/react';
-import { User } from 'next-auth';
+import {useSession} from 'next-auth/react';
+import {User} from 'next-auth';
 import TradeList from '@/app/components/apps/settings/company-trades/list';
 import HistoryList from '@/app/components/apps/settings/history';
-import { IconCategoryPlus } from '@tabler/icons-react';
-import { IconBasket } from '@tabler/icons-react';
+import {IconCategoryPlus} from '@tabler/icons-react';
+import {IconBasket} from '@tabler/icons-react';
 import TradeCategoryList from '@/app/components/apps/trade-categories/list';
 import UnitList from '@/app/components/apps/units/list';
 import StockHistoryList from '@/app/components/apps/settings/history/stock-history';
@@ -139,7 +149,7 @@ const AdminSetting = () => {
                                         label="Company Trades"
                                         {...a11yProps(6)}
                                     />
-                                        <Tab
+                                    <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconCategoryPlus size="20"/>}
@@ -153,14 +163,14 @@ const AdminSetting = () => {
                                         label="Units"
                                         {...a11yProps(8)}
                                     />
-                                     <Tab
+                                    <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUsers size="20"/>}
                                         label="Clients"
                                         {...a11yProps(9)}
                                     />
-                                     <Tab
+                                    <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconClock size="20"/>}
@@ -202,25 +212,25 @@ const AdminSetting = () => {
                                 <PermissionSettings/>
                             </TabPanel>
                             <TabPanel value={value} index={5}>
-                                <CategoryList />
+                                <CategoryList/>
                             </TabPanel>
                             <TabPanel value={value} index={6}>
-                                <TradeList />
+                                <TradeList/>
                             </TabPanel>
                             <TabPanel value={value} index={7}>
-                                <TradeCategoryList />
+                                <TradeCategoryList/>
                             </TabPanel>
                             <TabPanel value={value} index={8}>
-                                <UnitList />
+                                <UnitList/>
                             </TabPanel>
                             <TabPanel value={value} index={9}>
-                                <ClientList />
+                                <ClientList/>
                             </TabPanel>
                             <TabPanel value={value} index={10}>
-                                <StockHistoryList />
+                                <StockHistoryList/>
                             </TabPanel>
                             <TabPanel value={value} index={11}>
-                                <HistoryList />
+                                <HistoryList/>
                             </TabPanel>
                         </BlankCard>
                     </Grid>
@@ -229,12 +239,12 @@ const AdminSetting = () => {
         </PageContainer>
     )
     return user?.user_role_id === 1 ? (
-    content
-  ) : (
-    <PermissionGuard permission="Settings">
-      {content}
-    </PermissionGuard>
-  );
+        content
+    ) : (
+        <PermissionGuard permission="Settings">
+            {content}
+        </PermissionGuard>
+    );
 };
 
 export default AdminSetting;
