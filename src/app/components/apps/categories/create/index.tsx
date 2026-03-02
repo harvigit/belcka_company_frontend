@@ -75,10 +75,8 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    const size = Math.min(pixelCrop.width, pixelCrop.height);
-
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
 
     ctx?.drawImage(
       image,
@@ -88,19 +86,15 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
       pixelCrop.height,
       0,
       0,
-      size,
-      size,
+      pixelCrop.width,
+      pixelCrop.height,
     );
 
     return new Promise((resolve) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return;
-          resolve(new File([blob], "cropped.jpg", { type: "image/jpeg" }));
-        },
-        "image/jpeg",
-        1,
-      );
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        resolve(new File([blob], "cropped.png", { type: "image/png" }));
+      }, "image/png");
     });
   };
 
@@ -128,10 +122,10 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
       const selectedFile = acceptedFiles[0];
       if (!selectedFile) return;
 
-      const imageUrl = URL.createObjectURL(selectedFile);
-      setPreview(imageUrl);
-      setZoom(1);
       setCrop({ x: 0, y: 0 });
+      setZoom(1);
+
+      setPreview(URL.createObjectURL(selectedFile));
       setShowCrop(true);
     },
     onDropRejected: () => {
@@ -314,8 +308,10 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
               aspect={1}
               cropShape="rect"
               showGrid={true}
-              objectFit="contain" 
-              restrictPosition={false}
+              objectFit="cover"
+              restrictPosition={true}
+              minZoom={1}
+              maxZoom={3}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}

@@ -69,35 +69,28 @@ const EditCategory: React.FC<EditCategoryProps> = ({
       image.onerror = (error) => reject(error);
       image.src = url;
     });
-
   const getCroppedImg = async (
     imageSrc: string,
     pixelCrop: any,
   ): Promise<File> => {
-    // Fetch remote image
-    const response = await fetch(imageSrc, { mode: "cors" });
-    const blob = await response.blob();
-
-    const imageBitmap = await createImageBitmap(blob);
+    const image = await createImage(imageSrc);
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // Square crop, based on pixelCrop size
-    const size = Math.min(pixelCrop.width, pixelCrop.height);
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
 
     ctx?.drawImage(
-      imageBitmap,
+      image,
       pixelCrop.x,
       pixelCrop.y,
       pixelCrop.width,
       pixelCrop.height,
       0,
       0,
-      size,
-      size,
+      pixelCrop.width,
+      pixelCrop.height,
     );
 
     return new Promise((resolve) => {
@@ -130,8 +123,12 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     onDrop: (acceptedFiles) => {
       const selectedFile = acceptedFiles[0];
       if (!selectedFile) return;
+
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+
       setPreview(URL.createObjectURL(selectedFile));
-      setShowCrop(true); // Crop modal opens automatically
+      setShowCrop(true);
     },
     onDropRejected: () => {
       toast.error("Please upload a valid image file");
@@ -346,8 +343,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
               aspect={1}
               cropShape="rect"
               showGrid={true}
-              objectFit="contain"
-              restrictPosition={false} 
+              objectFit="cover"
+              restrictPosition={true}
+              minZoom={1}
+              maxZoom={3}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}

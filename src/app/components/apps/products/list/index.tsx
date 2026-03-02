@@ -174,6 +174,10 @@ const ProductList = () => {
   const [mainImageId, setMainImageId] = useState<number | null>(null);
   const [originalUploadedImages, setOriginalUploadedImages] = useState([]);
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [editing, setEditing] = useState<{
+    id: number | null;
+    field: "price" | "market_price" | null;
+  }>({ id: null, field: null });
 
   useEffect(() => {
     if (selectedRow) {
@@ -572,6 +576,31 @@ const ProductList = () => {
     }
   };
 
+  const [inputValue, setInputValue] = useState("");
+
+  const updatePrice = async (
+    id: number,
+    price?: number,
+    market_price?: number,
+  ) => {
+    try {
+      const payload: any = { id };
+
+      if (price !== undefined) payload.price = Number(price);
+      if (market_price !== undefined)
+        payload.market_price = Number(market_price);
+
+      const res = await api.post("products/update-price", payload);
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+      }
+    } catch (error) {
+      console.error("Update failed", error);
+    }
+  };
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
@@ -873,16 +902,88 @@ const ProductList = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isEditing = editing.id === item.id && editing.field === "price";
+
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.currency}
-              {item.price ? item.price : "0"}
-            </Typography>
+          <Stack direction="row" alignItems="center">
+            {isEditing ? (
+              <TextField
+                className="f-14"
+                size="small"
+                value={inputValue}
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                variant="standard"
+                sx={{ width: 80 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (/^\d*(\.\d{0,2})?$/.test(value)) {
+                    if (value === "" || Number(value) <= 10000) {
+                      setInputValue(value);
+                    }
+                  }
+                }}
+                onBlur={async () => {
+                  if (inputValue === "") return;
+                  let number = Number(inputValue);
+                  if (number > 10000) {
+                    return;
+                  }
+
+                  const formatted = number.toFixed(2);
+
+                  await updatePrice(item.id, undefined, Number(formatted));
+
+                  setEditing({ id: null, field: null });
+                }}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    let number = Number(inputValue);
+                    if (number > 10000) {
+                      return;
+                    }
+                    const formatted = number.toFixed(2);
+
+                    await updatePrice(item.id, undefined, Number(formatted));
+                    setEditing({ id: null, field: null });
+                  }
+                }}
+              />
+            ) : (
+              <Typography
+                className="f-14"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    border: "1px solid #1976d2",
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing({ id: item.id, field: "price" });
+                  setInputValue(item.price || "0");
+                }}
+              >
+                {item.currency}
+                {item.price || "0"}
+              </Typography>
+            )}
           </Stack>
         );
       },
     }),
+
     columnHelper.accessor((row) => row?.market_price, {
       id: "market",
       header: () => (
@@ -894,16 +995,90 @@ const ProductList = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isEditing =
+          editing.id === item.id && editing.field === "market_price";
+
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.currency}
-              {item.market_price ? item.market_price : "0"}
-            </Typography>
+            {/* Amount */}
+            {isEditing ? (
+              <TextField
+                className="f-14"
+                size="small"
+                value={inputValue}
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                variant="standard"
+                sx={{ width: 80 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (/^\d*(\.\d{0,2})?$/.test(value)) {
+                    if (value === "" || Number(value) <= 10000) {
+                      setInputValue(value);
+                    }
+                  }
+                }}
+                onBlur={async () => {
+                  if (inputValue === "") return;
+                  let number = Number(inputValue);
+                  if (number > 10000) {
+                    return;
+                  }
+
+                  const formatted = number.toFixed(2);
+
+                  await updatePrice(item.id, undefined, Number(formatted));
+
+                  setEditing({ id: null, field: null });
+                }}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    let number = Number(inputValue);
+                    if (number > 10000) {
+                      return;
+                    }
+                    const formatted = number.toFixed(2);
+
+                    await updatePrice(item.id, undefined, Number(formatted));
+                    setEditing({ id: null, field: null });
+                  }
+                }}
+              />
+            ) : (
+              <Typography
+                className="f-14"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    border: "1px solid #1976d2",
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing({ id: item.id, field: "market_price" });
+                  setInputValue(item.market_price || "0");
+                }}
+              >
+                {item.currency}
+                {item.market_price || "0"}
+              </Typography>
+            )}
           </Stack>
         );
       },
     }),
+
     columnHelper.accessor((row) => row?.stock_status, {
       id: "availability",
       header: () => "Availability",

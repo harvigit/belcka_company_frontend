@@ -83,7 +83,7 @@ const ReceivePurchaseOrder = () => {
               ordered_qty: ordered,
               received_qty: received,
               remaining_qty: ordered - received,
-              receive_now: ordered - received > 0 ? 1 : 0,
+              receive_now: ordered - received > 0 ? ordered : 0,
               image_url: p.image_url,
               uuid: p.uuid,
               description: p.description,
@@ -136,7 +136,7 @@ const ReceivePurchaseOrder = () => {
         .filter((p) => p.receive_now > 0)
         .map((p) => ({
           product_id: p.product_id,
-          received_qty: p.receive_now,
+          qty: p.receive_now,
         }));
 
       if (!product_data.length) {
@@ -150,7 +150,7 @@ const ReceivePurchaseOrder = () => {
         receive_date: receiveDate,
         receive_id: receiveId,
         note,
-        product_data: JSON.stringify(product_data),
+        product_data: product_data,
       });
 
       if (response.data.IsSuccess) {
