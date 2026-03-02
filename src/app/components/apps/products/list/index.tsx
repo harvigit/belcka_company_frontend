@@ -937,7 +937,7 @@ const ProductList = () => {
 
                   const formatted = number.toFixed(2);
 
-                  await updatePrice(item.id, undefined, Number(formatted));
+                  await updatePrice(item.id, Number(formatted), undefined);
 
                   setEditing({ id: null, field: null });
                 }}
@@ -950,7 +950,7 @@ const ProductList = () => {
                     }
                     const formatted = number.toFixed(2);
 
-                    await updatePrice(item.id, undefined, Number(formatted));
+                    await updatePrice(item.id, Number(formatted), undefined);
                     setEditing({ id: null, field: null });
                   }
                 }}
