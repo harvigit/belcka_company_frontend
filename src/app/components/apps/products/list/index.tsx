@@ -396,7 +396,7 @@ const ProductList = () => {
 
   // Fetch data
   const fetchProducts = async (restorePage?: number) => {
-    console.log(restorePage, "restorePage");
+
     setFetchProduct(true);
     try {
       const res = await api.get(`products/get?company_id=${user.company_id}`);

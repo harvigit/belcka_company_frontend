@@ -749,7 +749,7 @@ const Company = () => {
           }}
         >
           <Box className="task-form">
-            <Grid container mt={3}>
+            <Grid container mt={1}>
               <Grid size={{ xs: 12, lg: 12 }}>
                 <Box
                   display={"flex"}

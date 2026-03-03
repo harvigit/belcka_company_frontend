@@ -45,7 +45,10 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
     }
     setLoading(false);
   };
-  const paginatedFeeds = history?.slice(0, page * limit) || [];
+  const filteredHistory =
+    history?.filter((item) => item.request_type === 119) || [];
+
+  const paginatedFeeds = filteredHistory.slice(0, page * limit);
 
   useEffect(() => {
     if (open == true) {
@@ -194,7 +197,7 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
                     })}
                 </Box>
 
-                {paginatedFeeds.length < history.length && (
+                {paginatedFeeds.length < filteredHistory.length && (
                   <Box display="flex" justifyContent="center" my={2}>
                     <Button
                       variant="outlined"
