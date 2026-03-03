@@ -69,6 +69,7 @@ import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import Link from "next/link";
 import { FileDownload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
+import { format } from "date-fns";
 
 dayjs.extend(customParseFormat);
 interface Props {
@@ -352,6 +353,15 @@ const PurchaseProductList: React.FC<Props> = ({
     return sum + (row?.total_qty ? Number(row.total_qty) : 0);
   }, 0);
 
+  const formatDate = (date?: Date | string | null) => {
+    if (!date) return "-";
+    try {
+      return format(new Date(date), "dd/MM/yyyy");
+    } catch {
+      return "-";
+    }
+  };
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -422,6 +432,36 @@ const PurchaseProductList: React.FC<Props> = ({
       },
     },
 
+    // columnHelper.accessor("uuid", {
+    //   id: "Id",
+    //   header: () => (
+    //     <Stack direction="row" alignItems="center" spacing={4}>
+    //       <Typography variant="subtitle2" fontWeight="inherit">
+    //         Order Date
+    //       </Typography>
+    //     </Stack>
+    //   ),
+    //   enableSorting: true,
+    //   cell: ({ row }) => {
+    //     const item = row.original;
+
+    //     return (
+    //       <Stack
+    //         direction="row"
+    //         alignItems="center"
+    //         spacing={4}
+    //         sx={{ pl: 0.3 }}
+    //       >
+    //         <Typography textTransform="capitalize" className="f-14">
+    //           {item.employee_orders
+    //             ? formatDate(item?.employee_orders[0]?.created_at)
+    //             : "-"}
+    //         </Typography>
+    //       </Stack>
+    //     );
+    //   },
+    // }),
+    
     columnHelper.accessor((row) => row?.total_qty, {
       id: "add",
       header: () => (
@@ -1436,7 +1476,7 @@ const PurchaseProductList: React.FC<Props> = ({
               </Typography>
               <Typography color="textSecondary" ml={"3px"} className="f-14">
                 {" "}
-                | Entries :{" "}
+                | Entries:{" "}
               </Typography>
             </Stack>
             <CustomSelect

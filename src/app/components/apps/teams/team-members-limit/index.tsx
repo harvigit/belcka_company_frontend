@@ -91,7 +91,7 @@ const TeamMembersLimit: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => 
 
                 {/* Main content */}
                 <Box sx={{ flex: 1 }}>
-                    <Typography variant="h5" mt={3} mb={1}>
+                    <Typography variant="h5"  mb={1}>
                         Max Members
                     </Typography>
 
@@ -124,8 +124,9 @@ const TeamMembersLimit: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => 
                         variant="contained"
                         size="large"
                         onClick={handleApply}
+                        sx={{ borderRadius: 3 }}
+                        className="drawer_buttons"
                         disabled={isDisabled}
-                        fullWidth
                     >
                         {applying ? "Saving..." : "Save"}
                     </Button>
@@ -134,7 +135,12 @@ const TeamMembersLimit: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => 
                         variant="contained"
                         color="inherit"
                         onClick={onClose}
-                        fullWidth
+                        size="large"
+                        sx={{
+                            backgroundColor: "transparent",
+                            borderRadius: 3,
+                            color: "GrayText",
+                        }}
                     >
                         Close
                     </Button>
