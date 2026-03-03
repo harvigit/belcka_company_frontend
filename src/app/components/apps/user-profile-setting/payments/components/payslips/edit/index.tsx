@@ -1,14 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Drawer,
-  Box,
-  IconButton,
-  Typography,
-  Button,
-  InputLabel,
-  Avatar,
-  Select,
-  MenuItem,
+    Drawer, Box, IconButton, Typography, Button, InputLabel,
+    Avatar, Select, MenuItem, Dialog, DialogTitle, DialogContent,
+    Stack, Chip, CircularProgress,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
@@ -17,273 +11,363 @@ import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import api from "@/utils/axios";
 
+interface AmountMatch {
+    label: string;
+    value: string;
+}
+
 interface PayslipFormData {
-  id: number;
-  company_id: number | null;
-  user_id: number | null;
-  from_date: string;
-  to_date: string;
-  payment_date?: string;
-  amount?: string;
-  payslip_number?: string;
-  file_name: File | null;
-  existing_pdf?: string;
-  existing_image?: string;
+    id: number;
+    company_id: number | null;
+    user_id: number | null;
+    from_date: string;
+    to_date: string;
+    payment_date?: string;
+    amount?: string;
+    payslip_number?: string;
+    file_name: File | null;
+    existing_pdf?: string;
+    existing_image?: string;
 }
 
 interface EditPayslipProps {
-  open: boolean;
-  onClose: () => void;
-  formData: PayslipFormData;
-  setFormData: React.Dispatch<React.SetStateAction<PayslipFormData>>;
-  handleSubmit: (e: React.FormEvent) => void;
-  isSaving: boolean;
-  isShow: boolean;
-  payslip: any;
-  companyId: number | null;
+    open: boolean;
+    onClose: () => void;
+    formData: PayslipFormData;
+    setFormData: React.Dispatch<React.SetStateAction<PayslipFormData>>;
+    handleSubmit: (e: React.FormEvent) => void;
+    isSaving: boolean;
+    isShow: boolean;
+    payslip: any;
+    companyId: number | null;
 }
 
 const EditPayslip: React.FC<EditPayslipProps> = ({
-  open,
-  onClose,
-  formData,
-  setFormData,
-  handleSubmit,
-  isSaving,
-  payslip,
-  isShow,
-  companyId,
-}) => {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [users, setUsers] = useState<any[]>([]);
+                                                     open, onClose, formData, setFormData,
+                                                     handleSubmit, isSaving, payslip, isShow,
+                                                 }) => {
+    const [preview, setPreview] = useState<string | null>(null);
+    const [users, setUsers] = useState<any[]>([]);
 
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: {
-      "image/jpeg": [".jpeg", ".jpg"],
-      "image/png": [".png"],
-      "application/pdf": [".pdf"],
-    },
-    multiple: false,
-    onDrop: (acceptedFiles) => {
-      const selectedFile = acceptedFiles[0];
-      if (!selectedFile) return;
+    // OCR state
+    const [isScanning, setIsScanning] = useState(false);
+    const [ocrMatches, setOcrMatches] = useState<AmountMatch[]>([]);
+    const [ocrDialogOpen, setOcrDialogOpen] = useState(false);
+    // Edit starts with amountConfirmed=true since existing payslip already has amount
+    const [amountConfirmed, setAmountConfirmed] = useState(true);
 
-      setFormData((prev) => ({
-        ...prev,
-        file_name: selectedFile,
-        existing_pdf: undefined,
-        existing_image: undefined,
-      }));
+    const getUsers = useCallback(async () => {
+        try {
+            const res = await api.get(`user/list`);
+            setUsers(res.data.info || []);
+        } catch (error) {
+            console.error("Failed to load users.");
+        }
+    }, []);
 
-      setPreview(URL.createObjectURL(selectedFile));
-    },
-    onDropRejected: () => {
-      toast.error("Please upload a valid file (PDF or image)");
-    },
-  });
-  const getUsers = useCallback(async () => {
-    try {
-      const res = await api.get(`user/list`);
-      setUsers(res.data.info || []);
-    } catch (error) {
-      console.error("Failed to load users. Please try again.");
-    } finally {
-    }
-  }, [open]);
+    // Pre-fill the form when drawer opens
+    useEffect(() => {
+        if (open && payslip) {
+            setFormData({
+                id: payslip.id,
+                company_id: payslip.company_id,
+                user_id: payslip.user_id,
+                from_date: payslip.from_date ? dayjs(payslip.from_date).format("YYYY-MM-DD") : "",
+                to_date: payslip.to_date ? dayjs(payslip.to_date).format("YYYY-MM-DD") : "",
+                payment_date: payslip.payment_date ? dayjs(payslip.payment_date).format("YYYY-MM-DD") : "",
+                amount: payslip.amount || "",
+                payslip_number: payslip.payslip_number || "",
+                file_name: null,
+                existing_pdf: payslip.pdf || undefined,
+                existing_image: payslip.image || undefined,
+            });
 
-  // Pre-fill the form when drawer opens
-  useEffect(() => {
-    if (open && payslip) {
-      setFormData({
-        id: payslip.id,
-        company_id: payslip.company_id,
-        user_id: payslip.user_id,
-        from_date: payslip.from_date
-          ? dayjs(payslip.from_date).format("YYYY-MM-DD")
-          : "",
-        to_date: payslip.to_date
-          ? dayjs(payslip.to_date).format("YYYY-MM-DD")
-          : "",
-        payment_date: payslip.payment_date
-          ? dayjs(payslip.payment_date).format("YYYY-MM-DD")
-          : "",
-        amount: payslip.amount || "",
-        payslip_number: payslip.payslip_number || "",
-        file_name: null,
-        existing_pdf: payslip.pdf || undefined,
-        existing_image: payslip.image || undefined,
-      });
+            setPreview(payslip.image || null);
+            // Reset OCR state — existing amount is already confirmed
+            setOcrMatches([]);
+            setOcrDialogOpen(false);
+            setAmountConfirmed(true); // existing payslip already has amount
+            setIsScanning(false);
+            getUsers();
+        }
+    }, [open, payslip]);
 
-      // Show preview for existing file
-      setPreview(payslip.image || null);
-      getUsers();
-    }
-  }, [open, payslip, setFormData]);
+    const runOcrScan = async (file: File) => {
+        setIsScanning(true);
+        setAmountConfirmed(false);
+        setFormData((prev) => ({ ...prev, amount: "" }));
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+        try {
+            const fd = new FormData();
+            fd.append("file_name", file);
 
-  return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      sx={{
-        width: 480,
-        "& .MuiDrawer-paper": { width: 480, backgroundColor: "#f9f9f9" },
-      }}
-    >
-      <Box display="flex" flexDirection="column" height="100%">
-        {/* Header */}
-        <Box display="flex" alignItems="center" p={1}>
-          <IconButton onClick={onClose}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" fontWeight={700}>
-            Edit Payslip
-          </Typography>
-        </Box>
+            const res = await api.post("payslips/ocr-scan", fd, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
 
-        {/* Form */}
-        <Box height="100%" px={2}>
-          <form
-            onSubmit={handleSubmit}
-            className="address-form"
-            onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
-          >
-            {/* From Date */}
-            <Typography variant="body2" mt={2}>
-              From Date
-            </Typography>
-            <CustomTextField
-              type="date"
-              name="from_date"
-              fullWidth
-              value={formData.from_date}
-              onChange={handleChange}
-            />
+            const { amount, matches }: { amount: string | null; matches: AmountMatch[] } = res.data;
 
-            {/* To Date */}
-            <Typography variant="body2" mt={2}>
-              To Date
-            </Typography>
-            <CustomTextField
-              type="date"
-              name="to_date"
-              fullWidth
-              value={formData.to_date}
-              onChange={handleChange}
-              inputProps={{
-                min: formData.from_date || undefined,
-              }}
-            />
+            if (matches.length >= 2) {
+                // 2+ matches (same or different values) → always show dialog
+                setOcrMatches(matches);
+                setOcrDialogOpen(true);
 
-            {isShow && (
-              <>
-                <Typography variant="body2" sx={{ mt: 2 }}>
-                  User
-                </Typography>
-                <Select
-                  fullWidth
-                  value={formData.user_id}
-                  onChange={(e) => {
-                    setFormData((p) => ({
-                      ...p,
-                      user_id: Number(e.target.value),
-                    }));
-                  }}
-                >
-                  <MenuItem disabled>Select User</MenuItem>
-                  {users.map((a: any) => (
-                    <MenuItem key={a.id} value={a.id}>
-                      {a.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </>
-            )}
+            } else {
+                // 0 matches → amount="0"  |  1 match → amount=detected value
+                setFormData((prev) => ({ ...prev, amount: amount ?? "0" }));
+                setAmountConfirmed(true);
 
-            {/* File Upload */}
-            <InputLabel htmlFor="file-upload" sx={{ mt: 2 }}>
-              Upload File
-            </InputLabel>
-            <Box mt={2} mb={2} textAlign="center">
-              <Box
-                {...getRootProps()}
+                if (matches.length === 0) {
+                    toast("No amount detected, saving with 0.", { icon: "ℹ️" });
+                } else {
+                    toast.success(`Amount detected: ${amount}`);
+                }
+            }
+        } catch (e) {
+            console.error("OCR scan failed", e);
+            // On error: keep existing amount, don't block save
+            setFormData((prev) => ({ ...prev, amount: payslip?.amount || "0" }));
+            setAmountConfirmed(true);
+            toast.error("OCR scan failed, keeping previous amount.");
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    const { getRootProps, getInputProps } = useDropzone({
+        accept: {
+            "image/jpeg": [".jpeg", ".jpg"],
+            "image/png": [".png"],
+            "application/pdf": [".pdf"],
+        },
+        multiple: false,
+        onDrop: (acceptedFiles) => {
+            const file = acceptedFiles[0];
+            if (!file) return;
+
+            setFormData((prev) => ({
+                ...prev,
+                file_name: file,
+                existing_pdf: undefined,
+                existing_image: undefined,
+            }));
+
+            setPreview(URL.createObjectURL(file));
+            runOcrScan(file); // trigger OCR on new file
+        },
+        onDropRejected: () => {
+            toast.error("Please upload a valid file (PDF or image)");
+        },
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    // Guard submit
+    const handleFormSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (isScanning) {
+            toast.error("Please wait, scanning file...");
+            return;
+        }
+        if (!amountConfirmed) {
+            // 2+ matches and user hasn't picked yet — re-open dialog
+            setOcrDialogOpen(true);
+            toast.error("Please select an amount to continue.");
+            return;
+        }
+
+        handleSubmit(e);
+    };
+
+    return (
+        <>
+            <Drawer
+                anchor="right"
+                open={open}
+                onClose={onClose}
                 sx={{
-                  width: 180,
-                  height: 180,
-                  mx: "auto",
-                  border: "2px dashed",
-                  borderColor: "primary.main",
-                  borderRadius: 3,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  "&:hover": {
-                    backgroundColor: "primary.light",
-                  },
+                    width: 480,
+                    "& .MuiDrawer-paper": { width: 480, backgroundColor: "#f9f9f9" },
                 }}
-              >
-                <input {...getInputProps()} />
-                {preview ? (
-                  <Avatar
-                    src={preview}
-                    alt="Preview"
-                    sx={{ width: "100%", height: "100%" }}
-                  />
-                ) : (
-                  <Typography fontSize="12px" color="primary.main">
-                    Click or Drag File
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
-            {/* Actions */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "start",
-                gap: 2,
-                mt: "auto",
-                mb: 2,
-              }}
             >
-              <Button
-                color="primary"
-                variant="contained"
-                size="large"
-                type="submit"
-                disabled={isSaving}
-                sx={{ borderRadius: 3 }}
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-              <Button
-                color="inherit"
-                onClick={onClose}
-                variant="contained"
-                size="large"
-                sx={{
-                  backgroundColor: "transparent",
-                  borderRadius: 3,
-                  color: "GrayText",
-                }}
-              >
-                Close
-              </Button>
-            </Box>
-          </form>
-        </Box>
-      </Box>
-    </Drawer>
-  );
+                <Box display="flex" flexDirection="column" height="100%">
+                    {/* Header */}
+                    <Box display="flex" alignItems="center" p={1}>
+                        <IconButton onClick={onClose}>
+                            <ArrowBackIcon />
+                        </IconButton>
+                        <Typography variant="h6" fontWeight={700}>
+                            Edit Payslip
+                        </Typography>
+                    </Box>
+
+                    {/* Form */}
+                    <Box height="100%" px={2}>
+                        <form
+                            onSubmit={handleFormSubmit}
+                            className="address-form"
+                            onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                        >
+                            <Typography variant="body2" mt={2}>From Date</Typography>
+                            <CustomTextField
+                                type="date" name="from_date" fullWidth
+                                value={formData.from_date} onChange={handleChange}
+                            />
+
+                            <Typography variant="body2" mt={2}>To Date</Typography>
+                            <CustomTextField
+                                type="date" name="to_date" fullWidth
+                                value={formData.to_date} onChange={handleChange}
+                                inputProps={{ min: formData.from_date || undefined }}
+                            />
+
+                            {isShow && (
+                                <>
+                                    <Typography variant="body2" sx={{ mt: 2 }}>User</Typography>
+                                    <Select
+                                        fullWidth
+                                        value={formData.user_id}
+                                        onChange={(e) =>
+                                            setFormData((p) => ({ ...p, user_id: Number(e.target.value) }))
+                                        }
+                                    >
+                                        <MenuItem disabled>Select User</MenuItem>
+                                        {users.map((u: any) => (
+                                            <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </>
+                            )}
+
+                            {/* File Upload */}
+                            <InputLabel sx={{ mt: 2 }}>Upload File</InputLabel>
+                            <Box mt={2} mb={1} textAlign="center">
+                                <Box
+                                    {...getRootProps()}
+                                    sx={{
+                                        width: 180, height: 180, mx: "auto",
+                                        border: "2px dashed", borderColor: "primary.main",
+                                        borderRadius: 3, cursor: "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        "&:hover": { backgroundColor: "primary.light" },
+                                    }}
+                                >
+                                    <input {...getInputProps()} />
+                                    {isScanning ? (
+                                        <Stack alignItems="center" spacing={1}>
+                                            <CircularProgress size={32} />
+                                            <Typography fontSize="11px" color="textSecondary">
+                                                Scanning...
+                                            </Typography>
+                                        </Stack>
+                                    ) : preview ? (
+                                        <Avatar src={preview} alt="Preview" sx={{ width: "100%", height: "100%" }} />
+                                    ) : (
+                                        <Typography fontSize="12px" color="primary.main">
+                                            Click or Drag File
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+
+                            {/* Amount display — read only, set by OCR or existing value */}
+                            {formData.amount && amountConfirmed && (
+                                <Box
+                                    mt={1} mb={1} px={2} py={1.5}
+                                    sx={{
+                                        backgroundColor: "#f0fdf4",
+                                        border: "1px solid #86efac",
+                                        borderRadius: 2,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                    }}
+                                >
+                                    <Typography variant="body2" color="text.secondary">
+                                        Amount
+                                    </Typography>
+                                    <Chip
+                                        label={formData.amount}
+                                        color="success"
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                </Box>
+                            )}
+
+                            {/* Actions */}
+                            <Box sx={{ display: "flex", justifyContent: "start", gap: 2, mt: "auto", mb: 2 }}>
+                                <Button
+                                    color="primary" variant="contained" size="large" type="submit"
+                                    disabled={isSaving || isScanning}
+                                    sx={{ borderRadius: 3 }}
+                                >
+                                    {isSaving ? "Saving..." : isScanning ? "Scanning..." : "Save"}
+                                </Button>
+                                <Button
+                                    color="inherit" onClick={onClose} variant="contained" size="large"
+                                    sx={{ backgroundColor: "transparent", borderRadius: 3, color: "GrayText" }}
+                                >
+                                    Close
+                                </Button>
+                            </Box>
+                        </form>
+                    </Box>
+                </Box>
+            </Drawer>
+
+            {/* OCR Amount Picker Dialog — only when 2+ matches found on new file upload */}
+            <Dialog
+                open={ocrDialogOpen}
+                onClose={() => {}}
+                maxWidth="xs"
+                fullWidth
+                disableEscapeKeyDown
+            >
+                <DialogTitle>
+                    <Typography fontWeight={700}>Select Payslip Amount</Typography>
+                    <Typography variant="body2" color="textSecondary" mt={0.5}>
+                        Multiple amounts were detected. You must select one to continue.
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={1.5} mt={1}>
+                        {ocrMatches.map((match, i) => (
+                            <Button
+                                key={i}
+                                variant="outlined"
+                                fullWidth
+                                onClick={() => {
+                                    setFormData((prev) => ({ ...prev, amount: match.value }));
+                                    setAmountConfirmed(true);
+                                    setOcrDialogOpen(false);
+                                    toast.success(`Amount set: ${match.value}`);
+                                }}
+                                sx={{
+                                    justifyContent: "space-between",
+                                    px: 2.5, py: 1.5,
+                                    borderRadius: 2,
+                                    borderColor: "divider",
+                                    "&:hover": { borderColor: "primary.main", backgroundColor: "primary.50" },
+                                }}
+                            >
+                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                    {match.label}
+                                </Typography>
+                                <Typography variant="body1" color="primary" fontWeight={700}>
+                                    {match.value}
+                                </Typography>
+                            </Button>
+                        ))}
+                    </Stack>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
 };
 
 export default EditPayslip;
