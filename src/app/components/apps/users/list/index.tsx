@@ -95,6 +95,7 @@ export interface Permission {
 }
 
 export interface UserList {
+    cis: string;
     permissions: Permission[];
     id: number;
     name: string;
@@ -832,6 +833,23 @@ const TablePagination = () => {
             },
         }),
 
+        columnHelper.accessor((row) => row.cis, {
+            id: 'cis',
+            header: () => (
+                <Typography variant="subtitle2" noWrap>
+                    CIS
+                </Typography>
+            ),
+            cell: (info) => {
+                const row = info.row.original;
+                return (
+                    <Typography className="f-14" color="textPrimary" sx={{ml: 2}}>
+                        {row.cis ? row.cis : '-'}
+                    </Typography>
+                );
+            },
+        }),
+
         columnHelper.accessor((row) => row.bank_name, {
             id: 'bankName',
             header: () => (
@@ -848,6 +866,7 @@ const TablePagination = () => {
                 );
             },
         }),
+        
         columnHelper.accessor((row) => row.account_no, {
             id: 'accountNo',
             header: () => (

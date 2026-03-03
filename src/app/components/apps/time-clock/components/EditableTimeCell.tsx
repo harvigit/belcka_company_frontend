@@ -42,9 +42,15 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     const isSaving = savingWorklogs.has(worklogId);
     const isLocked = log?.status === 6 || log?.status === '6';
 
+    const isRequested = log.is_requested;
+    const requestStatus = log.request_status;
+    const requestedBy = log.requested_user_name;
+    
     const isEdited = field === 'start' ? !!log?.start_time_edited_by : !!log?.end_time_edited_by;
     const editedByName = field === 'start' ? log?.start_time_edited_by_name : log?.end_time_edited_by_name;
     const editedAt = field === 'start' ? log?.start_time_edited_at : log?.end_time_edited_at;
+
+    const dotTooltipTitle = isEdited ? `Modified by ${editedByName} on ${editedAt}` : isRequested ? `Worklog request by ${requestedBy}` : '';
 
     const isConflictResolved = log?.is_conflict_resolved;
     const conflictResolvedBy = log?.conflict_resolved_by_name ?? null;
@@ -68,9 +74,9 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     position: 'relative',
                 }}
             >
-                {isEdited && (
+                {(isEdited || isRequested) && (
                     <Tooltip
-                        title={`Modified by ${editedByName} on ${editedAt}`}
+                        title={dotTooltipTitle}
                         arrow
                         placement="top"
                         sx={tooltipStyles}
@@ -171,7 +177,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                 borderRadius: '4px',
                 px: '8px',
                 position: 'relative',
-                color: isConflictResolved ? '#d32f2f' : 'inherit',
+                color: (isConflictResolved || requestStatus === 5) ? '#d32f2f' : 'inherit',
                 '&:hover': !isLocked
                     ? {
                         borderColor: '#1976d2',
@@ -180,9 +186,9 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     : {},
             }}
         >
-            {isEdited && (
+            {(isEdited || isRequested) && (
                 <Tooltip
-                    title={`Modified by ${editedByName} on ${editedAt}`}
+                    title={dotTooltipTitle}
                     arrow
                     placement="top"
                     sx={tooltipStyles}
@@ -220,20 +226,9 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
         tooltipTitle = 'This worklog is locked and cannot be edited';
     }
 
-    return isEdited && editedByName && editedAt ? (
+    return (
         <Tooltip
             title={isIconHovered ? '' : tooltipTitle}
-            arrow
-            placement="top"
-            sx={tooltipStyles}
-        >
-            <Box title={isLocked ? 'This worklog is locked and cannot be edited' : ''}>
-                {cellContent}
-            </Box>
-        </Tooltip>
-    ) : (
-        <Tooltip
-            title={tooltipTitle}
             arrow
             placement="top"
             sx={tooltipStyles}
