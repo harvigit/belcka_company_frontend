@@ -7,18 +7,26 @@ import Earnings from "@/app/components/dashboard/TheEarnings";
 import MonthlySales from "@/app/components/dashboard/TheMonthlySales";
 import SalesOverview from "@/app/components/dashboard/TheSalesOverview";
 import React from "react";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 export default function Dashboard() {
+  const session = useSession();
+
+  const user = session.data?.user as User & {
+    company_id: number;
+  };
   return (
-    (<PageContainer title="Dashboard" description="this is Dashboard">
+    <PageContainer title="Dashboard" description="this is Dashboard">
       <Box mt={3}>
         <Grid container spacing={3}>
           {/* ------------------------- row 1 ------------------------- */}
           <Grid
             size={{
               xs: 12,
-              lg: 6
-            }}>
+              lg: 6,
+            }}
+          >
             <Grid container spacing={3}>
               <Grid size={12}>
                 <WelcomeCard />
@@ -27,16 +35,18 @@ export default function Dashboard() {
                 size={{
                   xs: 12,
                   lg: 6,
-                  sm: 6
-                }}>
+                  sm: 6,
+                }}
+              >
                 <Earnings />
               </Grid>
               <Grid
                 size={{
                   xs: 12,
                   lg: 6,
-                  sm: 6
-                }}>
+                  sm: 6,
+                }}
+              >
                 <MonthlySales />
               </Grid>
             </Grid>
@@ -44,12 +54,13 @@ export default function Dashboard() {
           <Grid
             size={{
               xs: 12,
-              lg: 6
-            }}>
-            <SalesOverview />
+              lg: 6,
+            }}
+          >
+            <SalesOverview companyId={user.company_id} />
           </Grid>
         </Grid>
       </Box>
-    </PageContainer>)
+    </PageContainer>
   );
 }
