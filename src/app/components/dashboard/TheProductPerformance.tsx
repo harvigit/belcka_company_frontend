@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+"use client";
+import React from "react";
 import {
   Typography,
   Box,
@@ -6,48 +7,33 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  LinearProgress,
   Avatar,
+  Card,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import DashboardCard from "../shared/DashboardCard";
 import Link from "next/link";
+import SkeletonLoader from "../SkeletonLoader";
 
-const items = [
-  {
-    id: 1,
-    imgsrc: "/images/products/1.jpg",
-    name: "Is it good butterscotch ice-cream?",
-    tags: "Ice-Cream, Milk, Powder",
-    earnings: "546,000",
-  },
-  {
-    id: 2,
-    imgsrc: "/images/products/2.jpg",
-    name: "Supreme fresh tomato available",
-    tags: "Market, Mall",
-    earnings: "780,000",
-  },
-];
-
-const PerformanceTable = () => {
-  const [products, setProducts] = useState(items);
-
-  const Capitalize = (str: string) =>
-    str.charAt(0).toUpperCase() + str.slice(1);
-  const deleteHandler = (id: number) => {
-    const updateProducts = products.filter((ind) => ind.id !== id);
-    setProducts(updateProducts);
-  };
-
-  const theme = useTheme();
+const LowStockProduct = ({
+  products,
+  loading,
+}: {
+  products: any;
+  loading: boolean;
+}) => {
   return (
-    <DashboardCard title="Products Performance" subtitle="">
-      <Box textAlign={"end"}>
-        <Link
-          href={"/apps/suppliers/list"}
-          style={{ color: "#1E4DB7", paddingTop: 16 }}
-        >
+    <Card sx={{ p: 2 }}>
+      <Box
+        p={2}
+        pt={0}
+        pb={0}
+        display={"flex"}
+        justifyItems={"center"}
+        justifyContent={"space-between"}
+      >
+        <Typography variant="h1" fontSize={21}>
+          Low Quantity Stock
+        </Typography>
+        <Link href={"/apps/products/list"} style={{ color: "#1E4DB7" }}>
           See all
         </Link>
       </Box>
@@ -69,53 +55,64 @@ const PerformanceTable = () => {
           }}
         >
           <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell
-                  sx={{
-                    pl: 0,
-                  }}
-                >
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <Avatar
-                      src={product.imgsrc}
-                      alt={product.imgsrc}
-                      sx={{
-                        borderRadius: "10px",
-                        height: "70px",
-                        width: "90px",
-                      }}
-                    />
-
-                    <Box>
-                      <Typography variant="h5">{product.name}</Typography>
-                      <Typography
-                        color="textSecondary"
-                        variant="h6"
-                        fontWeight="400"
-                      >
-                        {product.tags}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Typography
-                    color="textSecondary"
-                    variant="h6"
-                    fontWeight="400"
+            {!loading ? (
+              products.map((product: any) => (
+                <TableRow key={product.id}>
+                  <TableCell
+                    sx={{
+                      pl: 0,
+                    }}
                   >
-                    Earnings
-                  </Typography>
-                  <Typography variant="h5">${product.earnings}</Typography>
-                </TableCell>
-              </TableRow>
-            ))}
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <Avatar
+                        src={product.image_url}
+                        alt={product.image_url}
+                        sx={{
+                          borderRadius: "10px",
+                          height: "70px",
+                          width: "90px",
+                        }}
+                      />
+
+                      <Box>
+                        <Typography variant="h5">
+                          {product.short_name}
+                        </Typography>
+                        <Typography
+                          color="textSecondary"
+                          variant="h6"
+                          fontWeight="400"
+                        >
+                          UUID: {product.uuid}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="h5">
+                      {product.currency}
+                      {product.price}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <>
+                <SkeletonLoader
+                  columns={[
+                    { name: "Image" },
+                    { name: "Name" },
+                    { name: "Price" },
+                  ]}
+                  rowCount={3}
+                />
+              </>
+            )}
           </TableBody>
         </Table>
       </Box>
-    </DashboardCard>
+    </Card>
   );
 };
 
-export default PerformanceTable;
+export default LowStockProduct;

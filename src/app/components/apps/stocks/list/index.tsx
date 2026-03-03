@@ -94,6 +94,7 @@ export interface ProductFormData {
   cutoff?: number;
   is_sub_qty?: boolean;
   store_ids?: string;
+  max_stock?: number | null;
 }
 
 const StockList = () => {

@@ -114,6 +114,7 @@ export interface ProductFormData {
   is_sub_qty?: boolean;
   store_ids?: string;
   remove_image?: boolean;
+  max_stock?: number | null;
 }
 
 const ProductList = () => {

@@ -23,14 +23,15 @@ import {
 import Link from "next/link";
 import { IconChartBar } from "@tabler/icons-react";
 import SalesOverview from "@/app/components/dashboard/TheSalesOverview";
-import ProductPerformance from "@/app/components/dashboard/TheProductPerformance";
+import LowStockProduct from "@/app/components/dashboard/TheProductPerformance";
 
 const BuyerDashboard = () => {
   const session = useSession();
   const user = session.data?.user as User & { first_name?: string | null } & {
     last_name?: string | null;
-  } & { company_id?: number | null };
+  } & { company_id: number };
   const [sales, setSales] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,42 +47,8 @@ const BuyerDashboard = () => {
       );
 
       if (res.data.IsSuccess) {
+        setProducts(res.data.low_stock_product);
         const data = res.data.info;
-
-        setSales([
-          {
-            btnText: "primary.main",
-            title: "Categories",
-            digits: data.categories.count,
-            subtext: "",
-            text: "",
-            text2: "In a month",
-          },
-          {
-            btnText: "warning.main",
-            title: "Total Products",
-            digits: data.total_products.count,
-            subtext: data.total_products.revenue,
-            text: "Revenue",
-            text2: "In a month",
-          },
-          {
-            btnText: "success.main",
-            title: "Top Selling",
-            digits: data.top_selling.count,
-            subtext: data.top_selling.revenue,
-            text: "Cost",
-            text2: "In a month",
-          },
-          {
-            btnText: "error.main",
-            title: "Low Stocks",
-            digits: data.low_stocks.low_stock,
-            subtext: data.low_stocks.out_of_stock,
-            text: "Not in stock",
-            text2: "Ordered",
-          },
-        ]);
       }
     } catch (error) {
       console.error(error);
@@ -128,37 +95,37 @@ const BuyerDashboard = () => {
   };
 
   const fetchResorces = async () => {
+    setLoading(true);
     try {
       const res = await api.get(
         `get-inventory-resources?company_id=${user.company_id}`,
       );
       if (res.data.IsSuccess) {
-        if (res.data.IsSuccess) {
-          const data = res.data;
+        const data = res.data;
 
-          setSuppliers([
-            {
-              btnText: "primary.main",
-              title: "suppliers",
-              digits: data.suppliers?.length,
-              subtext: "",
-              text: "",
-              text2: "Number of Suppliers",
-            },
-            {
-              btnText: "warning.main",
-              title: "categories",
-              digits: data.categories?.length,
-              subtext: "",
-              text: "",
-              text2: "Number of Categories",
-            },
-          ]);
-        }
+        setSuppliers([
+          {
+            btnText: "primary.main",
+            title: "suppliers",
+            digits: data.suppliers?.length,
+            subtext: "",
+            text: "",
+            text2: "Number of Suppliers",
+          },
+          {
+            btnText: "warning.main",
+            title: "categories",
+            digits: data.categories?.length,
+            subtext: "",
+            text: "",
+            text2: "Number of Categories",
+          },
+        ]);
       }
     } catch (err) {
       console.error("Failed to fetch inventory resource", err);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -507,7 +474,7 @@ const BuyerDashboard = () => {
       </Grid> */}
 
       <Grid size={{ xs: 8 }}>
-        <SalesOverview />
+        <SalesOverview companyId={user.company_id} />
       </Grid>
       <Grid size={{ xs: 4 }}>
         <Grid size={{ xs: 12 }}>
@@ -535,16 +502,24 @@ const BuyerDashboard = () => {
               </Link>
             </Box>
             <Grid container>
-              {suppliers.map((topcard) => (
-                <Grid
-                  key={topcard.digits}
-                  size={{
-                    xs: 6,
-                    lg: 6,
-                    sm: 6,
-                  }}
-                >
-                  {!loading ? (
+              {loading ? (
+                <Box width={"100%"} textAlign={"center"}>
+                  <CircularProgress
+                    size={30}
+                    color="primary"
+                    sx={{ m: "auto" }}
+                  />
+                </Box>
+              ) : (
+                suppliers.map((topcard) => (
+                  <Grid
+                    key={topcard.digits}
+                    size={{
+                      xs: 6,
+                      lg: 6,
+                      sm: 6,
+                    }}
+                  >
                     <CardContent
                       sx={{
                         borderRight: {
@@ -595,23 +570,14 @@ const BuyerDashboard = () => {
                         </Typography>
                       </Box>
                     </CardContent>
-                  ) : (
-                    <>
-                      {" "}
-                      <CircularProgress
-                        size={30}
-                        color="primary"
-                        sx={{ ml: 5 }}
-                      />
-                    </>
-                  )}
-                </Grid>
-              ))}
+                  </Grid>
+                ))
+              )}
             </Grid>
           </Card>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <ProductPerformance />
+          <LowStockProduct products={products} loading={loading} />
         </Grid>
       </Grid>
     </Grid>

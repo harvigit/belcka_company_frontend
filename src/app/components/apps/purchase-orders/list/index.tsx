@@ -713,6 +713,34 @@ const PurchaseOrderList = () => {
       },
     },
 
+     columnHelper.accessor("created_date", {
+      id: "orderDate",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Order Date
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.3 , ml: 1}}
+          >
+            <Typography textTransform="capitalize" className="f-14">
+              {item.created_date ? item.created_date : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
     columnHelper.accessor("order_id", {
       id: "orderId",
       header: () => (
@@ -731,7 +759,7 @@ const PurchaseOrderList = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.3 }}
+            sx={{ pl: 0.3 , ml: 1}}
           >
             <Typography textTransform="capitalize" className="f-14">
               {item.order_id ? item.order_id : "-"}
@@ -759,7 +787,7 @@ const PurchaseOrderList = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.3 }}
+            sx={{ pl: 0.3 ,ml: 1}}
           >
             <Typography textTransform="capitalize" className="f-14">
               {item.user_name ? item.user_name : "-"}
@@ -788,8 +816,8 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center">
-            <Typography textTransform="capitalize" className="f-14" ml={1}>
+          <Stack direction="row" alignItems="center" ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
               {item.order_qty ? item.order_qty : "-"}
             </Typography>
           </Stack>
@@ -803,8 +831,8 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center">
-            <Typography textTransform="capitalize" className="f-14" ml={1}>
+          <Stack direction="row" alignItems="center" ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
               {item.receive_qty ? item.receive_qty : "-"}
             </Typography>
           </Stack>

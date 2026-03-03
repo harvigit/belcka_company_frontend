@@ -9,20 +9,11 @@ import {
   Avatar,
   Autocomplete,
   TextField,
-  MenuItem,
-  Divider,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
   Fab,
   Dialog,
 } from "@mui/material";
 import {
   createColumnHelper,
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
@@ -31,25 +22,19 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Grid, Stack } from "@mui/system";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconPlus,
-  IconTrash,
-  IconX,
-} from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useDropzone } from "react-dropzone";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import Image from "next/image";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CreateCategory from "../../categories/create";
 import toast from "react-hot-toast";
 import CreateSupplier from "../../suppliers/create";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 export interface ProductFormData {
   id: number;
@@ -82,6 +67,7 @@ export interface ProductFormData {
   is_sub_qty?: boolean;
   store_ids?: string;
   remove_image?: boolean;
+  max_stock?: number | null;
 }
 
 interface Category {
@@ -178,6 +164,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [mainFile, setMainFile] = useState<File | null>(null);
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null } & {
+    user_role_id: number;
+  };
+
   const [supplierFormData, setSupplierFormData] = useState<SupplierFormData>({
     id: 0,
     company_id: companyId,
@@ -238,6 +229,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         sort_id: 0,
         is_sub_qty: false,
         remove_image: false,
+        max_stock: 0,
       });
       setBarcodes([""]);
       setSelectedCategories([]);
@@ -280,6 +272,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         cutoff: product.cutoff ?? 0,
         is_sub_qty: Boolean(product.is_sub_qty),
         store_ids: product.store_ids ?? "",
+        max_stock: product.max_stock ?? 0,
       });
 
       setBarcodes(
@@ -1154,6 +1147,26 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                   container
                   spacing={3}
                 >
+                  {user.user_role_id == 1 && (
+                    <Grid size={{ xs: 3 }}>
+                      <Typography variant="body2" gutterBottom mb={1}>
+                        Max Stock Limit
+                      </Typography>
+                      <CustomTextField
+                        className="product_input"
+                        fullWidth
+                        placeholder="Max Stock"
+                        value={formData.max_stock || ""}
+                        onChange={(e: any) =>
+                          setFormData((p) => ({
+                            ...p,
+                            max_stock: e.target.value,
+                          }))
+                        }
+                      />
+                    </Grid>
+                  )}
+
                   <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom mb={1}>
                       Pack Off

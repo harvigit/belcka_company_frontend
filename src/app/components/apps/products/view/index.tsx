@@ -64,6 +64,7 @@ export interface ProductFormData {
   cutoff?: number;
   is_sub_qty?: boolean;
   store_ids?: string;
+  max_stock?: number | null;
 }
 
 interface Category {
@@ -615,6 +616,12 @@ const ProductView: React.FC<ProductViewProps> = ({
                 Quantity
               </Typography>
               <Typography>{product?.qty || 0}</Typography>
+            </Grid>
+             <Grid size={{ xs: 6 }}>
+              <Typography variant="body2" color="text.secondary">
+                Max Stock limit
+              </Typography>
+              <Typography>{product?.max_stock || 0}</Typography>
             </Grid>
             {product?.description && (
               <Grid size={{ xs: 6 }}>
