@@ -579,7 +579,10 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                   <Autocomplete
                     fullWidth
                     options={users}
-                    value={formData.store_manager_id ?? null}
+                    value={
+                      users.find((t) => t.id === formData.store_manager_id) ??
+                      null
+                    }
                     onChange={(_, newValue) => {
                       if (newValue) {
                         setFormData((prev) => ({
