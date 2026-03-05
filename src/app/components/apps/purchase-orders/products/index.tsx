@@ -43,7 +43,6 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
-  IconArrowRight,
   IconChevronRight,
   IconEye,
   IconFileImport,
@@ -125,7 +124,9 @@ const PurchaseProductList: React.FC<Props> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isImport, setIsImport] = useState(false);
-
+  const [manuallyDeselected, setManuallyDeselected] = useState<Set<number>>(
+    new Set(),
+  );
   const handleModelOpen = () => {
     setPreview(null);
     setOpenModel(true);
@@ -240,6 +241,17 @@ const PurchaseProductList: React.FC<Props> = ({
 
     setFetchStore(false);
   };
+
+  useEffect(() => {
+    if (open) {
+      const autoSelected = new Set(
+        data.filter((p) => p.total_qty > 0).map((p) => p.id),
+      );
+
+      setSelectedRowIds(autoSelected);
+      setManuallyDeselected(new Set());
+    }
+  }, [open]);
 
   useEffect(() => {
     fetchOrders();
@@ -413,13 +425,20 @@ const PurchaseProductList: React.FC<Props> = ({
               onChange={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
+
                 const newSelected = new Set(selectedRowIds);
+                const newDeselected = new Set(manuallyDeselected);
+
                 if (isChecked) {
                   newSelected.delete(item.id);
+                  newDeselected.add(item.id);
                 } else {
                   newSelected.add(item.id);
+                  newDeselected.delete(item.id);
                 }
+
                 setSelectedRowIds(newSelected);
+                setManuallyDeselected(newDeselected);
               }}
               sx={{
                 opacity: showCheckbox ? 1 : 0,
@@ -432,36 +451,6 @@ const PurchaseProductList: React.FC<Props> = ({
       },
     },
 
-    // columnHelper.accessor("uuid", {
-    //   id: "Id",
-    //   header: () => (
-    //     <Stack direction="row" alignItems="center" spacing={4}>
-    //       <Typography variant="subtitle2" fontWeight="inherit">
-    //         Order Date
-    //       </Typography>
-    //     </Stack>
-    //   ),
-    //   enableSorting: true,
-    //   cell: ({ row }) => {
-    //     const item = row.original;
-
-    //     return (
-    //       <Stack
-    //         direction="row"
-    //         alignItems="center"
-    //         spacing={4}
-    //         sx={{ pl: 0.3 }}
-    //       >
-    //         <Typography textTransform="capitalize" className="f-14">
-    //           {item.employee_orders
-    //             ? formatDate(item?.employee_orders[0]?.created_at)
-    //             : "-"}
-    //         </Typography>
-    //       </Stack>
-    //     );
-    //   },
-    // }),
-    
     columnHelper.accessor((row) => row?.total_qty, {
       id: "add",
       header: () => (
@@ -473,7 +462,7 @@ const PurchaseProductList: React.FC<Props> = ({
         const item = row.original;
 
         const updateQty = (newQty: number) => {
-          setData((prev: any[]) =>
+          setData((prev) =>
             prev.map((p) =>
               p.id === item.id
                 ? { ...p, total_qty: newQty > 0 ? newQty : null }
@@ -483,11 +472,15 @@ const PurchaseProductList: React.FC<Props> = ({
 
           setSelectedRowIds((prev) => {
             const updated = new Set(prev);
-            if (newQty > 0) {
+
+            if (newQty > 0 && !manuallyDeselected.has(item.id)) {
               updated.add(item.id);
-            } else {
+            }
+
+            if (newQty === 0) {
               updated.delete(item.id);
             }
+
             return updated;
           });
         };
