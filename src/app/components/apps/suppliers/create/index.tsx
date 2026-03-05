@@ -164,6 +164,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
             <Box className="form_inputs">
               <Typography variant="body1">Supplier Name</Typography>
               <CustomTextField
+                inputProps={{ maxLength: 50 }}
                 name="name"
                 fullWidth
                 value={formData.name}
@@ -226,6 +227,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 Contact Person Phone
               </Typography>
               <PhoneInput
+                inputClass="contact_phone"
                 country={"gb"}
                 value={phone1}
                 onChange={(value, country: any) => {

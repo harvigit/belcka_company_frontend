@@ -215,6 +215,8 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
             <Box className="form_inputs">
               <Typography variant="body1">Supplier Name</Typography>
               <CustomTextField
+                inputProps={{ maxLength: 50 }}
+
                 name="name"
                 className="f-14"
                 fullWidth
@@ -297,6 +299,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                   height: "47px",
                   borderColor: "#c0d1dc9c",
                 }}
+                inputClass="contact_phone"
                 enableSearch
                 inputProps={{ required: true }}
               />

@@ -465,3 +465,6 @@ input[type="range"]::-moz-range-thumb {
 .qty_input input {
     height: 13px;
 }
+.react-tel-input:has(.contact_phone) .special-label {
+  display: none !important;
+}

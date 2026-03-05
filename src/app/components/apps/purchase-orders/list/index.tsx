@@ -713,7 +713,7 @@ const PurchaseOrderList = () => {
       },
     },
 
-     columnHelper.accessor("created_date", {
+    columnHelper.accessor("created_date", {
       id: "orderDate",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -731,7 +731,7 @@ const PurchaseOrderList = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.3 , ml: 1}}
+            sx={{ pl: 0.3, ml: 1 }}
           >
             <Typography textTransform="capitalize" className="f-14">
               {item.created_date ? item.created_date : "-"}
@@ -759,7 +759,7 @@ const PurchaseOrderList = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.3 , ml: 1}}
+            sx={{ pl: 0.3, ml: 1 }}
           >
             <Typography textTransform="capitalize" className="f-14">
               {item.order_id ? item.order_id : "-"}
@@ -787,7 +787,7 @@ const PurchaseOrderList = () => {
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.3 ,ml: 1}}
+            sx={{ pl: 0.3, ml: 1 }}
           >
             <Typography textTransform="capitalize" className="f-14">
               {item.user_name ? item.user_name : "-"}
@@ -1501,6 +1501,7 @@ const PurchaseOrderList = () => {
                 whiteSpace: "nowrap",
                 textTransform: "none",
                 fontWeight: 600,
+                mr: 1
               }}
             >
               Activity
