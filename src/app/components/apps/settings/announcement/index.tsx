@@ -90,7 +90,7 @@ export default function AnnouncementsList({
   const handleEmojiClick = async (
     announcementId: number,
     emoji: string,
-    emojiCode: string
+    emojiCode: string,
   ) => {
     const payload = {
       id: announcementId,
@@ -112,7 +112,7 @@ export default function AnnouncementsList({
   const fetchEmojiDetails = async (announcementId: number) => {
     try {
       const response = await api.get(
-        `announcements/emoji-detail?announcement_id=${announcementId}`
+        `announcements/emoji-detail?announcement_id=${announcementId}`,
       );
       const data = response.data.info;
       setEmojiDetails(data);
@@ -124,7 +124,7 @@ export default function AnnouncementsList({
   const fetchReadDetails = async (announcementId: number) => {
     try {
       const response = await api.get(
-        `announcements/read-detail?announcement_id=${announcementId}`
+        `announcements/read-detail?announcement_id=${announcementId}`,
       );
       const data = response.data.info;
       setReadDetails(data);
@@ -136,7 +136,7 @@ export default function AnnouncementsList({
   const fetchAnnouncementDetails = async (announcementId: number) => {
     try {
       const response = await api.get(
-        `announcements/detail?id=${announcementId}&user_id=${userId}`
+        `announcements/detail?id=${announcementId}&user_id=${userId}`,
       );
       const data = response.data.info;
       setAnnouncementDetails(data);
@@ -283,7 +283,7 @@ export default function AnnouncementsList({
                                 const isImage =
                                   /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
                                 const isVideo = /\.(mp4|mov|webm|avi)$/i.test(
-                                  url
+                                  url,
                                 );
                                 const isPDF = /\.pdf$/i.test(url);
 
@@ -347,7 +347,11 @@ export default function AnnouncementsList({
                           )}
                         </Box>
 
-                        <Box display={"flex"} justifyContent={"space-between"}>
+                        <Box
+                          display={"flex"}
+                          justifyContent={"space-between"}
+                          alignItems={"center"}
+                        >
                           {it.feeds && it.feeds.length > 0 ? (
                             <Box
                               sx={{
@@ -363,7 +367,7 @@ export default function AnnouncementsList({
                                   acc[feed.action] =
                                     (acc[feed.action] || 0) + 1;
                                   return acc;
-                                }, {})
+                                }, {}),
                               ).map(([emoji, count]: any) => (
                                 <Box
                                   key={emoji}
@@ -399,7 +403,7 @@ export default function AnnouncementsList({
                             <Box></Box>
                           )}
                           {it.read_count > 0 && it.user_id == user.id && (
-                            <Box>
+                            <Box sx={{ px: 1.5, py: 0.5 }}>
                               <IconButton
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -736,7 +740,7 @@ export default function AnnouncementsList({
                               const isImage =
                                 /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
                               const isVideo = /\.(mp4|mov|webm|avi)$/i.test(
-                                url
+                                url,
                               );
                               const isPDF = /\.pdf$/i.test(url);
 
@@ -795,7 +799,7 @@ export default function AnnouncementsList({
                                   )}
                                 </Box>
                               );
-                            }
+                            },
                           )}
                         </Box>
                       </Box>
@@ -828,8 +832,8 @@ export default function AnnouncementsList({
                               acc[feed.action] = (acc[feed.action] || 0) + 1;
                               return acc;
                             },
-                            {}
-                          )
+                            {},
+                          ),
                         ).map(([emoji, count]: any) => (
                           <Box
                             key={emoji}

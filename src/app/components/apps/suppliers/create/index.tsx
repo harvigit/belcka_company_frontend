@@ -38,6 +38,8 @@ interface SupplierFormData {
   status: boolean;
   contact_person_email?: string;
   contact_person_name?: string;
+  contact_person_phone?: string;
+  contact_person_extension?: string;
 }
 
 interface CreateSupplierProps {
@@ -65,6 +67,9 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
   const [phone, setPhone] = useState("");
   const [extension, setExtension] = useState("+44");
   const [nationalPhone, setNationalPhone] = useState("");
+  const [phone1, setPhone1] = useState("");
+  const [extension1, setExtension1] = useState("+44");
+  const [nationalPhone1, setNationalPhone1] = useState("");
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
       "image/jpeg": [".jpeg", ".jpg"],
@@ -217,6 +222,32 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 onChange={handleChange}
               />
 
+              <Typography variant="body1" mt={2}>
+                Contact Person Phone
+              </Typography>
+              <PhoneInput
+                country={"gb"}
+                value={phone1}
+                onChange={(value, country: any) => {
+                  setPhone1(value);
+                  setExtension1("+" + country.dialCode);
+
+                  const numberOnly = value.replace(country.dialCode, "");
+                  setNationalPhone1(numberOnly);
+                  setFormData({
+                    ...formData,
+                    contact_person_phone: nationalPhone1,
+                    contact_person_extension: extension1,
+                  });
+                }}
+                inputStyle={{
+                  width: "100%",
+                  height: "47px",
+                  borderColor: "#c0d1dc9c",
+                }}
+                enableSearch
+                inputProps={{ required: true }}
+              />
               <Typography variant="body1" mt={2}>
                 Street
               </Typography>

@@ -42,7 +42,10 @@ const ProductHistory: React.FC<ProductProps> = ({ open, onClose }) => {
     }
     setLoading(false);
   };
-  const paginatedFeeds = history?.slice(0, page * limit) || [];
+  const filteredHistory =
+    history?.filter((item) => item.request_type === 117) || [];
+
+  const paginatedFeeds = filteredHistory.slice(0, page * limit);
 
   useEffect(() => {
     if (open == true) {
@@ -191,7 +194,7 @@ const ProductHistory: React.FC<ProductProps> = ({ open, onClose }) => {
                     })}
                 </Box>
 
-                {paginatedFeeds.length < history.length && (
+                {paginatedFeeds.length < filteredHistory.length && (
                   <Box display="flex" justifyContent="center" my={2}>
                     <Button
                       variant="outlined"
