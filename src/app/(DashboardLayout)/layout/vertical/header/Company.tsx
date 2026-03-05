@@ -270,17 +270,17 @@ const Company = () => {
   const REQUEST_ROUTE_MAP: Record<
     string,
     (
-      recordId?: number,
-      id?: number,
+        userId?: number,
+        recordId?: number,
       startDate?: string,
       endDate?: string,
     ) => string
   > = {
-    Shift: (recordId, startDate, endDate) => {
+      Shift: (userId, recordId, startDate, endDate) => {  // ← add "id" param
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
 
-      if (recordId) params.push(`user_id=${recordId}`);
+      if (userId) params.push(`user_id=${userId}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
       params.push("type=shift");
@@ -292,12 +292,12 @@ const Company = () => {
 
       return url;
     },
-    Expense: (recordId, id, startDate, endDate) => {
+    Expense: (userId, recordId, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
 
-      if (recordId) params.push(`user_id=${recordId}`);
-      if (id) params.push(`id=${id}`);
+      if (userId) params.push(`user_id=${userId}`);
+      if (recordId) params.push(`id=${recordId}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
       params.push(`open=true`);
@@ -309,11 +309,11 @@ const Company = () => {
 
       return url;
     },
-    Timesheet: (recordId, startDate, endDate) => {
+    Timesheet: (userId, recordId, startDate, endDate) => {
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
 
-      if (recordId) params.push(`user_id=${recordId}`);
+      if (userId) params.push(`user_id=${userId}`);
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
       // params.push(`open=true`);
