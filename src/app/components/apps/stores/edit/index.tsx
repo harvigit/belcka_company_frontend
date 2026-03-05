@@ -467,6 +467,9 @@ const EditStore: React.FC<EditStoreProps> = ({
                         ? value.slice(country.dialCode.length)
                         : value;
 
+                      localNumber = localNumber.replace(/\D/g, "");
+                      localNumber = localNumber.slice(0, 10);
+
                       setPhone(localNumber);
                       setExtension(dialCode);
 
@@ -474,7 +477,9 @@ const EditStore: React.FC<EditStoreProps> = ({
                         ...prev,
                         phone: localNumber,
                         extension: dialCode,
-                        phone_with_extension: dialCode + localNumber,
+                        phone_with_extension: localNumber
+                          ? dialCode + localNumber
+                          : "",
                       }));
                     }}
                     inputStyle={{

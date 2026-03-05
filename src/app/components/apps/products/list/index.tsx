@@ -396,7 +396,6 @@ const ProductList = () => {
 
   // Fetch data
   const fetchProducts = async (restorePage?: number) => {
-
     setFetchProduct(true);
     try {
       const res = await api.get(`products/get?company_id=${user.company_id}`);
@@ -575,6 +574,7 @@ const ProductList = () => {
     } finally {
       setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   const [inputValue, setInputValue] = useState("");
@@ -1724,7 +1724,7 @@ const ProductList = () => {
                   <ListItemIcon>
                     <IconNotes width={18} />
                   </ListItemIcon>
-                  Archive Product list
+                  Archived Product list
                 </Link>
               </MenuItem>
             </Menu>

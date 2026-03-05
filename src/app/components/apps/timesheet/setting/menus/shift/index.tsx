@@ -265,7 +265,7 @@ const ShiftLists: React.FC<ShiftListsProps> = ({ onClose }) => {
                   <ListItemIcon>
                     <IconNotes width={18} />
                   </ListItemIcon>
-                  Archive List
+                  Archived List
                 </Link>
               </MenuItem>
             </Menu>

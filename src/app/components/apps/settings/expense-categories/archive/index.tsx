@@ -138,7 +138,7 @@ const ArchiveExpenseCategory: React.FC<ArchiveExpenseCategoryProps> = ({
                                     <IconArrowLeft/>
                                 </IconButton>
                                 <Typography variant="h6" color='inherit' fontWeight={700}>
-                                    Archive Expense Category List
+                                    Archived Expense Category List
                                 </Typography>
                             </Box>
 

@@ -155,6 +155,14 @@ const StoreList = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
+      if (
+        (formData.phone && formData.phone.length !== 10) ||
+        (formData.phone && formData.phone?.length > 10)
+      ) {
+        toast.error("Phone number must be 10 digits");
+        return;
+      }
+
       const payload = {
         ...formData,
         company_id: user.company_id ?? null,
@@ -184,6 +192,13 @@ const StoreList = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
+      if (
+        (formData.phone && formData.phone.length !== 10) ||
+        (formData.phone && formData.phone?.length > 10)
+      ) {
+        toast.error("Phone number must be 10 digits");
+        return;
+      }
       const payload = {
         ...formData,
         company_id: user.company_id ?? null,

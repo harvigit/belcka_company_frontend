@@ -126,7 +126,7 @@ const ArchiveShifts: React.FC<ArchiveShiftsProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Shift List
+                  Archived Shift List
                 </Typography>
               </Box>
 

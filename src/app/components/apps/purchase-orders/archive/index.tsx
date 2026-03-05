@@ -121,7 +121,7 @@ const ArchivePurchaseOrder: React.FC<ArchivePurchaseOrderProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Purchase Order List
+                  Archived Purchase Order List
                 </Typography>
               </Box>
 

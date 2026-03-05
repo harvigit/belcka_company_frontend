@@ -701,7 +701,7 @@ const ClientList = () => {
                   <ListItemIcon>
                     <IconNotes width={18} />
                   </ListItemIcon>
-                  Archive List
+                  Archived Client List
                 </Link>
               </MenuItem>
             </Menu>

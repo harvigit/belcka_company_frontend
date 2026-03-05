@@ -180,6 +180,7 @@ const SupplierList = () => {
     } finally {
       setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   const editSupplier = async (e: React.FormEvent) => {

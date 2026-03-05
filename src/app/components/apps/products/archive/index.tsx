@@ -142,7 +142,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
               <IconArrowLeft />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
-              Archive Product List
+              Archived Product List
             </Typography>
           </Box>
           {data.length > 0 && (

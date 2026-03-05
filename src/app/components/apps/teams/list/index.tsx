@@ -874,7 +874,7 @@ const TablePagination = () => {
                   <ListItemIcon>
                     <IconNotes width={18} />
                   </ListItemIcon>
-                  Archive List
+                  Archived List
                 </Link>
               </MenuItem>
               <MenuItem

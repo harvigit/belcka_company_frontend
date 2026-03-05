@@ -136,7 +136,7 @@ const ArchiveLocation: React.FC<ArchiveLocationProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Location List
+                  Archived Location List
                 </Typography>
               </Box>
 

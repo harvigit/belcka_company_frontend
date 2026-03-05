@@ -127,7 +127,7 @@ const ArchiveAddress: React.FC<ArchiveAddressProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Address List
+                  Archived Address List
                 </Typography>
               </Box>
 

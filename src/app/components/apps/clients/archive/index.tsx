@@ -140,7 +140,7 @@ const ArchiveClient: React.FC<ArchiveClientProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Client List
+                  Archived Client List
                 </Typography>
               </Box>
 

@@ -1133,7 +1133,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <ListItemIcon>
                     <IconNotes width={18} />
                   </ListItemIcon>
-                  Archive address list
+                  Archived address list
                 </Link>
               </MenuItem>
               <MenuItem onClick={handleClose}>
@@ -1156,7 +1156,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <ListItemIcon>
                     <IconNotes width={18} />
                   </ListItemIcon>
-                  Archive project list
+                  Archived project list
                 </Link>
               </MenuItem>
             </Menu>

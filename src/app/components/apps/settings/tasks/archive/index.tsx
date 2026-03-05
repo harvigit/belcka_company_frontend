@@ -140,7 +140,7 @@ const ArchiveTask: React.FC<ArchiveTaskProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Task List
+                  Archived Task List
                 </Typography>
               </Box>
 

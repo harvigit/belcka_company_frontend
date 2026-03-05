@@ -126,7 +126,7 @@ const ArchiveLeave: React.FC<ArchiveLeaveProps> = ({
                                     <IconArrowLeft/>
                                 </IconButton>
                                 <Typography variant="h6" color='inherit' fontWeight={700}>
-                                    Archive Leave List
+                                    Archived Leave List
                                 </Typography>
                             </Box>
 

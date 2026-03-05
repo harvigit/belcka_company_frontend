@@ -133,7 +133,7 @@ const ArchiveTeam: React.FC<ArchiveTeamProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Team List
+                  Archived Team List
                 </Typography>
               </Box>
 

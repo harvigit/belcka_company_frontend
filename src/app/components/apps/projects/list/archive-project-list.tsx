@@ -127,7 +127,7 @@ const ArchiveProject: React.FC<ArchiveProjectProps> = ({
                   <IconArrowLeft />
                 </IconButton>
                 <Typography variant="h6" color="inherit" fontWeight={700}>
-                  Archive Project List
+                  Archived Project List
                 </Typography>
               </Box>
 
