@@ -122,7 +122,10 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
           contact_person_extension: supplier.contact_person_extension || "+44",
           contact_person_phone: supplier.contact_person_phone || "",
         });
-
+        setPhone(supplier.extension + supplier.phone);
+        setPhone1(
+          supplier.contact_person_extension + supplier.contact_person_phone,
+        );
         // Prefill image preview
         if (supplier.image_url) {
           setPreview(supplier.image_url);
@@ -216,12 +219,18 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
               <Typography variant="body1">Supplier Name</Typography>
               <CustomTextField
                 inputProps={{ maxLength: 50 }}
-
                 name="name"
                 className="f-14"
                 fullWidth
                 value={formData.name}
-                onChange={handleChange}
+                onChange={(e: any) => {
+                  let value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    name: value,
+                  }));
+                }}
               />
               <Typography variant="body1" mt={2}>
                 Email
@@ -240,7 +249,14 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 name="company_name"
                 value={formData.company_name || ""}
-                onChange={handleChange}
+                onChange={(e: any) => {
+                  let value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    company_name: value,
+                  }));
+                }}
               />
               <Typography variant="body1" mt={2}>
                 Account Number
@@ -250,7 +266,17 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 name="account_number"
                 value={formData.account_number || ""}
-                onChange={handleChange}
+                inputProps={{
+                  maxLength: 15,
+                  inputMode: "text",
+                }}
+                onChange={(e: any) => {
+                  let value = e.target.value.replace(/[^0-9]/g, "");
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    account_number: value,
+                  }));
+                }}
               />
 
               <Typography variant="body1" mt={2}>
@@ -261,7 +287,14 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 name="contact_person_name"
                 value={formData.contact_person_name || ""}
-                onChange={handleChange}
+                onChange={(e: any) => {
+                  let value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    contact_person_name: value,
+                  }));
+                }}
               />
 
               <Typography variant="body1" mt={2}>
@@ -341,7 +374,17 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 name="postcode"
                 value={formData.postcode || ""}
-                onChange={handleChange}
+                inputProps={{
+                  maxLength: 15,
+                  inputMode: "text",
+                }}
+                onChange={(e: any) => {
+                  let value = e.target.value;
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    postcode: value,
+                  }));
+                }}
                 sx={{ mb: 2 }}
               />
 

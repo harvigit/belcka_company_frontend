@@ -349,9 +349,9 @@ const ArchiveUserList = () => {
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
           <Grid display="flex" gap={1} alignItems={"center"}>
-            <Button variant="contained" color="primary">
+            {/* <Button variant="contained" color="primary">
               ARCHIVE USERS ({filteredData.length})
-            </Button>
+            </Button> */}
             <TextField
               id="search"
               type="text"

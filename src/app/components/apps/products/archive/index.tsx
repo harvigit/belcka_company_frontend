@@ -178,9 +178,20 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
               <FormControlLabel
                 label={
                   <Typography
+                    color="textSecondary"
                     variant="body1"
                     fontWeight={600}
-                    sx={{ maxWidth: 350 }}
+                    className="f-14"
+                    sx={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 3,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      lineHeight: 1.25,
+                      maxWidth: 350,
+                      wordBreak: "break-word",
+                    }}
                   >
                     {item.name ? item.name : item.sort_name}
                   </Typography>

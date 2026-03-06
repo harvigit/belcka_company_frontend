@@ -468,3 +468,33 @@ input[type="range"]::-moz-range-thumb {
 .react-tel-input:has(.contact_phone) .special-label {
   display: none !important;
 }
+.input-with-unit {
+  position: relative;
+  width: 100%;
+}
+
+.input-with-unit input {
+  width: 100%;
+  padding-right: 4rem;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.input-with-unit .unit {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  background-color: #d8d6de;
+  padding: 0.25rem 0.5rem;
+  border-left: 1px solid #ccc;
+  color: #333;
+  font-size: 0.875rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  border-top-right-radius: 0.25rem;
+  border-bottom-right-radius: 0.25rem;
+}
