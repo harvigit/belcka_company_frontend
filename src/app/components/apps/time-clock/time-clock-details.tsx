@@ -204,6 +204,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         'cis_amount',
         'gross_amount',
         'payableAmount',
+        'adjustment',
         'dailyTotal',
     ];
 
@@ -213,6 +214,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         cis_amount: false,
         gross_amount: false,
         payableAmount: false,
+        adjustment: false,
         dailyTotal: false,
     });
 
@@ -676,6 +678,20 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
+    const handleAdjustmentSave = async (date: string, amount: number) => {
+        try {
+            const response = await api.post('/time-clock/adjustment-amount', {user_id, date, adjustment_amount: amount});
+            if (response.data.IsSuccess) {
+                const defaultStartDate = startDate || defaultStart;
+                const defaultEndDate = endDate || defaultEnd;
+                await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                onDataChange?.();
+            }
+        } catch (error) {
+            console.error('Error saving adjustment:', error);
+        }
+    };
+
     // API calls
     const saveFieldChanges = async (worklogId: string, originalLog: any) => {
         const editedData = editingWorklogs[worklogId];
@@ -890,7 +906,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
                 timesheet_ids: '',
                 cis_amount: 0,
-                gross_amount: 0
+                gross_amount: 0,
+                adjustment: ''
             }];
 
             const filteredDayRows = (week.days || []).flatMap((day: any) => {
@@ -937,6 +954,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         penaltyHours: '--',
                         dailyTotal: formatHour(day.daily_total),
                         payableAmount: `${currency}${day.daily_payable_amount}`,
+                        daily_adjustment_amount: day.daily_adjustment_amount ?? 0,
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
                         managerNotes: day.manager_notes || '--',
@@ -974,6 +992,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     penaltyHours: '--',
                     dailyTotal: '--',
                     payableAmount: '--',
+                    daily_adjustment_amount: '--',
                     regular: '--',
                     employeeNotes: '--',
                     managerNotes: '--',
@@ -1698,6 +1717,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             //     size: 140,
             // },
             {
+                id: 'adjustment',
+                accessorKey: 'adjustment',
+                header: () => <span style={{ display: 'block', textAlign: 'center', color: '#203040' }}>Adjustment</span>,
+                cell: ({ row }) => row.original.rowType === 'day' ? (row.original.adjustment ?? '--') : null,
+                size: 130,
+            },
+            {
                 id: 'payableAmount',
                 accessorKey: 'payableAmount',
                 header: () => <span style={{display: 'block', textAlign: 'center', color: '#203040' }}>Payable Amount</span>,
@@ -1843,6 +1869,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 leaveRequestCount={leaveRequestCount}
                 penaltyAppealCount={penaltyAppealCount}
                 openLeaveRequestsSideBar={handleLeaveRequests}
+                onAdjustmentSave={handleAdjustmentSave}
             />
 
             <ActionBar

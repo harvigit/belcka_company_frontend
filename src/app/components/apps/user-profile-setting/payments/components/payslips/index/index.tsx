@@ -106,6 +106,112 @@ const saveDateRangeToStorage = (
     console.error("Error saving date range to localStorage:", error);
   }
 };
+
+// Add this OUTSIDE PayslipsList component (above it)
+const AmountCell = ({
+                        item,
+                        startDate,
+                        endDate,
+                        fetchPayslips,
+                    }: {
+    item: any;
+    startDate: Date | null;
+    endDate: Date | null;
+    fetchPayslips: (start: Date, end: Date) => Promise<void>;
+}) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(item.amount ?? "");
+
+    const handleSave = async () => {
+        if (editValue === item.amount) {
+            setIsEditing(false);
+            return;
+        }
+
+        try {
+            const payload = new FormData();
+            payload.append("id", String(item.id));
+            payload.append("user_id", String(item.user_id));
+            payload.append("company_id", String(item.company_id));
+            payload.append("amount", String(editValue));
+
+            payload.append("from_date", item.fromDate ?? "");
+            payload.append("to_date", item.toDate ?? "");
+            payload.append("payment_date", item.payment_date ?? "");
+            payload.append("payslip_number", item.payslip_number ?? "");
+
+            const result = await api.post("payslips/update", payload, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (result.data.IsSuccess) {
+                toast.success(result.data.message);
+                if (startDate && endDate) fetchPayslips(startDate, endDate);
+            } else {
+                toast.error(result.data.message);
+                setEditValue(item.amount); // revert
+            }
+        } catch (error) {
+            console.error("Failed to update amount:", error);
+            setEditValue(item.amount);
+        }
+
+        setIsEditing(false);
+    };
+
+    if (isEditing) {
+        return (
+            <TextField
+                autoFocus
+                size="small"
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave();
+                    if (e.key === "Escape") {
+                        setEditValue(item.amount);
+                        setIsEditing(false);
+                    }
+                }}
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">{item.currency}</InputAdornment>
+                        ),
+                    },
+                }}
+                sx={{ width: 140 }}
+            />
+        );
+    }
+
+    return (
+        <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            onClick={() => setIsEditing(true)}
+            sx={{
+                cursor: "pointer",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                "&:hover": {
+                    backgroundColor: "action.hover",
+                    outline: "1px dashed",
+                    outlineColor: "primary.main",
+                },
+            }}
+        >
+            <Typography className="f-14">
+                {item.currency} {item.amount ?? "-"}
+            </Typography>
+        </Stack>
+    );
+};
+
 const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
   const [data, setData] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
@@ -223,34 +329,51 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
     if (startDate && endDate) fetchPayslips(startDate, endDate);
   }, [api, startDate, endDate]);
 
-  const handleZip = async () => {
-    if (!selectedRowIds.size) {
-      toast.error("Please select at least one payslip");
-      return;
-    }
+    const handleZip = async () => {
+        if (!selectedRowIds.size) {
+            toast.error("Please select at least one payslip");
+            return;
+        }
 
-    try {
-      const res = await api.post(
-        "payslips/zip",
-        { ids: Array.from(selectedRowIds) },
-        { responseType: "blob" },
-      );
+        try {
+            const res = await api.post("payslips/zip", {
+                ids: Array.from(selectedRowIds),
+            });
 
-      const blob = new Blob([res.data], { type: "application/zip" });
-      const url = window.URL.createObjectURL(blob);
+            if (!res.data?.IsSuccess) {
+                toast.error(res.data?.message || "Failed to create zip");
+                return;
+            }
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "payslips.zip";
-      document.body.appendChild(a);
-      a.click();
+            const zipUrl = res.data?.data?.url;
+            if (!zipUrl) {
+                toast.error("No zip URL returned from server");
+                return;
+            }
 
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+            const fileRes = await fetch(zipUrl);
+            if (!fileRes.ok) {
+                toast.error("Failed to download zip file");
+                return;
+            }
+
+            const blob = await fileRes.blob();
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "payslips.zip";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            toast.success("Payslips downloaded!");
+        } catch (error) {
+            console.error(error);
+            toast.error("Something went wrong");
+        }
+    };
 
   const viewPdf = (pdf: string) => {
     if (!pdf) return;
@@ -534,24 +657,18 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
         );
       },
     }),
-      
+
       columnHelper.accessor((row) => row?.amount, {
           id: "amount",
           header: () => "Amount",
-          cell: ({ row }) => {
-              const item = row.original;
-              return (
-                  <Stack
-                      direction="row"
-                      alignItems="center"
-                      spacing={1}
-                      textTransform={"capitalize"}
-                      className="f-14"
-                  >
-                      <Typography>{item.currency} {item.amount}</Typography>
-                  </Stack>
-              );
-          },
+          cell: ({ row }) => (
+              <AmountCell
+                  item={row.original}
+                  startDate={startDate}
+                  endDate={endDate}
+                  fetchPayslips={fetchPayslips}
+              />
+          ),
       }),
 
     columnHelper.accessor((row) => row?.date, {

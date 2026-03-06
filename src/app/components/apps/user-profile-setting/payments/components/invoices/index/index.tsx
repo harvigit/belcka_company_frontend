@@ -105,6 +105,112 @@ const saveDateRangeToStorage = (
         console.error('Error saving date range to localStorage:', error);
     }
 };
+
+const InvoiceAmountCell = ({item, startDate, endDate, fetchInvoices,}: {
+    item: any;
+    startDate: Date | null;
+    endDate: Date | null;
+    fetchInvoices: (start: Date, end: Date) => Promise<void>;
+}) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(item.amount ?? '');
+
+    const handleSave = async () => {
+        if (editValue === item.amount) {
+            setIsEditing(false);
+            return;
+        }
+
+        try {
+            const formatToBackend = (dateStr: string | null | undefined): string => {
+                if (!dateStr) return '';
+                const dt = DateTime.fromFormat(dateStr, 'dd MMM yyyy');
+                return dt.isValid ? dt.toFormat('dd/MM/yyyy') : '';
+            };
+
+            const payload = new FormData();
+            payload.append('id', String(item.id));
+            payload.append('user_id', String(item.user_id));
+            payload.append('company_id', String(item.company_id));
+            payload.append('amount', String(editValue));
+            payload.append('from_date', formatToBackend(item.from_date));
+            payload.append('to_date', formatToBackend(item.to_date));
+            payload.append('invoice_date', formatToBackend(item.invoice_date));
+            payload.append('invoice_number', item.invoice_number ?? '');
+            payload.append('description', item.description ?? '');
+
+            const result = await api.post('bookkeeper-invoices/update', payload, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            if (result.data.IsSuccess) {
+                toast.success(result.data.message);
+                if (startDate && endDate) await fetchInvoices(startDate, endDate);
+            } else {
+                toast.error(result.data.message);
+                setEditValue(item.amount);
+            }
+        } catch (error) {
+            console.error('Failed to update invoice amount:', error);
+            setEditValue(item.amount);
+        }
+
+        setIsEditing(false);
+    };
+
+    if (isEditing) {
+        return (
+            <TextField
+                autoFocus
+                size="small"
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave();
+                    if (e.key === 'Escape') {
+                        setEditValue(item.amount);
+                        setIsEditing(false);
+                    }
+                }}
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">{item.currency}</InputAdornment>
+                        ),
+                    },
+                }}
+                sx={{ width: 140 }}
+            />
+        );
+    }
+
+    return (
+        <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            onClick={() => setIsEditing(true)}
+            sx={{
+                cursor: 'pointer',
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                '&:hover': {
+                    backgroundColor: 'action.hover',
+                    outline: '1px dashed',
+                    outlineColor: 'primary.main',
+                },
+            }}
+        >
+            <Typography className="f-14">
+                {item.currency} {item.amount ?? '-'}
+            </Typography>
+        </Stack>
+    );
+};
+
 const InvoicesList: React.FC<Props> = ({userId, isShow}) => {
     const [data, setData] = useState<any[]>([]);
     const [columnFilters, setColumnFilters] = useState<any>([]);
@@ -555,20 +661,14 @@ const InvoicesList: React.FC<Props> = ({userId, isShow}) => {
         columnHelper.accessor((row) => row?.amount, {
             id: 'amount',
             header: () => 'Amount',
-            cell: ({row}) => {
-                const item = row.original;
-                return (
-                    <Stack
-                        direction="row"
-                        alignItems="center"
-                        spacing={1}
-                        textTransform={'capitalize'}
-                        className="f-14"
-                    >
-                        <Typography>{item.currency} {item.amount}</Typography>
-                    </Stack>
-                );
-            },
+            cell: ({ row }) => (
+                <InvoiceAmountCell
+                    item={row.original}
+                    startDate={startDate}
+                    endDate={endDate}
+                    fetchInvoices={fetchInvoices}
+                />
+            ),
         }),
 
         columnHelper.accessor((row) => row?.description, {

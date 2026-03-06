@@ -32,6 +32,7 @@ import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox
 import EditableTimeCell from './EditableTimeCell';
 import EditableShiftCell from './EditableShiftCell';
 import EditableProjectCell from './EditableProjectCell';
+import EditableAdjustmentCell from './EditableAdjustmentCell';
 import NewRecordRow from './NewRecordRow';
 import {
     DailyBreakdown,
@@ -91,6 +92,7 @@ interface TimeClockTableProps {
     penaltyAppealCount: number;
     penaltyAppealByDate?: { [key: string]: number };
     openLeaveRequestsSideBar?: () => Promise<void>;
+    onAdjustmentSave?: (date: string, amount: number) => Promise<void>;
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -140,11 +142,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            penaltyAppealCount,
                                                            penaltyAppealByDate,
                                                            openLeaveRequestsSideBar,
+                                                           onAdjustmentSave
                                                        }) => {
     const [conflictAnchorEl, setConflictAnchorEl] = useState<HTMLElement | null>(null);
     const [exclamationAnchorEl, setExclamationAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedWorklog, setSelectedWorklog] = useState<any>(null);
-
+    
+    const [editingAdjustment, setEditingAdjustment] = useState<{ value: string; } | null>(null);
+    
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
         const configs: { [key: string]: { width: number; visible: boolean } } = {};
@@ -1044,6 +1049,23 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {/*    </TableCell>*/}
                                                 {/*)}*/}
 
+                                                {isFirstRow && visibleColumnConfigs.adjustment?.visible && (
+                                                    <TableCell
+                                                        rowSpan={rowSpan}
+                                                        align="center"
+                                                        className="rowspan-cell"
+                                                        sx={{ py: 0.5, fontSize: '0.875rem', height: '45px', verticalAlign: 'middle' }}
+                                                    >
+                                                        <EditableAdjustmentCell
+                                                            date={row.original.rowsData[0].date_added}
+                                                            currentAmount={rowData.daily_adjustment_amount}
+                                                            currency={currency}
+                                                            isLocked={isRowLocked}
+                                                            onSave={onAdjustmentSave!}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                                
                                                 {/* Payable Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.payableAmount?.visible && (
                                                     <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{

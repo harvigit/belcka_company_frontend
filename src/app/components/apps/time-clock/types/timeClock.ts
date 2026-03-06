@@ -1,6 +1,7 @@
 import {TimeClock} from '../time-clock';
 
 export type DailyBreakdown = {
+    adjustment: string;
     cis_amount: number;
     gross_amount: number;
     timesheet_ids: string;
