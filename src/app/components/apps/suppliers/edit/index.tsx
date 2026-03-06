@@ -224,7 +224,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 value={formData.name}
                 onChange={(e: any) => {
-                  let value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  let value = e.target.value;
 
                   setFormData((prev: any) => ({
                     ...prev,
@@ -250,7 +250,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 name="company_name"
                 value={formData.company_name || ""}
                 onChange={(e: any) => {
-                  let value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  let value = e.target.value;
 
                   setFormData((prev: any) => ({
                     ...prev,
@@ -266,12 +266,8 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 name="account_number"
                 value={formData.account_number || ""}
-                inputProps={{
-                  maxLength: 15,
-                  inputMode: "text",
-                }}
                 onChange={(e: any) => {
-                  let value = e.target.value.replace(/[^0-9]/g, "");
+                  let value = e.target.value;
                   setFormData((prev: any) => ({
                     ...prev,
                     account_number: value,
@@ -288,7 +284,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 name="contact_person_name"
                 value={formData.contact_person_name || ""}
                 onChange={(e: any) => {
-                  let value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  let value = e.target.value;
 
                   setFormData((prev: any) => ({
                     ...prev,
@@ -374,10 +370,6 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 fullWidth
                 name="postcode"
                 value={formData.postcode || ""}
-                inputProps={{
-                  maxLength: 15,
-                  inputMode: "text",
-                }}
                 onChange={(e: any) => {
                   let value = e.target.value;
                   setFormData((prev: any) => ({

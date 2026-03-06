@@ -86,6 +86,8 @@ interface SupplierFormData {
   status: boolean;
   contact_person_email?: string;
   contact_person_name?: string;
+  contact_person_phone?: string;
+  contact_person_extension?: string;
 }
 
 const SupplierList = () => {
@@ -115,6 +117,13 @@ const SupplierList = () => {
     company_id: user?.company_id,
     name: "",
     status: true,
+    phone: "",
+    contact_person_name: "",
+    contact_person_phone: "",
+    postcode: "",
+    town: "",
+    street: "",
+    location: "",
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {

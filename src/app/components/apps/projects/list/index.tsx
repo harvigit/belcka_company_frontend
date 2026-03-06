@@ -818,7 +818,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const filteredData = useMemo(() => {
     return products.filter((item) => {
       const search = searchProduct.toLowerCase();
-
+      if (filters.status == "All") return products;
       const matchesSearch =
         item.short_name?.toLowerCase().includes(search) ||
         item.name?.toLowerCase().includes(search);
@@ -1201,7 +1201,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {status.map((statusItem, i) => (
                       <MenuItem key={i} value={statusItem}>
                         {statusItem}

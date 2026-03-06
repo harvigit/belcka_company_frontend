@@ -605,6 +605,8 @@ const ProductList = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
+      if (filters.supplier == "All") return data;
+      if (filters.category == "All") return data;
       const matchesSupplier = filters.supplier
         ? item.supplier_name === filters.supplier
         : true;
@@ -1772,7 +1774,7 @@ const ProductList = () => {
                     }}
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {suppliers.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -1792,7 +1794,7 @@ const ProductList = () => {
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {categories.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}

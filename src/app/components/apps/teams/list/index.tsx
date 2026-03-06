@@ -40,15 +40,16 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
-    IconChevronLeft,
-    IconChevronRight,
-    IconEye,
-    IconFilter,
-    IconNotes,
-    IconRotate,
-    IconSearch,
-    IconTrash, IconUsersGroup,
-} from '@tabler/icons-react';
+  IconChevronLeft,
+  IconChevronRight,
+  IconEye,
+  IconFilter,
+  IconNotes,
+  IconRotate,
+  IconSearch,
+  IconTrash,
+  IconUsersGroup,
+} from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
@@ -144,8 +145,8 @@ const TablePagination = () => {
   const [createDrawer, setCreateDrawer] = useState(false);
   const [editDrawer, setEditDrawer] = useState(false);
   const [editTeamId, setEditTeamId] = useState<number | null>(null);
-    const [teamMembersLimit, setTeamMembersLimit] = useState(false);
-    
+  const [teamMembersLimit, setTeamMembersLimit] = useState(false);
+
   const handleEditClick = (teamId: number) => {
     setEditTeamId(teamId);
     setEditDrawer(true);
@@ -258,6 +259,7 @@ const TablePagination = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      if (filters.team == "All" || filters.supervisor == "All") return data;
       const matchesTeam = filters.team ? item.name === filters.team : true;
       const matchesSupervisor = filters.supervisor
         ? item.supervisor_name === filters.supervisor
@@ -588,7 +590,7 @@ const TablePagination = () => {
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {uniqueTrades.map((trade, i) => (
                       <MenuItem key={i} value={trade}>
                         {trade}
@@ -608,7 +610,7 @@ const TablePagination = () => {
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {uniqueSupervisors.map((supervisor, i) => (
                       <MenuItem key={i} value={supervisor}>
                         {supervisor}
@@ -830,30 +832,30 @@ const TablePagination = () => {
                   Add Team
                 </Link>
               </MenuItem>
-                <MenuItem onClick={handleClose}>
-                    <Link
-                        color="body1"
-                        href="#"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            setTeamMembersLimit(true);
-                        }}
-                        style={{
-                            width: "100%",
-                            color: "#11142D",
-                            textTransform: "none",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyItems: "center",
-                        }}
-                    >
-                        <ListItemIcon>
-                            <IconUsersGroup width={18} />
-                        </ListItemIcon>
-                        Team Members Limit
-                    </Link>
-                </MenuItem>
-                
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTeamMembersLimit(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconUsersGroup width={18} />
+                  </ListItemIcon>
+                  Team Members Limit
+                </Link>
+              </MenuItem>
+
               <MenuItem onClick={handleClose}>
                 <Link
                   color="body1"
@@ -914,8 +916,8 @@ const TablePagination = () => {
           onClose={() => setCreateDrawer(false)}
           onWorkUpdated={fetchTeams}
         />
-          
-          {/* Team Members Limit */}
+
+        {/* Team Members Limit */}
         <TeamMembersLimit
           open={teamMembersLimit}
           onClose={() => setTeamMembersLimit(false)}

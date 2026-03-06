@@ -430,15 +430,18 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                     value={phone}
                     onChange={(value, country: any) => {
                       setPhone(value);
-                      setExtension("+" + country.dialCode);
 
+                      const ext = "+" + country.dialCode;
                       const numberOnly = value.replace(country.dialCode, "");
+
+                      setExtension(ext);
                       setNationalPhone(numberOnly);
-                      setFormData({
-                        ...formData,
-                        phone: nationalPhone,
-                        extension: extension,
-                      });
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        phone: numberOnly,
+                        extension: ext,
+                      }));
                     }}
                     inputStyle={{
                       width: "100%",

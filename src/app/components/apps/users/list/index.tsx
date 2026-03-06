@@ -527,6 +527,7 @@ const TablePagination = () => {
 
     const filteredData = useMemo(() => {
         return data.filter((item) => {
+            if(filters.team == "All" || filters.trade == "All" || filters.supervisor == "All") return data;
             const matchesTeam = filters.team ? item.team_name === filters.team : true;
             const matchesTrade = filters.trade ? item.trade_name === filters.trade : true;
             const matchesSupervisor = filters.supervisor ? item.supervisor_name === filters.supervisor : true;
@@ -1221,7 +1222,7 @@ const TablePagination = () => {
                                         setTempFilters({...tempFilters, team: e.target.value})
                                     }
                                 >
-                                    <MenuItem value="">All</MenuItem>
+                                    <MenuItem value="All">All</MenuItem>
                                     {uniqueTeams.map((team) => (
                                         <MenuItem key={team} value={team}>
                                             {team}
@@ -1236,7 +1237,7 @@ const TablePagination = () => {
                                         setTempFilters({...tempFilters, trade: e.target.value})
                                     }
                                 >
-                                    <MenuItem value="">All</MenuItem>
+                                    <MenuItem value="All">All</MenuItem>
                                     {uniqueTrades.map((team) => (
                                         <MenuItem key={team} value={team}>
                                             {team}
@@ -1256,7 +1257,7 @@ const TablePagination = () => {
                                         }
                                         fullWidth
                                     >
-                                        <MenuItem value="">All</MenuItem>
+                                        <MenuItem value="All">All</MenuItem>
                                         {uniqueSupervisors.map((supervisor, i) => (
                                             <MenuItem key={i} value={supervisor}>
                                                 {supervisor}
