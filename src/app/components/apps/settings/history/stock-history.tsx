@@ -190,6 +190,7 @@ const StockHistoryList = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
+      if (filters.user == "All") return data;
       const matchesUser = filters.user ? item.user_name === filters.user : true;
       const matchesSearch =
         item.short_name?.toLowerCase().includes(search) ||
@@ -525,7 +526,7 @@ const StockHistoryList = () => {
                   }
                   fullWidth
                 >
-                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="All">All</MenuItem>
                   {uniqueSupervisors.map((supervisor, i) => (
                     <MenuItem key={i} value={supervisor}>
                       {supervisor}

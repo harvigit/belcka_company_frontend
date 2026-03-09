@@ -114,7 +114,7 @@ const ArchiveUserList = () => {
     setFetchUser(true);
     try {
       const res = await api.get(
-        `user/archive-users-list?company_id=${user.company_id}`
+        `user/archive-users-list?company_id=${user.company_id}`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -133,7 +133,7 @@ const ArchiveUserList = () => {
     const fetchTrades = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`
+          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
         );
         if (res.data) setTrade(res.data.info);
       } catch (err) {
@@ -147,7 +147,7 @@ const ArchiveUserList = () => {
     const fetchTeams = async () => {
       try {
         const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`
+          `get-company-resources?flag=teamList&company_id=${user.company_id}`,
         );
         if (res.data) setTeams(res.data.info);
       } catch (err) {
@@ -159,14 +159,14 @@ const ArchiveUserList = () => {
 
   const uniqueTeams = useMemo(
     () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
-    [data, teams]
+    [data, teams],
   );
 
   const uniqueSupervisors = useMemo(
     () => [
       ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
     ],
-    [data]
+    [data],
   );
 
   const formatDate = (date?: Date | string | null) => {
@@ -180,6 +180,7 @@ const ArchiveUserList = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      if (filters.team == "All" || filters.supervisor == "All") return data;
       const matchesTeam = filters.team ? item.team_name === filters.team : true;
       const matchesSupervisor = filters.supervisor
         ? item.supervisor_name === filters.supervisor
@@ -413,7 +414,7 @@ const ArchiveUserList = () => {
                     setTempFilters({ ...tempFilters, team: e.target.value })
                   }
                 >
-                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="All">All</MenuItem>
                   {uniqueTeams.map((team) => (
                     <MenuItem key={team} value={team}>
                       {team}
@@ -433,7 +434,7 @@ const ArchiveUserList = () => {
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {uniqueSupervisors.map((supervisor, i) => (
                       <MenuItem key={i} value={supervisor}>
                         {supervisor}
@@ -523,7 +524,7 @@ const ArchiveUserList = () => {
                   };
                   const response = await api.post(
                     "user/unarchive-account",
-                    payload
+                    payload,
                   );
                   toast.success(response.data.message);
                   setSelectedRowIds(new Set());
@@ -593,7 +594,7 @@ const ArchiveUserList = () => {
                             <Typography variant="subtitle2">
                               {flexRender(
                                 header.column.columnDef.header,
-                                header.getContext()
+                                header.getContext(),
                               )}
                             </Typography>
                             {isSortable && (
@@ -658,7 +659,7 @@ const ArchiveUserList = () => {
                         <TableCell key={cell.id} sx={{ padding: "10px" }}>
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}
@@ -694,8 +695,15 @@ const ArchiveUserList = () => {
             }}
           >
             <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">Page</Typography>
-              <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
+              <Typography color="textSecondary" className="f-14">
+                Page
+              </Typography>
+              <Typography
+                color="textSecondary"
+                className="f-14"
+                fontWeight={600}
+                ml={1}
+              >
                 {table.getState().pagination.pageIndex + 1} of{" "}
                 {table.getPageCount()}
               </Typography>
@@ -711,7 +719,7 @@ const ArchiveUserList = () => {
               color="textSecondary"
             >
               <CustomSelect
-              className="custom-select"
+                className="custom-select"
                 value={table.getState().pagination.pageSize}
                 onChange={(e: { target: { value: any } }) => {
                   table.setPageSize(Number(e.target.value));

@@ -155,10 +155,7 @@ const StoreList = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      if (
-        (formData.phone && formData.phone.length !== 10) ||
-        (formData.phone && formData.phone?.length > 10)
-      ) {
+      if (formData.phone && formData.phone.length !== 10) {
         toast.error("Phone number must be 10 digits");
         return;
       }
@@ -176,6 +173,10 @@ const StoreList = () => {
           name: "",
           status: true,
           company_id: user.company_id,
+          phone: "",
+          store_manager_id: 0,
+          street: "",
+          location: "",
         });
         setDrawerOpen(false);
         fetchStores();
@@ -192,10 +193,7 @@ const StoreList = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      if (
-        (formData.phone && formData.phone.length !== 10) ||
-        (formData.phone && formData.phone?.length > 10)
-      ) {
+      if (formData.phone && formData.phone.length !== 10) {
         toast.error("Phone number must be 10 digits");
         return;
       }
@@ -212,6 +210,10 @@ const StoreList = () => {
           name: "",
           status: true,
           company_id: user.company_id,
+          phone: "",
+          store_manager_id: 0,
+          street: "",
+          location: "",
         });
         setEditDrawerOpen(false);
         fetchStores();

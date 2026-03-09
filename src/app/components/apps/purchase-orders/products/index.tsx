@@ -304,6 +304,12 @@ const PurchaseProductList: React.FC<Props> = ({
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
 
+      if (
+        filters.supplier == "All" ||
+        filters.project == "All" ||
+        filters.address == "All"
+      )
+        return data;
       const matchSupplier = filters.supplier
         ? item.supplier_name === filters.supplier
         : true;
@@ -541,6 +547,36 @@ const PurchaseProductList: React.FC<Props> = ({
             ) : (
               <></>
             )}
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor("date", {
+      id: "orderDate",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Order Date
+          </Typography>
+        </Stack>
+      ),
+      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.3,ml:2 }}
+          >
+            <Typography textTransform="capitalize" className="f-14">
+              {item?.employee_orders[0]
+                ? formatDate(item.employee_orders[0].created_at)
+                : "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -977,7 +1013,7 @@ const PurchaseProductList: React.FC<Props> = ({
                     }}
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {suppliers.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -997,7 +1033,7 @@ const PurchaseProductList: React.FC<Props> = ({
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {projects.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -1017,7 +1053,7 @@ const PurchaseProductList: React.FC<Props> = ({
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {addresses.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}

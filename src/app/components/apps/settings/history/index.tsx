@@ -193,6 +193,7 @@ const HistoryList = () => {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
+      if (filters.type == "All" || filters.user == "All") return data;
       const matchesType = filters.type
         ? item.request_type === Number(filters.type)
         : true;
@@ -469,7 +470,7 @@ const HistoryList = () => {
                   setTempFilters({ ...tempFilters, type: e.target.value })
                 }
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="All">All</MenuItem>
                 <MenuItem value="101">Timesheet</MenuItem>
                 <MenuItem value="102">Worklog</MenuItem>
                 <MenuItem value="103">Billing Info</MenuItem>
@@ -503,7 +504,7 @@ const HistoryList = () => {
                   }
                   fullWidth
                 >
-                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="All">All</MenuItem>
                   {uniqueSupervisors.map((supervisor, i) => (
                     <MenuItem key={i} value={supervisor}>
                       {supervisor}

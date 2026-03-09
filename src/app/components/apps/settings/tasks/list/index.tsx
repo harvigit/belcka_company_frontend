@@ -266,6 +266,7 @@ const TablePagination = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      if (filters.team == "All") return data;
       const matchesTeam = filters.team
         ? item.trade_name === filters.team
         : true;
@@ -588,7 +589,7 @@ const TablePagination = () => {
                   }
                   fullWidth
                 >
-                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="All">All</MenuItem>
                   {uniqueTrades.map((trade, i) => (
                     <MenuItem key={i} value={trade}>
                       {trade}

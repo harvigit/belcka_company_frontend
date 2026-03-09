@@ -234,6 +234,7 @@ const TradeList = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      if (filters.team == "All") return data;
       const matchesTeam = filters.team ? item.name === filters.team : true;
 
       const search = searchTerm.toLowerCase();
@@ -541,7 +542,7 @@ const TradeList = () => {
                   }
                   fullWidth
                 >
-                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="All">All</MenuItem>
                   {uniqueTrades.map((trade, i) => (
                     <MenuItem key={i} value={trade}>
                       {trade}
