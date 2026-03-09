@@ -125,6 +125,10 @@ interface SupplierFormData {
   weight?: string;
   weight_unit?: string | null;
   status: boolean;
+  contact_person_email?: string;
+  contact_person_name?: string;
+  contact_person_phone?: string;
+  contact_person_extension?: string;
 }
 
 const ProductAddEdit: React.FC<ProductAddEditProps> = ({
@@ -369,6 +373,14 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
           name: "",
           status: true,
           company_id: companyId,
+          phone: "",
+          contact_person_phone: "",
+          contact_person_email: "",
+          contact_person_name: "",
+          email: "",
+          postcode: "",
+          street: "",
+          location: "",
         });
         setOpenSupplierModal(false);
         fetchResources();

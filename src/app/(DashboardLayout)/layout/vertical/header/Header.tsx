@@ -7,6 +7,7 @@ import {
   Toolbar,
   styled,
   Stack,
+  Typography,
 } from "@mui/material";
 import Profile from "./Profile";
 import Search from "./Search";
@@ -24,10 +25,20 @@ import { CustomizerContext } from "@/app/context/customizerContext";
 import { useTheme } from "@mui/material/styles";
 import { useState } from "react";
 import Navigation from "./Navigation";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
+import Cookies from "js-cookie";
 
 const Header = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const lgDown = useMediaQuery((theme) => theme.breakpoints.down("lg"));
+  const session = useSession();
+
+  const user = session.data?.user as User & {
+    id: number;
+  };
+  const storedStore = Cookies.get(`user_store_${user.id}`);
+  const store = storedStore ? JSON.parse(storedStore) : null;
 
   const {
     activeMode,
@@ -96,7 +107,7 @@ const Header = () => {
         >
           <IconMenu2 size="21" />
         </IconButton>
-
+        {store?.name && <Typography fontSize={20}>{store?.name}</Typography>}
         {/* ------------------------------------------- */}
         {/* Search Dropdown */}
         {/* ------------------------------------------- */}

@@ -110,6 +110,8 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
   useEffect(() => {
     fetchUnits();
     if (open == true) {
+      setPhone("");
+      setPhone1("");
       setPreview(null);
     }
   }, [open == true]);
