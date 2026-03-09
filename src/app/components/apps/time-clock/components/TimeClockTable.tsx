@@ -148,8 +148,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     const [exclamationAnchorEl, setExclamationAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedWorklog, setSelectedWorklog] = useState<any>(null);
     
-    const [editingAdjustment, setEditingAdjustment] = useState<{ value: string; } | null>(null);
-    
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
         const configs: { [key: string]: { width: number; visible: boolean } } = {};
@@ -364,7 +362,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                 const subRows = row.original.rowsData.map((log: any, index: number) => {
                                     const worklogId = `${row.id}-${log.worklog_id}`;
                                     const isFirstRow = index === 0;
-                                    const isLogLocked = isRecordLocked(log);
+                                    const isLogLocked = isRecordLocked(log) || log.is_timesheet_locked === true;
 
                                     return (
                                         <React.Fragment key={log.worklog_id}>
@@ -1060,7 +1058,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             date={row.original.rowsData[0].date_added}
                                                             currentAmount={rowData.daily_adjustment_amount}
                                                             currency={currency}
-                                                            isLocked={isRowLocked}
+                                                            isLocked={rowData.is_timesheet_paid === true}
                                                             onSave={onAdjustmentSave!}
                                                         />
                                                     </TableCell>

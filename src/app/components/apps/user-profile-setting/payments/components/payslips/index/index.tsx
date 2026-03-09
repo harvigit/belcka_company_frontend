@@ -712,11 +712,11 @@ const PayslipsList: React.FC<Props> = ({ userId, isShow }) => {
         const item = row.original;
         return (
           <Stack direction="row" spacing={1}>
-            <Tooltip title="View">
-              <IconButton onClick={() => viewPdf(item.pdf)} color="primary">
-                <IconEye size={18} />
-              </IconButton>
-            </Tooltip>
+            {/*<Tooltip title="View">*/}
+            {/*  <IconButton onClick={() => viewPdf(item.pdf)} color="primary">*/}
+            {/*    <IconEye size={18} />*/}
+            {/*  </IconButton>*/}
+            {/*</Tooltip>*/}
             <Tooltip title="Edit">
               <IconButton onClick={() => handleEdit(item)} color="primary">
                 <IconEdit size={18} />

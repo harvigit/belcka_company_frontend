@@ -10,7 +10,6 @@ export type DailyBreakdown = {
     is_requested: boolean;
     is_penalty_appealed: boolean;
     is_edited: boolean;
-    timesheet_light_id: number;
     rowsData?: any[];
     checkin_time: any;
     checkout_time: any;
@@ -51,6 +50,8 @@ export type DailyBreakdown = {
     userChecklogs?: CheckLog[];
     allUserChecklogs?: CheckLog[];
     has_pending_leave_request?: boolean;
+    is_timesheet_locked?: boolean;
+    timesheet_status?: string;
 };
 
 export interface TimeClockDetailsProps {

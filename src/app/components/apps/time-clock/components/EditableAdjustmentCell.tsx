@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Box, TextField, Tooltip, Typography } from '@mui/material';
-import { IconMinus } from '@tabler/icons-react';
 
 interface EditableAdjustmentCellProps {
     date: string;
@@ -62,7 +61,7 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
                     disabled={isSaving}
                     onChange={(e) => {
                         const raw = e.target.value;
-                        if (/^-?\d*\.?\d*$/.test(raw) || raw === '-' || raw === '') {
+                        if (/^-?\d{0,4}(\.\d{0,2})?$/.test(raw) || raw === '-' || raw === '') {
                             setValue(raw);
                         }
                     }}
@@ -108,7 +107,6 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '2px',
-                opacity: isLocked ? 0.6 : 1,
                 borderRadius: '4px',
                 px: '8px',
                 '&:hover': !isLocked ? { boxShadow: '0 0 0 1px #1976d2' } : {},
@@ -123,7 +121,7 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
 
     return (
         <Tooltip
-            title={isLocked ? 'This record is locked and cannot be edited' : ''}
+            title={isLocked ? 'Timesheet is paid and cannot be edited' : ''}
             arrow
             placement="top"
             sx={tooltipStyles}

@@ -205,12 +205,16 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
                                 <CustomTextField
                                     type="date" name="invoice_date" fullWidth
                                     value={formData.invoice_date} onChange={handleChange}
+                                    onFocus={(e: any) => e.target.showPicker()}
+                                    onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
                                 />
 
                                 <Typography variant="body2" mt={2}>From Date</Typography>
                                 <CustomTextField
                                     type="date" name="from_date" fullWidth
                                     value={formData.from_date} onChange={handleChange}
+                                    onFocus={(e: any) => e.target.showPicker()}
+                                    onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
                                 />
 
                                 <Typography variant="body2" mt={2}>To Date</Typography>
@@ -218,6 +222,8 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({
                                     type="date" name="to_date" fullWidth
                                     value={formData.to_date} onChange={handleChange}
                                     inputProps={{ min: formData.from_date || undefined }}
+                                    onFocus={(e: any) => e.target.showPicker()}
+                                    onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
                                 />
 
                                 {isShow && (

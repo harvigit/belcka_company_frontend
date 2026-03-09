@@ -42,8 +42,7 @@ const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
 
 interface RowData {
     rowType: string;
-    timesheet_light_id?: string | number | null;
-    rowsData?: { timesheet_light_id?: string | number }[];
+    rowsData?: [];
 }
 
 interface ExportResponse {
@@ -355,7 +354,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     };
 
     const hasValidWorklogData = (row: DailyBreakdown): boolean => {
-        return !!(row.worklog_id || row.timesheet_light_id) &&
+        return !!(row.worklog_id) &&
             row.start !== '--' &&
             row.end !== '--' &&
             row.start !== null &&
@@ -436,37 +435,22 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 throw new Error('Invalid or missing dailyData');
             }
 
-            const timesheetIds: string[] = Array.from(selectedRows)
-                .map((rowId) => parseInt(rowId.replace('row-', ''), 10))
-                .filter((rowIndex) => Number.isInteger(rowIndex) && rowIndex >= 0 && rowIndex < dailyData.length)
-                .flatMap((rowIndex) => {
-                    const rowData: RowData | undefined = dailyData[rowIndex];
-                    if (!rowData || rowData.rowType !== 'day') return [];
-
-                    if (!rowData.rowsData && rowData.timesheet_light_id != null) {
-                        return [String(rowData.timesheet_light_id)];
-                    }
-
-                    if (Array.isArray(rowData.rowsData)) {
-                        return rowData.rowsData
-                            .filter((worklog): worklog is {
-                                timesheet_light_id: string | number
-                            } => !!worklog.timesheet_light_id)
-                            .map((worklog) => String(worklog.timesheet_light_id));
-                    }
-
-                    return [];
-                });
-
-            if (timesheetIds.length === 0) {
-                throw new Error('No timesheet IDs selected for export');
-            }
-
-            const ids = timesheetIds.join(',');
-            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export-details', {
-                ids,
-                format: option
+            const timesheetIds: (string | number)[] = [];
+            const selectedRowIndices = Array.from(selectedRows).map((rowId) => {
+                return parseInt(rowId.replace('row-', ''));
             });
+
+            selectedRowIndices.forEach((rowIndex) => {
+                const rowData = dailyData[rowIndex];
+                if (rowData && rowData.rowType === 'day') {
+                    timesheetIds.push(rowData.timesheet_ids);
+                }
+            });
+
+            if (timesheetIds.length === 0) return;
+            
+            const ids = timesheetIds.join(',');
+            const response: AxiosResponse<ExportResponse> = await api.post('/time-clock/export-details', {ids, format: option});
 
             if (response.data.IsSuccess) {
                 const {file, filename, contentType} = response.data.data;
@@ -896,7 +880,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 is_requested: false,
                 is_penalty_appealed: false,
                 is_edited: false,
-                timesheet_light_id: 0,
                 checkin_time: '--',
                 checkout_time: '--',
                 total_hours: '--',
@@ -939,7 +922,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     return [{
                         rowType: 'day' as const,
                         date: day.date ?? '--',
-                        has_pending_leave_request: day.has_pending_leave_request ?? false, 
+                        has_pending_leave_request: day.has_pending_leave_request ?? false,
+                        is_timesheet_paid: day.status === '9' || day.status === 9,
                         timesheet_ids: day.timesheet_ids ?? '--',
                         shift: '--',
                         project: '--',
@@ -971,7 +955,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         status_text: '--',
                         is_requested: false,
                         is_edited: false,
-                        timesheet_light_id: day.timesheet_light_id,
                     }];
                 }
 
@@ -979,6 +962,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     rowType: 'day' as const,
                     date: day.date ?? '--',
                     has_pending_leave_request: day.has_pending_leave_request ?? false,
+                    is_timesheet_paid: day.status === '9' || day.status === 9,
                     timesheet_ids: day.timesheet_ids ?? null,
                     shift: '--',
                     project: '--',
@@ -1009,7 +993,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     is_edited: false,
                     isMoreThanWork: false,
                     isLessThanWork: false,
-                    timesheet_light_id: day.timesheet_light_id,
                 }];
             });
 
@@ -1171,16 +1154,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
-                // if (!rowData.rowsData && rowData.timesheet_light_id != null) {
-                //     timesheetIds.push(rowData.timesheet_light_id);
-                // } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                //     rowData.rowsData.forEach((worklog: any) => {
-                //         if (worklog.timesheet_light_id) {
-                //             timesheetIds.push(worklog.timesheet_light_id);
-                //         }
-                //     });
-                // }
-
                 timesheetIds.push(rowData.timesheet_ids);
             }
         });
@@ -1209,16 +1182,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         selectedRowIndices.forEach((rowIndex) => {
             const rowData = dailyData[rowIndex];
             if (rowData && rowData.rowType === 'day') {
-                // if (!rowData.rowsData && rowData.timesheet_light_id) {
-                //     timesheetIds.push(rowData.timesheet_light_id);
-                // } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                //     rowData.rowsData.forEach((worklog: any) => {
-                //         if (worklog.timesheet_light_id) {
-                //             timesheetIds.push(worklog.timesheet_light_id);
-                //         }
-                //     });
-                // }
-
                 timesheetIds.push(rowData.timesheet_ids);
             }
         });
@@ -1358,18 +1321,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const timesheetIds: (string | number)[] = [];
                 selectedRowIndices.forEach((rowIndex) => {
                     const rowData = dailyData[rowIndex];
-                    // if (rowData && rowData.rowType === 'day') {
-                    //     if (!rowData.rowsData && rowData.timesheet_light_id != null) {
-                    //         timesheetIds.push(rowData.timesheet_light_id);
-                    //     } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                    //         rowData.rowsData.forEach((worklog: any) => {
-                    //             if (worklog.timesheet_light_id) {
-                    //                 timesheetIds.push(worklog.timesheet_light_id);
-                    //             }
-                    //         });
-                    //     }
-                    // }
-
                     timesheetIds.push(rowData.timesheet_ids);
                 });
                 if (timesheetIds.length > 0) {
@@ -1381,18 +1332,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const timesheetIds: (string | number)[] = [];
                 selectedRowIndices.forEach((rowIndex) => {
                     const rowData = dailyData[rowIndex];
-                    // if (rowData && rowData.rowType === 'day') {
-                    //     if (!rowData.rowsData && rowData.timesheet_light_id) {
-                    //         timesheetIds.push(rowData.timesheet_light_id);
-                    //     } else if (rowData.rowsData && Array.isArray(rowData.rowsData)) {
-                    //         rowData.rowsData.forEach((worklog: any) => {
-                    //             if (worklog.timesheet_light_id) {
-                    //                 timesheetIds.push(worklog.timesheet_light_id);
-                    //             }
-                    //         });
-                    //     }
-                    // }
-
                     timesheetIds.push(rowData.timesheet_ids);
                 });
                 if (timesheetIds.length > 0) {
