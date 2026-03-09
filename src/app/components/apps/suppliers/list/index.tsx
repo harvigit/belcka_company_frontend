@@ -174,12 +174,7 @@ const SupplierList = () => {
       });
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          name: "",
-          status: true,
-          company_id: user.company_id,
-        });
+
         setDrawerOpen(false);
         fetchSuppliers();
       } else {
@@ -187,6 +182,20 @@ const SupplierList = () => {
     } catch (error) {
       console.log(error, "error");
     } finally {
+      setFormData({
+        id: 0,
+        name: "",
+        status: true,
+        company_id: user.company_id,
+        phone: "",
+        contact_person_phone: "",
+        contact_person_email: "",
+        contact_person_name: "",
+        email: "",
+        postcode: "",
+        street: "",
+        location: "",
+      });
       setIsSaving(false);
     }
     setIsSaving(false);
@@ -205,12 +214,7 @@ const SupplierList = () => {
       });
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          name: "",
-          status: true,
-          company_id: user.company_id,
-        });
+
         setEditDrawerOpen(false);
         fetchSuppliers();
       } else {
@@ -218,6 +222,20 @@ const SupplierList = () => {
     } catch (error) {
       console.log(error, "error");
     } finally {
+      setFormData({
+        id: 0,
+        name: "",
+        status: true,
+        company_id: user.company_id,
+        phone: "",
+        contact_person_phone: "",
+        contact_person_email: "",
+        contact_person_name: "",
+        email: "",
+        postcode: "",
+        street: "",
+        location: "",
+      });
       setIsSaving(false);
     }
   };

@@ -127,6 +127,8 @@ const PurchaseProductList: React.FC<Props> = ({
   const [manuallyDeselected, setManuallyDeselected] = useState<Set<number>>(
     new Set(),
   );
+  const [originalData, setOriginalData] = useState<any[]>([]);
+
   const handleModelOpen = () => {
     setPreview(null);
     setOpenModel(true);
@@ -233,6 +235,7 @@ const PurchaseProductList: React.FC<Props> = ({
 
       if (res.data) {
         setData(res.data.info);
+        setOriginalData(res.data.info);
         setSelectedRowIds(new Set());
       }
     } catch (err) {
@@ -244,14 +247,15 @@ const PurchaseProductList: React.FC<Props> = ({
 
   useEffect(() => {
     if (open) {
+      setData(originalData);
       const autoSelected = new Set(
-        data.filter((p) => p.total_qty > 0).map((p) => p.id),
+        originalData.filter((p) => p.total_qty > 0).map((p) => p.id),
       );
 
       setSelectedRowIds(autoSelected);
       setManuallyDeselected(new Set());
     }
-  }, [open]);
+  }, [open, originalData]);
 
   useEffect(() => {
     fetchOrders();
@@ -337,21 +341,19 @@ const PurchaseProductList: React.FC<Props> = ({
     });
   }, [data, searchTerm, filters]);
 
-  // Auto-select rows with total_qty > 0 whenever data or filteredData changes
   useEffect(() => {
-    if (filteredData?.length) {
-      setSelectedRowIds((prevSelected) => {
-        const updated = new Set(prevSelected);
-        filteredData.forEach((item) => {
-          if (item.total_qty > 0) {
-            updated.add(item.id);
-          }
-        });
-        return updated;
-      });
-    }
-  }, [filteredData]);
+    if (!open) return;
 
+    const autoSelected = new Set(
+      filteredData
+        .filter(
+          (item) => item.total_qty > 0 && !manuallyDeselected.has(item.id),
+        )
+        .map((item) => item.id),
+    );
+
+    setSelectedRowIds(autoSelected);
+  }, [open]);
   const selectedProductsWithQty = useMemo(() => {
     return data
       .filter(
@@ -490,7 +492,6 @@ const PurchaseProductList: React.FC<Props> = ({
             return updated;
           });
         };
-
         if (!item.total_qty) {
           return (
             <Fab size="small" onClick={() => updateQty(1)}>
@@ -570,7 +571,7 @@ const PurchaseProductList: React.FC<Props> = ({
             direction="row"
             alignItems="center"
             spacing={4}
-            sx={{ pl: 0.3,ml:2 }}
+            sx={{ pl: 0.3, ml: 2 }}
           >
             <Typography textTransform="capitalize" className="f-14">
               {item?.employee_orders[0]

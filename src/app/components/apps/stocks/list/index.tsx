@@ -45,7 +45,9 @@ import {
   IconChevronRight,
   IconClock,
   IconFilter,
+  IconPlusMinus,
   IconSearch,
+  IconUser,
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -62,6 +64,9 @@ import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { IconEye } from "@tabler/icons-react";
 import ProductAddEdit from "../../products/create";
+import AdjustStock from "../adjust-stock";
+import Cookies from "js-cookie";
+import StoreModal from "../../modals/store-model";
 
 dayjs.extend(customParseFormat);
 
@@ -107,7 +112,8 @@ const StockList = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
-
+  const [storeModalOpen, setStoreModalOpen] = useState(false);
+  const [storeId, setStoreId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
@@ -124,6 +130,9 @@ const StockList = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [editStockOpen, setEditStockOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [stockQty, setStockQty] = useState("0.00");
@@ -138,6 +147,40 @@ const StockList = () => {
     uuid: "",
     status: true,
   });
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const storedStore = Cookies.get(`user_store_${user.id}`);
+
+    if (!storedStore && stores.length > 0) {
+      setStoreModalOpen(true);
+      return;
+    }
+
+    if (storedStore) {
+      const store = JSON.parse(storedStore);
+      setStoreId(store.id);
+    }
+  }, [user, stores]);
+
+  const handleStoreConfirm = (store: { id: number; name: string }) => {
+    if (!user?.id) return;
+
+    Cookies.set(
+      `user_store_${user.id}`,
+      JSON.stringify({
+        id: store.id,
+        name: store.name,
+      }),
+      { expires: 365 },
+    );
+
+    setStoreId(store.id);
+    setStoreModalOpen(false);
+    fetchProducts();
+    window.location.reload();
+  };
 
   const fetchResorces = async () => {
     try {
@@ -278,9 +321,22 @@ const StockList = () => {
     await fetchHistories(id);
   }, []);
 
+  const handleStock = useCallback(async (item: any) => {
+    setSelectedTaskId(item.id);
+    setSelectedProduct(item);
+    setEditStockOpen(true);
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
+
+      if (
+        filters.store == "All" ||
+        filters.supplier == "All" ||
+        filters.category == "All"
+      )
+        return data;
       const matchesSupplier = filters.supplier
         ? item.supplier_name === filters.supplier
         : true;
@@ -504,6 +560,9 @@ const StockList = () => {
           <Stack direction="row" alignItems="center">
             <Typography textTransform="capitalize" className="f-14">
               {item.qty}
+              {item.is_sub_qty
+                ? ` (${item?.pack_off_qty} ${item?.pack_off_unit})`
+                : ""}
             </Typography>
           </Stack>
         );
@@ -629,6 +688,11 @@ const StockList = () => {
         const item = row.original;
         return (
           <Stack direction="row" spacing={1}>
+            <Tooltip title="Edit stock">
+              <IconButton color="primary" onClick={() => handleStock(item)}>
+                <IconPlusMinus size={18} />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="History">
               <IconButton
                 color="primary"
@@ -836,7 +900,7 @@ const StockList = () => {
                     }}
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {suppliers.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -856,7 +920,7 @@ const StockList = () => {
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {categories.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -876,7 +940,7 @@ const StockList = () => {
                     }
                     fullWidth
                   >
-                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="All">All</MenuItem>
                     {stores.map((item, i) => (
                       <MenuItem key={i} value={item.name}>
                         {item.name}
@@ -1196,7 +1260,7 @@ const StockList = () => {
           <Divider sx={{ mt: 2 }} />
 
           {loading ? (
-            <Box sx={{ textAlign: "center" }}>
+            <Box sx={{ textAlign: "center" }} mt={3}>
               <CircularProgress />
             </Box>
           ) : history.length === 0 ? (
@@ -1213,7 +1277,6 @@ const StockList = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell></TableCell>
                   <TableCell>Date</TableCell>
                   <TableCell>Qty</TableCell>
                   <TableCell>Reference</TableCell>
@@ -1227,89 +1290,109 @@ const StockList = () => {
                   const qtyColor =
                     qtyNum > 0 ? "#1a8f03ff" : qtyNum < 0 ? "red" : "inherit";
                   return (
-                    <TableRow key={h.id}>
-                      <TableCell>
-                        {h.action && (
-                          <Tooltip title={h.action?.name || "Select Company"}>
-                            <Avatar
-                              src={h.action?.image || ""}
-                              alt={h.action?.name || ""}
-                              sx={{
-                                width: 30,
-                                height: 30,
-                                margin: "0 auto",
-                                cursor: "pointer",
-                              }}
-                            />
-                          </Tooltip>
-                        )}
-                      </TableCell>
-
-                      <TableCell>{h.date || "-"}</TableCell>
-
-                      <TableCell
-                        sx={{
-                          color: qtyColor,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        <Box display="flex" alignItems="center">
-                          <Typography
-                            className="f-14"
-                            sx={{
-                              color: qtyColor,
-                              fontWeight: "bold",
-                            }}
+                    <>
+                      <TableRow key={h.id} sx={{ alignItems: "start"}}>
+                        <TableCell>
+                          <Box>{h.date || "-"}</Box>
+                          <Box
+                            display={"flex"}
+                            alignContent={"center"}
+                            alignItems={"center"}
+                            mr={2}
                           >
-                            {h.qty ?? 0}
-                          </Typography>
+                            {h?.user && (
+                              <>
+                                <IconUser size={18} />{" "}
+                                <Typography variant="body2">{h?.user?.name}</Typography>
+                              </>
+                            )}
+                          </Box>
+                        </TableCell>
 
-                          <Typography
-                            color="text.secondary"
-                            className="f-14"
-                            fontWeight={"bold"}
-                          >
-                            ({h.sub_qty ?? 0} {h.pack_off_unit_name ?? ""})
-                          </Typography>
-                        </Box>
-                      </TableCell>
-
-                      <TableCell>
-                        <Tooltip
-                          title={h.reference || "-"}
-                          placement="top"
-                          arrow
+                        <TableCell
+                          sx={{
+                            color: qtyColor,
+                            fontWeight: "bold",
+                          }}
                         >
-                          <Typography
-                            className="f-14"
-                            sx={{
-                              display: "-webkit-box",
-                              WebkitBoxOrient: "vertical",
-                              WebkitLineClamp: 1,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              lineHeight: 1.25,
-                              maxWidth: 100,
-                              wordBreak: "break-word",
-                            }}
+                          <Box display="flex" alignItems="center">
+                            <Typography
+                              className="f-14"
+                              sx={{
+                                color: qtyColor,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {h.qty ?? 0}
+                            </Typography>
+
+                            <Typography
+                              color="text.secondary"
+                              className="f-14"
+                              fontWeight={"bold"}
+                            >
+                              ({h.sub_qty ?? 0} {h.pack_off_unit_name ?? ""})
+                            </Typography>
+                          </Box>
+                        </TableCell>
+
+                        <TableCell>
+                          <Tooltip
+                            title={h.reference || "-"}
+                            placement="top"
+                            arrow
                           >
-                            {h.reference || "-"}
-                          </Typography>
-                        </Tooltip>
-                      </TableCell>
+                            <Typography
+                              className="f-14"
+                              sx={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 1,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                lineHeight: 1.25,
+                                maxWidth: 100,
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {h.reference || "-"}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
 
-                      <TableCell>{h.price ?? "-"}</TableCell>
+                        <TableCell>{h.price ?? "-"}</TableCell>
 
-                      <TableCell sx={{ fontWeight: "bold" }}>
-                        ({Number(h.new_qty || 0).toFixed(2)})
-                      </TableCell>
-                    </TableRow>
+                        <TableCell sx={{ fontWeight: "bold" }}>
+                          ({Number(h.new_qty || 0).toFixed(2)})
+                        </TableCell>
+                      </TableRow>
+                    </>
                   );
                 })}
               </TableBody>
             </Table>
           )}
         </Drawer>
+
+        {/* Edit stock */}
+        <AdjustStock
+          open={editStockOpen}
+          onClose={() => setEditStockOpen(false)}
+          formData={formData}
+          setFormData={setFormData}
+          onUpdate={fetchProducts}
+          onProductChange={() => handleEdit(selectedTaskId ?? 0)}
+          onChange={() => handleHistory(selectedTaskId ?? 0)}
+          isSaving={isSaving}
+          editData={selectedProduct}
+          companyId={user.company_id ?? null}
+        />
+
+        <StoreModal
+          open={storeModalOpen}
+          stores={stores}
+          onConfirm={handleStoreConfirm}
+        />
       </Box>
     </PermissionGuard>
   );

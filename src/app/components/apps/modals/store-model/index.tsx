@@ -20,11 +20,11 @@ type Store = {
 type Props = {
   open: boolean;
   stores: Store[];
-  onConfirm: (storeId: number) => void;
+  onConfirm: (store: Store) => void;
 };
 
 export default function StoreModal({ open, stores, onConfirm }: Props) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Store | null>(null);
 
   return (
     <Dialog
@@ -36,12 +36,15 @@ export default function StoreModal({ open, stores, onConfirm }: Props) {
         if (reason === "backdropClick" || reason === "escapeKeyDown") return;
       }}
     >
-      <DialogTitle>Select Store</DialogTitle>
+      <DialogTitle variant="h1">Select Store</DialogTitle>
 
       <DialogContent>
         <RadioGroup
-          value={selected}
-          onChange={(e) => setSelected(Number(e.target.value))}
+          value={selected?.id || ""}
+          onChange={(e) => {
+            const store = stores.find((s) => s.id === Number(e.target.value));
+            if (store) setSelected(store);
+          }}
         >
           {stores.map((store) => (
             <FormControlLabel
@@ -54,10 +57,10 @@ export default function StoreModal({ open, stores, onConfirm }: Props) {
         </RadioGroup>
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions sx={{ p: 2, pt: 0 }}>
         <Button
-          variant="contained"
           fullWidth
+          variant="contained"
           disabled={!selected}
           onClick={() => selected && onConfirm(selected)}
         >
