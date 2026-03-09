@@ -28,7 +28,6 @@ import {
   Checkbox,
   Drawer,
   CircularProgress,
-  Avatar,
 } from "@mui/material";
 import {
   flexRender,
@@ -67,7 +66,6 @@ import ProductAddEdit from "../../products/create";
 import AdjustStock from "../adjust-stock";
 import Cookies from "js-cookie";
 import StoreModal from "../../modals/store-model";
-import { IconBrandAppstore } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -149,7 +147,7 @@ const StockList = () => {
     status: true,
   });
 
-  const storedStore = Cookies.get(`user_store_${user.id}`);
+  const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
   const store = storedStore ? JSON.parse(storedStore) : null;
   useEffect(() => {
     if (!user?.id) return;
@@ -169,7 +167,7 @@ const StockList = () => {
     if (!user?.id) return;
 
     Cookies.set(
-      `user_store_${user.id}`,
+      `user_store_${user.id}_${user.company_id}`,
       JSON.stringify({
         id: store.id,
         name: store.name,
@@ -801,17 +799,6 @@ const StockList = () => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-            {/* <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<IconBrandAppstore width={18} />}
-              sx={{ marginRight: "5px", ml: 1 }}
-              onClick={() => {
-               setStoreModalOpen(true)
-              }}
-            >
-              Active Store
-            </Button> */}
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
