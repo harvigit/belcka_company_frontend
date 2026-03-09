@@ -122,7 +122,7 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
                   }}
                 >
                   {paginatedFeeds
-                    .filter((item) => item.request_type === 119)
+                    .filter((item) => item.request_type === 119 || item.request_type === 120)
                     .map((addr, index) => {
                       return (
                         <Box
