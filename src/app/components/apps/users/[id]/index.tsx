@@ -68,6 +68,8 @@ export interface TradeList {
 const TablePagination = () => {
   const [data, setData] = useState<TeamList>();
   const [loading, setLoading] = useState<boolean>(true);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(true);
+  const [archiveLoading, setArchiveLoading] = useState<boolean>(true);
   const [isPhoneUpdate, setIsPhoneUpdate] = useState<boolean>(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -948,7 +950,9 @@ const TablePagination = () => {
 
         <DialogActions>
           <Button
+            disabled={archiveLoading}
             onClick={async () => {
+              setArchiveLoading(true);
               try {
                 const payload = {
                   user_ids: String(userToDelete),
@@ -965,6 +969,7 @@ const TablePagination = () => {
               } finally {
                 setConfirmOpen(false);
               }
+              setArchiveLoading(false);
             }}
             variant="outlined"
             color="primary"
@@ -972,7 +977,9 @@ const TablePagination = () => {
             Archive
           </Button>
           <Button
+            disabled={deleteLoading}
             onClick={async () => {
+              setDeleteLoading(true);
               try {
                 const payload = {
                   user_id: userToDelete,
@@ -987,6 +994,7 @@ const TablePagination = () => {
               } finally {
                 setConfirmOpen(false);
               }
+              setDeleteLoading(false);
             }}
             variant="outlined"
             color="error"

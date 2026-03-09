@@ -110,16 +110,20 @@ const AdjustStock: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    if (!adjustQty) return;
+    if (adjustQty === "" || adjustQty === null) return;
 
-    let value = Number(adjustQty);
+    const value = Number(adjustQty);
 
-    if (value > 10000) value = 10000;
-    if (value < -10000) value = -10000;
+    if (isNaN(value)) return; // skip invalid input
 
-    setAdjustQty(value);
+    let newValue = value;
+    if (value > 10000) newValue = 10000;
+    if (value < -10000) newValue = -10000;
+
+    if (newValue !== value) {
+      setAdjustQty(newValue);
+    }
   }, [adjustQty]);
-
   const handleCutoff = async () => {
     try {
       const payload = {
@@ -309,12 +313,10 @@ const AdjustStock: React.FC<Props> = ({
                 options={users}
                 value={users.find((t) => t.id === formData.user_id) ?? null}
                 onChange={(_, newValue) => {
-                  if (newValue) {
-                    setFormData((prev: any) => ({
-                      ...prev,
-                      user_id: newValue.id,
-                    }));
-                  }
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    user_id: newValue?.id ?? null, // handle null case
+                  }));
                 }}
                 getOptionLabel={(option) => option.name || ""}
                 renderInput={(params) => (
@@ -355,7 +357,12 @@ const AdjustStock: React.FC<Props> = ({
                 type="text"
                 placeholder="Quantity"
                 value={adjustQty}
-                onChange={(e) => setAdjustQty(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^-?\d*$/.test(val)) {
+                    setAdjustQty(val);
+                  }
+                }}
               />
               {!showAddPackField && packOffUnit && (
                 <span className="unit">{packOffUnit}</span>

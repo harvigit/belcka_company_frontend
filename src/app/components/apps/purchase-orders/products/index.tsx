@@ -342,21 +342,18 @@ const PurchaseProductList: React.FC<Props> = ({
   }, [data, searchTerm, filters]);
 
   useEffect(() => {
-    if (filteredData?.length) {
-      setSelectedRowIds((prevSelected) => {
-        const updated = new Set(prevSelected);
+    if (!open) return;
 
-        filteredData.forEach((item) => {
-          if (item.total_qty > 0 && !manuallyDeselected.has(item.id)) {
-            updated.add(item.id);
-          }
-        });
+    const autoSelected = new Set(
+      filteredData
+        .filter(
+          (item) => item.total_qty > 0 && !manuallyDeselected.has(item.id),
+        )
+        .map((item) => item.id),
+    );
 
-        return updated;
-      });
-    }
-  }, [filteredData, manuallyDeselected]);
-
+    setSelectedRowIds(autoSelected);
+  }, [open]);
   const selectedProductsWithQty = useMemo(() => {
     return data
       .filter(
