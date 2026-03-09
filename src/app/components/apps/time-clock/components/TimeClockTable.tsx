@@ -833,14 +833,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             justifyContent: log.penalty_message ? "center" : "center",
                                                             alignItems: "center",
                                                             // gap: 1,
-                                                            color: (log.isMoreThanWork || log.isLessThanWork)
-                                                            ? "#1976d2"
-                                                            : log.is_edited
-                                                                ? "#ff0000"
-                                                                : "inherit",
-                                                            "&:hover": {
-                                                            color: "#1976d2",
-                                                            },
+                                                            color: log.is_penalty_edited ? "#ff0000" : "inherit",
+                                                            "&:hover": {color: "#1976d2",},
                                                         }}
                                                     >
                                                     {log.penalty_message && (

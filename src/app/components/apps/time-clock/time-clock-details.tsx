@@ -879,6 +879,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 isLessThanWork: false,
                 is_requested: false,
                 is_penalty_appealed: false,
+                is_penalty_edited: false,
                 is_edited: false,
                 checkin_time: '--',
                 checkout_time: '--',
