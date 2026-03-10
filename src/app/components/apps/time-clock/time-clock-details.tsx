@@ -417,6 +417,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             if (range.from && range.to) {
                 setStartDate(range.from);
                 setEndDate(range.to);
+                setData([]);
                 fetchTimeClockData(range.from, range.to);
                 saveDateRangeToStorage(range.from, range.to, columnVisibility);
                 onDataChange?.();
@@ -940,6 +941,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         dailyTotal: formatHour(day.daily_total),
                         payableAmount: `${currency}${day.daily_payable_amount}`,
                         daily_adjustment_amount: day.daily_adjustment_amount ?? 0,
+                        adjustment_added_by_name: day.adjustment_added_by_name ?? '',
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
                         managerNotes: day.manager_notes || '--',
@@ -978,6 +980,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     dailyTotal: '--',
                     payableAmount: '--',
                     daily_adjustment_amount: '--',
+                    adjustment_added_by_name: '--',
                     regular: '--',
                     employeeNotes: '--',
                     managerNotes: '--',

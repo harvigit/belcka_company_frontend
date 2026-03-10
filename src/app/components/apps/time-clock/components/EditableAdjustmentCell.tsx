@@ -4,12 +4,13 @@ import { Box, TextField, Tooltip, Typography } from '@mui/material';
 interface EditableAdjustmentCellProps {
     date: string;
     currentAmount: number | null | undefined;
+    addedBy: string;
     currency: string;
     isLocked: boolean;
     onSave: (date: string, amount: number) => Promise<void>;
 }
 
-const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, currentAmount, currency, isLocked, onSave}) => {
+const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, currentAmount, addedBy, currency, isLocked, onSave}) => {
     const [isEditing, setIsEditing] = useState(false);
     const [value, setValue] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -95,6 +96,8 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
     const hasValue = currentAmount !== undefined && currentAmount !== null && currentAmount !== 0;
     const isPositive = (currentAmount ?? 0) > 0;
 
+    const tooltipTitle = isLocked ? 'Timesheet is paid and cannot be edited' : hasValue && addedBy ? `Adjustment added by ${addedBy}` : '';
+
     const cellContent = (
         <Box
             onClick={openEditor}
@@ -121,10 +124,18 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
 
     return (
         <Tooltip
-            title={isLocked ? 'Timesheet is paid and cannot be edited' : ''}
+            title={tooltipTitle}
             arrow
             placement="top"
             sx={tooltipStyles}
+            componentsProps={{
+                tooltip: {
+                    sx: {
+                        bgcolor: '#1a1f29',
+                        fontSize: '0.75rem',
+                    },
+                },
+            }}
         >
             <Box>{cellContent}</Box>
         </Tooltip>

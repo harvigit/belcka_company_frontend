@@ -9,6 +9,7 @@ export type DailyBreakdown = {
     isLessThanWork: boolean;
     is_requested: boolean;
     is_penalty_appealed: boolean;
+    is_penalty_edited: boolean;
     is_edited: boolean;
     rowsData?: any[];
     checkin_time: any;

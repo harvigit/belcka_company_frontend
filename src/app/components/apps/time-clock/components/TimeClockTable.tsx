@@ -357,15 +357,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                 const expandedWorklogsCount = expandedWorklogsIds.filter((id) =>
                                     worklogIds.includes(id)
                                 ).length;
+
                                 const rowSpan = row.original.rowsData.length + expandedWorklogsCount + dateNewRecords.length;
 
                                 const subRows = row.original.rowsData.map((log: any, index: number) => {
-                                    const worklogId = `${row.id}-${log.worklog_id}`;
+                                    const worklogId = log.is_expense ? `${row.id}-expense-${log.expense_id}-${index}` : log.is_leave ? `${row.id}-leave-${log.user_leave_id}-${index}` : `${row.id}-worklog-${log.worklog_id}`;
                                     const isFirstRow = index === 0;
                                     const isLogLocked = isRecordLocked(log) || log.is_timesheet_locked === true;
 
                                     return (
-                                        <React.Fragment key={log.worklog_id}>
+                                        <React.Fragment key={worklogId}>
                                             <TableRow
                                                 sx={{
                                                     height: '45px',
@@ -617,7 +618,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
 
-                                                {/* Shift Column - ADDED is_expense check */}
+                                                {/* Shift Column */}
                                                 {visibleColumnConfigs.shift?.visible && (
                                                     <TableCell align="center" sx={{
                                                         py: 0.5,
@@ -1029,18 +1030,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     </TableCell>
                                                 )}
                                                 
-                                                {/* Expense Total Column */}
-                                                {/*{isFirstRow && visibleColumnConfigs.expenseAmount?.visible && (*/}
-                                                {/*    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{*/}
-                                                {/*        py: 0.5,*/}
-                                                {/*        fontSize: '0.875rem',*/}
-                                                {/*        height: '45px',*/}
-                                                {/*        verticalAlign: 'middle'*/}
-                                                {/*    }}>*/}
-                                                {/*        {rowData.expenseAmount}*/}
-                                                {/*    </TableCell>*/}
-                                                {/*)}*/}
-
                                                 {isFirstRow && visibleColumnConfigs.adjustment?.visible && (
                                                     <TableCell
                                                         rowSpan={rowSpan}
@@ -1049,8 +1038,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         sx={{ py: 0.5, fontSize: '0.875rem', height: '45px', verticalAlign: 'middle' }}
                                                     >
                                                         <EditableAdjustmentCell
-                                                            date={row.original.rowsData[0].date_added}
+                                                            date={row.original.rowsData.find((l: any) => l.type === 'worklog')?.date_added
+                                                            ?? row.original.rowsData[0].date_added}
                                                             currentAmount={rowData.daily_adjustment_amount}
+                                                            addedBy={rowData.adjustment_added_by_name}
                                                             currency={currency}
                                                             isLocked={rowData.is_timesheet_paid === true}
                                                             onSave={onAdjustmentSave!}
