@@ -238,6 +238,13 @@ const PurchaseOrder: React.FC<Props> = ({
     return unitTotal + taxAmount;
   }, [unitTotal, taxAmount]);
 
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
+  };
+
   useEffect(() => {
     setFormData((prev: any) => ({
       ...prev,
@@ -392,7 +399,7 @@ const PurchaseOrder: React.FC<Props> = ({
           }}
         >
           <Box p={3} pt={0}>
-            <Box display={"flex"} alignItems={"center"} gap={2}>
+            <Box display={"flex"} alignItems={"center"} gap={2} mb={2}>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Order ID
@@ -414,19 +421,14 @@ const PurchaseOrder: React.FC<Props> = ({
                   Expected Delivery Date
                 </Typography>
                 <CustomTextField
-                  id="expected_delivery_date"
                   type="date"
+                  name="expected_delivery_date"
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{
-                    min: formData.date || undefined,
-                  }}
-                  value={formData.expected_delivery_date || ""}
-                  onChange={(e: any) =>
-                    setFormData((p: any) => ({
-                      ...p,
-                      expected_delivery_date: e.target.value,
-                    }))
+                  value={formData.expected_delivery_date}
+                  onChange={handleChange}
+                  onFocus={(e: any) => e.target.showPicker()}
+                  onClick={(e: any) =>
+                    (e.target as HTMLInputElement).showPicker()
                   }
                 />
               </Box>
@@ -446,37 +448,6 @@ const PurchaseOrder: React.FC<Props> = ({
                 />
               </Box>
             </Box>
-            <Box display={"flex"} alignItems="center" gap={2} mb={2}>
-              {/* <Box className="form_inputs">
-                <Typography variant="body2" gutterBottom>
-                  received By
-                </Typography>
-                <Autocomplete
-                  fullWidth
-                  options={users}
-                  value={
-                    users.find((p) => p.id === formData.received_by) || null
-                  }
-                  onChange={(event, newValue) =>
-                    setFormData((prev: any) => ({
-                      ...prev,
-                      received_by: newValue ? newValue.id : null,
-                    }))
-                  }
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
-                    <CustomTextField
-                      {...params}
-                      placeholder="Select Received By"
-                    />
-                  )}
-                />
-              </Box> */}
-            </Box>
-
             <Box display={"flex"} alignItems={"flex-start"} gap={2} mb={2}>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
