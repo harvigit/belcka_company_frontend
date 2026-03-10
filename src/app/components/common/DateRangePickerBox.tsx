@@ -16,7 +16,6 @@ import {
 import { CalendarMonth } from "@mui/icons-material";
 import "react-day-picker/dist/style.css";
 import "../../global.css";
-import { enGB } from 'date-fns/locale';
 
 type PayrollCycle = '1_week' | '2_week' | '4_week' | '1_month' | '3_month' | string;
 
@@ -107,7 +106,7 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply, payr
         setCalendarMonth(range.from);
     };
 
-    const formatRangeLabel = () => from && to ? `${format(from, "dd MMM yyyy")} ~ ${format(to, "dd MMM yyyy")}` 
+    const formatRangeLabel = () => from && to ? `${format(from, "dd MMM yyyy")} ~ ${format(to, "dd MMM yyyy")}`
         : "Select Date Range";
 
     const formatPresetLabel = (range: { from: Date; to: Date }) =>
@@ -188,7 +187,6 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply, payr
                             }}
                             numberOfMonths={payrollCycle && presetRanges.length > 0 ? 2 : 1}
                             className="custom-day-picker"
-                            locale={enGB}
                             weekStartsOn={1}
                         />
                         <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2}>
