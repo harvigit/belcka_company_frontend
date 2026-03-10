@@ -188,7 +188,8 @@ const DateRangePickerBox: React.FC<Props> = ({ from, to, onChange, onApply, payr
                             }}
                             numberOfMonths={payrollCycle && presetRanges.length > 0 ? 2 : 1}
                             className="custom-day-picker"
-                            locale={{ ...enGB, options: { ...enGB.options, weekStartsOn: 1 } }}
+                            locale={enGB}
+                            weekStartsOn={1}
                         />
                         <Stack direction="row" justifyContent="flex-end" spacing={1} mt={2}>
                             <Button onClick={handleCancel}>Cancel</Button>
