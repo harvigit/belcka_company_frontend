@@ -14,6 +14,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { hasPermission, hasAnyPermission } from "@/lib/permissions";
 import CreateTrade from "../components/apps/settings/company-trades/create";
 import { User } from "next-auth";
+import Cookies from "js-cookie";
 
 export default function PermissionGuard({
   children,
@@ -51,7 +52,7 @@ export default function PermissionGuard({
   const getProfile = async () => {
     try {
       const res = await api.get(
-        `user/profile?user_id=${user.id}&company_id=${user.company_id}`
+        `user/profile?user_id=${user.id}&company_id=${user.company_id}`,
       );
       setProfile(res.data.info);
     } catch (err) {
@@ -88,7 +89,7 @@ export default function PermissionGuard({
     } else if (requiredPermissions?.length) {
       authorized = requireAll
         ? requiredPermissions.every((p: string) =>
-            hasPermission(permissions, p)
+            hasPermission(permissions, p),
           )
         : hasAnyPermission(permissions, requiredPermissions);
     }
@@ -108,7 +109,7 @@ export default function PermissionGuard({
     try {
       const res: AxiosResponse<any> = await api.post(
         "trade/create-trade",
-        formData
+        formData,
       );
 
       if (res.data.IsSuccess) {
@@ -133,6 +134,7 @@ export default function PermissionGuard({
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
+        Cookies.remove(`user_store_${user.id}_${user.company_id}`);
         await signOut({ callbackUrl: "/auth" });
       } else {
         toast.error(res.data.message);

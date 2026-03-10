@@ -301,8 +301,11 @@ const PurchaseOrder: React.FC<Props> = ({
             value={row.original.qty ?? ""}
             sx={{ width: 100 }}
             onChange={(e: any) => {
-              if (!/^\d*\.?\d*$/.test(e.target.value)) return;
-              updateProductData(row.original.id, e.target.value);
+              const value = e.target.value;
+              if (!/^\d*\.?\d*$/.test(value)) return;
+              const numValue = Number(value);
+              if (numValue > 500) return;
+              updateProductData(row.original.id, value);
             }}
           />
         ),
@@ -317,7 +320,13 @@ const PurchaseOrder: React.FC<Props> = ({
             sx={{ width: 100 }}
             onChange={(e) => {
               const value = e.target.value;
-              if (!/^\d*\.?\d*$/.test(value)) return;
+
+              if (!/^\d*\.?\d{0,2}$/.test(value)) return;
+
+              const numValue = Number(value);
+
+              if (numValue > 10000) return;
+
               setProducts((prev) =>
                 prev.map((item) =>
                   item.id === row.original.id

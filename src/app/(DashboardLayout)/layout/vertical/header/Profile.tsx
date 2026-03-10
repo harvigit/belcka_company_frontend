@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { User } from "next-auth";
+import Cookies from "js-cookie";
 
 const Profile = () => {
   const [anchorEl2, setAnchorEl2] = useState<HTMLElement | null>(null);
@@ -21,11 +22,12 @@ const Profile = () => {
     phone?: number | null;
   } & { user_image?: string | null } & { first_name?: string | null } & {
     last_name?: string | null;
-  } & { trade_name: string | null };
+  } & { trade_name: string | null } & { company_id?: number | null };
   const [loading] = useState(false);
 
   const userLogout = async () => {
     toast.success("Logged out successfully!!");
+    Cookies.remove(`user_store_${user.id}_${user.company_id}`);
     await signOut({ callbackUrl: "/auth" });
     return loading;
   };
