@@ -118,6 +118,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                     let color = "";
 
                     switch (addr.request_type) {
+                      case 126:
+                        color = "#0066ffff";
+                        break;
                       case 111:
                         color = "#A600FF";
                         break;
@@ -182,7 +185,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                             className="multi-ellipsis"
                           >
                             <b>{addr.user_name}:</b>{" "}
-                            <Tooltip placement="top" title={addr.message} arrow>{addr.message}</Tooltip>
+                            <Tooltip placement="top" title={addr.message} arrow>
+                              {addr.message}
+                            </Tooltip>
                           </Typography>
                           <p
                             style={{

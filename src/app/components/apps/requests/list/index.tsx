@@ -253,6 +253,7 @@ export default function UserRequests({
     Timesheet: "#FFFF7F00",
     "User Account": "#FF3F51B5",
     Penalty: "#ff3737ff",
+    Adjustment: "#0066ffff",
   };
 
   return (
