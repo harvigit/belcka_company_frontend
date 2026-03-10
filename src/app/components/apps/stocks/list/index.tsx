@@ -219,7 +219,7 @@ const StockList = () => {
     setLoading(true);
     try {
       const res = await api.get(
-        `stocks/history?company_id=${user.company_id}&product_id=${id}&store_id=${store?.id}`,
+        `stocks/history?company_id=${user.company_id}&product_id=${id}`,
       );
       if (res.data && res.data.IsSuccess) {
         setHistory(res.data.info ?? []);
