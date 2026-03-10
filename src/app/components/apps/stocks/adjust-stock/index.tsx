@@ -64,10 +64,8 @@ const AdjustStock: React.FC<Props> = ({
   const [packOffQty, setPackOffQty] = useState(1);
   const session = useSession();
 
-  const user = session.data?.user as User & {
-    id: number;
-  };
-  const storedStore = Cookies.get(`user_store_${user.id}`);
+  const user = session.data?.user as User & { company_id?: number | null };
+  const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
 
   const store = storedStore ? JSON.parse(storedStore) : null;
   const toggleMode = () => {

@@ -352,6 +352,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
   const sendLoginOtp = async () => {
     const payload = {
+      is_web:"false",
       extension: registerData.extension,
       phone: registerData.nationalPhone,
     };

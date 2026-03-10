@@ -28,6 +28,7 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
+  Chip,
 } from "@mui/material";
 import {
   flexRender,
@@ -44,7 +45,6 @@ import {
   IconChevronRight,
   IconEye,
   IconSearch,
-  IconTableColumn,
   IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
@@ -65,6 +65,7 @@ import Image from "next/image";
 import CreateStore from "../create";
 import EditStore from "../edit";
 import PermissionGuard from "@/app/auth/PermissionGuard";
+import Cookies from "js-cookie";
 
 dayjs.extend(customParseFormat);
 
@@ -115,6 +116,24 @@ const StoreList = () => {
     name: "",
     status: true,
   });
+  const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
+  const activeStore = storedStore ? JSON.parse(storedStore) : null;
+
+  const handleStoreConfirm = (store: { id: number; name: string }) => {
+    if (!user?.id) return;
+
+    Cookies.set(
+      `user_store_${user.id}_${user.company_id}`,
+
+      JSON.stringify({
+        id: store.id,
+        name: store.name,
+      }),
+      { expires: 365 },
+    );
+
+    window.location.reload();
+  };
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -498,13 +517,36 @@ const StoreList = () => {
       header: "Actions",
       cell: ({ row }) => {
         const item = row.original;
+        const isActive = activeStore?.id === item.id;
+
         return (
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title="Edit">
               <IconButton onClick={() => handleEdit(item.id)} color="primary">
                 <IconEdit size={18} />
               </IconButton>
             </Tooltip>
+            {isActive ? (
+              <Chip
+                label="Active"
+                color={"success"}
+                size="small"
+                sx={{ fontSize: 12, mb: 1, mt: 0.5, height: 24 }}
+                variant="outlined"
+              />
+            ) : (
+              <Tooltip title="Activate Store">
+                <IOSSwitch
+                  size="small"
+                  checked={false}
+                  onChange={() =>
+                    handleStoreConfirm({ id: item.id, name: item.name })
+                  }
+                  disabled={switchLoading}
+                  color="success"
+                />
+              </Tooltip>
+            )}
           </Stack>
         );
       },
@@ -590,7 +632,7 @@ const StoreList = () => {
                 variant="outlined"
                 color="error"
                 startIcon={<IconTrash width={18} />}
-                sx={{ marginRight: "5px" }}
+                sx={{ marginRight: "5px", ml: 1 }}
                 onClick={() => {
                   const selectedIds = Array.from(selectedRowIds);
                   setUsersToDelete(selectedIds);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Autocomplete,
   Box,
@@ -211,6 +211,19 @@ const PurchaseOrder: React.FC<Props> = ({
     }
   };
 
+  const updateProductData = useCallback((id: number, value: any) => {
+    setProducts((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              qty: value,
+              line_total: (Number(item.price) || 0) * (Number(value) || 0),
+            }
+          : item,
+      ),
+    );
+  }, []);
   const unitTotal = useMemo(() => {
     return products
       .filter((p) => p.checked)
@@ -239,109 +252,89 @@ const PurchaseOrder: React.FC<Props> = ({
   }, [products, taxAmount, totalAmount, setFormData]);
 
   const columnHelper = createColumnHelper<ProductRow>();
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor("short_name", {
+        header: "ITEM",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <Stack direction="row" alignItems="center" gap={2}>
+              <Box>
+                <Image
+                  src={item.image_url || ""}
+                  alt="product"
+                  width={50}
+                  height={50}
+                />
+              </Box>
+              <Box>
+                <Typography className="f-14">{item.short_name}</Typography>
+                <Typography variant="caption">Code: {item.uuid}</Typography>
+              </Box>
+            </Stack>
+          );
+        },
+      }),
 
-  const columns = [
-    columnHelper.accessor("short_name", {
-      header: "ITEM",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1}
-            display={"flex"}
-            alignContent={"center"}
-            gap={2}
-          >
-            <Box>
-              <Image
-                src={item.image_url || ""}
-                alt={"product"}
-                width={50}
-                height={50}
-              />
-            </Box>
-            <Box display={"block"}>
-              <Typography className="f-14">{item.short_name}</Typography>
-              <Typography variant="caption">Code: {item.uuid}</Typography>
-            </Box>
-          </Stack>
-        );
-      },
-    }),
+      columnHelper.accessor("supplier_name", {
+        header: "SUPPLIER",
+        cell: (info) => (
+          <Typography ml={1}>{info.getValue() ?? "-"}</Typography>
+        ),
+      }),
 
-    columnHelper.accessor("supplier_name", {
-      header: "SUPPLIER",
-      cell: (info) => <Typography ml={1}>{info.getValue() ?? "-"}</Typography>,
-    }),
+      columnHelper.accessor("qty", {
+        header: "QTY",
+        cell: ({ row }) => (
+          <CustomTextField
+            size="small"
+            type="text"
+            inputMode="numeric"
+            value={row.original.qty ?? ""}
+            sx={{ width: 100 }}
+            onChange={(e: any) => {
+              if (!/^\d*\.?\d*$/.test(e.target.value)) return;
+              updateProductData(row.original.id, e.target.value);
+            }}
+          />
+        ),
+      }),
 
-    columnHelper.accessor("qty", {
-      header: "QTY",
-      cell: ({ row }) => (
-        <TextField
-          size="small"
-          type="text"
-          inputMode="numeric"
-          value={row.original.qty ?? ""}
-          sx={{ width: 100 }}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (!/^\d*$/.test(value)) return;
+      columnHelper.accessor("price", {
+        header: `PRICE(${currency})`,
+        cell: ({ row }) => (
+          <TextField
+            size="small"
+            value={row.original.price ?? ""}
+            sx={{ width: 100 }}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!/^\d*\.?\d*$/.test(value)) return;
+              setProducts((prev) =>
+                prev.map((item) =>
+                  item.id === row.original.id
+                    ? {
+                        ...item,
+                        price: value,
+                        line_total:
+                          (Number(value) || 0) * (Number(item.qty) || 0),
+                      }
+                    : item,
+                ),
+              );
+            }}
+          />
+        ),
+      }),
 
-            setProducts((prev) =>
-              prev.map((item) =>
-                item.id === row.original.id
-                  ? {
-                      ...item,
-                      qty: value,
-                      line_total:
-                        (Number(item.price) || 0) * (Number(value) || 0),
-                    }
-                  : item,
-              ),
-            );
-          }}
-        />
-      ),
-    }),
-
-    columnHelper.accessor("price", {
-      header: `PRICE(${currency})`,
-      cell: ({ row }) => (
-        <TextField
-          size="small"
-          type="text"
-          inputMode="numeric"
-          value={row.original.price ?? ""}
-          onChange={(e) => {
-            const value = e.target.value;
-
-            if (!/^\d*$/.test(value)) return;
-
-            setProducts((prev) => {
-              const updated = [...prev];
-
-              updated[row.index] = {
-                ...updated[row.index],
-                price: value,
-                line_total:
-                  (Number(value) || 0) * (Number(updated[row.index].qty) || 0),
-              };
-
-              return updated;
-            });
-          }}
-        />
-      ),
-    }),
-
-    columnHelper.accessor("line_total", {
-      header: "LINE TOTAL",
-      cell: (info) => `${currency}${info.getValue().toFixed(2)}`,
-    }),
-  ];
-
+      columnHelper.accessor("line_total", {
+        header: "LINE TOTAL",
+        cell: (info) => `${currency}${Number(info.getValue() || 0).toFixed(2)}`,
+      }),
+    ],
+    [currency],
+  );
   const table = useReactTable({
     data: products,
     columns,

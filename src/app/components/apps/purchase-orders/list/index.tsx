@@ -608,24 +608,42 @@ const PurchaseOrderList = () => {
   }, []);
 
   const filteredData = useMemo(() => {
+    const search = searchTerm.toLowerCase();
+
     return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
       const matchStatus =
         filters.status && filters.status !== "all"
           ? item.status_text === filters.status
           : true;
 
       const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.email?.toLowerCase().includes(search) ||
-        item.phone?.toLowerCase().includes(search) ||
-        item.street?.toLowerCase().includes(search) ||
-        item.location?.toLowerCase().includes(search) ||
-        item.town?.toLowerCase().includes(search) ||
-        item.postcode?.toLowerCase().includes(search) ||
-        item.manager_name?.toLowerCase().includes(search) ||
-        // item.supplier_name?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search);
+        String(item.created_date ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.order_id ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.user_name ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.order_qty ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.receive_qty ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.store_name ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.expected_delivery_date ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.status_text ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        String(item.ref ?? "")
+          .toLowerCase()
+          .includes(search);
 
       return matchesSearch && matchStatus;
     });
@@ -1501,7 +1519,7 @@ const PurchaseOrderList = () => {
                 whiteSpace: "nowrap",
                 textTransform: "none",
                 fontWeight: 600,
-                mr: 1
+                mr: 1,
               }}
             >
               Activity

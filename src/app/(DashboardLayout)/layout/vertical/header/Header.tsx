@@ -34,10 +34,8 @@ const Header = () => {
   const lgDown = useMediaQuery((theme) => theme.breakpoints.down("lg"));
   const session = useSession();
 
-  const user = session.data?.user as User & {
-    id: number;
-  };
-  const storedStore = Cookies.get(`user_store_${user.id}`);
+  const user = session.data?.user as User & { company_id?: number | null };
+  const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
   const store = storedStore ? JSON.parse(storedStore) : null;
 
   const {

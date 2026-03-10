@@ -28,7 +28,6 @@ import {
   Checkbox,
   Drawer,
   CircularProgress,
-  Avatar,
 } from "@mui/material";
 import {
   flexRender,
@@ -148,10 +147,10 @@ const StockList = () => {
     status: true,
   });
 
+  const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
+  const store = storedStore ? JSON.parse(storedStore) : null;
   useEffect(() => {
     if (!user?.id) return;
-
-    const storedStore = Cookies.get(`user_store_${user.id}`);
 
     if (!storedStore && stores.length > 0) {
       setStoreModalOpen(true);
@@ -168,7 +167,7 @@ const StockList = () => {
     if (!user?.id) return;
 
     Cookies.set(
-      `user_store_${user.id}`,
+      `user_store_${user.id}_${user.company_id}`,
       JSON.stringify({
         id: store.id,
         name: store.name,
@@ -198,12 +197,17 @@ const StockList = () => {
   };
 
   // Fetch data
-  const fetchProducts = async () => {
+  const fetchProducts = async (restorePage?: number) => {
     setFetchProduct(true);
     try {
       const res = await api.get(`products/get?company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
+        if (restorePage !== undefined) {
+          setTimeout(() => {
+            table.setPageIndex(restorePage);
+          }, 0);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -215,7 +219,7 @@ const StockList = () => {
     setLoading(true);
     try {
       const res = await api.get(
-        `stocks/history?company_id=${user.company_id}&product_id=${id}`,
+        `stocks/history?company_id=${user.company_id}&product_id=${id}&store_id=${store?.id}`,
       );
       if (res.data && res.data.IsSuccess) {
         setHistory(res.data.info ?? []);
@@ -720,6 +724,7 @@ const StockList = () => {
     data: filteredData,
     columns,
     state: { columnFilters, sorting },
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -1291,7 +1296,7 @@ const StockList = () => {
                     qtyNum > 0 ? "#1a8f03ff" : qtyNum < 0 ? "red" : "inherit";
                   return (
                     <>
-                      <TableRow key={h.id} sx={{ alignItems: "start"}}>
+                      <TableRow key={h.id} sx={{ alignItems: "start" }}>
                         <TableCell>
                           <Box>{h.date || "-"}</Box>
                           <Box
@@ -1303,7 +1308,9 @@ const StockList = () => {
                             {h?.user && (
                               <>
                                 <IconUser size={18} />{" "}
-                                <Typography variant="body2">{h?.user?.name}</Typography>
+                                <Typography variant="body2">
+                                  {h?.user?.name}
+                                </Typography>
                               </>
                             )}
                           </Box>
