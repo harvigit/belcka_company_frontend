@@ -797,7 +797,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             fontSize: '0.875rem',
                                                             height: '45px',
                                                             verticalAlign: 'middle',
-                                                            color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_edited ? '#ff0000' : 'inherit')
+                                                            color: (log.isMoreThanWork || log.isLessThanWork) ? '#1976d2' : (log.is_added || log.is_edited ? '#ff0000' : 'inherit')
                                                         }}
                                                     >
                                                         {log.is_leave ? (
@@ -819,8 +819,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         )}
                                                     </TableCell>
                                                 )}
-                                                
-                                                {/* Total Hours Column */}
+
+                                                {/* Penalty Hours Column */}
                                                 {visibleColumnConfigs.penaltyHours?.visible && (
                                                     <TableCell
                                                         align="center"
@@ -831,30 +831,38 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             height: "49px",
                                                             verticalAlign: "middle",
                                                             display: "flex",
-                                                            justifyContent: log.penalty_message ? "center" : "center",
+                                                            justifyContent: "center",
                                                             alignItems: "center",
-                                                            // gap: 1,
                                                             color: log.is_penalty_edited ? "#ff0000" : "inherit",
-                                                            "&:hover": {color: "#1976d2",},
+                                                            "&:hover": { color: "#1976d2" },
                                                         }}
                                                     >
-                                                    {log.is_penalty_appealed && (
-                                                        <Tooltip title={log.penalty_message} arrow placement="top">
-                                                        <Box
-                                                            sx={{
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                justifyContent: "center",
-                                                                cursor: "pointer",
-                                                                marginLeft: '-15px',
-                                                            }}
-                                                        >
-                                                            <IconPointFilled size={18} style={{ color: "#ff9800" }} />
-                                                        </Box>
-                                                        </Tooltip>
-                                                    )}
+                                                        {log.is_penalty_appealed && (
+                                                            <Tooltip title={log.penalty_message} arrow placement="top">
+                                                                <Box
+                                                                    sx={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "center",
+                                                                        cursor: "pointer",
+                                                                        marginLeft: '-15px',
+                                                                    }}
+                                                                >
+                                                                    <IconPointFilled size={18} style={{ color: "#ff9800" }} />
+                                                                </Box>
+                                                            </Tooltip>
+                                                        )}
 
-                                                    {log.is_pricework ? "--" : formatHour(log?.penalty_hours ?? 0)}
+                                                        <Tooltip
+                                                            title={log.penalty_message || ""}
+                                                            arrow
+                                                            placement="top"
+                                                            disableHoverListener={!log.penalty_message}
+                                                        >
+                                                            <Box sx={{ cursor: log.penalty_message ? "pointer" : "default" }}>
+                                                                {log.is_pricework ? "--" : formatHour(log?.penalty_hours ?? 0)}
+                                                            </Box>
+                                                        </Tooltip>
                                                     </TableCell>
                                                 )}
 
