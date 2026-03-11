@@ -50,7 +50,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     const editedByName = field === 'start' ? log?.start_time_edited_by_name : log?.end_time_edited_by_name;
     const editedAt = field === 'start' ? log?.start_time_edited_at : log?.end_time_edited_at;
 
-    const dotTooltipTitle = isEdited ? `Modified by ${editedByName} on ${editedAt}` : isRequested ? `Worklog request by ${requestedBy}` : '';
+    const dotTooltipTitle = isRequested ? `Worklog request by ${requestedBy}` : '';
 
     const isConflictResolved = log?.is_conflict_resolved;
     const conflictResolvedBy = log?.conflict_resolved_by_name ?? null;
@@ -74,7 +74,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     position: 'relative',
                 }}
             >
-                {(isEdited || isRequested) && (
+                {isRequested && (
                     <Tooltip
                         title={dotTooltipTitle}
                         arrow
@@ -186,7 +186,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                     : {},
             }}
         >
-            {(isEdited || isRequested) && (
+            {isRequested && (
                 <Tooltip
                     title={dotTooltipTitle}
                     arrow
@@ -222,6 +222,8 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     let tooltipTitle = '';
     if (isConflictResolved && conflictResolvedBy) {
         tooltipTitle = `Conflict resolved by ${conflictResolvedBy}`;
+    } else if (isEdited) {
+        tooltipTitle = `Modified by ${editedByName} on ${editedAt}`;
     } else if (isLocked) {
         tooltipTitle = 'This worklog is locked and cannot be edited';
     }

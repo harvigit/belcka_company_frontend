@@ -122,6 +122,7 @@ export interface ConflictDetail {
 }
 
 export interface LeaveRequestDetail {
+    is_delete_request: any;
     note: any;
     user_leave_id: number;
     leave_id: number;

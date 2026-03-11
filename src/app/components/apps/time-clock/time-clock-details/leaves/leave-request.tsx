@@ -47,6 +47,8 @@ interface LeaveRequestDetails {
     note?: string;
     total_time_of_days?: string;
     work_hours?: number;
+    request_action?: string;
+    is_delete_request?: boolean;
 }
 
 interface LeaveRequestProps {
@@ -340,6 +342,14 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
                                             sx={{ bgcolor: request.request_status === 'Paid' ? undefined : 'grey.100' }}
                                         />
                                     )}
+                                    {request.is_delete_request && (
+                                        <Chip
+                                            label="Delete Request"
+                                            size="small"
+                                            color="error"
+                                            variant="outlined"
+                                        />
+                                    )}
                                 </Box>
                             </Box>
 
@@ -384,7 +394,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
                                             disabled={isLoading}
                                             sx={{ textTransform: 'none' }}
                                         >
-                                            Approve
+                                            {request.is_delete_request ? 'Approve Delete' : 'Approve'}
                                         </Button>
                                         <Button
                                             variant="contained"
@@ -395,7 +405,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({open, startDate, endDate, on
                                             disabled={isLoading}
                                             sx={{ textTransform: 'none' }}
                                         >
-                                            Reject
+                                            {request.is_delete_request ? 'Reject Delete' : 'Reject'}
                                         </Button>
                                     </Box>
                                 </>

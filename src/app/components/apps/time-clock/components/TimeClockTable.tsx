@@ -838,7 +838,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             "&:hover": {color: "#1976d2",},
                                                         }}
                                                     >
-                                                    {log.penalty_message && (
+                                                    {log.is_penalty_appealed && (
                                                         <Tooltip title={log.penalty_message} arrow placement="top">
                                                         <Box
                                                             sx={{
