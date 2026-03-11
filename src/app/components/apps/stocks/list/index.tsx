@@ -608,23 +608,16 @@ const StockList = () => {
       id: "stockStatus",
       header: () => "Stock Status",
       cell: ({ row }) => {
-        const { stock_status, stock_status_id } = row.original;
-
-        const colorMap: Record<number, string> = {
-          1: "success.main",
-          2: "warning.main",
-          3: "error.main",
-          4: "error.main",
-        };
+        const item = row.original;
 
         return (
           <Typography
             className="f-14"
             variant="h6"
             fontWeight={500}
-            color={colorMap[stock_status_id] ?? "text.primary"}
+            color={item.status_color}
           >
-            {stock_status || "-"}
+            {item.stock_status || "-"}
           </Typography>
         );
       },
@@ -1338,7 +1331,8 @@ const StockList = () => {
                               className="f-14"
                               fontWeight={"bold"}
                             >
-                              ({h.sub_qty ?? 0} {h.pack_off_unit_name ?? ""})
+                              {h.sub_qty &&
+                                `(${h.sub_qty} ${h.pack_off_unit_name ?? ""})`}
                             </Typography>
                           </Box>
                         </TableCell>
