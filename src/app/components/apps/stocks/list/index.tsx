@@ -785,6 +785,9 @@ const StockList = () => {
             >
               <IconFilter width={18} />
             </Button>
+            <Typography color="primary" fontWeight={500}>
+              {store?.name}
+            </Typography>
           </Grid>
 
           <Stack

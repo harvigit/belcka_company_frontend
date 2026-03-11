@@ -35,8 +35,6 @@ const Header = () => {
   const session = useSession();
 
   const user = session.data?.user as User & { company_id?: number | null };
-  const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
-  const store = storedStore ? JSON.parse(storedStore) : null;
 
   const {
     activeMode,
@@ -105,7 +103,6 @@ const Header = () => {
         >
           <IconMenu2 size="21" />
         </IconButton>
-        {store?.name && <Typography fontSize={20}>{store?.name}</Typography>}
         {/* ------------------------------------------- */}
         {/* Search Dropdown */}
         {/* ------------------------------------------- */}
