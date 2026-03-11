@@ -503,7 +503,7 @@ const AllZonesMap = ({ zones, isLoaded }: any) => {
 
   if (!isLoaded) return <p>Loading map...</p>;
 
-  const defaultCenter = { lat: 20.5937, lng: 78.9629 };
+    const defaultCenter = { lat: 51.5074, lng: -0.1278 };
 
   return (
     <Paper sx={{ height: "90%", width: "100%" }}>
@@ -788,7 +788,7 @@ const AddZone = ({
   const [radius, setRadius] = useState(10);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [location, setLocation] = useState({ lat: 20.5937, lng: 78.9629 });
+    const [location, setLocation] = useState({ lat: 51.5074, lng: -0.1278 });
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const circleRef = useRef<google.maps.Circle | null>(null);
