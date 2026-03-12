@@ -28,6 +28,7 @@ import {
   Checkbox,
   Drawer,
   CircularProgress,
+  Menu,
 } from "@mui/material";
 import {
   flexRender,
@@ -131,7 +132,7 @@ const StockList = () => {
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [editStockOpen, setEditStockOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-
+  const [storeAnchorEl, setStoreAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [stockQty, setStockQty] = useState("0.00");
@@ -146,7 +147,13 @@ const StockList = () => {
     uuid: "",
     status: true,
   });
+  const handleStoreOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setStoreAnchorEl(event.currentTarget);
+  };
 
+  const handleStoreClose = () => {
+    setStoreAnchorEl(null);
+  };
   const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
   const store = storedStore ? JSON.parse(storedStore) : null;
   useEffect(() => {
@@ -160,6 +167,11 @@ const StockList = () => {
     if (storedStore) {
       const store = JSON.parse(storedStore);
       setStoreId(store.id);
+
+      setFilters((prev) => ({
+        ...prev,
+        store: store.name,
+      }));
     }
   }, [user, stores]);
 
@@ -179,6 +191,28 @@ const StockList = () => {
     setStoreModalOpen(false);
     fetchProducts();
     // window.location.reload();
+  };
+
+  const handleStoreChange = (storeId: number) => {
+    const selectedStore = stores.find((s) => s.id === storeId);
+    if (!selectedStore || !user?.id) return;
+
+    Cookies.set(
+      `user_store_${user.id}_${user.company_id}`,
+      JSON.stringify({
+        id: selectedStore.id,
+        name: selectedStore.name,
+      }),
+      { expires: 365 },
+    );
+
+    setStoreId(selectedStore.id);
+
+    setFilters((prev) => ({
+      ...prev,
+      store: selectedStore.name,
+    }));
+    setStoreAnchorEl(null);
   };
 
   const fetchResorces = async () => {
@@ -353,12 +387,9 @@ const StockList = () => {
             .includes(filters.category.toLowerCase())
         : true;
 
-      const matchesStore = filters.store
-        ? item.product_stock?.some(
-            (stock: any) => stock.store_name === filters.store,
-          )
+      const matchesStore = storeId
+        ? item.product_stock?.some((stock: any) => stock.store_id === storeId)
         : true;
-
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.short_name?.toLowerCase().includes(search) ||
@@ -785,9 +816,30 @@ const StockList = () => {
             >
               <IconFilter width={18} />
             </Button>
-            <Typography color="primary" fontWeight={500}>
-              {store?.name}
-            </Typography>
+            <>
+              <Typography
+                color="primary"
+                fontWeight={500}
+                sx={{ cursor: "pointer" }}
+                onClick={handleStoreOpen}
+              >
+                {stores.find((s) => s.id === storeId)?.name || "Select Store"}
+              </Typography>
+
+              <Menu
+                anchorEl={storeAnchorEl}
+                open={Boolean(storeAnchorEl)}
+                onClose={handleStoreClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                transformOrigin={{ vertical: "top", horizontal: "left" }}
+              >
+                {stores.map((s) => (
+                  <MenuItem key={s.id} onClick={() => handleStoreChange(s.id)}>
+                    {s.name}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
           </Grid>
 
           <Stack
@@ -928,26 +980,6 @@ const StockList = () => {
                       </MenuItem>
                     ))}
                   </TextField>
-
-                  <TextField
-                    select
-                    label="Store"
-                    value={tempFilters.store}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        store: e.target.value,
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    {stores.map((item, i) => (
-                      <MenuItem key={i} value={item.name}>
-                        {item.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
                 </Stack>
               </DialogContent>
 
@@ -1075,7 +1107,7 @@ const StockList = () => {
                     columns={simpleColumns}
                     rowCount={simpleColumns.length}
                   />
-                ) : data.length === 0 ? (
+                ) : filteredData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={columns.length}>
                       <Box
