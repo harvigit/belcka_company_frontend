@@ -710,12 +710,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_leave || log.is_pricework || log.is_expense || isLogLocked ? ( 
+                                                        {log.is_leave || log.is_pricework || log.is_expense ? ( 
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                opacity: isLogLocked ? 0.6 : 1,
+                                                                opacity: 1,
                                                             }}>
                                                                 {sanitizeDateTime(log.start)}
                                                             </Box>
@@ -753,12 +753,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_leave || log.is_pricework || log.is_expense || isLogLocked ? (
+                                                        {log.is_leave || log.is_pricework || log.is_expense ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                opacity: isLogLocked ? 0.6 : 1,
+                                                                opacity: 1,
                                                             }}>
                                                                 {sanitizeDateTime(log.end)}
                                                             </Box>
