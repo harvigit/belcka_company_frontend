@@ -82,8 +82,8 @@ const ReceivePurchaseOrder = () => {
               supplier_code: p.supplier_code,
               ordered_qty: ordered,
               received_qty: received,
-              remaining_qty: ordered - received,
-              receive_now: ordered - received > 0 ? ordered : 0,
+              remaining_qty: p.remaining_qty,
+              receive_now: p.remaining_qty,
               image_url: p.image_url,
               uuid: p.uuid,
               description: p.description,
@@ -122,7 +122,8 @@ const ReceivePurchaseOrder = () => {
         p.product_id === productId
           ? {
               ...p,
-              receive_now: Math.min(Number(value), p.remaining_qty),
+              receive_now:
+                value === "" ? 0 : Math.min(Number(value), p.remaining_qty),
             }
           : p,
       ),
@@ -194,13 +195,13 @@ const ReceivePurchaseOrder = () => {
         {/* ORDER INFO */}
         <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={3}>
           <TextField label="Order ID" value={order?.order_id || ""} disabled />
-          <TextField label="Supplier" value={supplierIdsFromPO.join(", ")} disabled />
-          <TextField label="Store" value={order?.store?.name || ""} disabled />
           <TextField
-            label="Received By"
-            value={user.name || ""}
+            label="Supplier"
+            value={supplierIdsFromPO.join(", ")}
             disabled
           />
+          <TextField label="Store" value={order?.store?.name || ""} disabled />
+          <TextField label="Received By" value={user.name || ""} disabled />
           <Box className="form_inputs">
             <Typography variant="body2" gutterBottom>
               Purchase Receive
@@ -278,18 +279,20 @@ const ReceivePurchaseOrder = () => {
                   <TableCell>{p.received_qty}</TableCell>
 
                   <TableCell>
-                    <TextField
-                      size="small"
-                      type="text"
-                      value={p.receive_now}
-                      disabled={order.status == 2}
-                      inputProps={{
-                        inputMode: "numeric",
-                      }}
-                      onChange={(e) =>
-                        updateReceiveQty(p.product_id, e.target.value)
-                      }
-                    />
+                    {p.remaining_qty > 0 && (
+                      <TextField
+                        size="small"
+                        type="text"
+                        value={p.receive_now}
+                        disabled={order.status == 2}
+                        inputProps={{
+                          inputMode: "numeric",
+                        }}
+                        onChange={(e) =>
+                          updateReceiveQty(p.product_id, e.target.value)
+                        }
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
