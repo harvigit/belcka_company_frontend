@@ -1037,7 +1037,20 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         {rowData.dailyTotal}
                                                     </TableCell>
                                                 )}
-                                                
+
+                                                {/* Net Payable Amount Column */}
+                                                {isFirstRow && visibleColumnConfigs.netPayableAmount?.visible && (
+                                                    <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle'
+                                                    }}>
+                                                        {rowData.netPayableAmount}
+                                                    </TableCell>
+                                                )}
+
+                                                {/* Adjustment Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.adjustment?.visible && (
                                                     <TableCell
                                                         rowSpan={rowSpan}

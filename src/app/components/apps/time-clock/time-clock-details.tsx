@@ -59,6 +59,7 @@ const DELETE_ENDPOINTS: Record<RecordType, string> = {
     worklog: '/time-clock/worklogs-bulk-delete',
     expense: '/expense/bulk-delete',
     leave: '/user-leaves/delete-leave',
+    adjustment: '/time-clock/delete-adjustment',
 };
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
@@ -202,8 +203,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         'priceWork',
         'cis_amount',
         'gross_amount',
-        'payableAmount',
+        'netPayableAmount',
         'adjustment',
+        'payableAmount',
         'dailyTotal',
     ];
 
@@ -212,8 +214,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         priceWork: false,
         cis_amount: false,
         gross_amount: false,
-        payableAmount: false,
+        netPayableAmount: false,
         adjustment: false,
+        payableAmount: false,
         dailyTotal: false,
     });
 
@@ -939,8 +942,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         totalHours: '--',
                         penaltyHours: '--',
                         dailyTotal: formatHour(day.daily_total),
-                        payableAmount: `${currency}${day.daily_payable_amount}`,
+                        netPayableAmount: `${currency}${day.daily_net_payable_amount}`,
                         daily_adjustment_amount: day.daily_adjustment_amount ?? 0,
+                        payableAmount: `${currency}${day.daily_payable_amount}`,
+                        adjustment_id: day.adjustment_id ?? null,
                         adjustment_added_by_name: day.adjustment_added_by_name ?? '',
                         regular: '--',
                         employeeNotes: day.employee_notes || '--',
@@ -978,8 +983,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     totalHours: '--',
                     penaltyHours: '--',
                     dailyTotal: '--',
-                    payableAmount: '--',
+                    netPayableAmount: '--',
                     daily_adjustment_amount: '--',
+                    payableAmount: '--',
+                    adjustment_id: day.adjustment_id ?? null,
                     adjustment_added_by_name: '--',
                     regular: '--',
                     employeeNotes: '--',
@@ -1209,6 +1216,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         const worklogIds: string[] = [];
         const leaveIds: string[] = [];
         const expenseIds: string[] = [];
+        const adjustmentIds: string[] = [];
 
         const selectedRowIndices = Array.from(selectedRows).map((rowId) =>
             parseInt(rowId.replace('row-', ''))
@@ -1218,6 +1226,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const rowData = dailyData[rowIndex];
 
             if (rowData && rowData.rowType === 'day') {
+                
+                // Adjustment
+                if (rowData.adjustment_id) {
+                    adjustmentIds.push(String(rowData.adjustment_id));
+                }
+                
                 if (Array.isArray(rowData.rowsData)) {
                     rowData.rowsData.forEach((record: any) => {
                         // Worklog
@@ -1239,21 +1253,22 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             }
         });
 
-        if (!worklogIds.length && !leaveIds.length && !expenseIds.length) return;
+        if (!worklogIds.length && !leaveIds.length && !expenseIds.length && !adjustmentIds.length) return;
 
         const conflictCount = getConflictsInSelectedRows();
 
         if (conflictCount > 0) {
             setConfirmDialog({open: true, actionType: 'delete', conflictCount,});
         } else {
-            await proceedWithDelete({worklogIds, leaveIds, expenseIds,});
+            await proceedWithDelete({worklogIds, leaveIds, expenseIds, adjustmentIds});
         }
     };
 
-    const proceedWithDelete = async ({worklogIds, leaveIds, expenseIds,}: {
+    const proceedWithDelete = async ({worklogIds, leaveIds, expenseIds, adjustmentIds}: {
         worklogIds: string[];
         leaveIds: string[];
         expenseIds: string[];
+        adjustmentIds: string[];
     }) => {
         try {
             // Worklogs
@@ -1274,6 +1289,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             if (leaveIds.length) {
                 await api.post(DELETE_ENDPOINTS.leave, {
                     user_leave_id: leaveIds.join(','),
+                });
+            }
+            
+            // Adjustments
+            if (adjustmentIds.length) {
+                await api.post(DELETE_ENDPOINTS.adjustment, {
+                    adjustment_ids: adjustmentIds.join(','),
                 });
             }
 
@@ -1347,6 +1369,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 const worklogIds: string[] = [];
                 const leaveIds: string[] = [];
                 const expenseIds: string[] = [];
+                const adjustmentIds: string[] = [];
 
                 const selectedRowIndices = Array.from(selectedRows).map((rowId) =>
                     parseInt(rowId.replace('row-', ''))
@@ -1356,6 +1379,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     const rowData = dailyData[rowIndex];
 
                     if (rowData && rowData.rowType === 'day') {
+
+                        // Adjustment
+                        if (rowData.adjustment_id) {
+                            adjustmentIds.push(String(rowData.adjustment_id));
+                        }
+                        
                         if (Array.isArray(rowData.rowsData)) {
                             rowData.rowsData.forEach((record: any) => {
                                 // Worklog
@@ -1379,7 +1408,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
                 if (!worklogIds.length && !leaveIds.length && !expenseIds.length) return;
 
-                await proceedWithDelete({worklogIds, leaveIds, expenseIds,});
+                await proceedWithDelete({worklogIds, leaveIds, expenseIds, adjustmentIds});
 
                 break;
             }
@@ -1659,6 +1688,13 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             //     cell: ({row}) => row.original.rowType === 'day' ? row.original.expenseAmount : null,
             //     size: 140,
             // },
+            {
+                id: 'netPayableAmount',
+                accessorKey: 'netPayableAmount',
+                header: () => <span style={{ display: 'block', textAlign: 'center', color: '#203040' }}>Net Payable</span>,
+                cell: ({ row }) => row.original.rowType === 'day' ? (row.original.netPayableAmount ?? '--') : null,
+                size: 130,
+            },
             {
                 id: 'adjustment',
                 accessorKey: 'adjustment',

@@ -1,6 +1,7 @@
 import {TimeClock} from '../time-clock';
 
 export type DailyBreakdown = {
+    adjustment_id?: number;
     adjustment: string;
     cis_amount: number;
     gross_amount: number;
@@ -33,6 +34,7 @@ export type DailyBreakdown = {
     checkIns?: string;
     dailyTotal?: string;
     // expenseAmount?: string;
+    netPayableAmount?: string;
     payableAmount?: string;
     regular?: string;
     employeeNotes?: string;
@@ -173,5 +175,5 @@ export type NewRecord = {
     end: string;
 };
 
-export type RecordType = 'worklog' | 'expense' | 'leave';
+export type RecordType = 'worklog' | 'expense' | 'leave' | 'adjustment';
 

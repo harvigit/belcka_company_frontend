@@ -177,6 +177,8 @@ export type TimeClock = {
     total_expense_amount: number;
     cis_amount: number;
     gross_amount: number;
+    net_payable_amount: number;
+    total_adjustment_amount: number;
     total_payable_amount: number;
     status_text: string;
     status_color?: string;
@@ -276,6 +278,8 @@ const TimeClock = ({queryParams}: Props) => {
         'pricework_total_amount',
         'cis_amount',
         'gross_amount',
+        'net_payable_amount',
+        'total_adjustment_amount',
         'total_payable_amount',
     ];
 
@@ -290,6 +294,8 @@ const TimeClock = ({queryParams}: Props) => {
         pricework_total_amount: false,
         cis_amount: false,
         gross_amount: false,
+        net_payable_amount: false,
+        total_adjustment_amount: false,
         total_payable_amount: false,
     });
 
@@ -888,6 +894,26 @@ const TimeClock = ({queryParams}: Props) => {
             cell: (info: any) => {
                 const value = info.getValue();
                 return value === 0 ? '0' : value ? `${currency}${value}` : '-';
+            },
+        }),
+
+        columnHelper.accessor('net_payable_amount', {
+            id: 'net_payable_amount',
+            header: 'Net Payable',
+            cell: (info: any) => {
+                const value = info.getValue();
+                return value === 0 ? '0' : value ? `${currency}${value}` : '-';
+            },
+        }),
+
+        columnHelper.accessor('total_adjustment_amount', {
+            id: 'total_adjustment_amount',
+            header: 'Adjustment Amount',
+            cell: (info: any) => {
+                const value = info.getValue();
+                if (value === 0 || value === null || value === undefined) return value === 0 ? '0' : '-';
+                
+                return value > 0 ? `${currency}${Math.abs(value)}` : `-${currency}${Math.abs(value)}`;
             },
         }),
 
