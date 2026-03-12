@@ -964,23 +964,20 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         {(() => {
                                                             const statusText = log.status_text;
                                                             const statusColorFromApi = log.status_color;
-
                                                             const statusUpdatedBy = log.status_updated_by_name || '--';
                                                             const statusUpdatedAt = log.status_updated_at || '—';
 
                                                             const tooltipStyles = {
                                                                 '& .MuiTooltip-arrow': { color: '#1a1f29' },
                                                             };
-                                                            
+
                                                             const tooltipTitle = `Status updated by ${statusUpdatedBy} on ${statusUpdatedAt}`;
 
                                                             if (!statusText || !statusColorFromApi) {
                                                                 return (
-                                                                    <Tooltip title={tooltipTitle} arrow placement="top" sx={tooltipStyles}>
-                                                                        <Typography color="text.secondary" variant="body2">
-                                                                            —
-                                                                        </Typography>
-                                                                    </Tooltip>
+                                                                    <Typography color="text.secondary" variant="body2">
+                                                                        —
+                                                                    </Typography>
                                                                 );
                                                             }
 
