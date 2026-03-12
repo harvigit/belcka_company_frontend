@@ -932,7 +932,11 @@ const PurchaseOrderList = () => {
               color={item.status_color}
               fontWeight={500}
             >
-              {item.status_text ? item.status_text : "-"}
+              {item.status_text
+                ? item.status == 2
+                  ? "Delivered"
+                  : item.status_text
+                : "-"}
             </Typography>
           </Stack>
         );
