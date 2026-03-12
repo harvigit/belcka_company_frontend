@@ -178,7 +178,7 @@ const StockList = () => {
     setStoreId(store.id);
     setStoreModalOpen(false);
     fetchProducts();
-    window.location.reload();
+    // window.location.reload();
   };
 
   const fetchResorces = async () => {
@@ -785,6 +785,9 @@ const StockList = () => {
             >
               <IconFilter width={18} />
             </Button>
+            <Typography color="primary" fontWeight={500}>
+              {store?.name}
+            </Typography>
           </Grid>
 
           <Stack
@@ -1331,7 +1334,7 @@ const StockList = () => {
                               className="f-14"
                               fontWeight={"bold"}
                             >
-                              {h.sub_qty &&
+                              {h.sub_qty !== 0 &&
                                 `(${h.sub_qty} ${h.pack_off_unit_name ?? ""})`}
                             </Typography>
                           </Box>

@@ -754,7 +754,7 @@ const PurchaseProductList: React.FC<Props> = ({
       },
     }),
 
-    columnHelper.accessor((row) => row?.total_qty, {
+    columnHelper.accessor((row) => row?.qty, {
       id: "qty",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -768,7 +768,7 @@ const PurchaseProductList: React.FC<Props> = ({
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
-              {item.total_qty ? item.total_qty : "0"}{" "}
+              {item.qty ? item.qty : "0"}{" "}
               {item.is_sub_qty ? `${item.pack_off_unit}` : ""}
             </Typography>
           </Stack>

@@ -1007,8 +1007,7 @@ const PurchaseOrderList = () => {
             >
               <IconDownload size={18} />
             </IconButton>
-
-            {item.status !== 2 && (
+            {(item.status === 0 || item.status === 1) && (
               <Button
                 href={`/apps/receive-orders/${item.id}`}
                 onClick={(e) => e.stopPropagation()}
@@ -1875,9 +1874,11 @@ const PurchaseOrderList = () => {
                           <TableCell
                             key={cell.id}
                             sx={{ padding: "10px" }}
-                            onClick={() =>
-                              item.status !== 2 && handleEdit(item)
-                            }
+                            onClick={() => {
+                              if (item.status === 0 || item.status === 1) {
+                                handleEdit(item);
+                              }
+                            }}
                           >
                             {flexRender(
                               cell.column.columnDef.cell,

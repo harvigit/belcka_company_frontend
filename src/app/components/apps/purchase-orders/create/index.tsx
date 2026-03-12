@@ -158,10 +158,10 @@ const PurchaseOrder: React.FC<Props> = ({
         tax: editData.tax,
       }));
 
-      // Map products for the table
-      const mappedProducts: ProductRow[] = editData.purchase_orders.map(
-        (p: any) => {
-          const qty = Number(p.qty) || 0;
+      const mappedProducts: ProductRow[] = editData.purchase_orders
+        .filter((p: any) => Number(p.remaining_qty) > 0)
+        .map((p: any) => {
+          const qty = Number(p.remaining_qty) || 0;
           const price = Number(p.price) || 0;
 
           return {
@@ -175,8 +175,7 @@ const PurchaseOrder: React.FC<Props> = ({
             uuid: p.uuid,
             supplier_name: p.supplier_name,
           };
-        },
-      );
+        });
 
       setProducts(mappedProducts);
 
