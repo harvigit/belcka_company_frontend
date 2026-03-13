@@ -28,6 +28,7 @@ import {
   Checkbox,
   Drawer,
   CircularProgress,
+  Menu,
 } from "@mui/material";
 import {
   flexRender,
@@ -131,7 +132,7 @@ const StockList = () => {
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [editStockOpen, setEditStockOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-
+  const [storeAnchorEl, setStoreAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [stockQty, setStockQty] = useState("0.00");
@@ -146,7 +147,13 @@ const StockList = () => {
     uuid: "",
     status: true,
   });
+  const handleStoreOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setStoreAnchorEl(event.currentTarget);
+  };
 
+  const handleStoreClose = () => {
+    setStoreAnchorEl(null);
+  };
   const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
   const store = storedStore ? JSON.parse(storedStore) : null;
   useEffect(() => {
@@ -160,6 +167,11 @@ const StockList = () => {
     if (storedStore) {
       const store = JSON.parse(storedStore);
       setStoreId(store.id);
+
+      setFilters((prev) => ({
+        ...prev,
+        store: store.name,
+      }));
     }
   }, [user, stores]);
 
@@ -181,7 +193,31 @@ const StockList = () => {
     // window.location.reload();
   };
 
-  const fetchResorces = async () => {
+  const handleStoreChange = (storeId: number) => {
+    const selectedStore = stores.find((s) => s.id === storeId);
+    if (!selectedStore || !user?.id) return;
+
+    Cookies.set(
+      `user_store_${user.id}_${user.company_id}`,
+      JSON.stringify({
+        id: selectedStore.id,
+        name: selectedStore.name,
+      }),
+      { expires: 365 },
+    );
+
+    setStoreId(selectedStore.id);
+
+    setFilters((prev) => ({
+      ...prev,
+      store: selectedStore.name,
+    }));
+
+    fetchProducts(selectedStore.id);
+    setStoreAnchorEl(null);
+  };
+
+  const fetchResources = async () => {
     try {
       const res = await api.get(
         `get-inventory-resources?company_id=${user.company_id}`,
@@ -197,12 +233,18 @@ const StockList = () => {
   };
 
   // Fetch data
-  const fetchProducts = async (restorePage?: number) => {
+  const fetchProducts = async (storeIdParam?: number, restorePage?: number) => {
     setFetchProduct(true);
     try {
-      const res = await api.get(`products/get?company_id=${user.company_id}`);
+      const storeFilter = storeIdParam ?? storeId ?? store?.id;
+
+      const res = await api.get(
+        `products/get?company_id=${user.company_id}&store_ids=${storeFilter}`,
+      );
+
       if (res.data) {
         setData(res.data.info);
+
         if (restorePage !== undefined) {
           setTimeout(() => {
             table.setPageIndex(restorePage);
@@ -212,6 +254,7 @@ const StockList = () => {
     } catch (err) {
       console.error("Failed to fetch supplier", err);
     }
+
     setFetchProduct(false);
   };
 
@@ -219,7 +262,7 @@ const StockList = () => {
     setLoading(true);
     try {
       const res = await api.get(
-        `stocks/history?company_id=${user.company_id}&product_id=${id}`,
+        `stocks/history?company_id=${user.company_id}&product_id=${id}&store_id=${store?.id}`,
       );
       if (res.data && res.data.IsSuccess) {
         setHistory(res.data.info ?? []);
@@ -237,9 +280,9 @@ const StockList = () => {
   };
 
   useEffect(() => {
-    fetchResorces();
+    fetchResources();
     fetchProducts();
-  }, [api]);
+  }, [api, storeId]);
 
   const editSupplier = async (
     e: React.FormEvent,
@@ -319,11 +362,14 @@ const StockList = () => {
     setEditDrawerOpen(true);
   }, []);
 
-  const handleHistory = useCallback(async (id: number) => {
-    setSelectedTaskId(id);
-    setDrawerOpen(true); // open drawer
-    await fetchHistories(id);
-  }, []);
+  const handleHistory = useCallback(
+    async (id: number) => {
+      setSelectedTaskId(id);
+      setDrawerOpen(true); // open drawer
+      await fetchHistories(id);
+    },
+    [storeId],
+  );
 
   const handleStock = useCallback(async (item: any) => {
     setSelectedTaskId(item.id);
@@ -353,12 +399,6 @@ const StockList = () => {
             .includes(filters.category.toLowerCase())
         : true;
 
-      const matchesStore = filters.store
-        ? item.product_stock?.some(
-            (stock: any) => stock.store_name === filters.store,
-          )
-        : true;
-
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.short_name?.toLowerCase().includes(search) ||
@@ -369,9 +409,7 @@ const StockList = () => {
         item.barcode_text?.toLowerCase().includes(search) ||
         item.supplier_name?.toLowerCase().includes(search);
 
-      return (
-        matchesSearch && matchesCategory && matchesSupplier && matchesStore
-      );
+      return matchesSearch && matchesCategory && matchesSupplier;
     });
   }, [data, searchTerm, filters]);
 
@@ -563,7 +601,7 @@ const StockList = () => {
         return (
           <Stack direction="row" alignItems="center">
             <Typography textTransform="capitalize" className="f-14">
-              {item.qty}
+              {item.qty.toFixed(2)}
               {item.is_sub_qty
                 ? ` (${item?.pack_off_qty} ${item?.pack_off_unit})`
                 : ""}
@@ -785,9 +823,30 @@ const StockList = () => {
             >
               <IconFilter width={18} />
             </Button>
-            <Typography color="primary" fontWeight={500}>
-              {store?.name}
-            </Typography>
+            <>
+              <Typography
+                color="primary"
+                fontWeight={500}
+                sx={{ cursor: "pointer" }}
+                onClick={handleStoreOpen}
+              >
+                {stores.find((s) => s.id === storeId)?.name || "Select Store"}
+              </Typography>
+
+              <Menu
+                anchorEl={storeAnchorEl}
+                open={Boolean(storeAnchorEl)}
+                onClose={handleStoreClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                transformOrigin={{ vertical: "top", horizontal: "left" }}
+              >
+                {stores.map((s) => (
+                  <MenuItem key={s.id} onClick={() => handleStoreChange(s.id)}>
+                    {s.name}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
           </Grid>
 
           <Stack
@@ -928,26 +987,6 @@ const StockList = () => {
                       </MenuItem>
                     ))}
                   </TextField>
-
-                  <TextField
-                    select
-                    label="Store"
-                    value={tempFilters.store}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        store: e.target.value,
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    {stores.map((item, i) => (
-                      <MenuItem key={i} value={item.name}>
-                        {item.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
                 </Stack>
               </DialogContent>
 
@@ -1075,7 +1114,7 @@ const StockList = () => {
                     columns={simpleColumns}
                     rowCount={simpleColumns.length}
                   />
-                ) : data.length === 0 ? (
+                ) : filteredData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={columns.length}>
                       <Box
