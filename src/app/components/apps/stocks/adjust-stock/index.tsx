@@ -357,7 +357,7 @@ const AdjustStock: React.FC<Props> = ({
                 value={adjustQty}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (/^-?\d*$/.test(val)) {
+                  if (/^\d*$/.test(val)) {
                     setAdjustQty(val);
                   }
                 }}

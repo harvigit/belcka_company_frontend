@@ -407,8 +407,12 @@ const PurchaseProductList: React.FC<Props> = ({
 
               if (isChecked) {
                 setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setManuallyDeselected(new Set());
               } else {
                 setSelectedRowIds(new Set());
+                setManuallyDeselected(
+                  new Set(filteredData.map((row) => row.id)),
+                );
               }
             }}
           />

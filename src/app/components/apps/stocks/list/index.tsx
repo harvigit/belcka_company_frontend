@@ -212,10 +212,12 @@ const StockList = () => {
       ...prev,
       store: selectedStore.name,
     }));
+
+    fetchProducts(selectedStore.id);
     setStoreAnchorEl(null);
   };
 
-  const fetchResorces = async () => {
+  const fetchResources = async () => {
     try {
       const res = await api.get(
         `get-inventory-resources?company_id=${user.company_id}`,
@@ -231,12 +233,18 @@ const StockList = () => {
   };
 
   // Fetch data
-  const fetchProducts = async (restorePage?: number) => {
+  const fetchProducts = async (storeIdParam?: number, restorePage?: number) => {
     setFetchProduct(true);
     try {
-      const res = await api.get(`products/get?company_id=${user.company_id}`);
+      const storeFilter = storeIdParam ?? storeId ?? store?.id;
+
+      const res = await api.get(
+        `products/get?company_id=${user.company_id}&store_ids=${storeFilter}`,
+      );
+
       if (res.data) {
         setData(res.data.info);
+
         if (restorePage !== undefined) {
           setTimeout(() => {
             table.setPageIndex(restorePage);
@@ -246,6 +254,7 @@ const StockList = () => {
     } catch (err) {
       console.error("Failed to fetch supplier", err);
     }
+
     setFetchProduct(false);
   };
 
@@ -253,7 +262,7 @@ const StockList = () => {
     setLoading(true);
     try {
       const res = await api.get(
-        `stocks/history?company_id=${user.company_id}&product_id=${id}`,
+        `stocks/history?company_id=${user.company_id}&product_id=${id}&store_id=${store?.id}`,
       );
       if (res.data && res.data.IsSuccess) {
         setHistory(res.data.info ?? []);
@@ -271,9 +280,9 @@ const StockList = () => {
   };
 
   useEffect(() => {
-    fetchResorces();
+    fetchResources();
     fetchProducts();
-  }, [api]);
+  }, [api, storeId]);
 
   const editSupplier = async (
     e: React.FormEvent,
@@ -353,11 +362,14 @@ const StockList = () => {
     setEditDrawerOpen(true);
   }, []);
 
-  const handleHistory = useCallback(async (id: number) => {
-    setSelectedTaskId(id);
-    setDrawerOpen(true); // open drawer
-    await fetchHistories(id);
-  }, []);
+  const handleHistory = useCallback(
+    async (id: number) => {
+      setSelectedTaskId(id);
+      setDrawerOpen(true); // open drawer
+      await fetchHistories(id);
+    },
+    [storeId],
+  );
 
   const handleStock = useCallback(async (item: any) => {
     setSelectedTaskId(item.id);
@@ -387,9 +399,6 @@ const StockList = () => {
             .includes(filters.category.toLowerCase())
         : true;
 
-      const matchesStore = storeId
-        ? item.product_stock?.some((stock: any) => stock.store_id === storeId)
-        : true;
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.short_name?.toLowerCase().includes(search) ||
@@ -400,9 +409,7 @@ const StockList = () => {
         item.barcode_text?.toLowerCase().includes(search) ||
         item.supplier_name?.toLowerCase().includes(search);
 
-      return (
-        matchesSearch && matchesCategory && matchesSupplier && matchesStore
-      );
+      return matchesSearch && matchesCategory && matchesSupplier;
     });
   }, [data, searchTerm, filters]);
 
@@ -594,7 +601,7 @@ const StockList = () => {
         return (
           <Stack direction="row" alignItems="center">
             <Typography textTransform="capitalize" className="f-14">
-              {item.qty}
+              {item.qty.toFixed(2)}
               {item.is_sub_qty
                 ? ` (${item?.pack_off_qty} ${item?.pack_off_unit})`
                 : ""}

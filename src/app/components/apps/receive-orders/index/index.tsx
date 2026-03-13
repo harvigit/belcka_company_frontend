@@ -200,7 +200,7 @@ const ReceivePurchaseOrder = () => {
             value={supplierIdsFromPO.join(", ")}
             disabled
           />
-          <TextField label="Store" value={order?.store?.name || ""} disabled />
+          <TextField label="Store" value={order?.store_name || ""} disabled />
           <TextField label="Received By" value={user.name || ""} disabled />
           <Box className="form_inputs">
             <Typography variant="body2" gutterBottom>

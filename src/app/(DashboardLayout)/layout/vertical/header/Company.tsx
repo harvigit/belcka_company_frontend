@@ -169,7 +169,6 @@ const Company = () => {
       const dateRange = loadRequestDateRange();
 
       let url = `get-feeds?company_id=${user.company_id}&user_id=${user.id}`;
-      console.log(dateRange, "dateRange");
       if (dateRange?.startDate && dateRange?.endDate) {
         url += `&start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`;
       }
@@ -536,10 +535,10 @@ const Company = () => {
                       <MenuItem value="Shift">Worklog</MenuItem>
                       <MenuItem value="Billing Info">Billing Info</MenuItem>
                       <MenuItem value="User">User</MenuItem>
-                      <MenuItem value="Comapny">Comapny</MenuItem>
+                      <MenuItem value="Comapny">Company</MenuItem>
                       <MenuItem value="Project">Project</MenuItem>
                       <MenuItem value="Address">Address</MenuItem>
-                      <MenuItem value="Company">Comapny Rate</MenuItem>
+                      <MenuItem value="Company">Company Rate</MenuItem>
                       <MenuItem value="Team">Team</MenuItem>
                       <MenuItem value="Leave">Leave</MenuItem>
                       <MenuItem value="Expense">Expense</MenuItem>
