@@ -407,7 +407,7 @@ const PurchaseProductList: React.FC<Props> = ({
 
               if (isChecked) {
                 setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
-                setManuallyDeselected(new Set());
+                // setManuallyDeselected(new Set());
               } else {
                 setSelectedRowIds(new Set());
                 setManuallyDeselected(
@@ -483,10 +483,18 @@ const PurchaseProductList: React.FC<Props> = ({
             ),
           );
 
+          if (newQty > 0) {
+            setManuallyDeselected((prev) => {
+              const updated = new Set(prev);
+              updated.delete(item.id);
+              return updated;
+            });
+          }
+
           setSelectedRowIds((prev) => {
             const updated = new Set(prev);
 
-            if (newQty > 0 && !manuallyDeselected.has(item.id)) {
+            if (newQty > 0) {
               updated.add(item.id);
             }
 
