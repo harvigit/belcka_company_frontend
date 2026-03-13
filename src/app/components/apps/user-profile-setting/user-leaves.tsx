@@ -427,8 +427,27 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
             header: "Actions",
             cell: ({ row }) => {
                 const item = row.original;
+                const isDeleteRequest = item.status === 3 && item.is_delete_request === true;
+
                 return (
                     <Stack direction="row" spacing={1} alignItems="center">
+                        {isDeleteRequest && (
+                            <Tooltip title="Delete Leave Request">
+                                <Chip
+                                    label="Delete Request"
+                                    size="small"
+                                    sx={{
+                                        backgroundColor: "#fff0f0",
+                                        color: "#d32f2f",
+                                        borderColor: "#d32f2f",
+                                        fontWeight: 500,
+                                        fontSize: "0.7rem",
+                                    }}
+                                    variant="outlined"
+                                />
+                            </Tooltip>
+                        )}
+
                         {item.status === 3 && user.user_role_id == 1 ? (
                             <>
                                 <Tooltip title="Approve">
@@ -461,11 +480,13 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             </>
                         ) : (
                             <Box display={"flex"} gap={1} alignItems={"center"}>
-                                <Tooltip title="Edit">
-                                    <IconButton onClick={() => handleEdit(item)} color="primary">
-                                        <IconEdit size={16} />
-                                    </IconButton>
-                                </Tooltip>
+                                {!isDeleteRequest && (
+                                    <Tooltip title="Edit">
+                                        <IconButton onClick={() => handleEdit(item)} color="primary">
+                                            <IconEdit size={16} />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
 
                                 {item.status_text && (
                                     <Chip
@@ -650,7 +671,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                         ))}
                                 </FormGroup>
                             </Popover>
-                            
+
                             <IconButton
                                 onClick={handleSettingOpen}
                                 color="primary"
@@ -759,18 +780,37 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        table.getRowModel().rows.map((row) => (
-                                            <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                                                {row.getVisibleCells().map((cell) => (
-                                                    <TableCell key={cell.id}>
-                                                        {flexRender(
-                                                            cell.column.columnDef.cell,
-                                                            cell.getContext()
-                                                        )}
-                                                    </TableCell>
-                                                ))}
-                                            </TableRow>
-                                        ))
+                                        table.getRowModel().rows.map((row) => {
+                                            const isDeleteRequest =
+                                                row.original.status === 3 &&
+                                                row.original.is_delete_request === true;
+                                            return (
+                                                <TableRow
+                                                    key={row.id}
+                                                    hover
+                                                    sx={{
+                                                        cursor: "pointer",
+                                                        backgroundColor: isDeleteRequest
+                                                            ? "#f0f0f0"
+                                                            : "inherit",
+                                                        "&:hover": {
+                                                            backgroundColor: isDeleteRequest
+                                                                ? "#e0e0e0 !important"
+                                                                : undefined,
+                                                        },
+                                                    }}
+                                                >
+                                                    {row.getVisibleCells().map((cell) => (
+                                                        <TableCell key={cell.id}>
+                                                            {flexRender(
+                                                                cell.column.columnDef.cell,
+                                                                cell.getContext()
+                                                            )}
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            );
+                                        })
                                     )}
                                 </TableBody>
                             </Table>
