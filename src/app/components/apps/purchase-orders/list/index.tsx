@@ -979,7 +979,7 @@ const PurchaseOrderList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" sx={{ pl: 1 }} display={"flex"}>
+          <Stack direction="row" display={"flex"}>
             {/* <Tooltip title="Preview / Print">
               <IconButton
                 color="primary"
