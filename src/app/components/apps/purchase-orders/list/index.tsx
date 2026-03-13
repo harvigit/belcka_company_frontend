@@ -950,9 +950,24 @@ const PurchaseOrderList = () => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <Typography className="f-14" fontWeight={500}>
-              {item.ref ? item.ref : "-"}
-            </Typography>
+            <Tooltip title={item.ref ? item.ref : ""} placement="top" arrow>
+              <Typography
+                className="f-14"
+                fontWeight={500}
+                sx={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.25,
+                  maxWidth: 300,
+                  wordBreak: "break-word",
+                }}
+              >
+                {item.ref ? item.ref : "-"}
+              </Typography>
+            </Tooltip>
           </Stack>
         );
       },

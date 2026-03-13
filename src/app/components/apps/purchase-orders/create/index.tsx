@@ -447,6 +447,7 @@ const PurchaseOrder: React.FC<Props> = ({
                 <CustomTextField
                   fullWidth
                   value={formData.ref}
+                  inputProps={{ maxLength: 50 }}
                   onChange={(e: any) =>
                     setFormData((p: any) => ({
                       ...p,
@@ -517,6 +518,7 @@ const PurchaseOrder: React.FC<Props> = ({
                 <TextField
                   fullWidth
                   multiline
+                  inputProps={{ maxLength: 50 }}
                   value={formData.note ?? null}
                   onChange={(e: any) =>
                     setFormData((p: any) => ({
