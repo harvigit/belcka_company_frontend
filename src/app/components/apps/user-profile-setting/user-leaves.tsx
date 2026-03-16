@@ -65,6 +65,7 @@ import Image from "next/image";
 import DateRangePickerBox from "../../common/DateRangePickerBox";
 import AddLeave from "../time-clock/time-clock-details/leaves/add-leave";
 import LeaveSetting from "./leave-settings/leave-setting";
+import { useSearchParams } from "next/navigation";
 
 interface UserLeaveProps {
     active: boolean;
@@ -112,6 +113,8 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                                   userId,
                                                   companyId,
                                               }) => {
+    const searchParams = useSearchParams();
+
     const [data, setData] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -126,9 +129,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const [columnFilters, setColumnFilters] = useState<any>([]);
     const [fetchLeave, setFetchLeave] = useState<boolean>(true);
     const [openActionModal, setOpenActionModal] = useState(false);
-    const [actionType, setActionType] = useState<"approve" | "reject" | null>(
-        null
-    );
+    const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
     const [note, setNote] = useState("");
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
@@ -136,34 +137,60 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const [history, setHistory] = useState<any[]>([]);
     const [addLeaveSidebar, setAddLeaveSidebar] = useState<boolean>(false);
     const [editLeaveRequest, setEditLeaveRequest] = useState<any | undefined>();
+
     const today = new Date();
     const defaultStart = new Date(today.getFullYear(), 0, 1);
     const defaultEnd = new Date(today.getFullYear(), 11, 31);
 
     const [settingOpen, setSettingOpen] = useState(false);
-
     const handleSettingOpen = () => setSettingOpen(true);
     const handleSettingClose = async () => setSettingOpen(false);
 
-    // Load from localStorage or use defaults
+    // Priority 1: URL params (from Requests panel redirect)
+    // Priority 2: localStorage
+    // Priority 3: year defaults
     const getInitialDates = () => {
+        const urlStart = searchParams?.get("leave_start");
+        const urlEnd = searchParams?.get("leave_end");
+
+        if (urlStart && urlEnd) {
+            const parsedStart = new Date(urlStart);
+            const parsedEnd = new Date(urlEnd);
+            // Validate dates are real
+            if (!isNaN(parsedStart.getTime()) && !isNaN(parsedEnd.getTime())) {
+                return { startDate: parsedStart, endDate: parsedEnd };
+            }
+        }
+
         const stored = loadDateRangeFromStorage();
         if (stored && stored.startDate && stored.endDate) {
             return { startDate: stored.startDate, endDate: stored.endDate };
         }
+
         return { startDate: defaultStart, endDate: defaultEnd };
     };
 
     const initialDates = getInitialDates();
-    const [startDate, setStartDate] = useState<Date | null>(
-        initialDates.startDate
-    );
+    const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
-    const handleDateRangeChange = (range: {
-        from: Date | null;
-        to: Date | null;
-    }) => {
+    // When URL params change (e.g. clicking a different leave request while already on this page),
+    // update the date range state immediately
+    useEffect(() => {
+        const urlStart = searchParams?.get("leave_start");
+        const urlEnd = searchParams?.get("leave_end");
+
+        if (urlStart && urlEnd) {
+            const parsedStart = new Date(urlStart);
+            const parsedEnd = new Date(urlEnd);
+            if (!isNaN(parsedStart.getTime()) && !isNaN(parsedEnd.getTime())) {
+                setStartDate(parsedStart);
+                setEndDate(parsedEnd);
+            }
+        }
+    }, [searchParams]);
+
+    const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (range.from && range.to) {
             setStartDate(range.from);
             setEndDate(range.to);
@@ -193,12 +220,12 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
 
     const fetchLeaveHistory = async (start: Date, end: Date) => {
         try {
-            const startDate = format(start, "dd/MM/yyyy");
-            const endDate = format(end, "dd/MM/yyyy");
+            const startDateStr = format(start, "dd/MM/yyyy");
+            const endDateStr = format(end, "dd/MM/yyyy");
             const payload = {
                 company_id: user.company_id,
-                start_date: startDate,
-                end_date: endDate,
+                start_date: startDateStr,
+                end_date: endDateStr,
                 user_id: userId,
             };
             const res = await api.post(`user-leaves/get-list`, payload);
@@ -214,16 +241,15 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         }
     }, []);
 
-    // Fetch data
     const fetchLeaves = async (start: Date, end: Date): Promise<void> => {
         setFetchLeave(true);
         try {
-            const startDate = format(start, "dd/MM/yyyy");
-            const endDate = format(end, "dd/MM/yyyy");
+            const startDateStr = format(start, "dd/MM/yyyy");
+            const endDateStr = format(end, "dd/MM/yyyy");
             const payload = {
                 company_id: user.company_id,
-                start_date: startDate,
-                end_date: endDate,
+                start_date: startDateStr,
+                end_date: endDateStr,
                 user_id: userId,
             };
             const res = await api.post(`user-leaves/get-list`, payload);
@@ -531,7 +557,6 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         },
     });
 
-    // Reset to first page when search term changes
     useEffect(() => {
         table.setPageIndex(0);
     }, [searchTerm, table]);
@@ -615,7 +640,6 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                 Leave History
                             </Button>
 
-                            {/* Column visibility toggle */}
                             <IconButton onClick={handlePopoverOpen} color="primary">
                                 <IconEye />
                             </IconButton>
