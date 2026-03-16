@@ -42,8 +42,10 @@ const ProductHistory: React.FC<ProductProps> = ({ open, onClose }) => {
     }
     setLoading(false);
   };
+  const allowedTypes = [117, 119, 120, 125];
+
   const filteredHistory =
-    history?.filter((item) => item.request_type === 117) || [];
+    history?.filter((item) => allowedTypes.includes(item.request_type)) || [];
 
   const paginatedFeeds = filteredHistory.slice(0, page * limit);
 
@@ -119,8 +121,27 @@ const ProductHistory: React.FC<ProductProps> = ({ open, onClose }) => {
                   }}
                 >
                   {paginatedFeeds
-                    .filter((item) => item.request_type === 117)
+                    ?.filter((item) => allowedTypes.includes(item.request_type))
                     .map((addr, index) => {
+                      let color = "";
+
+                      switch (addr.request_type) {
+                        case 120:
+                          color = "#0066ffff";
+                          break;
+                        case 125:
+                          color = "#A600FF";
+                          break;
+                        case 119:
+                          color = "#FF7F00";
+                          break;
+                        case 117:
+                          color = "#32A852";
+                          break;
+                        default:
+                          color = "#949090ff";
+                      }
+
                       return (
                         <Box
                           key={addr.id ?? index}
@@ -144,7 +165,7 @@ const ProductHistory: React.FC<ProductProps> = ({ open, onClose }) => {
                             position="absolute"
                             top="-10px"
                             left="15px"
-                            bgcolor="#FF7F00"
+                            bgcolor={color}
                             px={1.5}
                             borderRadius="10px"
                             zIndex={1}
