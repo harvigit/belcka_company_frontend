@@ -662,7 +662,7 @@ const StockList = () => {
         return (
           <Stack direction="row" alignItems="center">
             <Typography textTransform="capitalize" className="f-14">
-              {item.sub_qty}
+              {item.sub_qty == 0 ? "-" : item.sub_qty}
             </Typography>
           </Stack>
         );
