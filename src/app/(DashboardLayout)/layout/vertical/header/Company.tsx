@@ -302,7 +302,6 @@ const Company = () => {
     ) => string
   > = {
     Shift: (userId, recordId, startDate, endDate) => {
-      // ← add "id" param
       let url = `/apps/timesheet/list`;
       const params: any[] = [];
 
@@ -361,6 +360,19 @@ const Company = () => {
       if (startDate && endDate) {
         saveDateRangeToStorage(startDate, endDate);
       }
+      return url;
+    },
+    Stock: (userId, recordId) => {
+      let url = `/apps/stocks/list`;
+      const params: any[] = [];
+
+      if (userId) params.push(`store_id=${userId}`);
+      if (recordId) params.push(`product_id=${recordId}`);
+
+      if (params.length > 0) {
+        url += `?${params.join("&")}`;
+      }
+
       return url;
     },
   };
@@ -667,6 +679,10 @@ const Company = () => {
                                     formattedDate,
                                     formattedDate,
                                   ),
+                                );
+                              } else if (item.request_name === "Stock") {
+                                router.push(
+                                  routeFn(item.store_id, item.record_id),
                                 );
                               } else if (item.request_name === "Team") {
                                 router.push(routeFn(item.team_id));

@@ -67,6 +67,8 @@ import ProductAddEdit from "../../products/create";
 import AdjustStock from "../adjust-stock";
 import Cookies from "js-cookie";
 import StoreModal from "../../modals/store-model";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(customParseFormat);
 
@@ -147,6 +149,9 @@ const StockList = () => {
     uuid: "",
     status: true,
   });
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const handleStoreOpen = (event: React.MouseEvent<HTMLElement>) => {
     setStoreAnchorEl(event.currentTarget);
   };
@@ -156,6 +161,7 @@ const StockList = () => {
   };
   const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
   const store = storedStore ? JSON.parse(storedStore) : null;
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -174,6 +180,15 @@ const StockList = () => {
       }));
     }
   }, [user, stores]);
+  useEffect(() => {
+    if (!searchParams || stores.length === 0) return;
+
+    const storeIdParam = searchParams.get("store_id");
+
+    if (storeIdParam) {
+      handleStoreChange(Number(storeIdParam));
+    }
+  }, [searchParams, stores]);
 
   const handleStoreConfirm = (store: { id: number; name: string }) => {
     if (!user?.id) return;
@@ -190,13 +205,14 @@ const StockList = () => {
     setStoreId(store.id);
     setStoreModalOpen(false);
     fetchProducts();
-    // window.location.reload();
   };
 
   const handleStoreChange = (storeId: number) => {
     const selectedStore = stores.find((s) => s.id === storeId);
     if (!selectedStore || !user?.id) return;
+    if (!searchParams) return;
 
+    const productId = searchParams.get("product_id");
     Cookies.set(
       `user_store_${user.id}_${user.company_id}`,
       JSON.stringify({
@@ -213,7 +229,12 @@ const StockList = () => {
       store: selectedStore.name,
     }));
 
-    fetchProducts(selectedStore.id);
+    fetchProducts(
+      selectedStore.id,
+      undefined,
+      productId ? Number(productId) : undefined,
+    );
+
     setStoreAnchorEl(null);
   };
 
@@ -233,26 +254,43 @@ const StockList = () => {
   };
 
   // Fetch data
-  const fetchProducts = async (storeIdParam?: number, restorePage?: number) => {
+  const fetchProducts = async (
+    storeIdParam?: number,
+    restorePage?: number,
+    productIdParam?: number,
+  ) => {
     setFetchProduct(true);
+
     try {
       const storeFilter = storeIdParam ?? storeId ?? store?.id;
 
-      const res = await api.get(
-        `products/get?company_id=${user.company_id}&store_ids=${storeFilter}`,
-      );
+      if (!storeFilter) return;
+      let url = `products/get?company_id=${user.company_id}&store_ids=${storeFilter}`;
 
-      if (res.data) {
-        setData(res.data.info);
+      if (productIdParam) {
+        url += `&product_id=${productIdParam}`;
+      }
+      const res = await api.get(url);
 
-        if (restorePage !== undefined) {
-          setTimeout(() => {
-            table.setPageIndex(restorePage);
-          }, 0);
-        }
+      const info = res.data.info;
+
+      if (Array.isArray(info)) {
+        setData(info);
+      } else if (info) {
+        setData([info]);
+      } else {
+        setData([]);
+      }
+
+      if (productIdParam) {
+        router.replace("/apps/stocks/list", { scroll: false });
+      }
+
+      if (restorePage !== undefined) {
+        setTimeout(() => table.setPageIndex(restorePage), 0);
       }
     } catch (err) {
-      console.error("Failed to fetch supplier", err);
+      console.error("Failed to fetch products", err);
     }
 
     setFetchProduct(false);
@@ -281,8 +319,12 @@ const StockList = () => {
 
   useEffect(() => {
     fetchResources();
-    fetchProducts();
-  }, [api, storeId]);
+  }, []);
+
+  useEffect(() => {
+    if (!storeId) return;
+    fetchProducts(storeId);
+  }, [storeId]);
 
   const editSupplier = async (
     e: React.FormEvent,
@@ -378,6 +420,7 @@ const StockList = () => {
   }, []);
 
   const filteredData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
     return data.filter((item) => {
       const search = searchTerm.toLowerCase();
 
@@ -386,7 +429,7 @@ const StockList = () => {
         filters.supplier == "All" ||
         filters.category == "All"
       )
-        return data;
+        return true;
       const matchesSupplier = filters.supplier
         ? item.supplier_name === filters.supplier
         : true;
@@ -611,7 +654,7 @@ const StockList = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.pack_off_qty, {
+    columnHelper.accessor((row) => row?.sub_qty, {
       id: "subQty",
       header: () => "Sub Qty",
       cell: ({ row }) => {
@@ -619,7 +662,7 @@ const StockList = () => {
         return (
           <Stack direction="row" alignItems="center">
             <Typography textTransform="capitalize" className="f-14">
-              {item.pack_off_qty}
+              {item.sub_qty}
             </Typography>
           </Stack>
         );
@@ -1373,7 +1416,8 @@ const StockList = () => {
                               className="f-14"
                               fontWeight={"bold"}
                             >
-                              {h.sub_qty !== 0 &&
+                              {h.sub_qty !== "0" &&
+                                h.sub_qty !== 0 &&
                                 `(${h.sub_qty} ${h.pack_off_unit_name ?? ""})`}
                             </Typography>
                           </Box>
