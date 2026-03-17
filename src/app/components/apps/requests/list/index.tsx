@@ -230,6 +230,7 @@ export default function UserRequests({
             let url = `/apps/users/${recordId}?tab=leave`;
             if (startDate) url += `&leave_start=${startDate}`;
             if (endDate) url += `&leave_end=${endDate}`;
+
             return url;
         },
     };

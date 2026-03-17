@@ -777,7 +777,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
                                             </Typography>
                                         </Box>
                                         <Typography color="success" variant="subtitle1" fontWeight={600}>
-                                            {payment.currency}{formatAmount(payment.net_timeclock_amount)}
+                                            {payment.currency}{formatAmount(parseFloat(payment.net_timeclock_amount || 0) + parseFloat(payment.net_paid_leave_amount || 0))}
                                         </Typography>
                                     </Box>
                                 )}

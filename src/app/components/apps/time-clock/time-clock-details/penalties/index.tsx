@@ -129,7 +129,6 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
                 onClose();
             }
         } catch {
-            toast.error("Something went wrong");
         } finally {
             setIsDeleting(false);
         }
