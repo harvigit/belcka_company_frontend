@@ -4,11 +4,9 @@ import { Grid, Box, Typography } from "@mui/material";
 import { Container } from "@mui/system";
 import {
   IconMailCheck,
-  IconMailDown,
-  IconMailQuestion,
 } from "@tabler/icons-react";
 
-export default function PrivacyPolicy() {
+export default function Help() {
   return (
     <Box>
       <Box

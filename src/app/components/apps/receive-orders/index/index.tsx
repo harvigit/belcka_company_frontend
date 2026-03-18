@@ -141,7 +141,8 @@ const ReceivePurchaseOrder = () => {
         }));
 
       if (!product_data.length) {
-        alert("Please enter quantity to receive");
+        toast.error("Please enter quantity to receive");
+        setIsSaving(false);
         return;
       }
       const response = await api.post("purchase-orders/purchase-receive", {

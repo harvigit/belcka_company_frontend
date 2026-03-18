@@ -159,30 +159,16 @@ const AdminSetting = () => {
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconBasket size="20"/>}
-                                        label="Units"
-                                        {...a11yProps(8)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
                                         icon={<IconUsers size="20"/>}
                                         label="Clients"
-                                        {...a11yProps(9)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconClock size="20"/>}
-                                        label="Stock History"
-                                        {...a11yProps(10)}
+                                        {...a11yProps(8)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconExclamationCircle size="20"/>}
                                         label="History"
-                                        {...a11yProps(11)}
+                                        {...a11yProps(9)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -221,15 +207,9 @@ const AdminSetting = () => {
                                 <TradeCategoryList/>
                             </TabPanel>
                             <TabPanel value={value} index={8}>
-                                <UnitList/>
-                            </TabPanel>
-                            <TabPanel value={value} index={9}>
                                 <ClientList/>
                             </TabPanel>
-                            <TabPanel value={value} index={10}>
-                                <StockHistoryList/>
-                            </TabPanel>
-                            <TabPanel value={value} index={11}>
+                            <TabPanel value={value} index={9}>
                                 <HistoryList/>
                             </TabPanel>
                         </BlankCard>

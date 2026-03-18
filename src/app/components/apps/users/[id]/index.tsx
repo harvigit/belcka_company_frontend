@@ -37,6 +37,7 @@ import toast from "react-hot-toast";
 import ComapnyRate from "../../user-profile-setting/company-rate";
 import Payments from "../../user-profile-setting/payments";
 import UserLeaves from "../../user-profile-setting/user-leaves";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 dayjs.extend(customParseFormat);
 
@@ -120,6 +121,37 @@ const TablePagination = () => {
     expired_at: "",
   });
 
+  const [enabled, setEnabled] = useState<boolean>(false);
+
+  const handleSwitchToggle = () => {
+    handleToggle(!enabled);
+  };
+
+  const handleToggle = async (overrideStatus?: boolean) => {
+    const newStatus = overrideStatus ?? !enabled;
+
+    setEnabled(newStatus);
+
+    const payload = {
+      company_id: Number(user.company_id),
+      users: [
+        {
+          id: Number(userId),
+          is_check_in: newStatus,
+        },
+      ],
+    };
+
+    try {
+      const res = await api.post("user/change-bulk-checkin", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchData();
+      }
+    } catch (e) {
+      console.error(e, "error");
+    }
+  };
   const handleFieldChange = (key: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
@@ -132,6 +164,8 @@ const TablePagination = () => {
       if (res.data?.info) {
         const data = res.data.info[0];
         setData(res.data.info[0]);
+        setEnabled(data?.is_check_in ?? false);
+
         const ext = data?.extension || "";
         const number = data?.phone || "";
         const userInfo = data;
@@ -188,6 +222,7 @@ const TablePagination = () => {
       }
     }
   };
+
   const askOtp = (): Promise<string | null> => {
     return new Promise((resolve) => {
       setOtpValue("");
@@ -707,6 +742,21 @@ const TablePagination = () => {
               </Box>
             </Box>
           </BlankCard>
+
+          <Card sx={{ mt: 3 }}>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ p: 3 }}
+            >
+              <Typography fontSize="16px !important" color="#487bb3ff">
+                Check-In
+              </Typography>
+
+              <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
+            </Box>
+          </Card>
 
           {userRole === 1 && (
             <Card sx={{ mt: 3 }}>

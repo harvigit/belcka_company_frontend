@@ -67,6 +67,7 @@ import JoinCompanyDialog from "../../modals/join-company";
 import GenerateCodeDialog from "../../modals/generate-code";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 dayjs.extend(customParseFormat);
 
@@ -139,18 +140,51 @@ const TablePagination = () => {
   const [openOtpDialog, setOpenOtpDialog] = useState(false);
   const [otp, setOtp] = useState("");
   const router = useRouter();
-  // fetch compnay trades
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
-        );
-        if (res.data) setTrade(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
-      }
+  const [enabled, setEnabled] = useState<boolean>(false);
+
+  const handleSwitchToggle = () => {
+    handleToggle(!enabled);
+  };
+
+  const handleToggle = async (overrideStatus?: boolean) => {
+    const newStatus = overrideStatus ?? !enabled;
+
+    setEnabled(newStatus);
+
+    const payload = {
+      company_id: Number(id.company_id),
+      teams: [
+        {
+          id: Number(teamId),
+          is_check_in: newStatus,
+        },
+      ],
     };
+
+    try {
+      const res = await api.post("team/change-bulk-checkin", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchData();
+      }
+    } catch (e) {
+      console.error(e, "error");
+    }
+  };
+
+  // fetch compnay trades
+  const fetchTrades = async () => {
+    try {
+      const res = await api.get(
+        `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
+      );
+      if (res.data) setTrade(res.data.info);
+    } catch (err) {
+      console.error("Failed to fetch trades", err);
+    }
+  };
+
+  useEffect(() => {
     fetchTrades();
   }, [api]);
 
@@ -161,6 +195,7 @@ const TablePagination = () => {
       const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
       if (res.data?.info) {
         const flattened = res.data.info.flatMap((team: any) => {
+          setEnabled(team.is_check_in ?? false);
           if (team.users.length === 0) {
             return [
               {
@@ -575,6 +610,16 @@ const TablePagination = () => {
                 </Typography>
               </Box>
             </Stack>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ mb: 1 }}
+            >
+              <Typography variant="h6">Check-In</Typography>
+
+              <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
+            </Box>
           </CardContent>
         </BlankCard>
       </Grid>

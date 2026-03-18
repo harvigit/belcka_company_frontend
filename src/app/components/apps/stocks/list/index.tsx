@@ -29,6 +29,7 @@ import {
   Drawer,
   CircularProgress,
   Menu,
+  ListItemIcon,
 } from "@mui/material";
 import {
   flexRender,
@@ -44,6 +45,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconClock,
+  IconDotsVertical,
   IconFilter,
   IconPlusMinus,
   IconSearch,
@@ -69,6 +71,8 @@ import Cookies from "js-cookie";
 import StoreModal from "../../modals/store-model";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import StockHistoryList from "../../settings/history/stock-history";
 
 dayjs.extend(customParseFormat);
 
@@ -132,6 +136,7 @@ const StockList = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [editStockOpen, setEditStockOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [storeAnchorEl, setStoreAnchorEl] = useState<null | HTMLElement>(null);
@@ -151,6 +156,15 @@ const StockList = () => {
   });
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
 
   const handleStoreOpen = (event: React.MouseEvent<HTMLElement>) => {
     setStoreAnchorEl(event.currentTarget);
@@ -960,6 +974,51 @@ const StockList = () => {
               </FormGroup>
             </Popover>
 
+            <IconButton
+              sx={{ margin: "0px" }}
+              id="basic-button"
+              aria-controls={openMenu ? "basic-menu" : undefined}
+              aria-haspopup="true"
+              aria-expanded={openMenu ? "true" : undefined}
+              onClick={handleClick}
+            >
+              <IconDotsVertical width={18} />
+            </IconButton>
+            <Menu
+              id="basic-menu"
+              anchorEl={anchorEl}
+              open={openMenu}
+              onClose={handleClose}
+              slotProps={{
+                list: {
+                  "aria-labelledby": "basic-button",
+                },
+              }}
+            >
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setHistoryDrawerOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconClock width={18} />
+                  </ListItemIcon>
+                  History
+                </Link>
+              </MenuItem>
+            </Menu>
             {/* Filter Dialog */}
             <Dialog
               open={open}
@@ -1281,6 +1340,12 @@ const StockList = () => {
             </Stack>
           </Box>
         </Stack>
+
+        {/* Stock History */}
+        <StockHistoryList
+          openDrawer={historyDrawerOpen}
+          onClose={() => setHistoryDrawerOpen(false)}
+        />
 
         {/* Edit product */}
         <ProductAddEdit

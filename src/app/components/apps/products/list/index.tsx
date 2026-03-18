@@ -43,6 +43,7 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
+  IconBasket,
   IconChevronLeft,
   IconChevronRight,
   IconFileExport,
@@ -76,6 +77,7 @@ import { useDropzone } from "react-dropzone";
 import ProductView from "../view";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ProductHistory from "../history";
+import UnitList from "../../units/list";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -159,7 +161,7 @@ const ProductList = () => {
     uuid: "",
     status: true,
   });
-
+  const [unitDrawerOpen, setUnitDrawerOpen] = useState(false);
   const [openModel, setOpenModel] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<any | null>(null);
@@ -1729,6 +1731,29 @@ const ProductList = () => {
                   Archived Product list
                 </Link>
               </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setUnitDrawerOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconBasket width={18} />
+                  </ListItemIcon>
+                  Units
+                </Link>
+              </MenuItem>
             </Menu>
 
             {/* Filter Dialog */}
@@ -1872,6 +1897,12 @@ const ProductList = () => {
           open={openDrawer}
           onClose={() => setOpenDrawer(false)}
         />
+
+        <UnitList
+          openDrawer={unitDrawerOpen}
+          onClose={() => setUnitDrawerOpen(false)}
+        />
+
         <Box
           sx={{
             flex: 1,

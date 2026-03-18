@@ -7,7 +7,7 @@ const unitListing = () => {
   return (
     <PageContainer title="Unit List" description="this is Unit List">
       <BlankCard>
-        <UnitList />
+        <UnitList openDrawer={true} onClose={() => {}} />
       </BlankCard>
     </PageContainer>
   );
