@@ -240,7 +240,7 @@ const DeleteAccount = () => {
                       value={digit}
                       onChange={(e) => handleOtpChange(e.target.value, index)}
                       onKeyDown={(e) => handleKeyDown(e, index)}
-                      type="text"
+                      type="tel"
                       inputMode="numeric"
                       inputProps={{
                         maxLength: 1,
