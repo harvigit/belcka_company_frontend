@@ -1,11 +1,10 @@
 import { useMediaQuery, Box, Drawer, useTheme } from "@mui/material";
 import SidebarItems from "./SidebarItems";
 import Logo from "../../shared/logo/Logo";
-import config from '@/app/context/config'
+import config from "@/app/context/config";
 import Scrollbar from "@/app/components/custom-scroll/Scrollbar";
 import { CustomizerContext } from "@/app/context/customizerContext";
 import { useContext } from "react";
-import SidebarProfile from './SidebarProfile';
 import React from "react";
 
 const Sidebar = () => {
@@ -66,7 +65,7 @@ const Sidebar = () => {
                   }),
                   width: toggleWidth,
                 },
-              }
+              },
             }}
           >
             {/* ------------------------------------------- */}
@@ -75,6 +74,8 @@ const Sidebar = () => {
             <Box
               sx={{
                 height: "100%",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               {/* ------------------------------------------- */}
@@ -87,7 +88,7 @@ const Sidebar = () => {
                     [theme.breakpoints.up("lg")]: {
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center"
+                      justifyContent: "center",
                     },
                   }),
                   ...(!isSidebarHover && {
@@ -99,15 +100,9 @@ const Sidebar = () => {
               >
                 <Logo />
               </Box>
-              <Scrollbar sx={{}}>
-                {/* ------------------------------------------- */}
-                {/* Sidebar Items */}
-                {/* ------------------------------------------- */}
+              <Scrollbar sx={{ flex: 1 }}>
                 <SidebarItems />
               </Scrollbar>
-              {isCollapse === "full-sidebar" ? <Box sx={{ px: 3, pb: 3 }}>
-                <SidebarProfile />
-              </Box> : ''}
             </Box>
           </Drawer>
         </Box>
@@ -124,7 +119,7 @@ const Sidebar = () => {
                 border: "0 !important",
                 boxShadow: (theme) => theme.shadows[8],
               },
-            }
+            },
           }}
         >
           {/* ------------------------------------------- */}

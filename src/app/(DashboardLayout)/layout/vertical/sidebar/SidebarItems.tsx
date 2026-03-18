@@ -55,70 +55,103 @@ const SidebarItems = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
 
-    const hasWebPermission = (title?: string) => {
-        if (!title) return false;
+  const hasWebPermission = (title?: string) => {
+    if (!title) return false;
 
-        return permissions.some(
-            (perm) =>
-                perm.name === title &&
-                perm.is_web === true &&
-                (perm.status === 1 || perm.status === 2)
-        );
-    };
+    return permissions.some(
+      (perm) =>
+        perm.name === title &&
+        perm.is_web === true &&
+        (perm.status === 1 || perm.status === 2),
+    );
+  };
 
-    const filteredMenuItems = MenuItems.filter((item: any) => {
-      if (item.title === 'Settings' && user?.user_role_id === 1) {
-        return true;
-      }
-      
-      if(item.slug === "purchase"){
-        return true;
-      }
-
-      if (item.children && item.children.length > 0) {
-        return item.children.some((child: any) =>
-          hasWebPermission(child.title)
-      );
+  const filteredMenuItems = MenuItems.filter((item: any) => {
+    if (item.title === "Settings" && user?.user_role_id === 1) {
+      return true;
     }
-    
-        if (item.subheader) return true;
-        return hasWebPermission(item.title);
-    });
+
+    if (item.slug === "purchase") {
+      return true;
+    }
+
+    if (item.children && item.children.length > 0) {
+      return item.children.some((child: any) => hasWebPermission(child.title));
+    }
+
+    if (item.subheader) return true;
+    return hasWebPermission(item.title);
+  });
+
+  const mainMenuItems = filteredMenuItems.filter(
+    (item: any) => item.title !== "Settings",
+  );
+
+  const bottomMenuItems = filteredMenuItems.filter(
+    (item: any) => item.title === "Settings",
+  );
 
   return (
-    <Box sx={{ px: 3 }}>
-      <List sx={{ pt: 0 }} className="sidebarNav">
-        {filteredMenuItems.map((item: any) => {
-          // {/********SubHeader**********/}
-          if (item.subheader) {
-            return (
-              <NavGroup item={item} hideMenu={hideMenu} key={item.subheader} />
-            );
-          } else if (item.children) {
-            return (
-              <NavCollapse
-                menu={item}
-                pathDirect={pathDirect}
-                hideMenu={hideMenu}
-                pathWithoutLastPart={pathWithoutLastPart}
-                level={1}
-                key={item.id}
-                onClick={() => setIsMobileSidebar(!isMobileSidebar)}
-              />
-            );
-          } else {
-            return (
-              <NavItem
-                item={item}
-                key={item.id}
-                pathDirect={pathDirect}
-                hideMenu={hideMenu}
-                onClick={() => setIsMobileSidebar(!isMobileSidebar)}
-              />
-            );
-          }
-        })}
-      </List>
+    <Box
+      sx={{
+        px: 3,
+        minHeight: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* TOP MENU */}
+      <Box sx={{ flexGrow: 1 }}>
+        <List sx={{ pt: 0 }} className="sidebarNav">
+          {mainMenuItems.map((item: any) => {
+            if (item.subheader) {
+              return (
+                <NavGroup
+                  item={item}
+                  hideMenu={hideMenu}
+                  key={item.subheader}
+                />
+              );
+            } else if (item.children) {
+              return (
+                <NavCollapse
+                  menu={item}
+                  pathDirect={pathDirect}
+                  hideMenu={hideMenu}
+                  pathWithoutLastPart={pathWithoutLastPart}
+                  level={1}
+                  key={item.id}
+                  onClick={() => setIsMobileSidebar(!isMobileSidebar)}
+                />
+              );
+            } else {
+              return (
+                <NavItem
+                  item={item}
+                  key={item.id}
+                  pathDirect={pathDirect}
+                  hideMenu={hideMenu}
+                  onClick={() => setIsMobileSidebar(!isMobileSidebar)}
+                />
+              );
+            }
+          })}
+        </List>
+      </Box>
+
+      <Box mt={"100%"}>
+        <List className="sidebarNav">
+          {bottomMenuItems.map((item: any) => (
+            <NavItem
+              item={item}
+              key={item.id}
+              pathDirect={pathDirect}
+              hideMenu={hideMenu}
+              onClick={() => setIsMobileSidebar(!isMobileSidebar)}
+            />
+          ))}
+        </List>
+      </Box>
     </Box>
   );
 };

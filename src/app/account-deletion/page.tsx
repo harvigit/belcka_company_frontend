@@ -87,8 +87,10 @@ const DeleteAccount = () => {
     if (!userData) return;
 
     if (
-      firstName.toLowerCase() !== userData.first_name.toLowerCase() ||
-      lastName.toLowerCase() !== userData.last_name.toLowerCase()
+      (firstName ?? "").toLowerCase().trim() !==
+        (userData.first_name ?? "").toLowerCase().trim() ||
+      (lastName ?? "").toLowerCase().trim() !==
+        (userData.last_name ?? "").toLowerCase().trim()
     ) {
       toast.error("Name does not match registered account");
       return;
