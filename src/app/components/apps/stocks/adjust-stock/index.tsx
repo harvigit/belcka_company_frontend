@@ -101,7 +101,7 @@ const AdjustStock: React.FC<Props> = ({
         `get-inventory-resources?company_id=${companyId}`,
       );
 
-      setUsers(res.data.all_users);
+      setUsers(res.data.users);
     } catch (error) {
       console.error(error);
     }

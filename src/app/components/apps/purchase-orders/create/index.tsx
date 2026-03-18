@@ -85,7 +85,6 @@ const PurchaseOrder: React.FC<Props> = ({
   const [orderId, setOrderId] = useState<number>(0);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
   const TAX_PERCENT = 20;
   const [currency, setCurrency] = useState("");
 
@@ -200,7 +199,6 @@ const PurchaseOrder: React.FC<Props> = ({
     );
 
     setAllProducts(res.data.products || []);
-    setUsers(res.data.users);
     setSuppliers(res.data.suppliers);
     setStores(res.data.stores);
 
