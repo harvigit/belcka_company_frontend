@@ -59,6 +59,7 @@ dayjs.extend(customParseFormat);
 interface Props {
   userId: number;
   isShow: boolean;
+    disableDateFilter?: boolean;
 }
 const STORAGE_KEY = "payment-date-range";
 const loadDateRangeFromStorage = () => {
@@ -91,7 +92,7 @@ const saveDateRangeToStorage = (
     console.error("Error saving date range to localStorage:", error);
   }
 };
-const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
+const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = false }) => {
   const [data, setData] = useState<any[]>([]);
   const [payment, setPayment] = useState<any>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
@@ -106,26 +107,24 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
-  const today = new Date();
-  const defaultStart = new Date(today);
-  defaultStart.setDate(today.getDate() - today.getDay() + 1);
-  const defaultEnd = new Date(today);
-  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+    const today = new Date();
+    const defaultStart = new Date(today);
+    defaultStart.setDate(today.getDate() - today.getDay() + 1);
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(today.getDate() - today.getDay() + 7);
 
-  // Load from localStorage or use defaults
-  const getInitialDates = () => {
-    const stored = loadDateRangeFromStorage();
-    if (stored && stored.startDate && stored.endDate) {
-      return {
-        startDate: stored.startDate,
-        endDate: stored.endDate,
-      };
-    }
-    return {
-      startDate: defaultStart,
-      endDate: defaultEnd,
+    // Load from localStorage or use defaults
+    const getInitialDates = () => {
+        if (disableDateFilter) {
+            return { startDate: null, endDate: null };
+        }
+
+        const stored = loadDateRangeFromStorage();
+        if (stored && stored.startDate && stored.endDate) {
+            return { startDate: stored.startDate, endDate: stored.endDate };
+        }
+        return { startDate: defaultStart, endDate: defaultEnd };
     };
-  };
 
   const initialDates = getInitialDates();
   const [startDate, setStartDate] = useState<Date | null>(
@@ -145,33 +144,36 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
   };
 
   // Fetch data
-  const fetchPayments = async (start: Date, end: Date): Promise<void> => {
-    setFetchPayslip(true);
-    try {
-      const startDate = format(start, "dd/MM/yyyy");
-      const endDate = format(end, "dd/MM/yyyy");
+    const fetchPayments = async (start: Date | null, end: Date | null): Promise<void> => {
+        setFetchPayslip(true);
+        try {
+            const startParam = start ? format(start, "dd/MM/yyyy") : "";
+            const endParam = end ? format(end, "dd/MM/yyyy") : "";
 
-      const params = {
-        company_id: user.company_id,
-        start_date: startDate,
-        end_date: endDate,
-        ...(userId ? { user_id: userId } : {}),
-      };
+            const params = {
+                company_id: user.company_id,
+                start_date: startParam,
+                end_date: endParam,
+                ...(userId ? { user_id: userId } : {}),
+            };
 
-      const res = await api.get(`payslips/get-bookkeeper-payments`, { params });
-      if (res.data) {
-        setData(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch payslip", err);
-    }
-    setFetchPayslip(false);
-  };
-  useEffect(() => {
-    if (startDate && endDate) fetchPayments(startDate, endDate);
-  }, [api, startDate, endDate]);
+            const res = await api.get(`payslips/get-bookkeeper-payments`, { params });
+            if (res.data) {
+                setData(res.data.info);
+            }
+        } catch (err) {
+            console.error("Failed to fetch payments", err);
+        }
+        setFetchPayslip(false);
+    };
 
-  const handleOpenDrawer = (item: any) => {
+    useEffect(() => {
+        if (user?.company_id) {
+            fetchPayments(startDate, endDate);
+        }
+    }, [user?.company_id, startDate, endDate]);
+
+    const handleOpenDrawer = (item: any) => {
     setDrawerOpen(true);
     setPayment(item);
   };
@@ -652,7 +654,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow }) => {
       >
         <Box display="flex" alignItems="center" gap={1}>
           <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
+            {table.getPrePaginationRowModel().rows.length} Records
           </Typography>
         </Box>
         <Box

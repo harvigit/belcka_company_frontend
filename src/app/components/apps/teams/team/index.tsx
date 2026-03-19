@@ -88,6 +88,7 @@ export interface TeamList {
   is_active: boolean;
   trade_name: string | null;
   trade_id: number | null;
+    last_worked_date: string | null;
 }
 
 export interface TradeList {
@@ -214,6 +215,7 @@ const TablePagination = () => {
                 is_active: null,
                 trade_id: null,
                 trade_name: null,
+                  last_worked_date: null,
               },
             ];
           }
@@ -231,6 +233,7 @@ const TablePagination = () => {
             image: user.image,
             is_active: user.is_active,
             trade_id: user.trade_id,
+              last_worked_date: user.last_worked_date,
             trade_name: user.trade_name,
             is_subcontractor: team.is_subcontractor,
             company_id: team.company_id,
@@ -488,38 +491,42 @@ const TablePagination = () => {
         </Typography>
       ),
     }),
-    columnHelper.accessor((row) => row?.is_active, {
-      id: "status",
-      header: () => "Status",
-      cell: (info) => {
-        const value = info.getValue();
-        return value ? (
-          <Chip
-            size="small"
-            label="Working"
-            sx={{
-              backgroundColor: (theme) => theme.palette.success.light,
-              color: (theme) => theme.palette.success.main,
-              fontWeight: 500,
-              borderRadius: "6px",
-              px: 1.5,
-            }}
-          />
-        ) : (
-          <Chip
-            size="small"
-            label="Not Working"
-            sx={{
-              backgroundColor: (theme) => theme.palette.error.light,
-              color: (theme) => theme.palette.error.main,
-              fontWeight: 500,
-              borderRadius: "6px",
-              px: 1.5,
-            }}
-          />
-        );
-      },
-    }),
+      columnHelper.accessor((row) => row?.is_active, {
+          id: "status",
+          header: () => "Status",
+          cell: (info) => {
+              const value = info.getValue();
+              const lastWorkedDate = info.row.original.last_worked_date;
+
+              return value ? (
+                  <Chip
+                      size="small"
+                      label="Working"
+                      sx={{
+                          backgroundColor: (theme) => theme.palette.success.light,
+                          color: (theme) => theme.palette.success.main,
+                          fontWeight: 500,
+                          borderRadius: "6px",
+                          px: 1.5,
+                      }}
+                  />
+              ) : (
+                  <Box>
+                      {lastWorkedDate && (
+                          <Typography
+                              variant="caption"
+                              color="error"
+                              display="block"
+                              fontSize={14}
+                              mt={0.5}
+                          >
+                              {dayjs(lastWorkedDate).format("DD/MM/YYYY")}
+                          </Typography>
+                      )}
+                  </Box>
+              );
+          },
+      }),
   ];
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {

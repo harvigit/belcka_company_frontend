@@ -72,6 +72,7 @@ dayjs.extend(customParseFormat);
 interface Props {
     userId: number;
     isShow: boolean;
+    disableDateFilter?: boolean;
 }
 
 const STORAGE_KEY = 'invoice-range';
@@ -211,7 +212,7 @@ const InvoiceAmountCell = ({item, startDate, endDate, fetchInvoices,}: {
     );
 };
 
-const InvoicesList: React.FC<Props> = ({userId, isShow}) => {
+const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = false}) => {
     const [data, setData] = useState<any[]>([]);
     const [columnFilters, setColumnFilters] = useState<any>([]);
     const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
@@ -242,19 +243,17 @@ const InvoicesList: React.FC<Props> = ({userId, isShow}) => {
 
     // Load from localStorage or use defaults
     const getInitialDates = () => {
+        if (disableDateFilter) {
+            return { startDate: null, endDate: null };
+        }
+
         const stored = loadDateRangeFromStorage();
         if (stored && stored.startDate && stored.endDate) {
-            return {
-                startDate: stored.startDate,
-                endDate: stored.endDate,
-            };
+            return { startDate: stored.startDate, endDate: stored.endDate };
         }
-        return {
-            startDate: defaultStart,
-            endDate: defaultEnd,
-        };
+        return { startDate: defaultStart, endDate: defaultEnd };
     };
-
+    
     const initialDates = getInitialDates();
     const [startDate, setStartDate] = useState<Date | null>(
         initialDates.startDate,
@@ -303,19 +302,19 @@ const InvoicesList: React.FC<Props> = ({userId, isShow}) => {
     };
 
     // Fetch data
-    const fetchInvoices = async (start: Date, end: Date): Promise<void> => {
+    const fetchInvoices = async (start: Date | null, end: Date | null): Promise<void> => {
         setFetchPayslip(true);
         try {
-            const startDate = format(start, 'dd/MM/yyyy');
-            const endDate = format(end, 'dd/MM/yyyy');
+            const startParam = start ? format(start, "dd/MM/yyyy") : "";
+            const endParam = end ? format(end, "dd/MM/yyyy") : "";
             const res = await api.get(
-                `bookkeeper-invoices/get?company_id=${user.company_id}&user_id=${userId}&start_date=${startDate}&end_date=${endDate}`,
+                `bookkeeper-invoices/get?company_id=${user.company_id}&user_id=${userId}&start_date=${startParam}&end_date=${endParam}`,
             );
             if (res.data) {
                 setData(res.data.info);
             }
         } catch (err) {
-            console.error('Failed to fetch payslip', err);
+            console.error("Failed to fetch invoices", err);
         }
         setFetchPayslip(false);
     };
@@ -325,8 +324,11 @@ const InvoicesList: React.FC<Props> = ({userId, isShow}) => {
     }, [api]);
 
     useEffect(() => {
-        if (startDate && endDate) fetchInvoices(startDate, endDate);
-    }, [api, startDate, endDate]);
+        if (user?.company_id) {
+            fetchInvoices(startDate, endDate);
+        }
+    }, [user?.company_id, startDate, endDate]);
+
 
     const handleZip = async () => {
         if (!selectedRowIds.size) {
@@ -1198,7 +1200,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow}) => {
             >
                 <Box display="flex" alignItems="center" gap={1}>
                     <Typography color="textSecondary" className="f-14">
-                        {table.getPrePaginationRowModel().rows.length} Rows
+                        {table.getPrePaginationRowModel().rows.length} Records
                     </Typography>
                 </Box>
                 <Box

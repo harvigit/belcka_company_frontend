@@ -862,6 +862,7 @@ const TablePagination = () => {
                   active={value === 5}
                   userId={Number(userId)}
                   isShow={false}
+                  disableDateFilter={true}
                 />
               </Box>
             </Box>

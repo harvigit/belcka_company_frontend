@@ -425,6 +425,18 @@ const TablePagination = () => {
       },
     }),
 
+      columnHelper.accessor((row) => row?.team_member_count, {
+          id: "teamMemberLimit",
+          header: () => "Member Limit",
+          cell: (info) => {
+              return (
+                  <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+                      {info.getValue()}
+                  </Typography>
+              );
+          },
+      }),
+      
     columnHelper.accessor((row) => row?.team_member_count, {
       id: "teamMemberCount",
       header: () => "Online",
@@ -439,6 +451,7 @@ const TablePagination = () => {
         );
       },
     }),
+      
     columnHelper.display({
       id: "actions",
       header: "Actions",

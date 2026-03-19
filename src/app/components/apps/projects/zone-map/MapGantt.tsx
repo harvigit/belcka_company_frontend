@@ -1,20 +1,5 @@
 'use client';
 
-/**
- * CHANGES vs. original MapGantt.tsx
- * ──────────────────────────────────
- * 1. Added `zoneGroups` state + `fetchZoneGroups()` call.
- * 2. Zones sidebar now renders zones grouped by their group name,
- *    with an "Unassigned" section for zones not in any group.
- * 3. Each group header has:
- *      • Eye toggle  – hides/shows every zone in that group at once
- *      • Edit button – opens the new EditZoneGroup drawer
- *      • Collapse chevron
- * 4. Imported the new <EditZoneGroup> component.
- *
- * Everything else is unchanged from the original.
- */
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Avatar,
@@ -75,9 +60,7 @@ import api from '@/utils/axios';
 import AddZone from './AddZone';
 import EditZone from './EditZone';
 import AddZoneGroup from './AddZoneGroup';
-import EditZoneGroup from './EditZoneGroup'; // ← NEW
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import EditZoneGroup from './EditZoneGroup';
 
 type Props = {
     open: boolean;
@@ -86,8 +69,6 @@ type Props = {
     projectId: number | null;
     companyId: number | null;
 };
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const GOOGLE_MAP_LIBRARIES = ['places', 'drawing'];
 const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
@@ -100,8 +81,6 @@ const drawerPaperSx = {
     backgroundColor: '#fff',
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const formatDateTime = (dtStr: string | null | undefined): string => {
     if (!dtStr) return '';
     try {
@@ -109,8 +88,8 @@ const formatDateTime = (dtStr: string | null | undefined): string => {
         const [dd, MM, yyyy] = datePart.split('/');
         const [hh, mm] = timePart.split(':');
         const monthNames = [
-            'January','February','March','April','May','June',
-            'July','August','September','October','November','December',
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December',
         ];
         return `${Number(dd)} ${monthNames[Number(MM) - 1] ?? ''} ${yyyy} ${hh}:${mm}`;
     } catch {
@@ -160,7 +139,36 @@ const buildBoundsFromZones = (zones: any[]): google.maps.LatLngBounds | null => 
     return bounds;
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+const spreadOverlappingUsers = (users: any[]): any[] => {
+    const groups: Record<string, any[]> = {};
+    for (const u of users) {
+        const key = `${Number(u.latitude).toFixed(6)},${Number(u.longitude).toFixed(6)}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(u);
+    }
+
+    const result: any[] = [];
+    const OFFSET = 0.00008;
+
+    for (const group of Object.values(groups)) {
+        if (group.length === 1) {
+            result.push(group[0]);
+        } else {
+            group.forEach((u, i) => {
+                const angle = (2 * Math.PI * i) / group.length;
+                result.push({
+                    ...u,
+                    latitude: (Number(u.latitude) + OFFSET * Math.sin(angle)).toString(),
+                    longitude: (Number(u.longitude) + OFFSET * Math.cos(angle)).toString(),
+                    _originalLatitude: u.latitude,
+                    _originalLongitude: u.longitude,
+                });
+            });
+        }
+    }
+
+    return result;
+};
 
 export default function MapGantt({ open, onClose, onUpdate, projectId, companyId }: Props) {
     const session = useSession();
@@ -192,12 +200,10 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
     const [zonesSearch, setZonesSearch] = useState('');
     const [zonesLoading, setZonesLoading] = useState(false);
 
-    // ── NEW: Zone Groups ──────────────────────────────────────────────────────
-    const [zoneGroups, setZoneGroups] = useState<any[]>([]); // [{id, name, zones:[{id,name,...}]}]
-    const [editingGroup, setEditingGroup] = useState<any | null>(null); // group being edited
-    // Single-select accordion: null = all closed (default)
+    // Zone Groups
+    const [zoneGroups, setZoneGroups] = useState<any[]>([]);
+    const [editingGroup, setEditingGroup] = useState<any | null>(null);
     const [openGroupKey, setOpenGroupKey] = useState<string | null>(null);
-    // ─────────────────────────────────────────────────────────────────────────
 
     // Staff sidebar
     const [usersDrawerOpen, setUsersDrawerOpen] = useState(false);
@@ -211,9 +217,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
         libraries: GOOGLE_MAP_LIBRARIES as any,
     });
-
-    // ── Toggle a zone's visibility ────────────────────────────────────────────
-
+    
     const toggleZoneVisibility = useCallback((id: number) => {
         setHiddenZoneIds((prev) => {
             const next = new Set(prev);
@@ -223,29 +227,23 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
         });
     }, []);
 
-    // Toggle ALL zones in a group at once
-    const toggleGroupVisibility = useCallback(
-        (zoneIds: number[]) => {
-            setHiddenZoneIds((prev) => {
-                const next = new Set(prev);
-                const allHidden = zoneIds.every((id) => next.has(id));
-                if (allHidden) {
-                    zoneIds.forEach((id) => next.delete(id));
-                } else {
-                    zoneIds.forEach((id) => next.add(id));
-                }
-                return next;
-            });
-        },
-        [],
-    );
+    const toggleGroupVisibility = useCallback((zoneIds: number[]) => {
+        setHiddenZoneIds((prev) => {
+            const next = new Set(prev);
+            const allHidden = zoneIds.every((id) => next.has(id));
+            if (allHidden) {
+                zoneIds.forEach((id) => next.delete(id));
+            } else {
+                zoneIds.forEach((id) => next.add(id));
+            }
+            return next;
+        });
+    }, []);
 
     const toggleGroupCollapse = (key: string) => {
         setOpenGroupKey((prev) => (prev === key ? null : key));
     };
-
-    // ── API calls ─────────────────────────────────────────────────────────────
-
+    
     const fetchProjects = async () => {
         try {
             const res = await api.get(`project/get?company_id=${companyId}`);
@@ -301,7 +299,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
         setZonesLoading(false);
     };
 
-    // ── NEW: fetch zone groups ────────────────────────────────────────────────
     const fetchZoneGroups = async () => {
         if (!user?.company_id) return;
         try {
@@ -315,7 +312,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
             console.error('Zone groups fetch error:', err);
         }
     };
-    // ─────────────────────────────────────────────────────────────────────────
 
     const fetchUserLocations = async () => {
         setUserLocationsLoading(true);
@@ -360,7 +356,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
     const handleOpenZones = () => {
         setZonesDrawerOpen(true);
         fetchZonesList();
-        fetchZoneGroups(); // ← also fetch groups
+        fetchZoneGroups();
     };
     const handleOpenUsers = () => {
         setUsersDrawerOpen(true);
@@ -377,9 +373,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
     const toggleTeam = (teamName: string) => {
         setExpandedTeams((prev) => ({ ...prev, [teamName]: !prev[teamName] }));
     };
-
-    // ── Effects ───────────────────────────────────────────────────────────────
-
+    
     useEffect(() => {
         if (addZoneOpen || selected?.mode === 'edit') loadAddressList();
     }, [addZoneOpen, selected]);
@@ -390,12 +384,16 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
             setActiveProjectId(projectId);
             fetchProjectDetail(projectId);
             fetchUserLocations();
-            fetchZoneGroups(); // ← NEW
+            fetchZoneGroups();
         }
-    }, [open, activeTab]);
+    }, [open]);
 
-    // ── Derived data ──────────────────────────────────────────────────────────
-
+    useEffect(() => {
+        if (open && activeProjectId) {
+            fetchProjectDetail(activeProjectId);
+        }
+    }, [activeTab]);
+    
     const filterData = useMemo(() => {
         const s = searchTerm.trim().toLowerCase();
         if (!s) return geofences;
@@ -428,35 +426,29 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
     const groupedUsers = useMemo(() => groupByTeam(filteredUserLocations), [filteredUserLocations]);
 
     const usersWithLocation = useMemo(
-        () => userLocations.filter((u) => u.latitude && u.longitude),
+        () => spreadOverlappingUsers(userLocations.filter((u) => u.latitude && u.longitude)),
         [userLocations],
     );
-
-    // ── NEW: Build grouped zone structure for sidebar ─────────────────────────
+    
     const groupedZonesForSidebar = useMemo(() => {
         const s = zonesSearch.trim().toLowerCase();
-        const allZones: any[] = s
-            ? zonesList.filter((z) => z.name?.toLowerCase().includes(s))
-            : zonesList;
+        const allZones: any[] = s ? zonesList.filter((z) => z.name?.toLowerCase().includes(s)) : zonesList;
 
-        // Set of zone IDs that belong to at least one group
         const assignedIds = new Set<number>(
             zoneGroups.flatMap((g) => g.zones?.map((z: any) => z.id) ?? []),
         );
 
-        // Build sections: one per group + one "Unassigned"
         const sections: Array<{
             key: string;
             label: string;
-            groupData: any | null; // null for "Unassigned"
+            groupData: any | null;
             zones: any[];
         }> = [];
 
-        // Sections for each group
         for (const group of zoneGroups) {
             const groupZoneIds = new Set<number>(group.zones?.map((z: any) => z.id) ?? []);
             const zonesInGroup = allZones.filter((z) => groupZoneIds.has(z.id));
-            if (zonesInGroup.length === 0 && s) continue; // hide empty groups when searching
+            if (zonesInGroup.length === 0 && s) continue;
             sections.push({
                 key: `group-${group.id}`,
                 label: group.name,
@@ -465,7 +457,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
             });
         }
 
-        // Unassigned section
         const unassignedZones = allZones.filter((z) => !assignedIds.has(z.id));
         sections.unshift({
             key: 'unassigned',
@@ -476,14 +467,9 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
 
         return sections;
     }, [zonesList, zoneGroups, zonesSearch]);
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // ── Render ────────────────────────────────────────────────────────────────
-
+    
     return (
         <Box p={2}>
-
-            {/* ── Top Bar ── */}
             <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Box display="flex" width="80%" gap={3} alignItems="center">
                     <Tabs
@@ -619,7 +605,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
 
             {/* ── Main Content: Table + Map ── */}
             <Box display="flex" gap={2} mt={2} height="calc(100vh - 120px)">
-                {/* Left: Zones Table */}
                 <Box width="35%" overflow="auto">
                     <Paper>
                         <Table>
@@ -678,7 +663,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                     </Paper>
                 </Box>
 
-                {/* Right: Map Area */}
                 <Box width="65%" display="flex" flexDirection="column" overflow="auto">
                     {!selected && (
                         <AllZonesMap
@@ -706,23 +690,12 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 </Box>
             </Box>
 
-            {/* ══════════════════════════════════════════════════════════════════
-                Zones Sidebar Drawer — grouped view
-                ─────────────────────────────────────────────────────────────────
-                Sections: "Unassigned" first, then one section per zone group.
-                Each section header:
-                  [Eye toggle (all)]  [Group name]  [Edit button*]  [Chevron]
-                  * only for named groups, not "Unassigned"
-                Each zone row:
-                  [Eye toggle]  [Zone name]  [Pin icon]
-            ══════════════════════════════════════════════════════════════════ */}
             <Drawer
                 anchor="right"
                 open={zonesDrawerOpen}
                 onClose={handleCloseZones}
                 sx={{ '& .MuiDrawer-paper': drawerPaperSx }}
             >
-                {/* Header */}
                 <Box
                     display="flex"
                     justifyContent="space-between"
@@ -744,7 +717,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                     </IconButton>
                 </Box>
 
-                {/* Search */}
                 <Box px={2} py={1.5} sx={{ borderBottom: '1px solid #f0f0f0' }}>
                     <TextField
                         fullWidth
@@ -769,7 +741,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                     />
                 </Box>
 
-                {/* Grouped zone list */}
                 <Box sx={{ flex: 1, overflowY: 'auto' }}>
                     {zonesLoading ? (
                         <Typography color="textSecondary" textAlign="center" py={4} fontSize={14}>
@@ -790,12 +761,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
 
                             return (
                                 <Box key={section.key} sx={{ borderBottom: '1px solid #efefef' }}>
-                                    <Box
-                                        sx={{
-                                            backgroundColor: '#f8f8f8',
-                                            borderBottom: '1px solid #efefef',
-                                        }}
-                                    >
+                                    <Box sx={{ backgroundColor: '#f8f8f8', borderBottom: '1px solid #efefef' }}>
                                         <Box
                                             display="flex"
                                             alignItems="center"
@@ -846,10 +812,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                                                         color: allHidden ? '#ea5455' : someHidden ? '#f59e0b' : '#1976d2',
                                                     }}
                                                 >
-                                                    {allHidden
-                                                        ? <IconEyeOff size={17} />
-                                                        : <IconEye size={17} />
-                                                    }
+                                                    {allHidden ? <IconEyeOff size={17} /> : <IconEye size={17} />}
                                                 </IconButton>
 
                                                 <Button
@@ -889,7 +852,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                                                         '&:hover': { backgroundColor: '#fafafa' },
                                                     }}
                                                 >
-                                                    {/* Eye toggle */}
                                                     <IconButton
                                                         size="small"
                                                         onClick={() => toggleZoneVisibility(z.id)}
@@ -902,7 +864,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                                                         {isHidden ? <IconEyeOff size={17} /> : <IconEye size={17} />}
                                                     </IconButton>
 
-                                                    {/* Zone name */}
                                                     <Box flex={1} minWidth={0}>
                                                         <Typography
                                                             variant="body2"
@@ -919,7 +880,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                                                         )}
                                                     </Box>
 
-                                                    {/* Pin / fly-to */}
                                                     <IconButton
                                                         size="small"
                                                         disabled={isHidden}
@@ -949,7 +909,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                     )}
                 </Box>
 
-                {/* Footer */}
                 <Box px={2} py={1.5} sx={{ borderTop: '1px solid #f0f0f0' }}>
                     <Button fullWidth variant="outlined" onClick={handleCloseZones} sx={{ borderRadius: 2 }}>
                         Close
@@ -957,7 +916,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 </Box>
             </Drawer>
 
-            {/* ── Staff on Site Sidebar Drawer ── */}
             <Drawer
                 anchor="right"
                 open={usersDrawerOpen}
@@ -1035,7 +993,24 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                                     <Collapse in={isExpanded}>
                                         <Box sx={{ borderTop: '1px solid #f2f2f2' }}>
                                             {members.map((member: any, idx: number) => (
-                                                <StaffMemberRow key={member.id} member={member} isLast={idx === members.length - 1} />
+                                                <StaffMemberRow
+                                                    key={member.id}
+                                                    member={member}
+                                                    isLast={idx === members.length - 1}
+                                                    onPinClick={() => {
+                                                        if (!mainMapRef.current || !member.latitude || !member.longitude) return;
+                                                        handleCloseUsers();
+                                                        setTimeout(() => {
+                                                            if (mainMapRef.current) {
+                                                                mainMapRef.current.panTo({
+                                                                    lat: Number(member.latitude),
+                                                                    lng: Number(member.longitude),
+                                                                });
+                                                                mainMapRef.current.setZoom(17);
+                                                            }
+                                                        }, 320);
+                                                    }}
+                                                />
                                             ))}
                                         </Box>
                                     </Collapse>
@@ -1046,7 +1021,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 </Box>
             </Drawer>
 
-            {/* ── Delete Confirmation Dialog ── */}
             <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
                 <DialogTitle>
                     Delete Zone
@@ -1063,7 +1037,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 </DialogActions>
             </Dialog>
 
-            {/* ── Add Zone Group ── */}
             {addGroupOpen && (
                 <AddZoneGroup
                     projectId={activeProjectId}
@@ -1078,7 +1051,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 />
             )}
 
-            {/* ── Edit Zone Group ── NEW ── */}
             {editingGroup && (
                 <EditZoneGroup
                     group={editingGroup}
@@ -1097,7 +1069,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 />
             )}
 
-            {/* ── Add Zone ── */}
             {addZoneOpen && (
                 <AddZone
                     projectId={activeProjectId}
@@ -1115,14 +1086,16 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
     );
 }
 
-// ─── StaffMemberRow (unchanged) ───────────────────────────────────────────────
-
-const StaffMemberRow = ({ member, isLast }: { member: any; isLast: boolean }) => {
+const StaffMemberRow = ({member, isLast, onPinClick}: {
+    member: any;
+    isLast: boolean;
+    onPinClick?: () => void;
+}) => {
     const isWorking = member.is_working ?? false;
     const hasLocation = Boolean(member.latitude && member.longitude);
     const initials = `${member.first_name?.[0] ?? ''}${member.last_name?.[0] ?? ''}`.toUpperCase();
-    const statusLabel = isWorking ? 'On Break' : 'Offline';
-    const statusColor = isWorking ? '#f59e0b' : '#9e9e9e';
+    const statusLabel = isWorking ? 'Working' : 'Not Working';
+    const statusColor = isWorking ? '#00c292' : '#fc4b6c';
 
     return (
         <Box
@@ -1130,7 +1103,7 @@ const StaffMemberRow = ({ member, isLast }: { member: any; isLast: boolean }) =>
             alignItems="center"
             gap={1.5}
             px={2}
-            py={1.25}
+            py={1.1}
             sx={{
                 borderBottom: isLast ? 'none' : '1px solid #f5f5f5',
                 '&:hover': { backgroundColor: '#fafafa' },
@@ -1141,9 +1114,9 @@ const StaffMemberRow = ({ member, isLast }: { member: any; isLast: boolean }) =>
                 <Avatar
                     src={member.user_thumb_image || member.user_image || undefined}
                     sx={{
-                        width: 44,
-                        height: 44,
-                        fontSize: 15,
+                        width: 40,
+                        height: 40,
+                        fontSize: 13,
                         fontWeight: 700,
                         backgroundColor: isWorking ? '#1976d2' : '#bdbdbd',
                     }}
@@ -1155,74 +1128,77 @@ const StaffMemberRow = ({ member, isLast }: { member: any; isLast: boolean }) =>
                         position: 'absolute',
                         bottom: 1,
                         right: 1,
-                        width: 12,
-                        height: 12,
+                        width: 10,
+                        height: 10,
                         borderRadius: '50%',
-                        backgroundColor: isWorking ? '#4caf50' : '#9e9e9e',
+                        backgroundColor: isWorking ? '#4caf50' : '#fc4b6c',
                         border: '2px solid white',
                     }}
                 />
             </Box>
 
             <Box flex={1} minWidth={0}>
-                <Typography variant="body2" fontWeight={600} color="#1a1a1a" noWrap sx={{ fontSize: 14 }}>
+                <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    noWrap
+                    sx={{ fontSize: 14, color: '#1a1a1a' }}
+                >
                     {member.user_name || `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim()}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" sx={{ fontSize: 12 }}>
-                    {formatDateTime(member.date_time)}
+                    {formatDateTime(member.last_seen)}
                 </Typography>
             </Box>
 
             <Typography
                 variant="caption"
-                fontWeight={700}
-                sx={{ color: statusColor, whiteSpace: 'nowrap', flexShrink: 0, fontSize: 12 }}
+                fontWeight={600}
+                sx={{ color: statusColor, whiteSpace: 'nowrap', flexShrink: 0, fontSize: 13 }}
             >
                 {statusLabel}
             </Typography>
 
             <IconButton
                 size="small"
-                disabled={!hasLocation}
+                onClick={hasLocation ? onPinClick : undefined}
                 sx={{
-                    color: hasLocation ? '#555' : '#ccc',
+                    color: '#555',
                     flexShrink: 0,
                     p: 0.5,
-                    '&:hover': hasLocation ? { color: '#1976d2' } : {},
+                    '&:hover': { color: '#1976d2' },
                 }}
             >
-                <IconMapPin size={18} />
+                <IconMapPin size={17} />
             </IconButton>
         </Box>
     );
 };
-
-// ─── UserMarker (unchanged) ───────────────────────────────────────────────────
 
 const UserMarker = ({ user }: { user: any }) => {
     const [hovered, setHovered] = useState(false);
     const position = { lat: Number(user.latitude), lng: Number(user.longitude) };
     const initials = `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase();
     const isWorking = user.is_working ?? false;
-    const borderColor = isWorking ? '#1976d2' : '#9e9e9e';
-    const dotColor = isWorking ? '#4caf50' : '#9e9e9e';
+    const pinColor = isWorking ? '#1976d2' : '#fc4b6c';
+    const dotColor = isWorking ? '#4caf50' : '#fc4b6c';
 
     return (
         <OverlayView
             position={position}
             mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -(h / 2) })}
+            getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -h })}
         >
             <Box
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
-                sx={{ position: 'relative', width: 60, height: 60, cursor: 'pointer' }}
+                sx={{ position: 'relative', width: 48, height: 58, cursor: 'pointer' }}
             >
                 {hovered && (
                     <Box
                         sx={{
                             position: 'absolute',
-                            bottom: 68,
+                            bottom: 66,
                             left: '50%',
                             transform: 'translateX(-50%)',
                             background: 'white',
@@ -1230,7 +1206,7 @@ const UserMarker = ({ user }: { user: any }) => {
                             boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
                             px: 1.5,
                             py: 1,
-                            minWidth: 160,
+                            minWidth: 170,
                             zIndex: 9999,
                             whiteSpace: 'nowrap',
                             border: '1px solid #e0e0e0',
@@ -1238,18 +1214,39 @@ const UserMarker = ({ user }: { user: any }) => {
                         }}
                     >
                         <Box sx={{
-                            position: 'absolute', bottom: -7, left: '50%', transform: 'translateX(-50%)',
-                            width: 0, height: 0,
-                            borderLeft: '7px solid transparent', borderRight: '7px solid transparent',
+                            position: 'absolute',
+                            bottom: -7,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 0,
+                            height: 0,
+                            borderLeft: '7px solid transparent',
+                            borderRight: '7px solid transparent',
                             borderTop: '7px solid white',
                         }} />
                         <Typography variant="body2" fontWeight={700} sx={{ mb: 0.25 }}>
                             {user.user_name || `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()}
                         </Typography>
-                        {user.trade_name && <Typography variant="caption" color="textSecondary" display="block">{user.trade_name}</Typography>}
-                        {user.team_name && <Typography variant="caption" color="textSecondary" display="block">Team: {user.team_name}</Typography>}
-                        {user.supervisor_name && <Typography variant="caption" color="textSecondary" display="block">Supervisor: {user.supervisor_name}</Typography>}
-                        {user.date_time && <Typography variant="caption" color="textSecondary" display="block">{formatDateTime(user.date_time)}</Typography>}
+                        {user.trade_name && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                {user.trade_name}
+                            </Typography>
+                        )}
+                        {user.team_name && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                Team: {user.team_name}
+                            </Typography>
+                        )}
+                        {user.supervisor_name && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                Supervisor: {user.supervisor_name}
+                            </Typography>
+                        )}
+                        {user.last_seen && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                {formatDateTime(user.last_seen)}
+                            </Typography>
+                        )}
                         <Box display="inline-flex" alignItems="center" gap={0.5} mt={0.5}>
                             <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: dotColor }} />
                             <Typography variant="caption" sx={{ color: dotColor, fontWeight: 600 }}>
@@ -1259,51 +1256,95 @@ const UserMarker = ({ user }: { user: any }) => {
                     </Box>
                 )}
 
-                <Box sx={{
-                    width: 60, height: 60, borderRadius: '50%',
-                    border: `3px solid ${borderColor}`,
-                    background: 'white', overflow: 'hidden',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.22)',
-                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                    ...(hovered && { transform: 'scale(1.1)', boxShadow: '0 4px 16px rgba(0,0,0,0.28)' }),
-                }}>
-                    {user.user_thumb_image ? (
-                        <img src={user.user_thumb_image} alt={user.user_name}
-                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    ) : (
-                        <Box sx={{
-                            width: '100%', height: '100%',
-                            backgroundColor: isWorking ? '#1976d2' : '#bdbdbd',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                            {initials
-                                ? <Typography sx={{ color: 'white', fontWeight: 700, fontSize: 18, lineHeight: 1, userSelect: 'none' }}>{initials}</Typography>
-                                : <IconUsers size={22} color="white" />
-                            }
-                        </Box>
-                    )}
-                </Box>
+                <Box
+                    sx={{
+                        position: 'relative',
+                        width: 48,
+                        height: 58,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center',
+                        filter: hovered
+                            ? 'drop-shadow(0 6px 14px rgba(0,0,0,0.38))'
+                            : 'drop-shadow(0 3px 6px rgba(0,0,0,0.26))',
+                        transition: 'filter 0.15s ease, transform 0.15s ease',
+                        transform: hovered ? 'scale(1.12) translateY(-2px)' : 'scale(1)',
+                    }}
+                >
+                    <svg
+                        width="48"
+                        height="58"
+                        viewBox="0 0 48 58"
+                        style={{ position: 'absolute', top: 0, left: 0 }}
+                    >
+                        <path
+                            d="M24 0C13.507 0 5 8.507 5 19c0 14.25 19 39 19 39S43 33.25 43 19C43 8.507 34.493 0 24 0z"
+                            fill={pinColor}
+                        />
+                        <circle cx="24" cy="19" r="16" fill="white" />
+                    </svg>
 
-                <Box sx={{
-                    position: 'absolute', bottom: 2, right: 2,
-                    width: 15, height: 15, borderRadius: '50%',
-                    backgroundColor: dotColor, border: '2.5px solid white',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)', zIndex: 1,
-                }} />
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 3, 
+                            left: 8, 
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isWorking ? '#1976d2' : '#bdbdbd',
+                        }}
+                    >
+                        {user.user_thumb_image ? (
+                            <img
+                                src={user.user_thumb_image}
+                                alt={user.user_name}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                }}
+                            />
+                        ) : (
+                            <Typography
+                                sx={{
+                                    color: 'white',
+                                    fontWeight: 700,
+                                    fontSize: 13,
+                                    lineHeight: 1,
+                                    userSelect: 'none',
+                                }}
+                            >
+                                {initials || <IconUsers size={16} color="white" />}
+                            </Typography>
+                        )}
+                    </Box>
+
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 28,  
+                            right: 7,
+                            width: 11,
+                            height: 11,
+                            borderRadius: '50%',
+                            backgroundColor: dotColor,
+                            border: '2px solid white',
+                            zIndex: 1,
+                        }}
+                    />
+                </Box>
             </Box>
         </OverlayView>
     );
 };
 
-// ─── AllZonesMap (unchanged) ──────────────────────────────────────────────────
-
-const AllZonesMap = ({
-                         zones,
-                         isLoaded,
-                         userLocations = [],
-                         onMapLoad,
-                     }: {
+const AllZonesMap = ({zones, isLoaded, userLocations = [], onMapLoad}: {
     zones: any[];
     isLoaded: boolean;
     userLocations?: any[];
@@ -1356,11 +1397,19 @@ const AllZonesMap = ({
                         return (
                             <React.Fragment key={zone.id}>
                                 <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                                    <Box onClick={() => onZoneClick(zone)} sx={{ cursor: 'pointer', color, width: 'max-content' }} className="map-site-label">
+                                    <Box
+                                        onClick={() => onZoneClick(zone)}
+                                        sx={{ cursor: 'pointer', color, width: 'max-content' }}
+                                        className="map-site-label"
+                                    >
                                         <Typography>{zone.name}</Typography>
                                     </Box>
                                 </OverlayView>
-                                <Circle center={center} radius={Number(zone.radius)} options={{ strokeColor: color, fillColor: color + '33' }} />
+                                <Circle
+                                    center={center}
+                                    radius={Number(zone.radius)}
+                                    options={{ strokeColor: color, fillColor: color + '33' }}
+                                />
                             </React.Fragment>
                         );
                     }
@@ -1375,11 +1424,19 @@ const AllZonesMap = ({
                         return (
                             <React.Fragment key={zone.id}>
                                 <OverlayView position={centroid} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                                    <Box onClick={() => onZoneClick(zone)} sx={{ cursor: 'pointer', color, width: 'max-content' }} className="map-site-label">
+                                    <Box
+                                        onClick={() => onZoneClick(zone)}
+                                        sx={{ cursor: 'pointer', color, width: 'max-content' }}
+                                        className="map-site-label"
+                                    >
                                         <Typography>{zone.name}</Typography>
                                     </Box>
                                 </OverlayView>
-                                <Polygon paths={path} options={{ strokeColor: color, fillColor: color + '33', strokeWeight: 2 }} onClick={() => onZoneClick(zone)} />
+                                <Polygon
+                                    paths={path}
+                                    options={{ strokeColor: color, fillColor: color + '33', strokeWeight: 2 }}
+                                    onClick={() => onZoneClick(zone)}
+                                />
                             </React.Fragment>
                         );
                     }
@@ -1390,11 +1447,19 @@ const AllZonesMap = ({
                         return (
                             <React.Fragment key={zone.id}>
                                 <OverlayView position={midpoint} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                                    <Box onClick={() => onZoneClick(zone)} sx={{ cursor: 'pointer', color, width: 'max-content' }} className="map-site-label">
+                                    <Box
+                                        onClick={() => onZoneClick(zone)}
+                                        sx={{ cursor: 'pointer', color, width: 'max-content' }}
+                                        className="map-site-label"
+                                    >
                                         <Typography>{zone.name}</Typography>
                                     </Box>
                                 </OverlayView>
-                                <Polyline path={path} options={{ strokeColor: color, strokeWeight: 3 }} onClick={() => onZoneClick(zone)} />
+                                <Polyline
+                                    path={path}
+                                    options={{ strokeColor: color, strokeWeight: 3 }}
+                                    onClick={() => onZoneClick(zone)}
+                                />
                             </React.Fragment>
                         );
                     }
@@ -1410,8 +1475,6 @@ const AllZonesMap = ({
     );
 };
 
-// ─── ViewZoneMap (unchanged) ──────────────────────────────────────────────────
-
 const ViewZoneMap = ({ zone, isLoaded }: { zone: any; isLoaded: boolean }) => {
     if (!isLoaded) return <Typography p={2}>Loading map...</Typography>;
 
@@ -1420,11 +1483,17 @@ const ViewZoneMap = ({ zone, isLoaded }: { zone: any; isLoaded: boolean }) => {
     const path = zone?.coordinates ?? [];
 
     const polygonCenter = path.length > 0
-        ? { lat: path.reduce((s: number, p: any) => s + p.lat, 0) / path.length, lng: path.reduce((s: number, p: any) => s + p.lng, 0) / path.length }
+        ? {
+            lat: path.reduce((s: number, p: any) => s + p.lat, 0) / path.length,
+            lng: path.reduce((s: number, p: any) => s + p.lng, 0) / path.length,
+        }
         : center;
 
     const polylineCenter = path.length > 0 ? path[Math.floor(path.length / 2)] : center;
-    const markerPosition = zone.type === 'circle' ? center : zone.type === 'polygon' ? polygonCenter : polylineCenter;
+    const markerPosition =
+        zone.type === 'circle' ? center
+            : zone.type === 'polygon' ? polygonCenter
+                : polylineCenter;
 
     const handleMapLoad = (map: google.maps.Map) => {
         const bounds = new google.maps.LatLngBounds();
@@ -1443,11 +1512,36 @@ const ViewZoneMap = ({ zone, isLoaded }: { zone: any; isLoaded: boolean }) => {
 
     return (
         <Paper sx={{ height: '90%' }}>
-            <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} zoom={DEFAULT_ZOOM} center={markerPosition} onLoad={handleMapLoad}>
-                <Marker position={markerPosition} label={{ text: zone.name || '', color, className: 'map-site-label' }} icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 0 }} />
-                {zone.type === 'circle' && <Circle center={center} radius={Number(zone.radius)} options={{ strokeColor: color, fillColor: `${color}33` }} />}
-                {zone.type === 'polygon' && <Polygon paths={path} options={{ strokeColor: color, fillColor: `${color}33` }} />}
-                {zone.type === 'polyline' && <Polyline path={path} options={{ strokeColor: color, strokeWeight: 3 }} />}
+            <GoogleMap
+                mapContainerStyle={{ width: '100%', height: '100%' }}
+                zoom={DEFAULT_ZOOM}
+                center={markerPosition}
+                onLoad={handleMapLoad}
+            >
+                <Marker
+                    position={markerPosition}
+                    label={{ text: zone.name || '', color, className: 'map-site-label' }}
+                    icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 0 }}
+                />
+                {zone.type === 'circle' && (
+                    <Circle
+                        center={center}
+                        radius={Number(zone.radius)}
+                        options={{ strokeColor: color, fillColor: `${color}33` }}
+                    />
+                )}
+                {zone.type === 'polygon' && (
+                    <Polygon
+                        paths={path}
+                        options={{ strokeColor: color, fillColor: `${color}33` }}
+                    />
+                )}
+                {zone.type === 'polyline' && (
+                    <Polyline
+                        path={path}
+                        options={{ strokeColor: color, strokeWeight: 3 }}
+                    />
+                )}
             </GoogleMap>
         </Paper>
     );

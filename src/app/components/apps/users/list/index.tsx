@@ -130,6 +130,7 @@ export interface TradeList {
 
 const TablePagination = () => {
     const [data, setData] = useState<UserList[]>([]);
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [columnFilters, setColumnFilters] = useState<any>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [fetchUser, setFetchUser] = useState<boolean>(false);
@@ -222,6 +223,7 @@ const TablePagination = () => {
             const res: AxiosResponse<any> = await api.get('user/get-user-lists');
             if (res.data) {
                 setData(res.data.info);
+                setIsAdmin(res.data.is_admin);
             }
         } catch (err) {
             console.error('Failed to fetch users', err);
@@ -1374,7 +1376,7 @@ const TablePagination = () => {
                                     ))}
                             </FormGroup>
                         </Popover>
-                        {selectedRowIds.size > 0 && (
+                        {isAdmin && selectedRowIds.size > 0 && (
                             <Button
                                 variant="outlined"
                                 color="error"
