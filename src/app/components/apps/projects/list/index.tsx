@@ -76,7 +76,7 @@ import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRange
 import EditProject from "../edit";
 import ArchiveProject from "./archive-project-list";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import MapGantt from "@/app/components/MapGantt";
+import MapGantt from "../zone-map/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 import Link from "next/link";
 import { IconNotes } from "@tabler/icons-react";
