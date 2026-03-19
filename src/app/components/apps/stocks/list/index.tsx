@@ -158,7 +158,15 @@ const StockList = () => {
   const searchParams = useSearchParams();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
+  const [editing, setEditing] = useState<{
+    id: number | null;
+    field: string | null;
+  }>({
+    id: null,
+    field: null,
+  });
 
+  const [inputValue, setInputValue] = useState<string>("");
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -335,6 +343,46 @@ const StockList = () => {
     fetchResources();
   }, []);
 
+  const handleSave = async (
+    item: any,
+    field: "qty" | "sub_qty",
+    value: string,
+  ) => {
+    if (value === "") return;
+
+    const number = Number(value);
+    if (isNaN(number) || number < 0) return;
+
+    let updatedQty = item.qty;
+    let updatedSubQty = item.sub_qty;
+
+    if (field === "qty") {
+      updatedQty = number;
+      updatedSubQty =
+        item.is_sub_qty && item.pack_off_qty
+          ? Number(item.pack_off_qty) * updatedQty
+          : updatedSubQty;
+    } else {
+      updatedSubQty = number;
+      if (item.is_sub_qty && item.pack_off_qty) {
+        updatedQty = updatedSubQty / item.pack_off_qty;
+      }
+    }
+
+    try {
+      await api.post(`purchase-orders/update-item-qty`, {
+        id: Number(item.id),
+        store_id: Number(storeId),
+        qty: updatedQty,
+        sub_qty: updatedSubQty,
+      });
+      fetchProducts();
+    } catch (err) {
+      console.error("Failed to update item:", err);
+    } finally {
+      setEditing({ id: null, field: null });
+    }
+  };
   useEffect(() => {
     if (!storeId) return;
     fetchProducts(storeId);
@@ -649,20 +697,64 @@ const StockList = () => {
         );
       },
     }),
-
     columnHelper.accessor((row) => row?.qty, {
       id: "Qty",
       header: () => "Qty",
       cell: ({ row }) => {
         const item = row.original;
+        const isEditing = editing.id === item.id && editing.field === "qty";
+
         return (
           <Stack direction="row" alignItems="center">
-            <Typography textTransform="capitalize" className="f-14">
-              {item.qty.toFixed(2)}
-              {item.is_sub_qty
-                ? ` (${item?.pack_off_qty} ${item?.pack_off_unit})`
-                : ""}
-            </Typography>
+            {isEditing ? (
+              <TextField
+                className="f-14"
+                size="small"
+                value={inputValue}
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                variant="standard"
+                sx={{ width: 80 }}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (/^\d*(\.\d{0,2})?$/.test(value)) {
+                    setInputValue(value);
+                  }
+                }}
+                onBlur={() => handleSave(item, "qty", inputValue)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSave(item, "qty", inputValue);
+                  }
+                }}
+              />
+            ) : (
+              <Typography
+                className="f-14"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": { border: "1px solid #1976d2" },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing({ id: item.id, field: "qty" });
+                  setInputValue(item.qty?.toString() || "0");
+                }}
+              >
+                {item.qty.toFixed(2)}
+                {item.is_sub_qty
+                  ? ` (${item?.pack_off_qty} ${item?.pack_off_unit})`
+                  : ""}
+              </Typography>
+            )}
           </Stack>
         );
       },
@@ -673,11 +765,55 @@ const StockList = () => {
       header: () => "Sub Qty",
       cell: ({ row }) => {
         const item = row.original;
+        const isEditing = editing.id === item.id && editing.field === "sub_qty";
+
         return (
           <Stack direction="row" alignItems="center">
-            <Typography textTransform="capitalize" className="f-14">
-              {item.sub_qty == 0 ? "-" : item.sub_qty}
-            </Typography>
+            {item.is_sub_qty}
+            {isEditing ? (
+              <TextField
+                size="small"
+                value={inputValue}
+                autoFocus
+                variant="standard"
+                sx={{ width: 80 }}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (/^\d*(\.\d{0,2})?$/.test(value)) setInputValue(value);
+                }}
+                onBlur={() => handleSave(item, "sub_qty", inputValue)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSave(item, "sub_qty", inputValue);
+                  }
+                }}
+              />
+            ) : (
+              <Typography
+                className="f-14"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: item.is_sub_qty ? "pointer" : "default",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": item.is_sub_qty
+                    ? { border: "1px solid #1976d2" }
+                    : {},
+                }}
+                onClick={(e) => {
+                  if (!item.is_sub_qty) return;
+                  e.stopPropagation();
+                  setEditing({ id: item.id, field: "sub_qty" });
+                  setInputValue(item.sub_qty?.toString() || "0");
+                }}
+              >
+                {item.sub_qty === 0 ? "-" : item.sub_qty}
+              </Typography>
+            )}
           </Stack>
         );
       },

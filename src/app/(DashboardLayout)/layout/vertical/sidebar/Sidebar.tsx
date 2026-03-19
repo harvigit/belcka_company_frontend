@@ -100,9 +100,9 @@ const Sidebar = () => {
               >
                 <Logo />
               </Box>
-              <Scrollbar sx={{ flex: 1 }}>
+              {/* <Scrollbar sx={{ flex: 1 }}> */}
                 <SidebarItems />
-              </Scrollbar>
+              {/* </Scrollbar> */}
             </Box>
           </Drawer>
         </Box>

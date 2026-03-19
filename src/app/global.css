@@ -498,3 +498,8 @@ input[type="range"]::-moz-range-thumb {
   border-top-right-radius: 0.25rem;
   border-bottom-right-radius: 0.25rem;
 }
+
+/* tip tap editor css */
+.MuiTiptap-FieldContainer-root{
+    min-height: 300px;
+}

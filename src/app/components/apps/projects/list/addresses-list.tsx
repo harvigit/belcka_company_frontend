@@ -350,7 +350,7 @@ const AddressesList = ({
 
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `tasks_address_${addressId}.zip`);
+      link.setAttribute("download", `task_${address?.name}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1355,6 +1355,7 @@ const AddressesList = ({
                   companyId={sidebarData.companyId}
                   addressId={sidebarData.addressId}
                   projectId={sidebarData.projectId}
+                  addressName={sidebarData.addressName}
                 />
               )}
               {value === 2 && (

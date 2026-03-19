@@ -910,7 +910,13 @@ const ProductList = () => {
         const isEditing = editing.id === item.id && editing.field === "price";
 
         return (
-          <Stack direction="row" alignItems="center">
+          <Stack
+            direction="row"
+            alignItems="center"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
             {isEditing ? (
               <TextField
                 className="f-14"
@@ -1004,7 +1010,14 @@ const ProductList = () => {
           editing.id === item.id && editing.field === "market_price";
 
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
             {/* Amount */}
             {isEditing ? (
               <TextField

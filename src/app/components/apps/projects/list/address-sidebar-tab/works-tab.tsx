@@ -393,7 +393,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     </Box>
                   </Tooltip>
 
-                  <Box
+                  {/* <Box
                     sx={{
                       backgroundColor: "#7523D3",
                       border: "1px solid #7523D3",
@@ -406,7 +406,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                     }}
                   >
                     {work.duration}
-                  </Box>
+                  </Box> */}
 
                   <Box
                     sx={{
@@ -487,7 +487,7 @@ export const WorksTab = ({ addressId, companyId }: WorksTabProps) => {
                   </Typography>
 
                   {/* Progress Bar */}
-                  <ProgressBar work={work} />
+                  {/* <ProgressBar work={work} /> */}
                 </Box>
 
                 {work.is_checklog === false && work.status_int == 1 && (

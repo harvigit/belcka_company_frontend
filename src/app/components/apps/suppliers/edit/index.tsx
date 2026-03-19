@@ -122,9 +122,10 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
           contact_person_extension: supplier.contact_person_extension || "+44",
           contact_person_phone: supplier.contact_person_phone || "",
         });
-        setPhone(supplier.extension + supplier.phone);
+        setPhone((supplier.extension ?? "") + (supplier.phone ?? ""));
         setPhone1(
-          supplier.contact_person_extension + supplier.contact_person_phone,
+          (supplier.contact_person_extension ?? "") +
+            (supplier.contact_person_phone ?? ""),
         );
         // Prefill image preview
         if (supplier.image_url) {
@@ -311,28 +312,37 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
               <PhoneInput
                 country={"gb"}
                 value={phone1}
-                onChange={(value, country: any) => {
-                  setPhone1(value);
-                  setExtension1("+" + country.dialCode);
+                onChange={(
+                  value: string | number | undefined,
+                  country: any,
+                ) => {
+                  const phoneStr = value ? String(value) : "";
+                  const ext = "+" + country.dialCode;
+                  let numberOnly = phoneStr;
+                  if (phoneStr.startsWith(country.dialCode)) {
+                    numberOnly = phoneStr.slice(country.dialCode.length);
+                  } else if (phoneStr.startsWith(ext)) {
+                    numberOnly = phoneStr.slice(ext.length);
+                  }
 
-                  const numberOnly = value.replace(country.dialCode, "");
+                  setPhone1(phoneStr);
+                  setExtension1(ext);
                   setNationalPhone1(numberOnly);
-                  setFormData({
-                    ...formData,
-                    contact_person_phone: nationalPhone1,
-                    contact_person_extension: extension1,
-                  });
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    contact_person_phone: numberOnly,
+                    contact_person_extension: ext,
+                  }));
                 }}
                 inputStyle={{
                   width: "100%",
                   height: "47px",
                   borderColor: "#c0d1dc9c",
                 }}
-                inputClass="contact_phone"
                 enableSearch
                 inputProps={{ required: true }}
               />
-
               <Typography variant="body1" mt={2}>
                 Street
               </Typography>
@@ -383,17 +393,29 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
               <PhoneInput
                 country={"gb"}
                 value={phone}
-                onChange={(value, country: any) => {
-                  setPhone(value);
-                  setExtension("+" + country.dialCode);
+                onChange={(
+                  value: string | number | undefined,
+                  country: any,
+                ) => {
+                  const phoneStr = value ? String(value) : "";
+                  const ext = "+" + country.dialCode;
 
-                  const numberOnly = value.replace(country.dialCode, "");
+                  let numberOnly = phoneStr;
+                  if (phoneStr.startsWith(country.dialCode)) {
+                    numberOnly = phoneStr.slice(country.dialCode.length);
+                  } else if (phoneStr.startsWith(ext)) {
+                    numberOnly = phoneStr.slice(ext.length);
+                  }
+
+                  setPhone(phoneStr);
+                  setExtension(ext);
                   setNationalPhone(numberOnly);
-                  setFormData({
-                    ...formData,
-                    phone: nationalPhone,
-                    extension: extension,
-                  });
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    phone: numberOnly,
+                    extension: ext,
+                  }));
                 }}
                 inputStyle={{
                   width: "100%",
