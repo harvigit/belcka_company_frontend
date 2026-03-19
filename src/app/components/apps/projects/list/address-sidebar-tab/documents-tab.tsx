@@ -33,12 +33,14 @@ interface DocumentsTabProps {
   addressId: number;
   projectId: number;
   companyId: number;
+  addressName: any;
 }
 
 export const DocumentsTab = ({
   addressId,
   projectId,
   companyId,
+  addressName,
 }: DocumentsTabProps) => {
   const [tabData, setTabData] = useState<any[]>([]);
   const [searchUser, setSearchUser] = useState<string>("");
@@ -99,7 +101,7 @@ export const DocumentsTab = ({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `tasks_address_${addressId}.zip`);
+      link.setAttribute("download", `task_${addressName}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();

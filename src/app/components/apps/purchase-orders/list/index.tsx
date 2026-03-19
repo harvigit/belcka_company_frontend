@@ -46,6 +46,7 @@ import {
   IconChevronRight,
   IconDownload,
   IconEye,
+  IconFileSignal,
   IconFilter,
   IconNotes,
   IconPrinter,
@@ -73,6 +74,7 @@ import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
 import ArchivePurchaseOrder from "../archive";
 import PurchaseOrderHistory from "../history";
+import TermsAndConditions from "../terms-conditions";
 
 dayjs.extend(customParseFormat);
 
@@ -130,6 +132,7 @@ const PurchaseOrderList = () => {
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [openConditionDrawer, setOpenConditionDrawer] = useState(false);
 
   const [selectedRow, setSelectedRow] = React.useState<TableRow | null>(null);
   const [singleDate, setSingleDate] = React.useState<Date | undefined>(
@@ -1726,6 +1729,29 @@ const PurchaseOrderList = () => {
                   Archived Purchase Order
                 </Link>
               </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setOpenConditionDrawer(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconFileSignal width={18} />
+                  </ListItemIcon>
+                  Terms and Conditions
+                </Link>
+              </MenuItem>
             </Menu>
           </Stack>
         </Stack>
@@ -1776,6 +1802,12 @@ const PurchaseOrderList = () => {
         <PurchaseOrderHistory
           open={openDrawer}
           onClose={() => setOpenDrawer(false)}
+        />
+
+        <TermsAndConditions
+          open={openConditionDrawer}
+          onClose={() => setOpenConditionDrawer(false)}
+          companyId={user.company_id ?? null}
         />
 
         <Box

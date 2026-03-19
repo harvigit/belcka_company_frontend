@@ -37,6 +37,7 @@ interface ReceiveProductRow {
   uuid?: string;
   description?: string | null;
   supplier_code?: string | null;
+  date?: string | null;
 }
 
 const ReceivePurchaseOrder = () => {
@@ -87,6 +88,7 @@ const ReceivePurchaseOrder = () => {
               image_url: p.image_url,
               uuid: p.uuid,
               description: p.description,
+              date: data.expected_delivery_date
             };
           },
         );
@@ -237,6 +239,7 @@ const ReceivePurchaseOrder = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Item & Description</TableCell>
+                <TableCell>Expect Delivery Date</TableCell>
                 <TableCell>ID</TableCell>
                 <TableCell>Code</TableCell>
                 <TableCell>Ordered</TableCell>
@@ -274,6 +277,7 @@ const ReceivePurchaseOrder = () => {
                     </Stack>
                   </TableCell>
 
+                  <TableCell>{p.date}</TableCell>
                   <TableCell>{p.product_id}</TableCell>
                   <TableCell>{p.supplier_code}</TableCell>
                   <TableCell>{p.ordered_qty}</TableCell>

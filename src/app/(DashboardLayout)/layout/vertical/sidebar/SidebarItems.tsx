@@ -95,9 +95,9 @@ const SidebarItems = () => {
     <Box
       sx={{
         px: 3,
-        minHeight: "100%",
         display: "flex",
         flexDirection: "column",
+        height: "calc(100vh - 77px)",
       }}
     >
       {/* TOP MENU */}
@@ -139,7 +139,7 @@ const SidebarItems = () => {
         </List>
       </Box>
 
-      <Box mt={"100%"}>
+      <Box>
         <List className="sidebarNav">
           {bottomMenuItems.map((item: any) => (
             <NavItem
