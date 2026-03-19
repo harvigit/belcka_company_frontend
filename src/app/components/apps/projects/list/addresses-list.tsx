@@ -627,7 +627,7 @@ const AddressesList = ({
     const [isHovering, setIsHovering] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
 
-    const canEdit = user.user_role_id === 1;
+    // const canEdit = user.user_role_id === 1;
 
     let color = "textPrimary";
     if (statusInt === 13) color = "#999999";
@@ -662,7 +662,8 @@ const AddressesList = ({
     return (
       <Box
         sx={{ display: "flex", alignItems: "center", position: "relative" }}
-        onMouseEnter={() => canEdit && setIsHovering(true)}
+        // onMouseEnter={() => canEdit && setIsHovering(true)}
+        onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => {
           if (!isEditing) setIsHovering(false);
         }}
@@ -695,7 +696,8 @@ const AddressesList = ({
           </Tooltip>
         )}
 
-        {canEdit && (isHovering || isEditing) ? (
+        {/*{canEdit && (isHovering || isEditing) ? (*/}
+        {(isHovering || isEditing) ? (
           <TextField
             type="text"
             size="small"
@@ -731,10 +733,13 @@ const AddressesList = ({
           <Typography
             fontWeight={700}
             color={color}
-            sx={{ px: 1.5, cursor: canEdit ? "pointer" : "default" }}
-            onMouseEnter={() => canEdit && setIsHovering(true)}
+            // sx={{ px: 1.5, cursor: canEdit ? "pointer" : "default" }}
+            sx={{ px: 1.5, cursor: "pointer" }}
+            // onMouseEnter={() => canEdit && setIsHovering(true)}
+            onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => !isEditing && setIsHovering(false)}
-            onClick={() => canEdit && setIsEditing(true)}
+            // onClick={() => canEdit && setIsEditing(true)}
+            onClick={() => setIsEditing(true)}
           >
             {value}
           </Typography>
