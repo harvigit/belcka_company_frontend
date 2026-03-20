@@ -116,7 +116,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
 
           if (address_id !== null && !formData.address_id) {
             const matched = res.data.info.find(
-              (addr: Address) => addr.id === address_id
+              (addr: Address) => addr.id === address_id,
             );
             if (matched) {
               setFormData((prev) => ({
@@ -137,7 +137,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
       if (!userCompanyId) return;
       try {
         const res = await api.get(
-          `company-locations/get?company_id=${userCompanyId}`
+          `company-locations/get?company_id=${userCompanyId}`,
         );
         if (res.data && Array.isArray(res.data.info)) {
           setLocation(res.data.info);
@@ -162,7 +162,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
     (async () => {
       try {
         const res = await api.get(
-          `type-works/get-work-resources?trade_id=${formData.trade_id}`
+          `type-works/get-work-resources?trade_id=${formData.trade_id}`,
         );
         if (res.data && Array.isArray(res.data.info)) {
           setTasks(res.data.info);
@@ -244,8 +244,8 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
               rate: newRate,
               duration: newDuration,
             }
-          : t
-      )
+          : t,
+      ),
     );
   };
 
@@ -333,15 +333,17 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                 <Box mt={2}>
                   {tasks
                     .filter((task) =>
-                      task.name.toLowerCase().includes(taskSearch.toLowerCase())
+                      task.name
+                        .toLowerCase()
+                        .includes(taskSearch.toLowerCase()),
                     )
                     .map((task) => {
                       const selected = selectedTasks.find(
-                        (t) => t.taskId === task.id
+                        (t) => t.taskId === task.id,
                       );
                       const quantityInfo = quantities[task.id] || {
                         quantity: 0,
-                        rate: task.is_pricework ? task.rate : "0",
+                        rate: task.is_pricework ? Number(task.rate) : 0,
                         duration: task.is_pricework ? task.duration : 0,
                       };
                       const quantity = quantityInfo.quantity;
@@ -411,7 +413,8 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                                 color="textSecondary"
                                 fontWeight={500}
                               >
-                                Rate: £{quantityInfo?.rate?.toFixed(2)}
+                                Rate: £
+                                {Number(quantityInfo?.rate || 0).toFixed(2)}
                               </Typography>
                             </Box>
                           )}
