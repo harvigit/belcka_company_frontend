@@ -425,7 +425,7 @@ const TablePagination = () => {
       },
     }),
 
-      columnHelper.accessor((row) => row?.team_member_count, {
+      columnHelper.accessor((row) => row?.max_members, {
           id: "teamMemberLimit",
           header: () => "Member Limit",
           cell: (info) => {

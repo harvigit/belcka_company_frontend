@@ -265,6 +265,9 @@ const EditTask: React.FC<EditTaskProps> = ({
                           variant="outlined"
                           inputProps={{
                               inputMode: "decimal",
+                              maxLength: 6,
+                              min: 0,
+                              max: 1000,
                           }}
                           fullWidth
                       />
