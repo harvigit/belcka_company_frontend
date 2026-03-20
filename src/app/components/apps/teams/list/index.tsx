@@ -86,6 +86,7 @@ export type TeamList = {
   supervisor_image?: string;
   supervisor_email?: string;
   supervisor_phone?: string;
+    max_members?: number;
   team_member_count?: number;
   working_member_count?: number;
   subcontractor_company_name?: string;
