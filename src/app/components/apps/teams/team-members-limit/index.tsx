@@ -91,7 +91,7 @@ const TeamMembersLimit: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => 
 
                 {/* Main content */}
                 <Box sx={{ flex: 1 }}>
-                    <Typography variant="h5"  mb={1}>
+                    <Typography variant="h5" mb={1}>
                         Max Members
                     </Typography>
 
@@ -104,9 +104,9 @@ const TeamMembersLimit: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => 
                         disabled={loading}
                         onChange={(e) => {
                             const val = e.target.value;
-                            setGlobalMax(val === '' ? '' : Math.max(0, parseInt(val) || 0));
+                            setGlobalMax(val === '' ? '' : Math.min(1000, Math.max(1, parseInt(val) || 1)));
                         }}
-                        inputProps={{ min: 0 }}
+                        inputProps={{ min: 1, max: 1000 }}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -114,7 +114,6 @@ const TeamMembersLimit: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => 
                                 </InputAdornment>
                             ),
                         }}
-                        helperText="Minimum value is 0. This will apply to all active teams."
                     />
                 </Box>
 

@@ -288,10 +288,10 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                                     const val = e.target.value;
                                     setFormData((prev: any) => ({
                                         ...prev,
-                                        max_members: val === "" ? "" : Math.max(1, parseInt(val)),
+                                        max_members: val === "" ? "" : Math.min(1000, Math.max(1, parseInt(val))),
                                     }));
                                 }}
-                                inputProps={{ min: 1 }}
+                                inputProps={{ min: 1, max: 1000 }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
