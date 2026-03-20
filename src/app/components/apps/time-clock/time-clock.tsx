@@ -39,7 +39,7 @@ import {
     IconChevronDown,
     IconDotsVertical,
     IconNotes, IconExclamationCircle, IconX,
-    IconSettings,
+    IconSettings, IconRestore,
 } from '@tabler/icons-react';
 import {
     useReactTable,
@@ -77,6 +77,7 @@ import ConfirmationDialog from './components/ConfirmationDialog';
 import { IconEye } from '@tabler/icons-react';
 import Settings from '../timesheet/setting/settings';
 import BookkeeperHistory from './history';
+import RecoverWorklogs from './recover-worklogs';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -269,7 +270,8 @@ const TimeClock = ({queryParams}: Props) => {
     const [openDrawer, setOpenDrawer] = useState(false);
 
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
-    
+    const [openRecoverWorklogs, setOpenRecoverWorklogs] = useState(false);
+
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
 
@@ -1541,6 +1543,29 @@ const TimeClock = ({queryParams}: Props) => {
                                         Leaves List
                                     </Link>
                                 </MenuItem>
+                                <MenuItem onClick={handleClose}>
+                                    <Link
+                                        color="body1"
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setOpenRecoverWorklogs(true);
+                                            handleClose();
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            color: '#11142D',
+                                            textTransform: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <ListItemIcon>
+                                            <IconRestore width={18} />
+                                        </ListItemIcon>
+                                        Recover worklogs
+                                    </Link>
+                                </MenuItem>
                             </Menu>
                         </Box>
                     </Box>
@@ -2033,6 +2058,14 @@ const TimeClock = ({queryParams}: Props) => {
             {/*  Leave list */}
             <LeaveLists open={openLeaves} onClose={() => setOpenLeaves(false)} queryParams={queryParams}/>
 
+            {/*  Recover Worklogs list */}
+            <RecoverWorklogs
+                open={openRecoverWorklogs}
+                onClose={() => setOpenRecoverWorklogs(false)}
+                startDate={startDate} 
+                endDate={endDate}     
+            />
+            
             {/* Conflicts */}
             <Drawer
                 anchor="right"
