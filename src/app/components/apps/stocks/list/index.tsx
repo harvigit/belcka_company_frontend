@@ -518,6 +518,7 @@ const StockList = () => {
     });
   }, [data, searchTerm, filters]);
 
+  const MAX_QTY = 1000.99;
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -719,8 +720,13 @@ const StockList = () => {
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
                   const value = e.target.value;
+
                   if (/^\d*(\.\d{0,2})?$/.test(value)) {
-                    setInputValue(value);
+                    const num = Number(value);
+
+                    if (value === "" || num <= MAX_QTY) {
+                      setInputValue(value);
+                    }
                   }
                 }}
                 onBlur={() => handleSave(item, "qty", inputValue)}
@@ -780,7 +786,14 @@ const StockList = () => {
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (/^\d*(\.\d{0,2})?$/.test(value)) setInputValue(value);
+
+                  if (/^\d*(\.\d{0,2})?$/.test(value)) {
+                    const num = Number(value);
+
+                    if (value === "" || num <= MAX_QTY) {
+                      setInputValue(value);
+                    }
+                  }
                 }}
                 onBlur={() => handleSave(item, "sub_qty", inputValue)}
                 onKeyDown={(e) => {
@@ -811,7 +824,7 @@ const StockList = () => {
                   setInputValue(item.sub_qty?.toString() || "0");
                 }}
               >
-                {item.sub_qty === 0 ? "-" : item.sub_qty}
+                {item.sub_qty > 0 ? item.sub_qty : "-"}
               </Typography>
             )}
           </Stack>

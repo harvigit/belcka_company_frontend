@@ -336,10 +336,10 @@ const AddressesList = ({
     });
   }, [processedIds]);
 
-  const handleDownloadZip = async (addressId: number) => {
+  const handleDownloadZip = async (address: any) => {
     try {
       const response = await api.get(
-        `address/download-tasks-zip/${addressId}`,
+        `address/download-tasks-zip/${address?.id}`,
         {
           responseType: "blob",
         },
@@ -697,7 +697,7 @@ const AddressesList = ({
         )}
 
         {/*{canEdit && (isHovering || isEditing) ? (*/}
-        {(isHovering || isEditing) ? (
+        {isHovering || isEditing ? (
           <TextField
             type="text"
             size="small"
@@ -780,7 +780,9 @@ const AddressesList = ({
                 const isChecked = e.target.checked;
 
                 if (isChecked) {
-                  setSelectedRowIds(new Set(currentFilteredData.map((row) => row.id)));
+                  setSelectedRowIds(
+                    new Set(currentFilteredData.map((row) => row.id)),
+                  );
                 } else {
                   setSelectedRowIds(new Set());
                 }
@@ -936,7 +938,7 @@ const AddressesList = ({
                 >
                   <IconButton
                     color="error"
-                    onClick={() => handleDownloadZip(info.row.original.id)}
+                    onClick={() => handleDownloadZip(info.row.original)}
                   >
                     <IconDownload size={20} />
                   </IconButton>

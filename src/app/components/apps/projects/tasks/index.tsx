@@ -341,7 +341,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                       );
                       const quantityInfo = quantities[task.id] || {
                         quantity: 0,
-                        rate: task.is_pricework ? task.rate : 0,
+                        rate: task.is_pricework ? task.rate : "0",
                         duration: task.is_pricework ? task.duration : 0,
                       };
                       const quantity = quantityInfo.quantity;
@@ -411,7 +411,7 @@ const CreateProjectTask: React.FC<CreateProjectTaskProps> = ({
                                 color="textSecondary"
                                 fontWeight={500}
                               >
-                                Rate: £{quantityInfo.rate.toFixed(2)}
+                                Rate: £{quantityInfo?.rate?.toFixed(2)}
                               </Typography>
                             </Box>
                           )}
