@@ -95,6 +95,7 @@ export interface Permission {
 }
 
 export interface UserList {
+    last_worked_date: string;
     cis: string;
     permissions: Permission[];
     id: number;
@@ -976,6 +977,7 @@ const TablePagination = () => {
             ),
             cell: (info) => {
                 const row = info.row.original;
+                const lastWorkedDate = info.row.original.last_worked_date;
 
                 if (row.is_invited) {
                     return (
@@ -1006,17 +1008,31 @@ const TablePagination = () => {
                         }}
                     />
                 ) : (
-                    <Chip
-                        size="small"
-                        label="Not Working"
-                        sx={{
-                            backgroundColor: (theme) => theme.palette.error.light,
-                            color: (theme) => theme.palette.error.main,
-                            fontWeight: 500,
-                            borderRadius: '6px',
-                            px: 1.5,
-                        }}
-                    />
+                    // <Chip
+                    //     size="small"
+                    //     label="Not Working"
+                    //     sx={{
+                    //         backgroundColor: (theme) => theme.palette.error.light,
+                    //         color: (theme) => theme.palette.error.main,
+                    //         fontWeight: 500,
+                    //         borderRadius: '6px',
+                    //         px: 1.5,
+                    //     }}
+                    // />
+
+                    <Box>
+                        {lastWorkedDate && (
+                            <Typography
+                                variant="caption"
+                                color="error"
+                                display="block"
+                                fontSize={14}
+                                mt={0.5}
+                            >
+                                {dayjs(lastWorkedDate).format("DD/MM/YYYY")}
+                            </Typography>
+                        )}
+                    </Box>
                 );
             },
         }),
