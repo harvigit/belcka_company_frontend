@@ -758,23 +758,23 @@ const TablePagination = () => {
             </Box>
           </Card>
 
-          {userRole === 1 && (
-            <Card sx={{ mt: 3 }}>
-              <Box sx={{ m: 3 }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => {
-                    setUserToDelete(Number(data?.id));
-                    setConfirmOpen(true);
-                  }}
-                  fullWidth
-                >
-                  Remove Account
-                </Button>
-              </Box>
-            </Card>
-          )}
+            {(userRole === 1 || Number(user?.id) === Number(userId)) && (
+                <Card sx={{mt: 3}}>
+                    <Box sx={{m: 3}}>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() => {
+                                setUserToDelete(Number(data?.id));
+                                setConfirmOpen(true);
+                            }}
+                            fullWidth
+                        >
+                            Remove Account
+                        </Button>
+                    </Box>
+                </Card>
+            )}
         </Grid>
 
         <Grid
