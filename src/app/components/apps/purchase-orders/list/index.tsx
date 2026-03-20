@@ -49,7 +49,6 @@ import {
   IconFileSignal,
   IconFilter,
   IconNotes,
-  IconPrinter,
   IconSearch,
   IconTrash,
   IconX,
@@ -75,6 +74,7 @@ import { styled } from "@mui/material/styles";
 import ArchivePurchaseOrder from "../archive";
 import PurchaseOrderHistory from "../history";
 import TermsAndConditions from "../terms-conditions";
+import { IconHelp } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -909,12 +909,23 @@ const PurchaseOrderList = () => {
                 variant="subtitle2"
                 sx={{
                   fontSize: 14,
+                  display: "flex",
                   textAlign: "center",
                   color: item.expected_delivery_date
                     ? "inherit"
                     : "text.secondary",
                 }}
               >
+                {item.date_label && (
+                  <Typography mr={1}>
+                    <Tooltip
+                      title={item.dates}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <IconHelp size={16} />
+                    </Tooltip>
+                  </Typography>
+                )}
                 {item.expected_delivery_date || "Select Date"}
               </Typography>
             </Box>
@@ -1029,12 +1040,12 @@ const PurchaseOrderList = () => {
             >
               <IconDownload size={18} />
             </IconButton>
-            {(item.status === 0 || item.status === 1) && (
+            {item.status !== 5 && (
               <Button
                 href={`/apps/receive-orders/${item.id}`}
                 onClick={(e) => e.stopPropagation()}
               >
-                Receive
+                View
               </Button>
             )}
           </Stack>
@@ -1926,9 +1937,7 @@ const PurchaseOrderList = () => {
                             key={cell.id}
                             sx={{ padding: "10px" }}
                             onClick={() => {
-                              if (item.status === 0 || item.status === 1) {
-                                handleEdit(item);
-                              }
+                              handleEdit(item);
                             }}
                           >
                             {flexRender(

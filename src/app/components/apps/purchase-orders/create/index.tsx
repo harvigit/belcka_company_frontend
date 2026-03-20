@@ -87,6 +87,7 @@ const PurchaseOrder: React.FC<Props> = ({
   const [stores, setStores] = useState<any[]>([]);
   const TAX_PERCENT = 20;
   const [currency, setCurrency] = useState("");
+  const [isDisable, setIsDisable] = useState<boolean>(true);
 
   useEffect(() => {
     if (!ids || ids.length === 0 || allProducts.length === 0) return;
@@ -136,7 +137,7 @@ const PurchaseOrder: React.FC<Props> = ({
       const supplierIdsFromPO = [
         ...new Set(editData.purchase_orders.map((po: any) => po.supplier_id)),
       ];
-
+      setIsDisable(editData?.status == 5 ? true : false);
       setFormData((prev: any) => ({
         id: editData.id,
         company_id: editData.company_id,
@@ -155,6 +156,7 @@ const PurchaseOrder: React.FC<Props> = ({
         expected_delivery_date: editData.expected_delivery_date,
         total_amount: editData.total_amount,
         tax: editData.tax,
+        status: editData.status,
       }));
 
       const mappedProducts: ProductRow[] = editData.purchase_orders
@@ -295,6 +297,7 @@ const PurchaseOrder: React.FC<Props> = ({
             size="small"
             type="text"
             inputMode="numeric"
+            disabled={isDisable}
             value={row.original.qty ?? ""}
             sx={{ width: 100 }}
             onChange={(e: any) => {
@@ -313,6 +316,7 @@ const PurchaseOrder: React.FC<Props> = ({
         cell: ({ row }) => (
           <TextField
             size="small"
+            disabled={isDisable}
             value={row.original.price ?? ""}
             sx={{ width: 100 }}
             onChange={(e) => {
@@ -413,6 +417,7 @@ const PurchaseOrder: React.FC<Props> = ({
                 <CustomTextField
                   name="name"
                   fullWidth
+                  disabled={isDisable}
                   value={orderId}
                   onChange={(e: any) =>
                     setFormData((prev: any) => ({
@@ -430,6 +435,7 @@ const PurchaseOrder: React.FC<Props> = ({
                   type="date"
                   name="expected_delivery_date"
                   fullWidth
+                  disabled={isDisable}
                   value={formData.expected_delivery_date}
                   onChange={handleChange}
                   onFocus={(e: any) => e.target.showPicker()}
@@ -444,6 +450,7 @@ const PurchaseOrder: React.FC<Props> = ({
                 </Typography>
                 <CustomTextField
                   fullWidth
+                  disabled={isDisable}
                   value={formData.ref}
                   inputProps={{ maxLength: 50 }}
                   onChange={(e: any) =>
@@ -463,6 +470,7 @@ const PurchaseOrder: React.FC<Props> = ({
                 <Autocomplete
                   fullWidth
                   options={stores}
+                  disabled={isDisable}
                   value={stores.find((p) => p.id === formData.store_id) || null}
                   onChange={(event, newValue) =>
                     setFormData((prev: any) => ({
@@ -486,6 +494,7 @@ const PurchaseOrder: React.FC<Props> = ({
                 <Autocomplete
                   fullWidth
                   multiple
+                  disabled={isDisable}
                   options={suppliers?.filter(
                     (supplier) =>
                       Array.isArray(formData.supplier_id) &&
@@ -516,6 +525,7 @@ const PurchaseOrder: React.FC<Props> = ({
                 <TextField
                   fullWidth
                   multiline
+                  disabled={isDisable}
                   inputProps={{ maxLength: 50 }}
                   value={formData.note ?? null}
                   onChange={(e: any) =>
@@ -624,7 +634,7 @@ const PurchaseOrder: React.FC<Props> = ({
           size="large"
           type="submit"
           onClick={handleSubmit}
-          disabled={isSaving}
+          disabled={isSaving || isDisable}
           sx={{ borderRadius: 3, width: "8%" }}
         >
           {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
