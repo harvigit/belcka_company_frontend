@@ -56,7 +56,6 @@ const AddZoneGroup = ({ projectId, companyId, geofences, onAdded, onCancel }: Ad
             }
         } catch (err) {
             console.error(err);
-            toast.error('Failed to create zone group.');
         }
         setIsSaving(false);
     };

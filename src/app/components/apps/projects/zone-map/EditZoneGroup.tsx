@@ -71,11 +71,10 @@ const EditZoneGroup = ({ group, allZones, onUpdated, onDeleted, onCancel }: Edit
                 toast.success(res.data.message || 'Zone group updated successfully!');
                 onUpdated();
             } else {
-                toast.error(res.data.message || 'Failed to update zone group.');
+                toast.error(res.data.message);
             }
         } catch (err) {
             console.error(err);
-            toast.error('Failed to update zone group.');
         }
         setIsSaving(false);
     };
@@ -88,11 +87,10 @@ const EditZoneGroup = ({ group, allZones, onUpdated, onDeleted, onCancel }: Edit
                 toast.success(res.data.message || 'Zone group deleted successfully!');
                 onDeleted();
             } else {
-                toast.error(res.data.message || 'Failed to delete zone group.');
+                toast.error(res.data.message);
             }
         } catch (err) {
             console.error(err);
-            toast.error('Failed to delete zone group.');
         }
         setIsDeleting(false);
         setDeleteConfirm(false);
