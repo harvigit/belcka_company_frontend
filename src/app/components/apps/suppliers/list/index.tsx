@@ -64,6 +64,8 @@ import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import EditSupplier from "../edit";
 import { IconEye } from "@tabler/icons-react";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import { useDropzone } from "react-dropzone";
 
 dayjs.extend(customParseFormat);
 
@@ -90,6 +92,13 @@ interface SupplierFormData {
   contact_person_extension?: string;
 }
 
+interface TableRow {
+  id: number;
+  image_url?: string;
+  images?: string[];
+  [key: string]: any;
+}
+
 const SupplierList = () => {
   const [data, setData] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
@@ -111,7 +120,17 @@ const SupplierList = () => {
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [switchLoading, setSwitchLoading] = useState(false);
-
+  const [openImageManager, setOpenImageManager] = useState(false);
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [newMainImage, setNewMainImage] = useState<File | null>(null);
+  const [newOtherImages, setNewOtherImages] = useState<File[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [mainImageId, setMainImageId] = useState<number | null>(null);
+  const [selectedRow, setSelectedRow] = useState<TableRow | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<
+    { id: number; url: string; isMain: boolean }[]
+  >([]);
   const [formData, setFormData] = useState<SupplierFormData>({
     id: 0,
     company_id: user?.company_id,
@@ -134,12 +153,17 @@ const SupplierList = () => {
   };
 
   // Fetch data
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = async (restorePage?: number) => {
     setFetchSupplier(true);
     try {
       const res = await api.get(`suppliers/get?company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
+        if (restorePage !== undefined) {
+          setTimeout(() => {
+            table.setPageIndex(restorePage);
+          }, 0);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -149,7 +173,7 @@ const SupplierList = () => {
 
   useEffect(() => {
     fetchSuppliers();
-  }, [api]);
+  }, []);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -258,6 +282,152 @@ const SupplierList = () => {
     setEditDrawerOpen(true);
   }, []);
 
+  const handleSetMainExisting = (id: number) => {
+    setUploadedImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        isMain: img.id === id,
+      })),
+    );
+    setMainImageId(id);
+    setNewMainImage(null);
+  };
+
+  const handleSetMainNew = (file: File) => {
+    setNewMainImage(file);
+    setMainImageId(null);
+    setUploadedImages((prev) => prev.map((img) => ({ ...img, isMain: false })));
+  };
+
+  const onDrop = (acceptedFiles: File[]) => {
+    setNewImages((prev) => [...prev, ...acceptedFiles]);
+    setNewOtherImages((prev) => [...prev, ...acceptedFiles]);
+  };
+
+  const { getRootProps: getImageRootProps, getInputProps: getImageInputProps } =
+    useDropzone({
+      accept: {
+        "image/*": [".jpg", ".jpeg", ".png", ".webp"],
+      },
+      multiple: false,
+      maxFiles: 1,
+      onDrop: onDrop,
+    });
+
+  useEffect(() => {
+    if (!selectedRow) return;
+
+    const existingImages = [
+      selectedRow.image_url
+        ? { id: 0, image_url: selectedRow.image_url }
+        : null,
+      ...(selectedRow.product_images || []),
+    ]
+      .filter((img): img is { id: number; image_url: string } => !!img)
+      .map((img) => ({
+        id: img.id,
+        url: img.image_url,
+        isMain: img.image_url === selectedRow.image_url,
+      }));
+
+    setUploadedImages(existingImages);
+
+    const mainIdx = existingImages.findIndex((img) => img.isMain);
+    setMainImageId(mainIdx >= 0 ? mainIdx : null);
+
+    setNewImages([]);
+    setNewOtherImages([]);
+    setNewMainImage(null);
+  }, [selectedRow]);
+
+  useEffect(() => {
+    if (!openImageManager) return;
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+
+        if (item.type.startsWith("image")) {
+          const file = item.getAsFile();
+          if (file) {
+            setNewImages([file]);
+          }
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+
+    return () => {
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, [openImageManager]);
+
+  const handleEditSupplier = async (selectedRow: any) => {
+    if (!selectedRow) return;
+
+    setIsSaving(true);
+
+    try {
+      const currentPage = table.getState().pagination.pageIndex;
+
+      const payload = new FormData();
+      payload.append("id", String(selectedRow.id));
+      payload.append("name", selectedRow.name);
+      payload.append("company_id", String(selectedRow.company_id));
+      payload.append("status", String(selectedRow.status));
+      payload.append("phone", String(selectedRow.phone ?? ""));
+      payload.append(
+        "contact_person_phone",
+        String(selectedRow.contact_person_phone ?? ""),
+      );
+      payload.append(
+        "contact_person_email",
+        String(selectedRow.contact_person_email ?? ""),
+      );
+      payload.append(
+        "contact_person_name",
+        String(selectedRow.contact_person_name ?? ""),
+      );
+      payload.append("email", String(selectedRow.email ?? ""));
+      payload.append("postcode", String(selectedRow.postcode ?? ""));
+      payload.append("street", String(selectedRow.street ?? ""));
+      payload.append("location", String(selectedRow.location ?? ""));
+
+      if (newMainImage) {
+        payload.append("supplier_image", newMainImage);
+      }
+
+      const result = await api.post("suppliers/update", payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (result.data.IsSuccess) {
+        toast.success(result.data.message);
+
+        setOpenImageManager(false);
+        fetchSuppliers(currentPage);
+
+        setFormData({
+          id: 0,
+          name: "",
+          status: true,
+          company_id: user.company_id,
+        });
+
+        setNewMainImage(null);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -327,6 +497,7 @@ const SupplierList = () => {
         );
       },
     },
+
     columnHelper.accessor("image_url", {
       id: "image",
       header: () => (
@@ -342,14 +513,32 @@ const SupplierList = () => {
         const image = "/images/products/product.png";
 
         return (
-          <Stack direction="row" alignItems="center" spacing={4}>
+          <Stack direction="row" alignItems="center" spacing={4} ml={1}>
             <Image
               src={item.image_url || image}
               style={{ cursor: "pointer" }}
               alt="Supplier"
               width={50}
               height={50}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(item.image_url || image);
+                setOpenPreview(true);
+              }}
             />
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedRow(item);
+                setOpenImageManager(true);
+                setNewMainImage(null);
+                setNewImages([]);
+                setNewOtherImages([]);
+              }}
+            >
+              <AddCircleOutlineIcon fontSize="small" />
+            </IconButton>
           </Stack>
         );
       },
@@ -361,7 +550,7 @@ const SupplierList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
               {item.name ? item.name : "-"}
             </Typography>
@@ -376,7 +565,7 @@ const SupplierList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
               {item.company_name ? item.company_name : "-"}
             </Typography>
@@ -683,7 +872,151 @@ const SupplierList = () => {
           </Stack>
         </Stack>
         <Divider />
+        {/* for handling image upload */}
+        <Dialog
+          open={openImageManager}
+          onClose={() => setOpenImageManager(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Image</DialogTitle>
+          <DialogContent>
+            <div
+              {...getImageRootProps()}
+              style={{
+                border: "2px dashed #1976d2",
+                borderRadius: 8,
+                padding: 40,
+                textAlign: "center",
+                cursor: "pointer",
+                marginBottom: 20,
+              }}
+            >
+              <input {...getImageInputProps()} />
+              <Typography>Drag & drop or paste image</Typography>
+            </div>
 
+            <Grid container spacing={2}>
+              {uploadedImages.map((img) => (
+                <Grid key={img.id} style={{ position: "relative" }}>
+                  <img
+                    src={img.url}
+                    width={80}
+                    height={80}
+                    style={{ objectFit: "cover", borderRadius: 4 }}
+                  />
+
+                  {/* Main image selector */}
+                  <button
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      background: img.isMain ? "#1976d2" : "rgba(0,0,0,0.4)",
+                      color: "white",
+                      fontSize: 12,
+                      border: "none",
+                      borderRadius: "0 4px 0 0",
+                      padding: "2px 4px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleSetMainExisting(img.id)}
+                  >
+                    {img.isMain ? "Primary" : "Images"}
+                  </button>
+
+                  {/* Delete button */}
+                  <IconButton
+                    color="error"
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: -10,
+                      right: -10,
+                      backgroundColor: "#fff",
+                      zIndex: 2,
+                      "&:hover": {
+                        backgroundColor: "#fff",
+                        color: "red",
+                      },
+                    }}
+                    onClick={() =>
+                      setUploadedImages(
+                        uploadedImages.filter((i) => i.id !== img.id),
+                      )
+                    }
+                  >
+                    <IconTrash size={16} />
+                  </IconButton>
+                </Grid>
+              ))}
+
+              {newImages.map((file, index) => (
+                <Grid key={index} style={{ position: "relative" }}>
+                  <img
+                    src={URL.createObjectURL(file)}
+                    width={80}
+                    height={80}
+                    style={{ objectFit: "cover", borderRadius: 4 }}
+                  />
+
+                  {/* Main selector for new files */}
+                  <button
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      background:
+                        newMainImage === file ? "#1976d2" : "rgba(0,0,0,0.4)",
+                      color: "white",
+                      fontSize: 12,
+                      border: "none",
+                      borderRadius: "0 4px 0 0",
+                      padding: "2px 4px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleSetMainNew(file)}
+                  >
+                    Primary
+                  </button>
+
+                  <IconButton
+                    size="small"
+                    color="error"
+                    sx={{
+                      position: "absolute",
+                      top: -10,
+                      right: -10,
+                      backgroundColor: "#fff",
+                      zIndex: 2,
+                      "&:hover": {
+                        backgroundColor: "#fff",
+                        color: "red",
+                      },
+                    }}
+                    onClick={() =>
+                      setNewImages(newImages.filter((_, i) => i !== index))
+                    }
+                  >
+                    <IconTrash size={16} />
+                  </IconButton>
+                </Grid>
+              ))}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenImageManager(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                handleEditSupplier(selectedRow);
+              }}
+              disabled={isSaving}
+            >
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
         {/* Add supplier */}
         <CreateSupplier
           open={drawerOpen}
