@@ -356,6 +356,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   const fetchFavoriteProducts = async () => {
+    if(!projectID) return;
     try {
       const response = await api.get(
         `project/get-favorite?company_id=${user.company_id}&project_id=${projectID}`,
