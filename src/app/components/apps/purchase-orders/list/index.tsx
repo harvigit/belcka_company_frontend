@@ -42,6 +42,7 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
+  IconBasketCancel,
   IconChevronLeft,
   IconChevronRight,
   IconDownload,
@@ -50,6 +51,7 @@ import {
   IconFilter,
   IconNotes,
   IconSearch,
+  IconShoppingCartCancel,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -75,6 +77,7 @@ import ArchivePurchaseOrder from "../archive";
 import PurchaseOrderHistory from "../history";
 import TermsAndConditions from "../terms-conditions";
 import { IconHelp } from "@tabler/icons-react";
+import CancelOrder from "../cancel-orders";
 
 dayjs.extend(customParseFormat);
 
@@ -129,10 +132,12 @@ const PurchaseOrderList = () => {
   const [productDrawerOpen, setProductDrawerOpen] = useState(false);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [openCancelOrder, setOpenCancelOrder] = useState(false);
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [openConditionDrawer, setOpenConditionDrawer] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const [selectedRow, setSelectedRow] = React.useState<TableRow | null>(null);
   const [singleDate, setSingleDate] = React.useState<Date | undefined>(
@@ -225,6 +230,11 @@ const PurchaseOrderList = () => {
   useEffect(() => {
     fetchOrders();
   }, [api]);
+
+  const handleCancelOrder = useCallback((id: number) => {
+    setSelectedId(id);
+    setOpenCancelOrder(true);
+  }, []);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -1027,6 +1037,16 @@ const PurchaseOrderList = () => {
             >
               <IconDownload size={18} />
             </IconButton>
+            <IconButton
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancelOrder(item.id);
+              }}
+            >
+              <IconShoppingCartCancel size={18} />
+            </IconButton>
+
             {item.status !== 5 && (
               <Button
                 href={`/apps/receive-orders/${item.id}`}
@@ -1808,6 +1828,12 @@ const PurchaseOrderList = () => {
           companyId={user.company_id ?? null}
         />
 
+        <CancelOrder
+          open={openCancelOrder}
+          onClose={() => setOpenCancelOrder(false)}
+          companyId={user.company_id ?? null}
+          id={selectedId}
+        />
         <Box
           sx={{
             flex: 1,

@@ -183,6 +183,7 @@ const ReceivePurchaseOrder = () => {
       const mapped: ReceiveProductRow[] = data.purchase_orders.map((p: any) => {
         const ordered = Number(p.qty);
         const received = Number(p.delivered_qty || 0);
+        console.log(p)
         return {
           id: p.product_id,
           order_id: p.id,
@@ -192,7 +193,7 @@ const ReceivePurchaseOrder = () => {
           ordered_qty: ordered,
           received_qty: received,
           remaining_qty: p.remaining_qty,
-          receive_now: ordered - p.delivered_qty,
+          receive_now: ordered - received - p.cancelled_qty,
           image_url: p.image_url,
           uuid: p.uuid,
           description: p.description,
@@ -598,7 +599,7 @@ const ReceivePurchaseOrder = () => {
                   type="text"
                   sx={{ width: "40%" }}
                   value={item.receive_now}
-                  disabled={order?.status == 2}
+                  disabled={order?.status == 5}
                   inputProps={{
                     inputMode: "numeric",
                   }}
