@@ -818,19 +818,6 @@ const PurchaseOrderList = () => {
       },
     }),
 
-    // columnHelper.accessor((row) => row?.supplier_name, {
-    //   id: "supplier",
-    //   header: () => "Supplier",
-    //   cell: ({ row }) => {
-    //     const item = row.original;
-    //     return (
-    //       <Typography textTransform="capitalize" className="f-14" ml={1}>
-    //         {item.supplier_name ? item.supplier_name : "-"}
-    //       </Typography>
-    //     );
-    //   },
-    // }),
-
     columnHelper.accessor((row) => row?.order_qty, {
       id: "orderQty",
       header: () => "Order QTY",
@@ -884,6 +871,7 @@ const PurchaseOrderList = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isShow = item.status !== 4 && item.status !== 5;
 
         return (
           <Stack direction="row" alignItems="center" spacing={4} ml={1}>
@@ -900,9 +888,8 @@ const PurchaseOrderList = () => {
                 cursor: "pointer",
                 border: "1px solid transparent",
                 transition: "all 0.2s ease",
-                "&:hover": {
-                  border: "1px solid #1976d2",
-                },
+                "&:hover": isShow ? { border: "1px solid #1976d2" } : {},
+                opacity: isShow ? 1 : 0.5,
               }}
             >
               <Typography

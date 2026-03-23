@@ -87,7 +87,7 @@ const PurchaseOrder: React.FC<Props> = ({
   const [stores, setStores] = useState<any[]>([]);
   const TAX_PERCENT = 20;
   const [currency, setCurrency] = useState("");
-  const [isDisable, setIsDisable] = useState<boolean>(true);
+  const [isDisable, setIsDisable] = useState<boolean>(false);
 
   useEffect(() => {
     if (!ids || ids.length === 0 || allProducts.length === 0) return;

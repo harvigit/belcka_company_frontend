@@ -61,6 +61,7 @@ interface ReceiveProductRow {
   date?: string | null;
   note?: string | null;
   images?: any;
+  status: number;
 }
 
 interface TableRow {
@@ -116,8 +117,6 @@ const ReceivePurchaseOrder = () => {
   );
   const [modalOpen, setModalOpen] = React.useState(false);
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [commonNote, setCommonNote] = useState("");
   const [receiveDate, setReceiveDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
@@ -198,7 +197,7 @@ const ReceivePurchaseOrder = () => {
           uuid: p.uuid,
           description: p.description,
           date: p.date,
-
+          status: data.status,
           note: "",
           images: [],
         };
@@ -288,7 +287,7 @@ const ReceivePurchaseOrder = () => {
     }
   };
 
-  const handleReceive = async () => {
+  const handleCancel = async () => {
     try {
       setIsSaving(true);
 
@@ -296,7 +295,7 @@ const ReceivePurchaseOrder = () => {
 
       formData.append("company_id", String(order.company_id));
       formData.append("id", String(order.id));
-      formData.append("status", "2");
+      formData.append("status", "4");
 
       let index = 0;
 
@@ -344,32 +343,6 @@ const ReceivePurchaseOrder = () => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleCancel = async () => {
-    try {
-      setIsSaving(true);
-
-      const formData = new FormData();
-
-      formData.append("company_id", String(order.company_id));
-      formData.append("id", String(order.id));
-      formData.append("status", "4");
-
-      const res = await api.post("purchase-orders/update-status", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (res.data.IsSuccess) {
-        toast.success(res.data.message);
-        router.replace("/apps/purchase-orders/list");
-      }
-    } catch (error) {
-      toast.error("Cancel failed");
-    }
-    setIsSaving(false);
   };
 
   useEffect(() => {
@@ -501,11 +474,13 @@ const ReceivePurchaseOrder = () => {
 
         cell: ({ row }) => {
           const item = row.original;
+          const isShow = item.status !== 4 && item.status !== 5;
 
           return (
             <Stack direction="row" alignItems="center" spacing={2} ml={1}>
               <Box
                 onClick={(e) => {
+                  if (!isShow) return;
                   e.stopPropagation();
                   handleOpenModal(item);
                 }}
@@ -514,12 +489,11 @@ const ReceivePurchaseOrder = () => {
                   px: 1,
                   py: 0.5,
                   borderRadius: 1,
-                  cursor: "pointer",
+                  cursor: isShow ? "pointer" : "not-allowed",
                   border: "1px solid transparent",
                   transition: "all 0.2s ease",
-                  "&:hover": {
-                    border: "1px solid #1976d2",
-                  },
+                  "&:hover": isShow ? { border: "1px solid #1976d2" } : {},
+                  opacity: isShow ? 1 : 0.5,
                 }}
               >
                 <Typography
@@ -746,8 +720,8 @@ const ReceivePurchaseOrder = () => {
               gap: 2,
             }}
           >
-            {/* <Button
-              color="primary"
+            <Button
+              color="error"
               variant="contained"
               size="large"
               onClick={() => {
@@ -757,26 +731,10 @@ const ReceivePurchaseOrder = () => {
                 }
                 setReceiveModalOpen(true);
               }}
-              disabled={isSaving}
+              disabled={isSaving || selectedRowIds.size === 0 || order.status == 4}
             >
-              {isSaving ? "Saving..." : "Receive"}
-            </Button> */}
-
-            {/* <Button
-              color="error"
-              variant="contained"
-              size="large"
-              onClick={() => {
-                if (selectedRowIds.size === 0) {
-                  toast.error("Select at least one product");
-                  return;
-                }
-                setCancelModalOpen(true);
-              }}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button> */}
+              {isSaving ? "Saving..." : "Cancel"}
+            </Button>
           </Box>
         </Box>
         {/* TABLE */}
@@ -935,13 +893,13 @@ const ReceivePurchaseOrder = () => {
       </Box>
 
       {/* order receive */}
-      {/* <Dialog
+      <Dialog
         open={receiveModalOpen}
         onClose={() => setReceiveModalOpen(false)}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Receive Products</DialogTitle>
+        <DialogTitle>Cancel Products</DialogTitle>
 
         <DialogContent>
           <Stack spacing={2}>
@@ -961,7 +919,7 @@ const ReceivePurchaseOrder = () => {
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="Enter note"
+                    placeholder="Enter cancellation reason..."
                     value={item.note || ""}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -1019,48 +977,14 @@ const ReceivePurchaseOrder = () => {
         </DialogContent>
 
         <DialogActions>
-          <Button color="error" onClick={() => setReceiveModalOpen(false)}>Cancel</Button>
+          <Button color="error" onClick={() => setReceiveModalOpen(false)}>
+            Cancel
+          </Button>
 
           <Button
             variant="contained"
             onClick={async () => {
               setReceiveModalOpen(false);
-              await handleReceive();
-            }}
-          >
-            Receive
-          </Button>
-        </DialogActions>
-      </Dialog> */}
-
-      {/* order cancel */}
-      <Dialog
-        open={cancelModalOpen}
-        onClose={() => setCancelModalOpen(false)}
-        fullWidth
-      >
-        <DialogTitle>Cancel Order</DialogTitle>
-
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Enter cancellation reason..."
-            multiline
-            rows={3}
-            value={commonNote}
-            onChange={(e) => setCommonNote(e.target.value)}
-          />
-        </DialogContent>
-
-        <DialogActions>
-          <Button color="error" onClick={() => setCancelModalOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            color="primary"
-            variant="contained"
-            onClick={async () => {
-              setCancelModalOpen(false);
               await handleCancel();
             }}
           >
