@@ -66,41 +66,41 @@ export default function PermissionGuard({
     }
   }, [user?.id, user?.company_id]);
 
-  useEffect(() => {
-    if (loading || !profile) return;
+    useEffect(() => {
+        if (loading || !profile) return;
 
-    const webPermissions = permissions.filter((p) => p.is_web);
+        if (user?.user_role_id === 1) {
+            if (profile?.is_trade_available === false) {
+                setShowTradePopup(true);
+                setIsAuthorized(false);
+                return;
+            }
+            setIsAuthorized(true);
+            return;
+        }
 
-    if (!webPermissions.length) {
-      router.push("/");
-      return;
-    }
+        const webPermissions = permissions.filter((p) => p.is_web);
 
-    if (user?.user_role_id === 1 && profile?.is_trade_available === false) {
-      setShowTradePopup(true);
-      setIsAuthorized(false);
-      return;
-    }
+        if (!webPermissions.length) {
+            router.push("/");
+            return;
+        }
 
-    let authorized = true;
+        let authorized = true;
 
-    if (permission) {
-      authorized = hasPermission(permissions, permission);
-    } else if (requiredPermissions?.length) {
-      authorized = requireAll
-        ? requiredPermissions.every((p: string) =>
-            hasPermission(permissions, p),
-          )
-        : hasAnyPermission(permissions, requiredPermissions);
-    }
+        if (permission) {
+            authorized = hasPermission(permissions, permission);
+        } else if (requiredPermissions?.length) {
+            authorized = requireAll
+                ? requiredPermissions.every((p: string) =>
+                    hasPermission(permissions, p),
+                )
+                : hasAnyPermission(permissions, requiredPermissions);
+        }
 
-    if (!authorized) {
-      setIsAuthorized(false);
-      return;
-    }
+        setIsAuthorized(authorized);
 
-    setIsAuthorized(true);
-  }, [loading, permissions, profile, pathname]);
+    }, [loading, permissions, profile, pathname]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

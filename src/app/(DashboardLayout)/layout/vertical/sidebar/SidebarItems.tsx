@@ -34,25 +34,26 @@ const SidebarItems = () => {
     company_image?: number | null;
   } & { id: number } & { user_role_id: number };
 
-  useEffect(() => {
-    const fetchPermissions = async () => {
-      try {
-        const payload = {
-          user_id: Number(user.id),
-          company_id: Number(user.company_id),
+    useEffect(() => {
+        if (user?.user_role_id === 1) return;
+
+        const fetchPermissions = async () => {
+            try {
+                const payload = {
+                    user_id: Number(user.id),
+                    company_id: Number(user.company_id),
+                };
+                const response = await api.post("/dashboard/user-permissions", payload);
+                setPermissions(response.data.permissions);
+            } catch (error) {
+                console.error("Error fetching permissions:", error);
+            }
         };
 
-        const response = await api.post("/dashboard/user-permissions", payload);
-        setPermissions(response.data.permissions);
-      } catch (error) {
-        console.error("Error fetching permissions:", error);
-      }
-    };
+        fetchPermissions();
+    }, [user?.company_id, user?.id]);
 
-    fetchPermissions();
-  }, [user?.company_id, user?.id]);
-
-  const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
+    const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
   const hideMenu = lgUp ? isCollapse == "mini-sidebar" && !isSidebarHover : "";
 
   const hasWebPermission = (title?: string) => {
@@ -66,22 +67,35 @@ const SidebarItems = () => {
     );
   };
 
-  const filteredMenuItems = MenuItems.filter((item: any) => {
-    if (item.title === "Settings" && user?.user_role_id === 1) {
-      return true;
-    }
+  // const filteredMenuItems = MenuItems.filter((item: any) => {
+  //   if (item.title === "Settings" && user?.user_role_id === 1) {
+  //     return true;
+  //   }
+  //
+  //   if (item.slug === "purchase") {
+  //     return true;
+  //   }
+  //
+  //   if (item.children && item.children.length > 0) {
+  //     return item.children.some((child: any) => hasWebPermission(child.title));
+  //   }
+  //
+  //   if (item.subheader) return true;
+  //   return hasWebPermission(item.title);
+  // });
 
-    if (item.slug === "purchase") {
-      return true;
-    }
+    const filteredMenuItems = MenuItems.filter((item: any) => {
+        if (user?.user_role_id === 1) return true;
 
-    if (item.children && item.children.length > 0) {
-      return item.children.some((child: any) => hasWebPermission(child.title));
-    }
+        if (item.slug === "purchase") return true;
 
-    if (item.subheader) return true;
-    return hasWebPermission(item.title);
-  });
+        if (item.children && item.children.length > 0) {
+            return item.children.some((child: any) => hasWebPermission(child.title));
+        }
+
+        if (item.subheader) return true;
+        return hasWebPermission(item.title);
+    });
 
   const mainMenuItems = filteredMenuItems.filter(
     (item: any) => item.title !== "Settings",
