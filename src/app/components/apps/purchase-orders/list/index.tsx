@@ -42,6 +42,7 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
+  IconBasketCancel,
   IconChevronLeft,
   IconChevronRight,
   IconDownload,
@@ -49,8 +50,8 @@ import {
   IconFileSignal,
   IconFilter,
   IconNotes,
-  IconPrinter,
   IconSearch,
+  IconShoppingCartCancel,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -75,6 +76,8 @@ import { styled } from "@mui/material/styles";
 import ArchivePurchaseOrder from "../archive";
 import PurchaseOrderHistory from "../history";
 import TermsAndConditions from "../terms-conditions";
+import { IconHelp } from "@tabler/icons-react";
+import CancelOrder from "../cancel-orders";
 
 dayjs.extend(customParseFormat);
 
@@ -129,10 +132,12 @@ const PurchaseOrderList = () => {
   const [productDrawerOpen, setProductDrawerOpen] = useState(false);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [openCancelOrder, setOpenCancelOrder] = useState(false);
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [openConditionDrawer, setOpenConditionDrawer] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const [selectedRow, setSelectedRow] = React.useState<TableRow | null>(null);
   const [singleDate, setSingleDate] = React.useState<Date | undefined>(
@@ -225,6 +230,11 @@ const PurchaseOrderList = () => {
   useEffect(() => {
     fetchOrders();
   }, [api]);
+
+  const handleCancelOrder = useCallback((id: number) => {
+    setSelectedId(id);
+    setOpenCancelOrder(true);
+  }, []);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -818,19 +828,6 @@ const PurchaseOrderList = () => {
       },
     }),
 
-    // columnHelper.accessor((row) => row?.supplier_name, {
-    //   id: "supplier",
-    //   header: () => "Supplier",
-    //   cell: ({ row }) => {
-    //     const item = row.original;
-    //     return (
-    //       <Typography textTransform="capitalize" className="f-14" ml={1}>
-    //         {item.supplier_name ? item.supplier_name : "-"}
-    //       </Typography>
-    //     );
-    //   },
-    // }),
-
     columnHelper.accessor((row) => row?.order_qty, {
       id: "orderQty",
       header: () => "Order QTY",
@@ -884,6 +881,7 @@ const PurchaseOrderList = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isShow = item.status !== 4 && item.status !== 5;
 
         return (
           <Stack direction="row" alignItems="center" spacing={4} ml={1}>
@@ -900,21 +898,32 @@ const PurchaseOrderList = () => {
                 cursor: "pointer",
                 border: "1px solid transparent",
                 transition: "all 0.2s ease",
-                "&:hover": {
-                  border: "1px solid #1976d2",
-                },
+                "&:hover": isShow ? { border: "1px solid #1976d2" } : {},
+                opacity: isShow ? 1 : 0.5,
+                pointerEvents: isShow ? "" : "none",
               }}
             >
               <Typography
                 variant="subtitle2"
                 sx={{
                   fontSize: 14,
+                  display: "flex",
                   textAlign: "center",
                   color: item.expected_delivery_date
                     ? "inherit"
                     : "text.secondary",
                 }}
               >
+                {item.date_label && (
+                  <Typography mr={1}>
+                    <Tooltip
+                      title={item.dates}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <IconHelp size={16} />
+                    </Tooltip>
+                  </Typography>
+                )}
                 {item.expected_delivery_date || "Select Date"}
               </Typography>
             </Box>
@@ -1029,12 +1038,22 @@ const PurchaseOrderList = () => {
             >
               <IconDownload size={18} />
             </IconButton>
-            {(item.status === 0 || item.status === 1) && (
+            <IconButton
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancelOrder(item.id);
+              }}
+            >
+              <IconShoppingCartCancel size={18} />
+            </IconButton>
+
+            {item.status !== 5 && (
               <Button
                 href={`/apps/receive-orders/${item.id}`}
                 onClick={(e) => e.stopPropagation()}
               >
-                Receive
+                View
               </Button>
             )}
           </Stack>
@@ -1810,6 +1829,12 @@ const PurchaseOrderList = () => {
           companyId={user.company_id ?? null}
         />
 
+        <CancelOrder
+          open={openCancelOrder}
+          onClose={() => setOpenCancelOrder(false)}
+          companyId={user.company_id ?? null}
+          id={selectedId}
+        />
         <Box
           sx={{
             flex: 1,
@@ -1926,9 +1951,7 @@ const PurchaseOrderList = () => {
                             key={cell.id}
                             sx={{ padding: "10px" }}
                             onClick={() => {
-                              if (item.status === 0 || item.status === 1) {
-                                handleEdit(item);
-                              }
+                              handleEdit(item);
                             }}
                           >
                             {flexRender(
