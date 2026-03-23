@@ -176,6 +176,8 @@ const CreateStore: React.FC<CreateStoreProps> = ({
   useEffect(() => {
     fetchUsers();
     fetchProducts();
+    setPhone("")
+    setNationalPhone("")
   }, [open == true]);
   const filteredData = useMemo(() => {
     return data.filter((item) => {
