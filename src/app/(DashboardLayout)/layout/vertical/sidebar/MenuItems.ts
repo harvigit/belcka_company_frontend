@@ -97,14 +97,14 @@ const MenuItems: NavGroup[] = [
   {
     id: uniqueId(),
     title: "Dashboard (Buyer)",
-    slug: "purchase",
+    slug: "purchasing",
     icon: IconKeyframes,
     href: "/dashboard/buyer",
     children: [
       {
         id: uniqueId(),
         title: "Home",
-        slug: "purchase",
+        slug: "purchasing",
         icon: IconPoint,
         href: "/dashboard/buyer",
       },
