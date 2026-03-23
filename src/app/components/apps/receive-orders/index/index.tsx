@@ -183,7 +183,7 @@ const ReceivePurchaseOrder = () => {
       const mapped: ReceiveProductRow[] = data.purchase_orders.map((p: any) => {
         const ordered = Number(p.qty);
         const received = Number(p.delivered_qty || 0);
-        console.log(p)
+        console.log(p);
         return {
           id: p.product_id,
           order_id: p.id,
@@ -490,11 +490,12 @@ const ReceivePurchaseOrder = () => {
                   px: 1,
                   py: 0.5,
                   borderRadius: 1,
-                  cursor: isShow ? "pointer" : "not-allowed",
+                  cursor: "pointer",
                   border: "1px solid transparent",
                   transition: "all 0.2s ease",
                   "&:hover": isShow ? { border: "1px solid #1976d2" } : {},
                   opacity: isShow ? 1 : 0.5,
+                  pointerEvents: isShow ? "" : "none",
                 }}
               >
                 <Typography
@@ -732,7 +733,9 @@ const ReceivePurchaseOrder = () => {
                 }
                 setReceiveModalOpen(true);
               }}
-              disabled={isSaving || selectedRowIds.size === 0 || order.status == 4}
+              disabled={
+                isSaving || selectedRowIds.size === 0 || order.status == 4
+              }
             >
               {isSaving ? "Saving..." : "Cancel"}
             </Button>

@@ -900,6 +900,7 @@ const PurchaseOrderList = () => {
                 transition: "all 0.2s ease",
                 "&:hover": isShow ? { border: "1px solid #1976d2" } : {},
                 opacity: isShow ? 1 : 0.5,
+                pointerEvents: isShow ? "" : "none",
               }}
             >
               <Typography

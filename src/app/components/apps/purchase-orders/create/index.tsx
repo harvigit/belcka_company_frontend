@@ -137,7 +137,9 @@ const PurchaseOrder: React.FC<Props> = ({
       const supplierIdsFromPO = [
         ...new Set(editData.purchase_orders.map((po: any) => po.supplier_id)),
       ];
-      setIsDisable(editData?.status == 5 ? true : false);
+      setIsDisable(
+        editData?.status == 5 || editData?.status == 4 ? true : false,
+      );
       setFormData((prev: any) => ({
         id: editData.id,
         company_id: editData.company_id,
