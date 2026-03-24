@@ -193,22 +193,27 @@ input#project_id::placeholder {
     display: none;
 }
 
-.team_selection .mui-qfpvdy-MuiAutocomplete-root .MuiAutocomplete-endAdornment{
+.team_selection .mui-qfpvdy-MuiAutocomplete-root .MuiAutocomplete-endAdornment,.address_selection .mui-qfpvdy-MuiAutocomplete-root .MuiAutocomplete-endAdornment{
     top: 66% !important;
     right: 4px !important
 }
-.team_selection input {
+.team_selection input, .address_selection input {
     width: 100% !important;
 }
 
-.team_selection .MuiAutocomplete-endAdornment button {
+.team_selection .MuiAutocomplete-endAdornment button , .address_selection .MuiAutocomplete-endAdornment button{
     height: 30px !important;
     width: 30px !important;
     min-height: 30px !important;
 }
-.team_selection .MuiAutocomplete-endAdornment button svg{
+.team_selection .MuiAutocomplete-endAdornment button svg, .address_selection .MuiAutocomplete-endAdornment button svg{
     font-size: 18px !important;
 }
+
+.address_selection input{
+    max-width: 82% !important;
+}
+
 .address-form ,.task-form , .category-form,.product-form{
     display: flex;
     height: 100%;

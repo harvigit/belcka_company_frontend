@@ -892,6 +892,7 @@ const PurchaseProductList: React.FC<Props> = ({
     >
       <Box
         p={2}
+        pb={0}
         display={"flex"}
         alignItems={"center"}
         justifyContent={"space-between"}

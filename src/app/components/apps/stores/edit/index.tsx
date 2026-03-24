@@ -520,6 +520,7 @@ const EditStore: React.FC<EditStoreProps> = ({
                       <Typography>Select Address</Typography>
                       <Autocomplete
                         fullWidth
+                        disableCloseOnSelect
                         options={addressOptions}
                         value={selectedAddress}
                         loading={loadingAddresses}
@@ -544,6 +545,26 @@ const EditStore: React.FC<EditStoreProps> = ({
                         }}
                         renderInput={(params) => (
                           <CustomTextField
+                            sx={{
+                              "& .MuiAutocomplete-inputRoot": {
+                                flexWrap: "wrap",
+                                alignItems: "flex-start",
+                                minHeight: 40,
+                                paddingTop: "10px",
+                                paddingBottom: "10px",
+                                paddingRight: "30px",
+                              },
+                              "& .MuiAutocomplete-tag": {
+                                margin: "4px",
+                                maxWidth: "100%",
+                              },
+                              "& .MuiAutocomplete-endAdornment": {
+                                right: "8px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                              },
+                            }}
+                            className="address_selection"
                             {...params}
                             placeholder="Select address"
                             InputProps={{
