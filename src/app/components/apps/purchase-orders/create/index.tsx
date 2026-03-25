@@ -372,6 +372,7 @@ const PurchaseOrder: React.FC<Props> = ({
     ],
     [currency],
   );
+
   const table = useReactTable({
     data: products,
     columns,
