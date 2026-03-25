@@ -90,22 +90,40 @@ const PurchaseOrder: React.FC<Props> = ({
   const [isDisable, setIsDisable] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!ids || ids.length === 0 || allProducts.length === 0) return;
-    const uniqueSupplierIds = [...new Set(ids.map((item) => item.supplier_id))];
+    if (allProducts.length === 0) return;
+
+    const source =
+      ids && ids.length > 0
+        ? ids
+        : editData?.purchase_orders?.map((po: any) => ({
+            id: po.product_id,
+            qty: Number(po.qty) || 0,
+            supplier_id: po.supplier_id,
+          })) || [];
+
+    if (!source || source.length === 0) return;
+
+    const uniqueSupplierIds = [
+      ...new Set(source.map((item: any) => item.supplier_id)),
+    ];
 
     setFormData((prev: any) => ({
       ...prev,
       supplier_id: uniqueSupplierIds,
     }));
-    const mappedProducts: ProductRow[] = ids
-      .map((selected) => {
+
+    const mappedProducts: ProductRow[] = source
+      .map((selected: any) => {
         const product = allProducts.find((p) => p.id === selected.id);
+
         const items = allProducts.filter((product) =>
-          ids.some((x) => x.id === product.id),
+          source.some((x: any) => x.id === product.id),
         );
 
         setSelectedProducts(items);
+
         if (!product) return null;
+
         setCurrency(product.currency);
 
         return {
@@ -123,7 +141,7 @@ const PurchaseOrder: React.FC<Props> = ({
       .filter(Boolean) as ProductRow[];
 
     setProducts(mappedProducts);
-  }, [ids, allProducts]);
+  }, [ids, editData, allProducts]);
 
   useEffect(() => {
     if (!open) return;
@@ -579,22 +597,7 @@ const PurchaseOrder: React.FC<Props> = ({
               alignItems={"end"}
               mt={2}
             >
-              {/* CHECKBOX */}
-              <Box display="flex" alignItems="center">
-                <CustomCheckbox
-                  checked={formData.checked_product || false}
-                  onChange={(e) =>
-                    setFormData((p: any) => ({
-                      ...p,
-                      checked_product: e.target.checked,
-                    }))
-                  }
-                />
-                <Typography>
-                  Implement the rate adjustments for products in the catalogue
-                </Typography>
-              </Box>
-
+              <Box display="flex" alignItems="center"></Box>
               {/* TOTALS */}
               <Box mt={4} display="flex" justifyContent="flex-end">
                 <Box width={300}>
@@ -620,6 +623,21 @@ const PurchaseOrder: React.FC<Props> = ({
             </Box>
           </Box>
         </form>
+      </Box>
+      {/* CHECKBOX */}
+      <Box display="flex" alignItems="center" pl={5}>
+        <CustomCheckbox
+          checked={formData.checked_product || false}
+          onChange={(e) =>
+            setFormData((p: any) => ({
+              ...p,
+              checked_product: e.target.checked,
+            }))
+          }
+        />
+        <Typography>
+          Implement the rate adjustments for products in the catalogue
+        </Typography>
       </Box>
       <Box
         sx={{

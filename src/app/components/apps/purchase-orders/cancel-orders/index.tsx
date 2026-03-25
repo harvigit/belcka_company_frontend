@@ -106,7 +106,22 @@ const CancelOrder: React.FC<Props> = ({ open, onClose, companyId, id }) => {
           px: 4,
         }}
       >
-        <Typography variant="h2" fontWeight={600} mt={1}>
+        <Typography
+          color="textSecondary"
+          variant="body1"
+          fontWeight={600}
+          className="f-14"
+          sx={{
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 3,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            lineHeight: 1.25,
+            maxWidth: 180,
+            wordBreak: "break-word",
+          }}
+        >
           {product?.supplier_name}
         </Typography>
         {groupedCancelOrders.map((group: any, index: number) => (

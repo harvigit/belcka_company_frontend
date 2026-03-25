@@ -348,7 +348,7 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
               ),
             )}
 
-            <Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <PhoneInput
                 inputClass="phone-input"
                 country="gb"
@@ -379,12 +379,14 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
               <TextField
                 className="custom_color"
                 fullWidth
+                inputMode="numeric"
                 label="Height (cm)"
                 value={healthInfo.height}
                 inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                onChange={(e) =>
-                  handleOtherInfoChange("height", e.target.value)
-                }
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, "");
+                  handleOtherInfoChange("height", value);
+                }}
               />
             </Grid>
 
@@ -395,9 +397,10 @@ const HealthInfoComponent: React.FC<ProjectListingProps> = ({
                 label="Weight (kg)"
                 value={healthInfo.weight}
                 inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                onChange={(e) =>
-                  handleOtherInfoChange("weight", e.target.value)
-                }
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, "");
+                  handleOtherInfoChange("weight", value);
+                }}
               />
             </Grid>
           </Grid>
