@@ -51,7 +51,6 @@ import {
   IconFilter,
   IconNotes,
   IconSearch,
-  IconShoppingBag,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -78,6 +77,8 @@ import ProductView from "../view";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ProductHistory from "../history";
 import UnitList from "../../units/list";
+import { IconLayersIntersect } from "@tabler/icons-react";
+import SetList from "../sets/list";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -162,6 +163,7 @@ const ProductList = () => {
     status: true,
   });
   const [unitDrawerOpen, setUnitDrawerOpen] = useState(false);
+  const [productSetOpen, setProductSetOpen] = useState(false);
   const [openModel, setOpenModel] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<any | null>(null);
@@ -1727,6 +1729,29 @@ const ProductList = () => {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
+                    setProductSetOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconLayersIntersect width={18} />
+                  </ListItemIcon>
+                  Product Sets
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
                     setArchiveProductList(true);
                   }}
                   style={{
@@ -1914,6 +1939,11 @@ const ProductList = () => {
         <UnitList
           openDrawer={unitDrawerOpen}
           onClose={() => setUnitDrawerOpen(false)}
+        />
+
+        <SetList
+          openDrawer={productSetOpen}
+          onClose={() => setProductSetOpen(false)}
         />
 
         <Box

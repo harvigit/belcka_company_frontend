@@ -14,6 +14,8 @@ import {
   TableBody,
   Chip,
   Dialog,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   createColumnHelper,
@@ -33,6 +35,39 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import ProductAddEdit from "../create";
 import { IconX } from "@tabler/icons-react";
+import BlankCard from "@/app/components/shared/BlankCard";
+import ProductInformation from "../information";
+import ProductSets from "../product-sets";
+import ProductTechnicalInformation from "../technical-information";
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`vertical-tabpanel-${index}`}
+      aria-labelledby={`vertical-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 1 }}>{children}</Box>}
+    </div>
+  );
+}
+
+function a11yProps(index: number) {
+  return {
+    id: `vertical-tab-${index}`,
+    "aria-controls": `vertical-tabpanel-${index}`,
+  };
+}
 
 export interface ProductFormData {
   id: number;
@@ -130,6 +165,11 @@ const ProductView: React.FC<ProductViewProps> = ({
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [value, setValue] = React.useState(0);
+
+  const handleChange = (_: React.SyntheticEvent, newValue: number) => {
+    setValue(newValue);
+  };
 
   const fetchProducts = async () => {
     try {
@@ -503,6 +543,7 @@ const ProductView: React.FC<ProductViewProps> = ({
           borderTopRightRadius: 12,
           // overflow: "hidden",
           p: 4,
+          pt: 2,
           backgroundColor: "#f9fafb",
         },
       }}
@@ -522,301 +563,80 @@ const ProductView: React.FC<ProductViewProps> = ({
           </Button>
         </Box>
       </Box>
-      <Grid container spacing={4} mt={1} p={2}>
-        {/* LEFT SIDE */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Box
-            display={"flex"}
-            justifyContent={"space-between"}
-            gap={3}
-            width={"70%"}
-          >
-            <Typography fontWeight={600} mb={2}>
-              Primary Details
-            </Typography>
-            {product?.stock_status_id !== 0 && (
-              <Chip
-                label={product?.stock_status || ""}
-                size="small"
-                sx={{
-                  // width: 80,
-                  height: 28,
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                  backgroundColor: "#fffcfcff",
-                  color: colorMap[product?.stock_status_id] ?? "text.primary",
-                  border: "1px solid #cbd5e1",
-                  textTransform: "capitalize",
-                }}
-              />
-            )}
-          </Box>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Product name
-              </Typography>
-              <Typography
-                sx={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 4,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: 1.25,
-                  mr: 1,
-                  wordBreak: "break-word",
-                }}
-              >
-                {product?.short_name || "-"}
-              </Typography>
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                UUID
-              </Typography>
-              <Typography>{product?.uuid || "-"}</Typography>
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Product category
-              </Typography>
-              <Typography>{product?.product_categories || "-"}</Typography>
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Threshold Value
-              </Typography>
-              <Typography>{product?.cutoff || 0}</Typography>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Buying Price
-              </Typography>
-              <Typography>{product?.price || "-"}</Typography>
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Market Price
-              </Typography>
-              <Typography>{product?.market_price || 0}</Typography>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Barcodes
-              </Typography>
-              <Typography>{product?.barcode_text || 0}</Typography>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Quantity
-              </Typography>
-              <Typography>{product?.qty || 0}</Typography>
-            </Grid>
-             <Grid size={{ xs: 6 }}>
-              <Typography variant="body2" color="text.secondary">
-                Max Stock limit
-              </Typography>
-              <Typography>{product?.max_stock || 0}</Typography>
-            </Grid>
-            {product?.description && (
-              <Grid size={{ xs: 6 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Description
-                </Typography>
-                <Typography>{product?.description || ""}</Typography>
-              </Grid>
-            )}
-          </Grid>
-
-          <Box mt={4}>
-            <Typography fontWeight={600} mb={2}>
-              Supplier Details
-            </Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Supplier name
-                </Typography>
-                <Typography>{product?.supplier_name || "-"}</Typography>
-              </Grid>
-
-              <Grid size={{ xs: 6 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Supplier code
-                </Typography>
-                <Typography>{product?.supplier_code || "-"}</Typography>
-              </Grid>
-            </Grid>
-          </Box>
-          {/* 
-          <Box mt={4} width={"70%"}>
-            <Typography fontWeight={600} mb={2}>
-              Stock Locations
-            </Typography>
-
-            <TableContainer
-              sx={{
-                backgroundColor: "#fff",
-                borderRadius: 2,
-                border: "1px solid #e5e7eb",
-              }}
-            >
-              <Table>
-                <TableHead sx={{ backgroundColor: "#f3f4f6" }}>
-                  <TableRow>
-                    <TableCell>Store Name</TableCell>
-                    <TableCell align="right">Stock in hand</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data?.map((row: any) => (
-                    <TableRow key={row.id}>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell align="right">
-                        <Typography color="primary">{row.qty}</Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box> */}
-        </Grid>
-
-        {/* RIGHT SIDE */}
-        <Grid size={{ xs: 12, md: 4 }}>
-          {/* PRODUCT IMAGE */}
-          <Box
-            sx={{
-              border: "1px dashed #d1d5db",
-              borderRadius: 2,
-              p: 3,
-              textAlign: "center",
-              backgroundColor: "#fff",
+      <Grid container spacing={2} mt={2} height={"100%"}>
+        <Grid
+          container
+          display={"flex"}
+          size={{
+            xs: 12,
+            lg: 12,
+          }}
+        >
+          <Grid
+            size={{
+              xs: 12,
+              lg: 2,
             }}
           >
-            {mainPreview ? (
-              <Image
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewImage(mainPreview);
-                  setOpenPreview(true);
-                }}
-                src={mainPreview}
-                alt="product"
-                width={180}
-                height={180}
-                style={{ objectFit: "contain", cursor: "pointer" }}
-              />
-            ) : (
-              <Typography>No Image</Typography>
-            )}
-          </Box>
-          {galleryPreview.length > 0 ? (
-            <Grid
-              container
-              spacing={2}
-              mt={2}
-              sx={{
-                border: "1px dashed #d1d5db",
-                borderRadius: 2,
-                p: 3,
-                textAlign: "center",
-                backgroundColor: "#fff",
-              }}
-            >
-              {galleryPreview.map((item, i) => (
-                <Grid size={{ xs: 6, sm: 4, md: 4, lg: 3 }} key={item.id ?? i}>
-                  <Box
-                    sx={{
-                      position: "relative",
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                      overflow: "hidden",
-                      borderRadius: 1,
-                    }}
-                  >
-                    <Image
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewImage(item.src);
-                        setOpenPreview(true);
-                      }}
-                      src={item.src}
-                      alt="Product image"
-                      fill
-                      style={{
-                        objectFit: "cover",
-                        cursor: "pointer",
-                      }}
-                    />
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <></>
-          )}
+            <BlankCard className="tab-balnkcard">
+              <Stack direction="row" mt={1} ml={2} mb={3} mr={2}>
+                <Tabs
+                  className="admin-settings-tabs"
+                  orientation="vertical"
+                  variant="scrollable"
+                  value={value}
+                  onChange={handleChange}
+                >
+                  <Tab
+                    className="admin-settings"
+                    color="textSecondary"
+                    iconPosition="start"
+                    label="Product Information"
+                    {...a11yProps(0)}
+                  />
+                  <Tab
+                    className="admin-settings"
+                    iconPosition="start"
+                    label="Technical Information"
+                    {...a11yProps(1)}
+                  />
+                  <Tab
+                    className="admin-settings"
+                    iconPosition="start"
+                    label="Product Set"
+                    {...a11yProps(2)}
+                  />
+                </Tabs>
+              </Stack>
+            </BlankCard>
+          </Grid>
+          <Grid
+            display={"flex"}
+            size={{
+              xs: 12,
+              lg: 10,
+            }}
+          >
+            <BlankCard>
+              <TabPanel value={value} index={0}>
+                <ProductInformation
+                  companyId={companyId}
+                  productId={productId}
+                />
+              </TabPanel>
+              <TabPanel value={value} index={1}>
+                <ProductTechnicalInformation
+                  companyId={companyId}
+                  productId={productId}
+                />
+              </TabPanel>
+              <TabPanel value={value} index={2}>
+                <ProductSets companyId={companyId} productId={productId} />
+              </TabPanel>
+            </BlankCard>
+          </Grid>
         </Grid>
       </Grid>
-      <Dialog
-        open={openPreview}
-        onClose={() => setOpenPreview(false)}
-        fullScreen
-        PaperProps={{
-          sx: {
-            backgroundColor: "transparent",
-            boxShadow: "none",
-          },
-        }}
-      >
-        <IconButton
-          onClick={() => setOpenPreview(false)}
-          color="primary"
-          sx={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 1301,
-            backgroundColor: "#fff",
-            "&:hover": {
-              backgroundColor: "#eee",
-              color: "#1e4db7",
-            },
-          }}
-        >
-          <IconX />
-        </IconButton>
-
-        <Box
-          sx={{
-            width: "100vw",
-            height: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onClick={() => setOpenPreview(false)}
-        >
-          <img
-            src={previewImage || ""}
-            alt="Preview"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "90% !important",
-              height: "50%",
-              objectFit: "contain",
-            }}
-          />
-        </Box>
-      </Dialog>
-
       {/* Edit product */}
       <ProductAddEdit
         open={editDrawerOpen}
