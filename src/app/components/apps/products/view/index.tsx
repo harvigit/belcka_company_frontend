@@ -197,7 +197,7 @@ const ProductView: React.FC<ProductViewProps> = ({
       } else {
         toast.error(result.data.message);
       }
-    } catch (error) {
+  } catch (error) {
       console.log(error, "error");
     } finally {
     }
@@ -206,6 +206,7 @@ const ProductView: React.FC<ProductViewProps> = ({
     if (productId) {
       fetchProducts();
     }
+    setValue(0)
   }, [open, productId]);
 
   return (

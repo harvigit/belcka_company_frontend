@@ -55,6 +55,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     last_name: "",
     extension: "+44",
     phone: "",
+    email: "",
     nationalPhone: "",
     otp: "",
     user_image: null as File | null,
@@ -172,7 +173,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   // register new user
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { first_name, last_name, extension, nationalPhone, otp, user_image } =
+    const { first_name, last_name, extension, nationalPhone, otp, user_image ,email} =
       registerData;
 
     if (!user_image)
@@ -184,6 +185,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
     const payload = {
       extension,
+      email,
       phone: nationalPhone,
       first_name,
       last_name,
@@ -344,7 +346,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const fetchTrades = async () => {
     try {
       const res = await api.get(
-        `get-company-resources?flag=tradeList&company_id=${companyId}`
+        `get-company-resources?flag=tradeList&company_id=${companyId}`,
       );
       if (res.data?.info) setTrade(res.data.info);
     } catch (err) {}
@@ -352,7 +354,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
   const sendLoginOtp = async () => {
     const payload = {
-      is_web:"false",
+      is_web: "false",
       extension: registerData.extension,
       phone: registerData.nationalPhone,
     };
@@ -430,44 +432,59 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
             </Typography>
           </Box>
 
-          <Box className="form_inputs" mb={2} display={"flex"} gap={2}>
+          <Box mb={2} display="flex" gap={2}>
             <TextField
+              fullWidth
               value={registerData.first_name}
               onChange={(e: any) =>
                 setRegisterData({ ...registerData, first_name: e.target.value })
               }
               label="First name"
-              autoFocus
             />
 
             <TextField
+              fullWidth
               value={registerData.last_name}
               onChange={(e: any) =>
                 setRegisterData({ ...registerData, last_name: e.target.value })
               }
               label="Last name"
-              autoFocus
             />
           </Box>
 
-          <PhoneInput
-            country={"gb"}
-            value={registerData.phone}
-            onChange={(phone, country: any) =>
-              setRegisterData({
-                ...registerData,
-                nationalPhone: phone.slice(country.dialCode.length),
-                extension: `+${country.dialCode}`,
-              })
-            }
-            inputStyle={{
-              height: "47px",
-              width: "48%",
-              borderColor: "#c0d1dc9c",
-            }}
-            enableSearch
-            inputProps={{ required: true }}
-          />
+          <Box mb={2} display="flex" gap={2}>
+            <Box flex={1}>
+              <PhoneInput
+                country={"gb"}
+                value={registerData.phone}
+                onChange={(phone, country: any) =>
+                  setRegisterData({
+                    ...registerData,
+                    nationalPhone: phone.slice(country.dialCode.length),
+                    extension: `+${country.dialCode}`,
+                  })
+                }
+                inputStyle={{
+                  height: "47px",
+                  width: "100%",
+                  borderRadius: "4px",
+                  borderColor: "#c0d1dc",
+                }}
+                containerStyle={{ width: "100%" }}
+                enableSearch
+                inputProps={{ required: true }}
+              />
+            </Box>
+
+            <TextField
+              sx={{ width: "48%" }}
+              value={registerData.email}
+              onChange={(e: any) =>
+                setRegisterData({ ...registerData, email: e.target.value })
+              }
+              label="Email"
+            />
+          </Box>
         </Box>
 
         {showVerification && (
@@ -526,8 +543,8 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
             {loading
               ? "Loading..."
               : showVerification
-              ? "Verify & Register"
-              : "Continue"}
+                ? "Verify & Register"
+                : "Continue"}
           </Button>
         </Box>
       </form>

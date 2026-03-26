@@ -32,7 +32,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
   companyId,
   setId,
 }) => {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [setName, setSetName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -44,7 +44,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     try {
       const res = await api.get(`products/get?company_id=${companyId}`);
       if (res.data?.info) {
-        setProjects(res.data.info);
+        setProducts(res.data.info);
       }
     } catch (err) {
       console.error("Failed to fetch projects", err);
@@ -62,12 +62,12 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
         setSetName(setData.name);
         const preSelected = setData.products.map((p: any) => p.product_id);
         setSelectedIds(preSelected);
-        setSelectAll(preSelected.length === projects.length);
+        setSelectAll(preSelected.length === products.length);
       }
     } catch (err) {
       console.error("Failed to fetch set data", err);
     }
-  }, [companyId, setId, projects.length]);
+  }, [companyId, setId, products.length]);
 
   useEffect(() => {
     if (open) {
@@ -91,7 +91,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     if (selectAll) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(projects.map((p) => p.id));
+      setSelectedIds(products.map((p) => p.id));
     }
     setSelectAll(!selectAll);
   };
@@ -175,7 +175,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
         </Box>
 
         {/* Select/Deselect All */}
-        {projects.length > 0 && (
+        {products.length > 0 && (
           <Box mb={1} textAlign={"end"}>
             <Button variant="outlined" size="small" onClick={handleSelectAll}>
               {selectAll ? "Deselect All" : "Select All"}
@@ -184,16 +184,16 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
         )}
 
         {/* Projects List */}
-        {projects.map((product) => (
+        {products.map((product) => (
           <Box
             key={product.id}
             mt={1}
-            p={1.5}
+            p={1}
             display="flex"
             alignItems="center"
             justifyContent="space-between"
             sx={{
-              border: "1px solid #999",
+              border: "1px solid #e7e3e3ff",
               borderRadius: "10px",
             }}
           >
@@ -213,15 +213,18 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
                 <Image
                   src={product.image_url || "/images/products/product.png"}
                   alt={"product"}
-                  width={80}
-                  height={80}
+                  width={50}
+                  height={50}
                   style={{ objectFit: "contain" }}
                 />
               </Box>
               <Stack mt={2} spacing={1}>
-                <Typography key={product.id} variant="body2">
+                <Typography variant="body2">
                   {product.short_name ?? product.name}{" "}
                   <Chip label={product.uuid} size="small" sx={{ ml: 1 }} />
+                </Typography>
+                <Typography variant="body2">
+                  Supplier Code: {product.supplier_code}
                 </Typography>
               </Stack>
             </Box>
