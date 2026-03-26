@@ -101,8 +101,6 @@ const CreateStore: React.FC<CreateStoreProps> = ({
   const isNZPostcode = (value: string) => /^\d{4}$/.test(value.trim());
 
   const fetchAddresses = async (query: string) => {
-    if (query.length < 3) return;
-
     try {
       setLoadingAddresses(true);
       let country = "UK";
@@ -127,13 +125,11 @@ const CreateStore: React.FC<CreateStoreProps> = ({
     }
   };
   useEffect(() => {
-    const delay = setTimeout(() => {
-      if (postcodeQuery) {
-        fetchAddresses(postcodeQuery);
-      }
+    const timer = setTimeout(() => {
+      if (postcodeQuery.length >= 3) fetchAddresses(postcodeQuery);
     }, 500);
 
-    return () => clearTimeout(delay);
+    return () => clearTimeout(timer);
   }, [postcodeQuery]);
 
   // Fetch product
@@ -178,6 +174,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
     fetchProducts();
     setPhone("");
     setNationalPhone("");
+    setPostcodeQuery("");
   }, [open == true]);
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -266,7 +263,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
               }}
             />
             <Image
-              src={item.image_url}
+              src={item.image_url || "/images/products/product.svg"}
               alt={"Supplier image"}
               width={50}
               height={50}
@@ -465,6 +462,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                   />
 
                   <Grid container spacing={2} mt={2}>
+                    {/* Postcode Input */}
                     <Grid size={{ xs: 12, md: 3 }}>
                       <Typography variant="body1" mt={2}>
                         Postcode
@@ -473,17 +471,22 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                       <CustomTextField
                         fullWidth
                         name="postcode"
-                        value={postcodeQuery}
+                        value={formData.postcode}
                         onChange={(e: any) => {
-                          setPostcodeQuery(e.target.value);
+                          const val = e.target.value;
                           setFormData((prev) => ({
                             ...prev,
-                            postcode: e.target.value,
+                            postcode: val,
                           }));
+
+                          if (val.length >= 3) {
+                            setPostcodeQuery(val);
+                          }
                         }}
                       />
                     </Grid>
 
+                    {/* Address Autocomplete */}
                     <Grid size={{ xs: 12, md: 9 }}>
                       <Typography variant="body1" mt={2}>
                         Select Address
@@ -491,56 +494,57 @@ const CreateStore: React.FC<CreateStoreProps> = ({
 
                       <Autocomplete
                         fullWidth
-                        disableCloseOnSelect
-                        options={addressOptions}
+                        freeSolo
+                        options={addressOptions || []}
                         loading={loadingAddresses}
-                        getOptionLabel={(option) =>
-                          option.summaryline ||
-                          `${option.addressline1}, ${option.posttown}`
+                        getOptionLabel={(o: any) =>
+                          typeof o === "string"
+                            ? o
+                            : o.summaryline ||
+                              `${o.addressline1}, ${o.posttown}`
                         }
+                        isOptionEqualToValue={(o: any, v: any) =>
+                          typeof o !== "string" &&
+                          typeof v !== "string" &&
+                          o.addressline1 === v.addressline1 &&
+                          o.postcode === v.postcode
+                        }
+                        onInputChange={(event, value, reason) => {
+                          if (reason === "input") setPostcodeQuery(value);
+                        }}
                         onChange={(_, value) => {
                           if (!value) return;
 
-                          setFormData((prev) => ({
-                            ...prev,
-                            address: [
-                              value.addressline1,
-                              value.addressline2,
-                              value.addressline3,
-                              value.posttown,
-                              value.postcode,
-                            ]
-                              .filter(Boolean)
-                              .join(", "),
-                            street: value.addressline1 || "",
-                            town: value.posttown || "",
-                            postcode: value.postcode || prev.postcode,
-                          }));
+                          if (typeof value === "string") {
+                            setFormData((prev) => ({
+                              ...prev,
+                              street: value,
+                              town: "",
+                              postcode: prev.postcode || "",
+                              address: value,
+                            }));
+                          } else {
+                            setFormData((prev) => ({
+                              ...prev,
+                              street: value.addressline1 || "",
+                              town: value.posttown || "",
+                              postcode: value.postcode || "",
+                              address: [
+                                value.addressline1,
+                                value.addressline2,
+                                value.addressline3,
+                                value.posttown,
+                                value.postcode,
+                              ]
+                                .filter(Boolean)
+                                .join(", "),
+                            }));
+                          }
                         }}
                         renderInput={(params) => (
                           <CustomTextField
-                            sx={{
-                              "& .MuiAutocomplete-inputRoot": {
-                                flexWrap: "wrap",
-                                alignItems: "flex-start",
-                                minHeight: 40,
-                                paddingTop: "10px",
-                                paddingBottom: "10px",
-                                paddingRight: "30px",
-                              },
-                              "& .MuiAutocomplete-tag": {
-                                margin: "4px",
-                                maxWidth: "100%",
-                              },
-                              "& .MuiAutocomplete-endAdornment": {
-                                right: "8px",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                              },
-                            }}
-                            className="address_selection"
                             {...params}
-                            placeholder="Select address"
+                            placeholder="Select or type address"
                             InputProps={{
                               ...params.InputProps,
                               endAdornment: (

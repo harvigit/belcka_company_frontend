@@ -239,7 +239,7 @@ const AdjustStock: React.FC<Props> = ({
         <Box p={3} display="flex" justifyContent="space-between">
           <Box display="flex" gap={2}>
             <Image
-              src={editData?.image_url || "/images/products/product.png"}
+              src={editData?.image_url || "/images/products/product.svg"}
               alt="product"
               width={110}
               height={110}

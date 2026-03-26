@@ -115,6 +115,7 @@ const StoreList = () => {
     company_id: user?.company_id,
     name: "",
     status: true,
+    address: ""
   });
   const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
   const activeStore = storedStore ? JSON.parse(storedStore) : null;

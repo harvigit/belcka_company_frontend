@@ -1915,7 +1915,7 @@ const TablePagination = () => {
                                     </TableRow>
                                 ))
                             )}
-                            {data.length ? <Divider/> : <></>}
+                            {data.length ? <><Divider/></> : <></>}
                         </TableBody>
                     </Table>
                 </TableContainer>

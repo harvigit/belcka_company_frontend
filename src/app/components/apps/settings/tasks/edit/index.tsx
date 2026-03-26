@@ -54,25 +54,19 @@ const EditTask: React.FC<EditTaskProps> = ({
   trade,
   isSaving,
 }) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
 
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => {
-        const { name, value } = e.target;
-
-        if (name === "duration" && !/^\d*$/.test(value)) {
-            return;
-        }
-
-        if (name === "rate" && !/^\d*\.?\d*$/.test(value)) {
-            return;
-        }
-
-        setFormData((prevData) => ({
-            ...prevData,
-            [name]: value,
-        }));
-    };
+    if (name === "duration" && !/^\d*$/.test(value)) {
+      return;
+    }
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
   const [data, setData] = useState<TaskList[]>([]);
 
@@ -255,22 +249,32 @@ const EditTask: React.FC<EditTaskProps> = ({
                     <Typography variant="h5" mt={2}>
                       Rate
                     </Typography>
-                      <CustomTextField
-                          id="rate"
-                          name="rate"
-                          type="text"
-                          placeholder="Enter rate.."
-                          value={formData.rate === 0 ? "" : formData.rate}
-                          onChange={handleChange}
-                          variant="outlined"
-                          inputProps={{
-                              inputMode: "decimal",
-                              maxLength: 6,
-                              min: 0,
-                              max: 1000,
-                          }}
-                          fullWidth
-                      />
+                    <CustomTextField
+                      id="rate"
+                      name="rate"
+                      type="text"
+                      placeholder="Enter rate.."
+                      value={formData.rate === 0 ? "" : formData.rate}
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (/^\d*\.?\d{0,2}$/.test(value)) {
+                          const numericValue = Number(value);
+
+                          if (
+                            value === "" ||
+                            numericValue < 1000 ||
+                            (numericValue === 1000 && !value.includes("."))
+                          ) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              rate: value,
+                            }));
+                          }
+                        }
+                      }}
+                      variant="outlined"
+                      fullWidth
+                    />
                   </>
                 )}
 

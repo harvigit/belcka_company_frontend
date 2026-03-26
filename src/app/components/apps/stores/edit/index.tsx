@@ -86,7 +86,9 @@ const EditStore: React.FC<EditStoreProps> = ({
   const [postcodeQuery, setPostcodeQuery] = useState(formData.postcode || "");
   const [addressOptions, setAddressOptions] = useState<any[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState<any | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState(
+    formData.address || "",
+  );
   const [data, setData] = useState<any[]>([]);
   const [fetchProject, setFetchProject] = useState<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -107,18 +109,14 @@ const EditStore: React.FC<EditStoreProps> = ({
     return "UK";
   };
   const fetchAddresses = async (query: string) => {
-    if (query.length < 3) return;
-
     try {
       setLoadingAddresses(true);
       const country = getCountry(query);
-
       const res = await fetch(
-        `https://ws.postcoder.com/pcw/${
-          process.env.NEXT_PUBLIC_POSTCODER_KEY
-        }/address/${country}/${encodeURIComponent(query)}?format=json`,
+        `https://ws.postcoder.com/pcw/${process.env.NEXT_PUBLIC_POSTCODER_KEY}/address/${country}/${encodeURIComponent(
+          query,
+        )}?format=json`,
       );
-
       const data = await res.json();
       setAddressOptions(data || []);
     } catch {
@@ -127,12 +125,13 @@ const EditStore: React.FC<EditStoreProps> = ({
       setLoadingAddresses(false);
     }
   };
+
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (postcodeQuery) fetchAddresses(postcodeQuery);
+    const timer = setTimeout(() => {
+      if (postcodeQuery.length >= 3) fetchAddresses(postcodeQuery);
     }, 500);
 
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [postcodeQuery]);
 
   const fetchUsers = async () => {
@@ -172,6 +171,7 @@ const EditStore: React.FC<EditStoreProps> = ({
 
   useEffect(() => {
     if (open && formData.postcode) {
+      console.log(formData.address);
       setPostcodeQuery(formData.postcode);
       fetchAddresses(formData.postcode);
     }
@@ -202,6 +202,8 @@ const EditStore: React.FC<EditStoreProps> = ({
           address: data.address || "",
           status: data.status,
         });
+        setSelectedAddress(data.address || "");
+
         if (data.product_ids) {
           const productIds = data.product_ids.split(",").map(Number);
           setSelectedRowIds(new Set(productIds));
@@ -309,7 +311,7 @@ const EditStore: React.FC<EditStoreProps> = ({
               }}
             />
             <Image
-              src={item.image_url}
+              src={item.image_url || "/images/products/product.svg"}
               alt={"Product image"}
               width={50}
               height={50}
@@ -520,31 +522,66 @@ const EditStore: React.FC<EditStoreProps> = ({
                       <Typography>Select Address</Typography>
                       <Autocomplete
                         fullWidth
+                        freeSolo
                         disableCloseOnSelect
-                        options={addressOptions}
+                        options={addressOptions || []}
                         value={selectedAddress}
                         loading={loadingAddresses}
-                        getOptionLabel={(o) =>
-                          o.summaryline || `${o.addressline1}, ${o.posttown}`
+                        getOptionLabel={(o: any) =>
+                          typeof o === "string"
+                            ? o
+                            : o.summaryline ||
+                              `${o.addressline1}, ${o.posttown}`
                         }
-                        isOptionEqualToValue={(o, v) =>
+                        isOptionEqualToValue={(o: any, v: any) =>
+                          typeof o !== "string" &&
+                          typeof v !== "string" &&
                           o.addressline1 === v.addressline1 &&
                           o.postcode === v.postcode
                         }
+                        onInputChange={(event, value, reason) => {
+                          if (reason === "input") {
+                            setPostcodeQuery(String(formData.postcode));
+                          }
+                        }}
                         onChange={(_, value) => {
                           if (!value) return;
 
-                          setSelectedAddress(value);
-                          setFormData((prev) => ({
-                            ...prev,
-                            street: value.addressline1 || "",
-                            town: value.posttown || "",
-                            postcode: value.postcode || prev.postcode,
-                            address: value.summaryline,
-                          }));
+                          if (typeof value === "string") {
+                            setSelectedAddress(value);
+                            setFormData((prev) => ({
+                              ...prev,
+                              street: value,
+                              town: "",
+                              postcode: "",
+                              address: value,
+                            }));
+                          } else {
+                            setSelectedAddress(value);
+                            setFormData((prev) => ({
+                              ...prev,
+                              street: value.addressline1 || "",
+                              town: value.posttown || "",
+                              postcode: value.postcode || prev.postcode,
+                              address: value.summaryline,
+                            }));
+                          }
                         }}
                         renderInput={(params) => (
                           <CustomTextField
+                            {...params}
+                            placeholder="Select or type address"
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {loadingAddresses && (
+                                    <CircularProgress size={18} />
+                                  )}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
                             sx={{
                               "& .MuiAutocomplete-inputRoot": {
                                 flexWrap: "wrap",
@@ -563,20 +600,6 @@ const EditStore: React.FC<EditStoreProps> = ({
                                 top: "50%",
                                 transform: "translateY(-50%)",
                               },
-                            }}
-                            className="address_selection"
-                            {...params}
-                            placeholder="Select address"
-                            InputProps={{
-                              ...params.InputProps,
-                              endAdornment: (
-                                <>
-                                  {loadingAddresses && (
-                                    <CircularProgress size={18} />
-                                  )}
-                                  {params.InputProps.endAdornment}
-                                </>
-                              ),
                             }}
                           />
                         )}

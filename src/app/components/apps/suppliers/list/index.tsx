@@ -510,7 +510,7 @@ const SupplierList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const image = "/images/products/product.png";
+        const image = "/images/products/product.svg";
 
         return (
           <Stack direction="row" alignItems="center" spacing={4} ml={1}>

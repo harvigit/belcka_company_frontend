@@ -3,11 +3,9 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Drawer,
   Box,
-  Grid,
   IconButton,
   Typography,
   Button,
-  Checkbox,
   TextField,
   Chip,
   Stack,
@@ -16,6 +14,7 @@ import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 interface AddEditSetProps {
   open: boolean;
@@ -198,7 +197,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
             }}
           >
             <Box display="flex" alignItems="center" gap={1}>
-              <Checkbox
+              <CustomCheckbox
                 checked={selectedIds.includes(product.id)}
                 onChange={() => handleCheckboxChange(product.id)}
               />
@@ -211,7 +210,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
                 }}
               >
                 <Image
-                  src={product.image_url || "/images/products/product.png"}
+                  src={product.image_url || "/images/products/product.svg"}
                   alt={"product"}
                   width={50}
                   height={50}
