@@ -76,7 +76,7 @@ const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId }) => {
                 >
                   <Image
                     src={p.thumb_url || p.image_url}
-                    alt={p.name}
+                    alt={"Product"}
                     width={80}
                     height={80}
                     style={{ objectFit: "contain" }}
