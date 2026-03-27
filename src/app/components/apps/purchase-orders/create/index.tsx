@@ -284,11 +284,13 @@ const PurchaseOrder: React.FC<Props> = ({
         header: "ITEM",
         cell: ({ row }) => {
           const item = row.original;
+          const placeholder = "/images/products/product.svg";
+
           return (
             <Stack direction="row" alignItems="center" gap={2}>
               <Box>
                 <Image
-                  src={item.image_url || ""}
+                  src={item.image_url || placeholder}
                   alt="product"
                   width={50}
                   height={50}
