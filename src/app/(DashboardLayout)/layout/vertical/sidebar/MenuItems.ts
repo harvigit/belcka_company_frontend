@@ -9,6 +9,7 @@ import {
   IconFiles,
   IconInfoCircle,
   IconKeyframes,
+    IconReportMedical,
   IconServer,
   IconShieldCheck,
   IconShoppingBag,
@@ -70,6 +71,13 @@ const MenuItems: NavGroup[] = [
     icon: IconFiles,
     href: "/apps/projects/index",
   },
+    {
+        id: uniqueId(),
+        title: "Health & Safety",
+        slug: "health_safety",
+        icon: IconReportMedical,
+        href: "/apps/health-safety/index",
+    },
   // {
   //   id: uniqueId(),
   //   title: "Clients",

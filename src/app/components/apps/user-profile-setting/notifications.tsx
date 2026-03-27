@@ -18,7 +18,7 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import Image from "next/image";
-import SkeletonLoader from "../../SkeletonLoader";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 interface ProjectListingProps {
   companyId: number | null;

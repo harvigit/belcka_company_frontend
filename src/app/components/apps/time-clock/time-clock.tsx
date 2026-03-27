@@ -68,7 +68,7 @@ import {User} from 'next-auth';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import AddWorklog from './time-clock-details/worklog/add-worklog';
 import Image from 'next/image';
-import SkeletonLoader from '../../SkeletonLoader';
+import SkeletonLoader from '@/app/components/SkeletonLoader';
 import Link from 'next/link';
 import LeaveLists from './time-clock-details/leaves';
 import Conflicts from '@/app/components/apps/time-clock/time-clock-details/conflicts/conflicts';
@@ -356,7 +356,6 @@ const TimeClock = ({queryParams}: Props) => {
                 setConflictDetails(response.data.conflicts || []);
             }
         } catch (error) {
-            console.error('Error fetching conflicts:', error);
             setConflictDetails([]);
         }
     };

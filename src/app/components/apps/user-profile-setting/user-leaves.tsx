@@ -60,7 +60,7 @@ import { User } from "next-auth";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
 import { format } from "date-fns";
 import CustomSelect from "../../forms/theme-elements/CustomSelect";
-import SkeletonLoader from "../../SkeletonLoader";
+import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import DateRangePickerBox from "../../common/DateRangePickerBox";
 import AddLeave from "../time-clock/time-clock-details/leaves/add-leave";
