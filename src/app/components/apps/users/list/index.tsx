@@ -398,16 +398,13 @@ const TablePagination = () => {
         });
 
         setTempPermissions({web, app});
-        const permssion = user.user_role_id == 1 ? true : false || userPermission.id == user.id ? true : false;
-        setIsPermission(permssion);
+        const permission = user.user_role_id == 1 ? true : false || userPermission.id == user.id ? true : false;
+        setIsPermission(permission);
         setPermissionSearch('');
         setPermissionsDrawerOpen(true);
     };
 
-    const handlePermissionToggle = (
-        permissionId: number,
-        type: 'web' | 'app',
-    ) => {
+    const handlePermissionToggle = (permissionId: number, type: 'web' | 'app') => {
         setTempPermissions((prev) => {
             const updated = new Set(prev[type]);
             updated.has(permissionId) ? updated.delete(permissionId) : updated.add(permissionId);
@@ -775,22 +772,25 @@ const TablePagination = () => {
             ),
             cell: (info) => {
                 const user = info.row.original;
+                
                 return (
                     <Chip
                         size="small"
-                        onClick={() => handleOpenPermissionsDrawer(user)}
-                        label={
-                            user.permission_count === 0
-                                ? 'Select'
-                                : `${user.permission_count} Permissions`
-                        }
+                        onClick={isAdmin ? () => handleOpenPermissionsDrawer(user) : undefined}
+                        label={user.permission_count === 0 ? 'Select' : `${user.permission_count} Permissions`}
                         sx={{
                             backgroundColor: (theme) => theme.palette.primary.light,
                             color: (theme) => theme.palette.primary.main,
                             fontWeight: 500,
                             borderRadius: '10px',
                             px: 1.5,
+                            cursor: isAdmin ? 'pointer' : 'not-allowed',
+                            opacity: isAdmin ? 1 : 0.6,
                         }}
+                        {...(!isAdmin && {
+                            onMouseEnter: undefined,
+                            onMouseLeave: undefined,
+                        })}
                     />
                 );
             },
