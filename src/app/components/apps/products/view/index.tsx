@@ -18,6 +18,7 @@ import BlankCard from "@/app/components/shared/BlankCard";
 import ProductInformation from "../information";
 import ProductSets from "../product-sets";
 import ProductTechnicalInformation from "../technical-information";
+import ProductTrades from "../sets/trades";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -197,7 +198,7 @@ const ProductView: React.FC<ProductViewProps> = ({
       } else {
         toast.error(result.data.message);
       }
-  } catch (error) {
+    } catch (error) {
       console.log(error, "error");
     } finally {
     }
@@ -206,7 +207,7 @@ const ProductView: React.FC<ProductViewProps> = ({
     if (productId) {
       fetchProducts();
     }
-    setValue(0)
+    setValue(0);
   }, [open, productId]);
 
   return (
@@ -286,6 +287,12 @@ const ProductView: React.FC<ProductViewProps> = ({
                     label="Product Set"
                     {...a11yProps(2)}
                   />
+                  <Tab
+                    className="admin-settings"
+                    iconPosition="start"
+                    label="Trades"
+                    {...a11yProps(2)}
+                  />
                 </Tabs>
               </Stack>
             </BlankCard>
@@ -313,6 +320,9 @@ const ProductView: React.FC<ProductViewProps> = ({
               </TabPanel>
               <TabPanel value={value} index={2}>
                 <ProductSets companyId={companyId} productId={productId} />
+              </TabPanel>
+              <TabPanel value={value} index={3}>
+                <ProductTrades companyId={companyId} productId={productId} />
               </TabPanel>
             </BlankCard>
           </Grid>
