@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   TableContainer,
   Table,
@@ -355,34 +355,46 @@ const PurchaseProductList: React.FC<Props> = ({
     setSelectedRowIds(autoSelected);
   }, [open, filteredData, manuallyDeselected]);
 
-  const selectedProductsWithQty = useMemo(() => {
-    const selected = data
-      .filter(
-        (item) => selectedRowIds.has(item.id) && Number(item.total_qty) > 0,
-      )
-      .map((item) => ({
-        id: item.id,
-        qty: Number(item.total_qty),
-        supplier_id: Number(item.supplier_id),
-      }));
+  const useSelectedProducts = (data: any[], selectedRowIds: Set<number>) => {
+    const toastShownRef = useRef(false);
 
-    const supplierIds = [...new Set(selected.map((p) => p.supplier_id))];
-    if (supplierIds.length > 1) {
-      toast.error("All selected products must belong to the same supplier!");
-      return [];
-    }
+    const selectedProductsWithQty = useMemo(() => {
+      if (!data?.length || selectedRowIds.size === 0) return [];
 
-    return selected;
-  }, [data, selectedRowIds]);
+      const selected = data
+        .filter(
+          (item) => selectedRowIds.has(item.id) && Number(item.total_qty) > 0,
+        )
+        .map((item) => ({
+          id: item.id,
+          qty: Number(item.total_qty),
+          supplier_id: Number(item.supplier_id),
+        }));
 
-  // Determine if all selected products belong to the same supplier
-  const isSameSupplierSelected = useMemo(() => {
-    const selectedProducts = data.filter((item) => selectedRowIds.has(item.id));
-    const supplierIds = [
-      ...new Set(selectedProducts.map((p) => p.supplier_id)),
-    ];
-    return supplierIds.length <= 1;
-  }, [data, selectedRowIds]);
+      const supplierIds = [...new Set(selected.map((p) => p.supplier_id))];
+
+      if (supplierIds.length > 1) {
+        if (!toastShownRef.current) {
+          toast.error(
+            "All selected products must belong to the same supplier!",
+          );
+          toastShownRef.current = true;
+        }
+        return [];
+      } else {
+        toastShownRef.current = false;
+      }
+
+      return selected;
+    }, [data, selectedRowIds]);
+
+    const isSameSupplierSelected = selectedProductsWithQty.length > 0;
+
+    return { selectedProductsWithQty, isSameSupplierSelected };
+  };
+
+  const { selectedProductsWithQty, isSameSupplierSelected } =
+    useSelectedProducts(data, selectedRowIds);
 
   const selectedRowCount = selectedRowIds.size;
 

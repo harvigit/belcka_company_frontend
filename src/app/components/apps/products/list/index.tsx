@@ -387,7 +387,6 @@ const ProductList = () => {
       }
     } catch (err) {
       console.error("Upload failed:", err);
-      toast.error("Failed to save images!");
     }
 
     setIsSaving(false);

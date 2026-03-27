@@ -9,14 +9,16 @@ import {
   TextField,
   Chip,
   Stack,
+  Autocomplete,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
-interface AddEditSetProps {
+interface AddEditToolProps {
   open: boolean;
   onClose: () => void;
   onWorkUpdated?: () => void;
@@ -24,7 +26,7 @@ interface AddEditSetProps {
   setId?: number | null;
 }
 
-const AddEditSet: React.FC<AddEditSetProps> = ({
+const AddEditTool: React.FC<AddEditToolProps> = ({
   open,
   onClose,
   onWorkUpdated,
@@ -33,9 +35,20 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
 }) => {
   const [products, setProducts] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [setName, setSetName] = useState("");
+  const [productId, setProductId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
+  const [trades, setTrades] = useState<any[]>([]);
+
+  // trades
+  const fetchTrades = async () => {
+    try {
+      const res = await api.get(
+        `get-company-resources?flag=tradeList&company_id=${companyId}`,
+      );
+      if (res.data?.info) setTrades(res.data.info);
+    } catch (err) {}
+  };
 
   // Fetch all products/projects
   const fetchProjects = useCallback(async () => {
@@ -52,25 +65,31 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
 
   const fetchSetData = useCallback(async () => {
     if (!companyId || !setId) return;
+
     try {
       const res = await api.get(
-        `products/get-sets?company_id=${companyId}&set_id=${setId}`,
+        `products/get-product-trade?company_id=${companyId}&id=${setId}`,
       );
+
       const setData = res.data?.info?.[0];
+
       if (setData) {
-        setSetName(setData.name);
-        const preSelected = setData.products.map((p: any) => p.product_id);
+        setProductId(setData.product_id);
+
+        const preSelected = setData.trades.map((t: any) => t.trade_id);
+
         setSelectedIds(preSelected);
-        setSelectAll(preSelected.length === products.length);
+        setSelectAll(preSelected.length === trades.length);
       }
     } catch (err) {
       console.error("Failed to fetch set data", err);
     }
-  }, [companyId, setId, products.length]);
+  }, [companyId, setId, trades.length]);
 
   useEffect(() => {
     if (open) {
       fetchProjects();
+      fetchTrades();
     }
   }, [open, fetchProjects]);
 
@@ -78,12 +97,12 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     if (open && setId) {
       fetchSetData();
     }
-  }, [open, setId, fetchSetData]);
+  }, [open, setId]);
 
   useEffect(() => {
     if (open && !setId) {
       setSelectedIds([]);
-      setSetName("");
+      setProductId("");
       setSelectAll(false);
     }
   }, [open, setId]);
@@ -98,16 +117,15 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     if (selectAll) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(products.map((p) => p.id));
+      setSelectedIds(trades.map((t) => t.id));
     }
     setSelectAll(!selectAll);
   };
-
   const handleSave = async () => {
     if (!companyId) return;
 
-    if (!setName.trim()) {
-      toast.error("Set name is required");
+    if (!productId) {
+      toast.error("Please select product!");
       return;
     }
 
@@ -121,24 +139,22 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     try {
       const payload: any = {
         company_id: companyId,
-        name: setName,
-        product_ids: selectedIds.join(","),
+        product_id: productId,
+        trade_ids: selectedIds.join(","),
       };
       if (setId) payload.id = setId;
 
-      const res = await api.post("products/manage-set", payload);
+      const res = await api.post("products/manage-trades", payload);
 
       if (res.data?.IsSuccess) {
         toast.success(res.data.message);
         onWorkUpdated?.();
         onClose();
         setSelectedIds([]);
-        setSetName("");
+        setProductId("");
       } else {
-        toast.error(res.data?.message || "Failed to save set");
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to save set");
     } finally {
       setIsSaving(false);
     }
@@ -162,38 +178,45 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
       }}
     >
       <Box sx={{ flex: 1, overflowY: "auto", paddingRight: 1 }}>
-        <Box mb={2} display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1}>
           <IconButton onClick={onClose}>
             <IconArrowLeft />
           </IconButton>
           <Typography variant="h6" fontWeight={700}>
-            {setId ? "Edit Product Set" : "Create Product Set"}
+            {setId ? "Edit Tools" : "Add Tools"}
           </Typography>
-        </Box>
-
-        {/* Set Name Input */}
-        <Box mb={2}>
-          <TextField
-            label="Set Name"
-            fullWidth
-            value={setName}
-            onChange={(e) => setSetName(e.target.value)}
-          />
         </Box>
 
         {/* Select/Deselect All */}
         {products.length > 0 && (
-          <Box mb={1} textAlign={"end"}>
+          <Box textAlign={"end"}>
             <Button variant="outlined" size="small" onClick={handleSelectAll}>
               {selectAll ? "Deselect All" : "Select All"}
             </Button>
           </Box>
         )}
+        {/* Set Name Input */}
+        <Box mb={2}>
+          <Typography mb={1}>Select Product</Typography>
+          <Autocomplete
+            fullWidth
+            // className="trade-selection"
+            size="small"
+            options={products}
+            value={products.find((t: any) => t.id === productId) ?? null}
+            onChange={(e, val) => setProductId(val?.id || "")}
+            getOptionLabel={(option) => option.short_name ?? option.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => (
+              <CustomTextField {...params} placeholder="Select Product" />
+            )}
+          />
+        </Box>
 
-        {/* Projects List */}
-        {products.map((product) => (
+        {/* Trades List */}
+        {trades.map((trade) => (
           <Box
-            key={product.id}
+            key={trade.id}
             mt={1}
             p={1}
             display="flex"
@@ -206,34 +229,10 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
           >
             <Box display="flex" alignItems="center" gap={1}>
               <CustomCheckbox
-                checked={selectedIds.includes(product.id)}
-                onChange={() => handleCheckboxChange(product.id)}
+                checked={selectedIds.includes(trade.id)}
+                onChange={() => handleCheckboxChange(trade.id)}
               />
-              <Box
-                sx={{
-                  border: "1px dashed #d1d5db",
-                  borderRadius: 2,
-                  p: 1,
-                  textAlign: "center",
-                }}
-              >
-                <Image
-                  src={product.image_url || "/images/products/product.svg"}
-                  alt={"product"}
-                  width={50}
-                  height={50}
-                  style={{ objectFit: "contain" }}
-                />
-              </Box>
-              <Stack mt={2} spacing={1}>
-                <Typography variant="body2">
-                  {product.short_name ?? product.name}{" "}
-                  <Chip label={product.uuid} size="small" sx={{ ml: 1 }} />
-                </Typography>
-                <Typography variant="body2">
-                  Supplier Code: {product.supplier_code}
-                </Typography>
-              </Stack>
+              <Typography variant="body2">{trade.name} </Typography>
             </Box>
           </Box>
         ))}
@@ -269,4 +268,4 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
   );
 };
 
-export default AddEditSet;
+export default AddEditTool;

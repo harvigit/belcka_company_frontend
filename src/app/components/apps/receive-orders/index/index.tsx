@@ -440,6 +440,7 @@ const ReceivePurchaseOrder = () => {
         enableSorting: true,
         cell: ({ row }) => {
           const item = row.original;
+          const placeholder = "/images/products/product.svg";
 
           return (
             <Box>
@@ -452,7 +453,7 @@ const ReceivePurchaseOrder = () => {
                 sx={{ pl: 0.3, ml: 1 }}
               >
                 <Image
-                  src={item.image_url || ""}
+                  src={item.image_url || placeholder}
                   alt={"product"}
                   width={50}
                   height={50}

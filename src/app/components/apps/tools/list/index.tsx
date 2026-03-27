@@ -28,7 +28,7 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
-  Drawer,
+  Autocomplete,
 } from "@mui/material";
 import {
   flexRender,
@@ -43,6 +43,7 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconEdit,
   IconSearch,
   IconTrash,
   IconX,
@@ -58,24 +59,56 @@ import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import { IconEdit } from "@tabler/icons-react";
-import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import Image from "next/image";
+import PermissionGuard from "@/app/auth/PermissionGuard";
 import { IconEye } from "@tabler/icons-react";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AddEditSet from "../add-edit";
+import AddEditTool from "../add-edit";
 
 dayjs.extend(customParseFormat);
-
-interface Props {
-  openDrawer: boolean;
-  onClose: () => void;
+interface TableRow {
+  id: number;
+  image_url?: string;
+  images?: string[];
+  [key: string]: any;
+}
+export interface ProductFormData {
+  id: number;
+  company_id: any;
+  uuid: string;
+  short_name: string;
+  name?: string;
+  status?: boolean;
+  description?: string;
+  image?: File | null;
+  supplier_code?: string;
+  supplier_id?: number | null;
+  barcode_text?: string;
+  category_ids?: string;
+  model_id?: number | null;
+  manufacturer_id?: number | null;
+  pack_off_qty?: string;
+  pack_off_unit?: number | null;
+  weight?: string;
+  weight_unit?: number | null;
+  length?: string;
+  width?: string;
+  height?: string;
+  length_unit?: number | null;
+  tax?: string;
+  price?: string;
+  sort_id?: number | null;
+  cutoff?: number;
+  is_sub_qty?: boolean;
+  store_ids?: string;
+  remove_image?: boolean;
+  max_stock?: number | null;
 }
 
-const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
+const ToolsList = () => {
   const [data, setData] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [fetchSet, setFetchSet] = useState<boolean>(true);
+  const [fetchProduct, setFetchProduct] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -85,12 +118,28 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [rowTrades, setRowTrades] = useState<Record<string, any[]>>({});
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [openCategoryModal, setOpenCategoryModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [trades, setTrades] = useState<any[]>([]);
+
+  // trades
+  const fetchTrades = async () => {
+    try {
+      const res = await api.get(
+        `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
+      );
+      if (res.data?.info) setTrades(res.data.info);
+    } catch (err) {}
+  };
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -99,34 +148,83 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
     setAnchorEl(null);
   };
 
-  const handleModelClose = () => {
+  const onClose = () => {
     setDrawerOpen(false);
     setSelectedTaskId(null);
   };
+
+  const handleTradeClose = () => {
+    setOpenCategoryModal(false);
+  };
+
   // Fetch data
-  const fetchSets = async () => {
-    setFetchSet(true);
+  const fetchProducts = async (restorePage?: number) => {
+    setFetchProduct(true);
     try {
       const res = await api.get(
-        `products/get-sets?company_id=${user.company_id}`,
+        `products/get-product-trade?company_id=${user.company_id}`,
       );
       if (res.data) {
         setData(res.data.info);
+
+        if (restorePage !== undefined) {
+          setTimeout(() => {
+            table.setPageIndex(restorePage);
+          }, 0);
+        }
       }
     } catch (err) {
-      console.error("Failed to fetch product sets", err);
+      console.error("Failed to fetch products", err);
     }
-    setFetchSet(false);
+    setFetchProduct(false);
   };
 
   useEffect(() => {
-    setUsersToDelete([]);
-    fetchSets();
-  }, [api]);
+    fetchProducts();
+    fetchTrades();
+  }, []);
 
-  useEffect(() => {
-    setUsersToDelete([]);
-  }, [openDrawer]);
+  // UseCallback to memoize these functions
+  const handleEdit = useCallback((id: number) => {
+    setSelectedTaskId(id);
+    setDrawerOpen(true);
+  }, []);
+
+  const handleEditCategories = (item: any) => {
+    setEditingRowId(item.id);
+    setEditingProductId(item.product_id);
+
+    const selectedIds = item.trade_ids
+      ? item.trade_ids.split(",").map((id: string) => Number(id))
+      : [];
+    const selected = trades.filter((cat) => selectedIds.includes(cat.id));
+
+    setRowTrades((prev) => ({ ...prev, [item.id]: selected }));
+    setOpenCategoryModal(true);
+  };
+
+  const updateTrades = async (
+    id: string,
+    productId: string,
+    selected: any[],
+  ) => {
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        product_id: Number(productId),
+        trade_ids: selected.map((c) => c.id).join(","),
+      };
+      const res = await api.post("products/manage-trades", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+        setOpenCategoryModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -134,18 +232,16 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
 
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
-        item.type?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search);
+        item.short_name?.toLowerCase().includes(search) ||
+        item.uuid?.toLowerCase().includes(search) ||
+        item.price?.toLowerCase().includes(search) ||
+        item.supplier_code?.toLowerCase().includes(search) ||
+        item.product_trades?.toLowerCase().includes(search) ||
+        item.supplier_name?.toLowerCase().includes(search);
 
       return matchesSearch;
     });
   }, [data, searchTerm]);
-
-  // UseCallback to memoize these functions
-  const handleEdit = useCallback((id: number) => {
-    setSelectedTaskId(id);
-    setDrawerOpen(true);
-  }, []);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
@@ -190,7 +286,6 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
             alignItems="center"
             onMouseEnter={() => setHoveredRow(item.id)}
             onMouseLeave={() => setHoveredRow(null)}
-            sx={{ pl: 1 }}
           >
             <CustomCheckbox
               checked={isChecked}
@@ -216,12 +311,12 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
         );
       },
     },
-    columnHelper.accessor("name", {
-      id: "name",
+    columnHelper.accessor("uuid", {
+      id: "Id",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
           <Typography variant="subtitle2" fontWeight="inherit">
-            Name
+            ID
           </Typography>
         </Stack>
       ),
@@ -230,34 +325,150 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
         const item = row.original;
 
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={4}
+            sx={{ pl: 0.3 }}
+          >
             <Typography textTransform="capitalize" className="f-14">
-              {item.name ?? "-"}
+              {item.uuid ? item.uuid : "-"}
             </Typography>
           </Stack>
         );
       },
     }),
 
-    columnHelper.accessor("items", {
-      id: "products",
+    columnHelper.accessor("image_url", {
+      id: "Image",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Products
-          </Typography>
+          <Typography variant="subtitle2">Image</Typography>
         </Stack>
       ),
-      enableSorting: true,
+      cell: ({ row }) => {
+        const item = row.original;
+        const placeholder = "/images/products/product.svg";
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Image
+              src={item.image_url || placeholder}
+              alt="Product"
+              width={50}
+              height={50}
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(item.image_url || placeholder);
+                setOpenPreview(true);
+              }}
+            />
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.short_name, {
+      id: "name",
+      header: () => "Name",
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography textTransform="capitalize" className="f-14">
-                {item.items ?? "-"}
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Tooltip
+              title={item.short_name ? item.short_name : (item.name ?? "")}
+              placement="top"
+              arrow
+            >
+              <Typography
+                className="f-14"
+                variant="body1"
+                sx={{
+                  width: 200,
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  lineHeight: 1.25,
+                  maxWidth: 300,
+                  wordBreak: "break-word",
+                }}
+              >
+                {item.short_name ? item.short_name : "-"}
+                <Typography color="textSecondary" className="f-14">
+                  {item.name}
+                </Typography>
               </Typography>
-            </Stack>
+            </Tooltip>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.supplier_name, {
+      id: "supplier",
+      header: () => "Supplier",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Typography textTransform="capitalize" className="f-14">
+            {item.supplier_name ? item.supplier_name : "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.supplier_code, {
+      id: "code",
+      header: () => "Code",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center">
+            <Typography textTransform="capitalize" className="f-14">
+              {item.supplier_code ? item.supplier_code : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row.product_trades, {
+      id: "trades",
+      header: () => "Trades",
+      cell: ({ row }) => {
+        const item = row.original;
+        const selectedForRow = rowTrades[item.id] || [];
+
+        return (
+          <Stack
+            sx={{ cursor: "pointer", minWidth: 200 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditCategories(item);
+            }}
+          >
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  border: "1px solid #1976d2",
+                },
+              }}
+            >
+              {selectedForRow.length
+                ? selectedForRow.map((c) => c.name).join(", ")
+                : item.product_trades || "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -289,6 +500,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
     data: filteredData,
     columns,
     state: { columnFilters, sorting },
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -305,7 +517,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
   // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
-  }, [searchTerm, table]);
+  }, [searchTerm]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -313,44 +525,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
   }));
 
   return (
-    <Drawer
-      anchor="bottom"
-      open={openDrawer}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: 0,
-          height: "95vh",
-          boxShadow: "none",
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12,
-          overflow: "hidden",
-        },
-      }}
-    >
-      {/* Header */}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent={"space-between"}
-        ml={-2}
-        mb={1}
-        p={2}
-        pb={0}
-      >
-        <Box display={"flex"} alignItems={"center"}>
-          <IconButton onClick={onClose}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" fontWeight={700}>
-            Product Sets
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose}>
-          <IconX />
-        </IconButton>
-      </Box>
-
+    <PermissionGuard permission="Tools">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -358,6 +533,106 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
           flexDirection: "column",
         }}
       >
+        {/* for handling categories update */}
+        <Dialog
+          open={openCategoryModal}
+          onClose={() => setOpenCategoryModal(false)}
+        >
+          <DialogTitle>Select Trades</DialogTitle>
+          <DialogContent>
+            <Autocomplete
+              multiple
+              className="product_selection"
+              options={trades || []}
+              getOptionLabel={(option) => option.name}
+              value={editingRowId ? rowTrades[editingRowId] || [] : []}
+              onChange={(_, newValue) => {
+                setRowTrades((prev) => ({
+                  ...prev,
+                  [editingRowId!]: newValue,
+                }));
+              }}
+              renderInput={(params) => (
+                <TextField {...params} placeholder="Select trades" />
+              )}
+              size="small"
+              sx={{ width: 400 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => handleTradeClose()} color="error">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingRowId && editingProductId) {
+                  updateTrades(
+                    editingRowId,
+                    editingProductId,
+                    rowTrades[editingRowId],
+                  );
+                }
+                setOpenCategoryModal(false);
+              }}
+              variant="contained"
+              color="primary"
+            >
+              Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={openPreview}
+          onClose={() => setOpenPreview(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: "transparent",
+              boxShadow: "none",
+            },
+          }}
+        >
+          <IconButton
+            onClick={() => setOpenPreview(false)}
+            color="primary"
+            sx={{
+              position: "fixed",
+              top: 16,
+              right: 16,
+              zIndex: 1301,
+              backgroundColor: "#fff",
+              "&:hover": {
+                backgroundColor: "#eee",
+                color: "#1e4db7",
+              },
+            }}
+          >
+            <IconX />
+          </IconButton>
+
+          <Box
+            sx={{
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => setOpenPreview(false)}
+          >
+            <img
+              src={previewImage || ""}
+              alt="Preview"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "90% !important",
+                height: "50%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+        </Dialog>
         {/* Render the search and table */}
         <Stack
           mr={2}
@@ -387,6 +662,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
               }}
             />
           </Grid>
+
           <Stack
             mb={2}
             justifyContent="end"
@@ -397,14 +673,14 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                 variant="outlined"
                 color="error"
                 startIcon={<IconTrash width={18} />}
-                sx={{ marginRight: "5px" }}
+                sx={{ marginRight: "5px", marginLeft: 1 }}
                 onClick={() => {
                   const selectedIds = Array.from(selectedRowIds);
                   setUsersToDelete(selectedIds);
                   setConfirmOpen(true);
                 }}
               >
-                Remove
+                Archive
               </Button>
             )}
             <IconButton
@@ -451,25 +727,31 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                       }
                       sx={{ textTransform: "none" }}
                       label={
-                        col.columnDef.meta?.label ||
-                        (typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
-                          ? col.columnDef.header
-                          : col.id
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str: string) => str.toUpperCase())
-                              .trim())
+                        col.id === "QR"
+                          ? "QR"
+                          : col.columnDef.meta?.label
+                            ? col.columnDef.meta.label
+                            : typeof col.columnDef.header === "string" &&
+                                col.columnDef.header.trim() !== ""
+                              ? col.columnDef.header
+                              : col.id
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}
               </FormGroup>
             </Popover>
             <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogTitle>Confirm Archive</DialogTitle>
               <DialogContent>
                 <Typography color="textSecondary">
-                  Are you sure you want to delete {usersToDelete.length} set
-                  {usersToDelete.length > 1 ? "s" : ""} from the product sets?
+                  Are you sure you want to archive {usersToDelete.length}{" "}
+                  product
+                  {usersToDelete.length > 1 ? "s" : ""} from the products?
                 </Typography>
               </DialogContent>
               <DialogActions>
@@ -484,16 +766,17 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                   onClick={async () => {
                     try {
                       const payload = {
-                        ids: usersToDelete.join(","),
+                        product_ids: usersToDelete.join(","),
                       };
                       const response = await api.post(
-                        "products/delete-sets",
+                        "products/archive",
                         payload,
                       );
                       toast.success(response.data.message);
                       setSelectedRowIds(new Set());
-                      await fetchSets();
+                      await fetchProducts();
                     } catch (error) {
+                      toast.error("Failed to archive products");
                     } finally {
                       setConfirmOpen(false);
                     }
@@ -501,7 +784,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                   variant="outlined"
                   color="error"
                 >
-                  Remove
+                  Archive
                 </Button>
               </DialogActions>
             </Dialog>
@@ -546,7 +829,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                   <ListItemIcon>
                     <IconPlus width={18} />
                   </ListItemIcon>
-                  Add Set
+                  Add New
                 </Link>
               </MenuItem>
             </Menu>
@@ -554,20 +837,12 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
         </Stack>
         <Divider />
 
-        {/* Add set */}
-        <AddEditSet
+        {/* Add product */}
+        <AddEditTool
           open={drawerOpen}
-          companyId={Number(user.company_id)}
-          onClose={() => setDrawerOpen(false)}
-          onWorkUpdated={fetchSets}
-        />
-
-        {/* Edit set */}
-        <AddEditSet
-          open={drawerOpen}
-          companyId={Number(user.company_id)}
-          onClose={() => handleModelClose()}
-          onWorkUpdated={fetchSets}
+          onClose={() => onClose()}
+          companyId={user?.company_id ?? null}
+          onWorkUpdated={fetchProducts}
           setId={selectedTaskId}
         />
 
@@ -591,16 +866,21 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                       return (
                         <TableCell
                           key={header.id}
-                          align="center"
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
                             width:
-                              header.column.id === "actions"
-                                ? 120
-                                : header.column.id === "select"
-                                  ? 30
-                                  : "auto",
+                              header.column.id === "actions" ||
+                              header.column.id === "price" ||
+                              header.column.id === "barcode"
+                                ? 80
+                                : header.column.id === "QrCode"
+                                  ? 120
+                                  : header.column.id === "supplierCode"
+                                    ? 140
+                                    : header.column.id === "select"
+                                      ? 30
+                                      : "auto",
                           }}
                         >
                           <Box
@@ -648,7 +928,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                 ))}
               </TableHead>
               <TableBody>
-                {fetchSet ? (
+                {fetchProduct ? (
                   <SkeletonLoader
                     columns={simpleColumns}
                     rowCount={simpleColumns.length}
@@ -678,18 +958,30 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                  table.getRowModel().rows.map((row) => {
+                    const item = row.original;
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        hover
+                        sx={{
+                          cursor: "pointer",
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          return (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -778,8 +1070,8 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
           </Box>
         </Stack>
       </Box>
-    </Drawer>
+    </PermissionGuard>
   );
 };
 
-export default SetList;
+export default ToolsList;
