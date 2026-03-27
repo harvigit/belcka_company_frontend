@@ -525,7 +525,7 @@ const ToolsList = () => {
   }));
 
   return (
-    <PermissionGuard permission="Products">
+    <PermissionGuard permission="Tools">
       <Box
         sx={{
           height: "calc(100vh - 100px)",
