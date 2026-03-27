@@ -33,7 +33,7 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
     const [name, setName] = useState(zone.name);
     const [color, setColor] = useState(zone.color);
     const [address, setAddress] = useState(zone.address);
-    const [radius, setRadius] = useState(Number(zone.radius || 100));
+    const [radius, setRadius] = useState(Number(zone.radius || 10000));
     const [isSaving, setIsSaving] = useState(false);
     const [zoneType, setZoneType] = useState<'circle' | 'polygon' | 'polyline'>(zone.type || 'circle');
     const [location, setLocation] = useState({ lat: Number(zone.latitude), lng: Number(zone.longitude) });
@@ -63,13 +63,13 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
 
     const handleRadiusChange = (r: number) => {
         if (!r) return;
-        setRadius(r > 100 ? 100 : r);
+        setRadius(r > 10000 ? 10000 : r);
     };
 
     const onRadiusChanged = () => {
         if (!circleRef.current) return;
         const r = circleRef.current.getRadius();
-        setRadius(r > 100 ? 100 : r);
+        setRadius(r > 10000 ? 10000 : r);
     };
 
     const syncFromPolygon = () => {
@@ -208,7 +208,7 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                         </Typography>
                         <Slider
                             min={0}
-                            max={100}
+                            max={10000}
                             value={radius}
                             onChange={(_, v) => handleRadiusChange(v as number)}
                             sx={{ mb: 2, width: '98%' }}

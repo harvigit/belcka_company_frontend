@@ -99,9 +99,9 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
     const onRadiusChanged = () => {
         if (!circleRef.current) return;
         const nr = circleRef.current.getRadius();
-        if (nr > 100) {
-            circleRef.current.setRadius(100);
-            setRadius(100);
+        if (nr > 10000) {
+            circleRef.current.setRadius(10000);
+            setRadius(10000);
         } else {
             setRadius(nr);
         }
@@ -225,7 +225,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                         </Typography>
                         <Slider
                             min={0}
-                            max={100}
+                            max={10000}
                             value={radius}
                             onChange={(_, v) => setRadius(v as number)}
                             sx={{ mb: 2, width: '98%' }}
@@ -259,9 +259,9 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                             if (!c) return;
                                             if (circleRef.current) {
                                                 const nr = circleRef.current.getRadius();
-                                                if (nr > 100) {
-                                                    circleRef.current.setRadius(100);
-                                                    setRadius(100);
+                                                if (nr > 10000) {
+                                                    circleRef.current.setRadius(10000);
+                                                    setRadius(10000);
                                                 } else {
                                                     setRadius(nr);
                                                 }
