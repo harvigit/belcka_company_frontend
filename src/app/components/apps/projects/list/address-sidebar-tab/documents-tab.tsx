@@ -28,6 +28,7 @@ import toast from "react-hot-toast";
 import { Grid } from "@mui/system";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 interface DocumentsTabProps {
   addressId: number;
@@ -77,10 +78,10 @@ export const DocumentsTab = ({
   }, [addressId, projectId]);
 
   const fetchDocumentTabData = async () => {
-    setFetchWork(true)
+    setFetchWork(true);
     try {
       const res = await api.get(
-        `address/address-document?address_id=${addressId}&company_id=${companyId}`
+        `address/address-document?address_id=${addressId}&company_id=${companyId}`,
       );
       if (res.data?.isSuccess) setTabData(res.data.info || []);
       else setTabData([]);
@@ -88,14 +89,14 @@ export const DocumentsTab = ({
       console.error("Document fetch failed:", error);
       setTabData([]);
     }
-    setFetchWork(false)
+    setFetchWork(false);
   };
 
   const handleDownloadZip = async (taskIds: number[]) => {
     try {
       const response = await api.get(
         `address/download-tasks-zip/${addressId}?taskIds=${taskIds.join(",")}`,
-        { responseType: "blob" }
+        { responseType: "blob" },
       );
       const blob = new Blob([response.data], { type: "application/zip" });
       const url = window.URL.createObjectURL(blob);
@@ -114,7 +115,7 @@ export const DocumentsTab = ({
     companyTaskId: number | string,
     recordId: string | number,
     files: FileList | null,
-    type: "before" | "after"
+    type: "before" | "after",
   ) => {
     if (!files || files.length === 0) return;
     const newFiles = Array.from(files);
@@ -170,7 +171,7 @@ export const DocumentsTab = ({
   const handleDeleteImage = (
     companyTaskId: number | string,
     recordId: string | number,
-    attachmentId: string | number
+    attachmentId: string | number,
   ) => {
     setTabData((prev) =>
       prev.map((doc) =>
@@ -179,8 +180,8 @@ export const DocumentsTab = ({
               ...doc,
               images: doc.images.filter((img: any) => img.id !== attachmentId),
             }
-          : doc
-      )
+          : doc,
+      ),
     );
 
     setAttachmentsPayload((prev) => ({
@@ -244,7 +245,7 @@ export const DocumentsTab = ({
     setSelectedTasks((prev) =>
       prev.includes(taskId)
         ? prev.filter((id) => id !== taskId)
-        : [...prev, taskId]
+        : [...prev, taskId],
     );
   };
 
@@ -271,9 +272,25 @@ export const DocumentsTab = ({
     return tabData.filter(
       (item) =>
         item.title?.toLowerCase().includes(search) ||
-        item.created_at?.toLowerCase().includes(search)
+        item.created_at?.toLowerCase().includes(search),
     );
   }, [searchUser, tabData]);
+
+  const isAllSelected =
+    filteredData.length > 0 && selectedTasks.length === filteredData.length;
+
+  const isIndeterminate =
+    selectedTasks.length > 0 && selectedTasks.length < filteredData.length;
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedTasks([]);
+    } else {
+      filteredData.forEach((item) => handleCheckboxChange(item.id));
+      const allIds = filteredData.map((item) => item.id);
+      setSelectedTasks(allIds);
+    }
+  };
 
   return (
     <Box>
@@ -283,6 +300,16 @@ export const DocumentsTab = ({
         display={"flex"}
         justifyContent={"flex-end"}
       >
+        <FormControlLabel
+          label="Select All"
+          control={
+            <CustomCheckbox
+              checked={isAllSelected}
+              indeterminate={isIndeterminate}
+              onChange={handleSelectAll}
+            />
+          }
+        />
         <IconButton
           color="primary"
           onClick={handleDownloadSelected}
@@ -312,7 +339,7 @@ export const DocumentsTab = ({
               mb={2}
             >
               <Stack direction="row" alignItems="center" spacing={1}>
-                <Checkbox
+                <CustomCheckbox
                   checked={selectedTasks.includes(doc.id)}
                   onChange={() => handleCheckboxChange(doc.id)}
                 />
@@ -383,7 +410,7 @@ export const DocumentsTab = ({
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
-                        cursor: "pointer"
+                        cursor: "pointer",
                       }}
                       onMouseEnter={(e) => {
                         setHoveredImage(image.image_url);
@@ -403,7 +430,7 @@ export const DocumentsTab = ({
                       handleDeleteImage(
                         doc.id,
                         image.record_id ?? doc.record_id,
-                        image.id
+                        image.id,
                       )
                     }
                     sx={{
@@ -449,24 +476,24 @@ export const DocumentsTab = ({
       ) : (
         <Box
           sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "calc(55vh - 100px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "calc(55vh - 100px)",
           }}
         >
           <Image
-          src="/images/svgs/no-data.webp"
-          alt="No data"
-          style={{
+            src="/images/svgs/no-data.webp"
+            alt="No data"
+            style={{
               maxWidth: "100%",
               maxHeight: "100%",
-          }}
-          width={250}
-          height={250}
+            }}
+            width={250}
+            height={250}
           />
         </Box>
-        )}
+      )}
 
       {hasUnsavedChanges && (
         <Box mt={3} textAlign="center">
@@ -520,7 +547,7 @@ export const DocumentsTab = ({
                   selectedDoc?.id ?? 0,
                   selectedDoc?.images?.[0]?.record_id ?? selectedDoc?.record_id,
                   e.target.files,
-                  selectedImageType
+                  selectedImageType,
                 );
               }}
             />

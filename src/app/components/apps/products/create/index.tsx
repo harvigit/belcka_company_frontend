@@ -1370,7 +1370,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                                 }}
                               >
                                 <Image
-                                  src={item.src}
+                                  src={item.src || "/images/products/product.svg"}
                                   alt="Product image"
                                   fill
                                   style={{

@@ -31,6 +31,7 @@ import {
   Modal,
   LinearProgress,
   CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import {
   flexRender,
@@ -183,7 +184,10 @@ const ProductList = () => {
     id: number | null;
     field: "price" | "market_price" | null;
   }>({ id: null, field: null });
-
+  const [inputValue, setInputValue] = useState("");
+  const [rowCategories, setRowCategories] = useState<Record<string, any[]>>({});
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [openCategoryModal, setOpenCategoryModal] = useState(false);
   useEffect(() => {
     if (selectedRow) {
       setUploadedImages(selectedRow.product_images || []);
@@ -282,6 +286,11 @@ const ProductList = () => {
   };
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const closeDrawer = () => {
+    setViewDrawerOpen(false);
+    fetchProducts();
   };
 
   useEffect(() => {
@@ -581,7 +590,35 @@ const ProductList = () => {
     setIsSaving(false);
   };
 
-  const [inputValue, setInputValue] = useState("");
+  const handleEditCategories = (item: any) => {
+    setEditingRowId(item.id);
+
+    const selectedIds = item.category_ids
+      ? item.category_ids.split(",").map((id: string) => Number(id))
+      : [];
+    const selected = categories.filter((cat) => selectedIds.includes(cat.id));
+
+    setRowCategories((prev) => ({ ...prev, [item.id]: selected }));
+    setOpenCategoryModal(true);
+  };
+
+  const updateCategories = async (id: string, selected: any[]) => {
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        category_ids: selected.map((c) => c.id).join(","),
+      };
+      const res = await api.post("products/update", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+        setOpenCategoryModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const updatePrice = async (
     id: number,
@@ -746,7 +783,7 @@ const ProductList = () => {
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const placeholder = "/images/products/product.png";
+        const placeholder = "/images/products/product.svg";
 
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
@@ -868,15 +905,39 @@ const ProductList = () => {
       },
     }),
 
-    columnHelper.accessor((row) => row?.product_categories, {
+    columnHelper.accessor((row) => row.product_categories, {
       id: "categories",
       header: () => "Categories",
       cell: ({ row }) => {
         const item = row.original;
+        const selectedForRow = rowCategories[item.id] || [];
+
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.product_categories ? item.product_categories : "-"}
+          <Stack
+            sx={{ cursor: "pointer", minWidth: 200 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditCategories(item);
+            }}
+          >
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  border: "1px solid #1976d2",
+                },
+              }}
+            >
+              {selectedForRow.length
+                ? selectedForRow.map((c) => c.name).join(", ")
+                : item.product_categories || "-"}
             </Typography>
           </Stack>
         );
@@ -1160,6 +1221,51 @@ const ProductList = () => {
           flexDirection: "column",
         }}
       >
+        {/* for handling categories update */}
+        <Dialog
+          open={openCategoryModal}
+          onClose={() => setOpenCategoryModal(false)}
+        >
+          <DialogTitle>Select Categories</DialogTitle>
+          <DialogContent>
+            <Autocomplete
+              multiple
+              className="product_selection"
+              options={categories || []}
+              getOptionLabel={(option) => option.name}
+              value={editingRowId ? rowCategories[editingRowId] || [] : []}
+              onChange={(_, newValue) => {
+                setRowCategories((prev) => ({
+                  ...prev,
+                  [editingRowId!]: newValue,
+                }));
+              }}
+              renderInput={(params) => (
+                <TextField {...params} placeholder="Select categories" />
+              )}
+              size="small"
+              sx={{ width: 400 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenCategoryModal(false)} color="error">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingRowId) {
+                  updateCategories(editingRowId, rowCategories[editingRowId]);
+                }
+                setOpenCategoryModal(false);
+              }}
+              variant="contained"
+              color="primary"
+            >
+              Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* for handling image upload */}
         <Dialog
           open={openImageManager}
@@ -1914,7 +2020,7 @@ const ProductList = () => {
         {/* View product */}
         <ProductView
           open={viewDrawerOpen}
-          onClose={() => setViewDrawerOpen(false)}
+          onClose={() => closeDrawer()}
           productId={selectedTaskId}
           formData={formData}
           setFormData={setFormData}

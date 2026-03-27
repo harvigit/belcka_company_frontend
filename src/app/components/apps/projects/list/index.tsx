@@ -2102,7 +2102,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       key={product.id}
                       display="flex"
                       alignItems={"center"}
-                      mb={2}
+                      mb={1}
                       p={2}
                       sx={{
                         borderRadius: "12px",

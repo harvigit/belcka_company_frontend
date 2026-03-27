@@ -9,6 +9,7 @@ import { IconX } from "@tabler/icons-react";
 interface ProductInformationProps {
   companyId: number | null;
   productId?: number | null;
+  shouldRefresh: boolean;
 }
 
 type GalleryImage = {
@@ -21,6 +22,7 @@ type GalleryImage = {
 const ProductInformation: React.FC<ProductInformationProps> = ({
   companyId,
   productId,
+  shouldRefresh,
 }) => {
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
@@ -37,9 +39,9 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
         setProduct(res.data.info);
         setMainPreview(res.data.info?.image_url);
 
-        if (product.product_images?.length) {
+        if (res.data.info?.product_images?.length) {
           setGalleryPreview(
-            product.product_images.map((img: any) => ({
+            res.data.info?.product_images.map((img: any) => ({
               id: img.id,
               src: img.image_url,
               isExisting: true,
@@ -56,7 +58,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
     if (productId) {
       fetchProducts();
     }
-  }, [productId]);
+  }, [productId,shouldRefresh]);
 
   const colorMap: Record<number, string> = {
     1: "success.main",
@@ -179,7 +181,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
             )}
           </Grid>
 
-          <Box mt={4}>
+          <Box mt={2}>
             <Typography fontWeight={600} mb={2}>
               Supplier Details
             </Typography>

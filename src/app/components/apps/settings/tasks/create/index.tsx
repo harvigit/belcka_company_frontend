@@ -51,16 +51,19 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const activeTab = formData.is_pricework ? 1 : 0;
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
 
-    if ((name === "duration" || name === "rate") && !/^\d*$/.test(value)) {
+    if (name === "duration") {
+      if (value === "" || /^\d+$/.test(value)) {
+        setFormData((prev: any) => ({ ...prev, duration: value }));
+      }
       return;
     }
 
-    setFormData((prevData) => ({
-      ...prevData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
     }));
   };
@@ -220,12 +223,24 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                       type="text"
                       placeholder="Enter rate.."
                       value={formData.rate === 0 ? "" : formData.rate}
-                      onChange={handleChange}
-                      variant="outlined"
-                      inputProps={{
-                        inputMode: "numeric",
-                        pattern: "[0-9]*",
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (/^\d*\.?\d{0,2}$/.test(value)) {
+                          const numericValue = Number(value);
+
+                          if (
+                            value === "" ||
+                            numericValue < 1000 ||
+                            (numericValue === 1000 && !value.includes("."))
+                          ) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              rate: value,
+                            }));
+                          }
+                        }
                       }}
+                      variant="outlined"
                       fullWidth
                     />
                   </>

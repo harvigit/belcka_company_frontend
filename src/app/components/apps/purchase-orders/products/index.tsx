@@ -356,7 +356,7 @@ const PurchaseProductList: React.FC<Props> = ({
   }, [open, filteredData, manuallyDeselected]);
 
   const selectedProductsWithQty = useMemo(() => {
-    return data
+    const selected = data
       .filter(
         (item) => selectedRowIds.has(item.id) && Number(item.total_qty) > 0,
       )
@@ -365,6 +365,23 @@ const PurchaseProductList: React.FC<Props> = ({
         qty: Number(item.total_qty),
         supplier_id: Number(item.supplier_id),
       }));
+
+    const supplierIds = [...new Set(selected.map((p) => p.supplier_id))];
+    if (supplierIds.length > 1) {
+      toast.error("All selected products must belong to the same supplier!");
+      return [];
+    }
+
+    return selected;
+  }, [data, selectedRowIds]);
+
+  // Determine if all selected products belong to the same supplier
+  const isSameSupplierSelected = useMemo(() => {
+    const selectedProducts = data.filter((item) => selectedRowIds.has(item.id));
+    const supplierIds = [
+      ...new Set(selectedProducts.map((p) => p.supplier_id)),
+    ];
+    return supplierIds.length <= 1;
   }, [data, selectedRowIds]);
 
   const selectedRowCount = selectedRowIds.size;
@@ -646,7 +663,7 @@ const PurchaseProductList: React.FC<Props> = ({
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const image = "/images/products/product.png";
+        const image = "/images/products/product.svg";
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Image
@@ -1574,7 +1591,7 @@ const PurchaseProductList: React.FC<Props> = ({
               color="primary"
               className="drawer_buttons"
               sx={{ borderRadius: 3, marginRight: "5px" }}
-              disabled={selectedRowIds.size > 0 ? false : true}
+              disabled={selectedRowIds.size === 0 || !isSameSupplierSelected}
               onClick={() => {
                 handleOpenCreateDrawer();
               }}
