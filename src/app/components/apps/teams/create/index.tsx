@@ -369,7 +369,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                                                         });
                                                     }}
                                                     inputProps={{ min: 1, max: 1000 }}
-                                                    sx={{ width: 100 }}
+                                                    sx={{ width: 120 }}
                                                     InputProps={{
                                                         startAdornment: (
                                                             <InputAdornment position="start">
