@@ -23,7 +23,13 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { IconArrowLeft, IconFileTypePdf, IconX } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconFileTypePdf,
+  IconHistory,
+  IconPlus,
+  IconX,
+} from "@tabler/icons-react";
 import Image from "next/image";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
@@ -100,9 +106,10 @@ const ReceivePurchaseOrder = () => {
   const [singleDate, setSingleDate] = React.useState<Date | undefined>(
     undefined,
   );
-
-  const [modalOpen, setModalOpen] = React.useState(false);
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
+  const [historyReceiveModalOpen, setHistoryReceiveModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>([]);
+  const [modalOpen, setModalOpen] = React.useState(false);
   const [receiveDate, setReceiveDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
@@ -187,6 +194,7 @@ const ReceivePurchaseOrder = () => {
           status: data.status,
           delivered_qty: p.delivered_qty,
           cancelled_qty: p.cancelled_qty,
+          maxReceiveNow: ordered - received - p.cancelled_qty,
           note: "",
           images: [],
         };
@@ -631,9 +639,9 @@ const ReceivePurchaseOrder = () => {
                 onClick={() => {
                   setReceiveModalOpen(true);
                 }}
-                disabled={isSaving || order?.status == 4}
+                disabled={order?.status == 4}
               >
-                {isSaving ? "Saving..." : "Cancel Order"}
+                Cancel Order
               </Button>
             )}
           </Box>
@@ -933,61 +941,99 @@ const ReceivePurchaseOrder = () => {
                   <Typography variant="h6" mb={1}>
                     {item.uuid}
                   </Typography>
-                  <Fab
-                    size="small"
-                    onClick={() => {
-                      setProducts((prev) =>
-                        prev.map((p) =>
-                          p.product_id === item.product_id
-                            ? {
-                                ...p,
-                                receive_now: Math.max(0, p.receive_now - 1),
-                              }
-                            : p,
-                        ),
-                      );
 
-                      setSelectedRowIds((prev) => {
-                        const updated = new Set(prev);
+                  <Box display={"flex"} alignItems={"center"}>
+                    {item.receive_now > 0 && (
+                      <Fab
+                        size="small"
+                        onClick={() => {
+                          setProducts((prev) =>
+                            prev.map((p) =>
+                              p.product_id === item.product_id
+                                ? {
+                                    ...p,
+                                    receive_now: Math.max(0, p.receive_now - 1),
+                                    // maxReceiveNow stays the same
+                                  }
+                                : p,
+                            ),
+                          );
 
-                        if (item.receive_now - 1 <= 0) {
-                          updated.delete(item.product_id);
-                        }
+                          setSelectedRowIds((prev) => {
+                            const updated = new Set(prev);
 
-                        return updated;
-                      });
-                    }}
-                  >
-                    <IconMinus size={16} />
-                  </Fab>
-                  <TextField
-                    size="small"
-                    value={item.receive_now}
-                    inputProps={{
-                      style: { textAlign: "center" },
-                    }}
-                    sx={{ width: 60, ml: 1 }}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                            if (item.receive_now - 1 <= 0) {
+                              updated.delete(item.product_id);
+                            }
 
-                      if (!/^\d*$/.test(value)) return;
+                            return updated;
+                          });
+                        }}
+                      >
+                        <IconMinus size={16} />
+                      </Fab>
+                    )}
+                    <TextField
+                      size="small"
+                      value={item.receive_now}
+                      inputProps={{
+                        style: { textAlign: "center" },
+                      }}
+                      sx={{ width: 60, ml: 1, mr: 1 }}
+                      onChange={(e) => {
+                        const value = e.target.value;
 
-                      const num = Number(value || 0);
+                        if (!/^\d*$/.test(value)) return;
 
-                      setProducts((prev) =>
-                        prev.map((p) => {
-                          if (p.product_id !== item.product_id) return p;
+                        const num = Number(value || 0);
 
-                          if (num > p.receive_now) return p;
+                        setProducts((prev) =>
+                          prev.map((p) => {
+                            if (p.product_id !== item.product_id) return p;
 
-                          return {
-                            ...p,
-                            receive_now: Math.max(0, num),
-                          };
-                        }),
-                      );
-                    }}
-                  />
+                            if (num > p.maxReceiveNow) return p;
+
+                            return {
+                              ...p,
+                              receive_now: Math.max(0, num),
+                            };
+                          }),
+                        );
+                      }}
+                    />
+                    {item.receive_now < item.maxReceiveNow && (
+                      <Fab
+                        size="small"
+                        onClick={() => {
+                          setProducts((prev) =>
+                            prev.map((p) =>
+                              p.product_id === item.product_id
+                                ? {
+                                    ...p,
+                                    receive_now: Math.min(
+                                      p.maxReceiveNow,
+                                      p.receive_now + 1,
+                                    ),
+                                  }
+                                : p,
+                            ),
+                          );
+
+                          setSelectedRowIds((prev) => {
+                            const updated = new Set(prev);
+
+                            if (item.receive_now + 1 > 0) {
+                              updated.add(item.product_id);
+                            }
+
+                            return updated;
+                          });
+                        }}
+                      >
+                        <IconPlus size={16} />
+                      </Fab>
+                    )}
+                  </Box>
 
                   <Box display={"flex"} gap={1} alignItems={"center"}>
                     <Typography mt={1} variant="h6">
@@ -996,6 +1042,15 @@ const ReceivePurchaseOrder = () => {
                     <Typography mt={1} variant="h6">
                       Cancelled: {item?.cancelled_qty}{" "}
                     </Typography>
+                    <IconButton
+                      onClick={() => {
+                        setSelectedProduct(item);
+                        setHistoryReceiveModalOpen(true);
+                      }}
+                      title="View Notes & Attachments"
+                    >
+                      <IconHistory />
+                    </IconButton>
                   </Box>
                   <TextField
                     fullWidth
@@ -1078,6 +1133,80 @@ const ReceivePurchaseOrder = () => {
               {isSaving ? "Saving..." : "Cancel"}
             </Button>
           )}
+        </Box>
+      </Drawer>
+
+      {/* note and image history */}
+      <Drawer
+        anchor="right"
+        open={historyReceiveModalOpen}
+        onClose={() => setHistoryReceiveModalOpen(false)}
+        sx={{
+          width: 500,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 500,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <Box sx={{ flex: 1, overflowY: "auto", p: 1 }}>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Notes:
+          </Typography>
+          {selectedProduct?.notes?.length > 0 ? (
+            <ul style={{ paddingLeft: 16 }}>
+              {selectedProduct.notes.map((note: any, idx: any) => (
+                <li key={idx} style={{ marginBottom: 8 }}>
+                  {note}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Typography>No notes available.</Typography>
+          )}
+
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Attachments:
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={1}>
+            {selectedProduct?.attachments?.length > 0 ? (
+              selectedProduct.attachments.map((attachment: any) => (
+                <img
+                  key={attachment.id}
+                  src={attachment.thumb_url || attachment.image_url}
+                  alt="attachment"
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 6,
+                    objectFit: "cover",
+                  }}
+                />
+              ))
+            ) : (
+              <Typography>No attachments.</Typography>
+            )}
+          </Box>
+        </Box>
+
+        <Box mt={2} display="flex" justifyContent="flex-start">
+          <Button
+            variant="contained"
+            color="inherit"
+            size="large"
+            onClick={() => setHistoryReceiveModalOpen(false)}
+            sx={{
+              backgroundColor: "transparent",
+              borderRadius: 3,
+              color: "GrayText",
+            }}
+          >
+            Close
+          </Button>
         </Box>
       </Drawer>
     </Drawer>
