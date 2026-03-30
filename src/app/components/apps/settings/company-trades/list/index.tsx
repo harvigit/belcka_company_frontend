@@ -373,17 +373,17 @@ const TradeList = () => {
       },
     }),
 
-      columnHelper.accessor((row) => row?.max_members, {
-          id: "maxMembers",
-          header: () => "Max Members",
-          cell: (info) => {
-              return (
-                  <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
-                      {info.getValue() ?? "-"}
-                  </Typography>
-              );
-          },
-      }),
+      // columnHelper.accessor((row) => row?.max_members, {
+      //     id: "maxMembers",
+      //     header: () => "Max Members",
+      //     cell: (info) => {
+      //         return (
+      //             <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+      //                 {info.getValue() ?? "-"}
+      //             </Typography>
+      //         );
+      //     },
+      // }),
 
     columnHelper.accessor((row) => row?.status, {
       id: "status",

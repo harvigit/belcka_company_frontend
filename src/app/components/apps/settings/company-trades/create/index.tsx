@@ -146,32 +146,32 @@ const CreateTrade: React.FC<CreateTradeProps> = ({
                   )}
                 />
 
-                  <Typography variant="h5" mt={3}>
-                      Max Members
-                  </Typography>
-                  <TextField
-                      name="max_members"
-                      type="number"
-                      placeholder="Enter max members limit..."
-                      fullWidth
-                      size="small"
-                      value={formData?.max_members ?? ""}
-                      onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData((prev: any) => ({
-                              ...prev,
-                              max_members: val === "" ? "" : Math.min(1000, Math.max(1, parseInt(val))),
-                          }));
-                      }}
-                      inputProps={{ min: 1, max: 1000 }}
-                      InputProps={{
-                          startAdornment: (
-                              <InputAdornment position="start">
-                                  <IconUsers size={16} />
-                              </InputAdornment>
-                          ),
-                      }}
-                  />
+                  {/*<Typography variant="h5" mt={3}>*/}
+                  {/*    Max Members*/}
+                  {/*</Typography>*/}
+                  {/*<TextField*/}
+                  {/*    name="max_members"*/}
+                  {/*    type="number"*/}
+                  {/*    placeholder="Enter max members limit..."*/}
+                  {/*    fullWidth*/}
+                  {/*    size="small"*/}
+                  {/*    value={formData?.max_members ?? ""}*/}
+                  {/*    onChange={(e) => {*/}
+                  {/*        const val = e.target.value;*/}
+                  {/*        setFormData((prev: any) => ({*/}
+                  {/*            ...prev,*/}
+                  {/*            max_members: val === "" ? "" : Math.min(1000, Math.max(1, parseInt(val))),*/}
+                  {/*        }));*/}
+                  {/*    }}*/}
+                  {/*    inputProps={{ min: 1, max: 1000 }}*/}
+                  {/*    InputProps={{*/}
+                  {/*        startAdornment: (*/}
+                  {/*            <InputAdornment position="start">*/}
+                  {/*                <IconUsers size={16} />*/}
+                  {/*            </InputAdornment>*/}
+                  {/*        ),*/}
+                  {/*    }}*/}
+                  {/*/>*/}
               </Grid>
             </Grid>
 
