@@ -114,6 +114,7 @@ const TradeList = () => {
     trade_category_id: "",
     company_id: id.company_id,
     status: true,
+      max_members: null,
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -161,6 +162,7 @@ const TradeList = () => {
       name: "",
       trade_id: null,
       company_id: id.company_id,
+        max_members: null,
     });
     setDrawerOpen(true);
   };
@@ -183,6 +185,7 @@ const TradeList = () => {
           id: 0,
           name: "",
           trade_category_id: 0,
+            max_members: null,
         });
         fetchTrades();
         setDrawerOpen(false);
@@ -215,6 +218,7 @@ const TradeList = () => {
           name: "",
           trade_id: 0,
           trade_category_id: 0,
+            max_members: null,
         });
         fetchTrades();
         setEditDrawerOpen(false);
@@ -368,6 +372,18 @@ const TradeList = () => {
         );
       },
     }),
+
+      columnHelper.accessor((row) => row?.max_members, {
+          id: "maxMembers",
+          header: () => "Max Members",
+          cell: (info) => {
+              return (
+                  <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+                      {info.getValue() ?? "-"}
+                  </Typography>
+              );
+          },
+      }),
 
     columnHelper.accessor((row) => row?.status, {
       id: "status",

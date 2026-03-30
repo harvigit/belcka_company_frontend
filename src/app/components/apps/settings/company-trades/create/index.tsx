@@ -1,21 +1,23 @@
 import React, { useEffect, useState } from "react";
 import {
-  Drawer,
-  Box,
-  Grid,
-  IconButton,
-  Typography,
-  Button,
-  Autocomplete,
-} from "@mui/material";
+    Drawer,
+    Box,
+    Grid,
+    IconButton,
+    Typography,
+    Button,
+    Autocomplete, TextField, InputAdornment,
+} from '@mui/material';
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import api from "@/utils/axios";
+import {IconUsers} from '@tabler/icons-react';
 
 interface FormData {
   name: string;
   trade_category_id: string | number | null;
   company_id: string | number;
+    max_members: number;
 }
 
 interface CreateTradeProps {
@@ -143,6 +145,33 @@ const CreateTrade: React.FC<CreateTradeProps> = ({
                     <CustomTextField {...params} placeholder="Trades" />
                   )}
                 />
+
+                  <Typography variant="h5" mt={3}>
+                      Max Members
+                  </Typography>
+                  <TextField
+                      name="max_members"
+                      type="number"
+                      placeholder="Enter max members limit..."
+                      fullWidth
+                      size="small"
+                      value={formData?.max_members ?? ""}
+                      onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData((prev: any) => ({
+                              ...prev,
+                              max_members: val === "" ? "" : Math.min(1000, Math.max(1, parseInt(val))),
+                          }));
+                      }}
+                      inputProps={{ min: 1, max: 1000 }}
+                      InputProps={{
+                          startAdornment: (
+                              <InputAdornment position="start">
+                                  <IconUsers size={16} />
+                              </InputAdornment>
+                          ),
+                      }}
+                  />
               </Grid>
             </Grid>
 

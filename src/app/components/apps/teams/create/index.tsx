@@ -25,6 +25,18 @@ interface Props {
     onWorkUpdated?: () => void;
 }
 
+// ── NEW ──
+interface Trade {
+    id: number;
+    name: string;
+}
+
+interface TradeMaxLimit {
+    trade_id: number;
+    trade_name: string;
+    max_limit: string;
+}
+
 const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
     const [data, setData] = useState<TeamList[]>([]);
     const [users, setUsers] = useState<UserList[]>([]);
@@ -32,6 +44,10 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
     const [isSaving, setIsSaving] = useState(false);
+
+    // ── NEW ──
+    const [tradeData, setTradeData] = useState<Trade[]>([]);
+    const [tradeMaxLimits, setTradeMaxLimits] = useState<TradeMaxLimit[]>([]);
 
     const [formData, setFormData] = useState<any>({
         id: 0,
@@ -41,7 +57,6 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
         max_members: "",
     });
 
-    // ── Fetch company-level default limit and pre-fill ──
     const fetchCompanyLimit = async () => {
         try {
             const res = await api.get('team/company-team-members-limit');
@@ -53,7 +68,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                 }));
             }
         } catch {
-            // silently fail — field stays empty
+            // silently fail
         }
     };
 
@@ -79,6 +94,16 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
         setLoading(false);
     };
 
+    const fetchTradeList = async () => {
+        try {
+            if (!user?.company_id) return;
+            const res = await api.get(`trade/get-trades?company_id=${user.company_id}`);
+            if (res.data?.info) setTradeData(res.data.info);
+        } catch (err) {
+            console.error("Failed to fetch trade list", err);
+        }
+    };
+
     useEffect(() => {
         if (open) {
             fetchTrades();
@@ -88,7 +113,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
     useEffect(() => {
         if (open) {
             fetchUsers();
-            // Reset form first, then fetch and apply the company default
+            fetchTradeList();
             setFormData({
                 id: 0,
                 name: "",
@@ -96,6 +121,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                 team_member_ids: [],
                 max_members: "",
             });
+            setTradeMaxLimits([]);
             fetchCompanyLimit();
         }
     }, [user?.id, open]);
@@ -118,6 +144,10 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                 team_member_ids: formData.team_member_ids.join(","),
                 company_id: user.company_id,
                 max_members: formData.max_members !== "" ? parseInt(formData.max_members) : null,
+                trade_max_limits: tradeMaxLimits.map((t) => ({
+                    trade_id: t.trade_id,
+                    max_limit: parseInt(t.max_limit),
+                })),
             };
             const response = await api.post(`team/add`, payload);
             if (response.data.IsSuccess) {
@@ -165,9 +195,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             </Box>
 
                             {/* ── Name ── */}
-                            <Typography variant="h5" mt={3}>
-                                Name
-                            </Typography>
+                            <Typography variant="h5" mt={3}>Name</Typography>
                             <CustomTextField
                                 id="name"
                                 name="name"
@@ -179,16 +207,12 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             />
 
                             {/* ── Supervisor ── */}
-                            <Typography variant="h5" mt={3}>
-                                Supervisor
-                            </Typography>
+                            <Typography variant="h5" mt={3}>Supervisor</Typography>
                             <Autocomplete
                                 fullWidth
                                 disableCloseOnSelect
                                 options={data || []}
-                                value={
-                                    data?.find((item: any) => item.id === formData.supervisor_id) || null
-                                }
+                                value={data?.find((item: any) => item.id === formData.supervisor_id) || null}
                                 onChange={(event, newValue) => {
                                     setFormData({
                                         ...formData,
@@ -226,9 +250,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             />
 
                             {/* ── Team Members ── */}
-                            <Typography variant="h5" mt={3}>
-                                Team Member&apos;s
-                            </Typography>
+                            <Typography variant="h5" mt={3}>Team Member&apos;s</Typography>
                             <Autocomplete
                                 multiple
                                 fullWidth
@@ -274,9 +296,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             />
 
                             {/* ── Max Members ── */}
-                            <Typography variant="h5" mt={3}>
-                                Max Members
-                            </Typography>
+                            <Typography variant="h5" mt={3}>Max Members</Typography>
                             <TextField
                                 name="max_members"
                                 type="number"
@@ -300,6 +320,73 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                                     ),
                                 }}
                             />
+
+                            <Typography variant="h5" mt={3} mb={1}>
+                                Trade-wise Max Members
+                            </Typography>
+
+                            {tradeData.length > 0 ? (
+                                <Box display="flex" flexDirection="column" gap={1}>
+                                    {tradeData.map((trade) => {
+                                        const current = tradeMaxLimits.find((t) => t.trade_id === trade.id);
+                                        return (
+                                            <Box
+                                                key={trade.id}
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="space-between"
+                                                gap={2}
+                                                sx={{
+                                                    px: 1.5,
+                                                    py: 1,
+                                                    borderRadius: 2,
+                                                    backgroundColor: "#fff",
+                                                    border: "1px solid #e0e0e0",
+                                                }}
+                                            >
+                                                <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>
+                                                    {trade.name}
+                                                </Typography>
+                                                <TextField
+                                                    type="number"
+                                                    placeholder="Max"
+                                                    size="small"
+                                                    value={current?.max_limit ?? ""}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        const limit = val === "" ? "" : String(Math.min(1000, Math.max(1, parseInt(val))));
+                                                        setTradeMaxLimits((prev) => {
+                                                            if (val === "") {
+                                                                return prev.filter((t) => t.trade_id !== trade.id);
+                                                            }
+                                                            const exists = prev.find((t) => t.trade_id === trade.id);
+                                                            if (exists) {
+                                                                return prev.map((t) =>
+                                                                    t.trade_id === trade.id ? { ...t, max_limit: limit } : t
+                                                                );
+                                                            }
+                                                            return [...prev, { trade_id: trade.id, trade_name: trade.name, max_limit: limit }];
+                                                        });
+                                                    }}
+                                                    inputProps={{ min: 1, max: 1000 }}
+                                                    sx={{ width: 100 }}
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <IconUsers size={14} />
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                />
+                                            </Box>
+                                        );
+                                    })}
+                                </Box>
+                            ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                    No trades found.
+                                </Typography>
+                            )}
                         </Grid>
                     </Grid>
                 </Box>

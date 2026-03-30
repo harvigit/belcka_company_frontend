@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
 import {
-  Drawer,
-  Box,
-  Grid,
-  IconButton,
-  Typography,
-  Button,
-  Autocomplete,
-} from "@mui/material";
+    Drawer,
+    Box,
+    Grid,
+    IconButton,
+    Typography,
+    Button,
+    Autocomplete, TextField, InputAdornment,
+} from '@mui/material';
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import api from "@/utils/axios";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import {IconUsers} from '@tabler/icons-react';
 
 interface FormData {
   id: number;
@@ -19,6 +20,7 @@ interface FormData {
   trade_category_id: string | number | null;
   company_id: number | null;
   status: boolean;
+    max_members: number;
 }
 
 interface EditTradeProps {
@@ -66,6 +68,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
         trade_category_id: record.category_id ?? null,
         company_id: companyId ?? null,
         status: record.status,
+          max_members: record.max_members ?? 0,
       });
     }
   }, [id, open, data, companyId, setFormData]);
@@ -176,6 +179,33 @@ const EditTrade: React.FC<EditTradeProps> = ({
                     })
                   }
                 />
+
+                  <Typography variant="h5" mt={3}>
+                      Max Members
+                  </Typography>
+                  <TextField
+                      name="max_members"
+                      type="number"
+                      placeholder="Enter max members limit..."
+                      fullWidth
+                      size="small"
+                      value={formData?.max_members ?? ""}
+                      onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData((prev: any) => ({
+                              ...prev,
+                              max_members: val === "" ? "" : Math.min(1000, Math.max(1, parseInt(val))),
+                          }));
+                      }}
+                      inputProps={{ min: 1, max: 1000 }}
+                      InputProps={{
+                          startAdornment: (
+                              <InputAdornment position="start">
+                                  <IconUsers size={16} />
+                              </InputAdornment>
+                          ),
+                      }}
+                  />
               </Grid>
             </Grid>
 
