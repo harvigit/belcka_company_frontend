@@ -120,6 +120,7 @@ const CancelOrder: React.FC<Props> = ({ open, onClose, companyId, id }) => {
             lineHeight: 1.25,
             maxWidth: 180,
             wordBreak: "break-word",
+            mt: 2
           }}
         >
           {product?.supplier_name}
