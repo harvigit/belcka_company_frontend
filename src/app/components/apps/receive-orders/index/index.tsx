@@ -2,14 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Avatar,
   Box,
   Button,
+  Card,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Drawer,
+  Fab,
   IconButton,
   Stack,
   Table,
@@ -22,7 +23,7 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { IconTrash, IconX } from "@tabler/icons-react";
+import { IconArrowLeft, IconFileTypePdf, IconX } from "@tabler/icons-react";
 import Image from "next/image";
 import api from "@/utils/axios";
 import { useSession } from "next-auth/react";
@@ -40,29 +41,13 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import { styled } from "@mui/system";
 import { DayPicker } from "react-day-picker";
 import { useDropzone } from "react-dropzone";
-
-interface ReceiveProductRow {
-  id: number;
-  product_id: number;
-  short_name: string;
-  ordered_qty: number;
-  received_qty: number;
-  remaining_qty: number;
-  receive_now: number;
-  image_url?: string | null;
-  uuid?: string;
-  description?: string | null;
-  supplier_code?: string | null;
-  date?: string | null;
-  note?: string | null;
-  images?: any;
-  status: number;
-}
+import { IconMinus } from "@tabler/icons-react";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
 interface TableRow {
   id: number;
@@ -102,7 +87,7 @@ const ReceivePurchaseOrder = () => {
   const [fetchOrders, setFetchOrders] = useState<boolean>(true);
   const [open, setOpen] = useState(false);
   const [order, setOrder] = useState<any>(null);
-  const [products, setProducts] = useState<ReceiveProductRow[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [note, setNote] = useState("");
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
@@ -115,6 +100,7 @@ const ReceivePurchaseOrder = () => {
   const [singleDate, setSingleDate] = React.useState<Date | undefined>(
     undefined,
   );
+
   const [modalOpen, setModalOpen] = React.useState(false);
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [receiveDate, setReceiveDate] = useState(
@@ -174,17 +160,17 @@ const ReceivePurchaseOrder = () => {
       setFetchOrders(true);
 
       const res = await api.get(
-        `purchase-orders/get?company_id=${user.company_id}&id=${orderId}`,
+        `purchase-orders/detail?company_id=${user.company_id}&id=${orderId}`,
       );
-      const data = res.data.info[0];
+      const data = res.data.info;
 
       setOrder(data);
 
-      const mapped: ReceiveProductRow[] = data.purchase_orders.map((p: any) => {
+      const mapped: any[] = data.purchase_orders.map((p: any) => {
         const ordered = Number(p.qty);
         const received = Number(p.delivered_qty || 0);
-        console.log(p);
         return {
+          ...p,
           id: p.product_id,
           order_id: p.id,
           product_id: p.product_id,
@@ -199,6 +185,8 @@ const ReceivePurchaseOrder = () => {
           description: p.description,
           date: p.date,
           status: data.status,
+          delivered_qty: p.delivered_qty,
+          cancelled_qty: p.cancelled_qty,
           note: "",
           images: [],
         };
@@ -229,20 +217,11 @@ const ReceivePurchaseOrder = () => {
     router.push("/apps/purchase-orders/list");
   };
 
-  const updateReceiveQty = (productId: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.product_id === productId
-          ? {
-              ...p,
-              receive_now:
-                value === "" ? 0 : Math.min(Number(value), p.remaining_qty),
-            }
-          : p,
-      ),
-    );
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setReceiveDate(value);
   };
 
   const parseDDMMYYYY = (dateString: string | null) => {
@@ -293,7 +272,6 @@ const ReceivePurchaseOrder = () => {
       setIsSaving(true);
 
       const formData = new FormData();
-
       formData.append("company_id", String(order.company_id));
       formData.append("id", String(order.id));
       formData.append("status", "4");
@@ -320,7 +298,7 @@ const ReceivePurchaseOrder = () => {
       });
 
       if (index === 0) {
-        toast.error("Select at least one product");
+        toast.error("Select at least one product!");
         return;
       }
 
@@ -359,75 +337,6 @@ const ReceivePurchaseOrder = () => {
   const columnHelper = createColumnHelper<any>();
   const columns = useMemo(
     () => [
-      {
-        id: "select",
-        header: ({ table }: any) => (
-          <Stack direction="row" alignItems="center">
-            <CustomCheckbox
-              className="header-checkbox"
-              checked={
-                selectedRowIds.size === products.length && products.length > 0
-              }
-              indeterminate={
-                selectedRowIds.size > 0 && selectedRowIds.size < products.length
-              }
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const isChecked = e.target.checked;
-
-                if (isChecked) {
-                  setSelectedRowIds(
-                    new Set(products.map((row) => row.product_id)),
-                  );
-                } else {
-                  setSelectedRowIds(new Set());
-                }
-              }}
-            />
-          </Stack>
-        ),
-        cell: ({ row }: any) => {
-          const item = row.original;
-          const isChecked = selectedRowIds.has(item.product_id);
-          const isHovered = hoveredRow === item.id;
-          const showCheckbox = isChecked || isHovered;
-
-          return (
-            <Stack
-              direction="row"
-              alignItems="center"
-              onMouseEnter={() => setHoveredRow(item.id)}
-              onMouseLeave={() => setHoveredRow(null)}
-              sx={{ pl: 1 }}
-            >
-              <CustomCheckbox
-                checked={isChecked}
-                disabled={item.receive_now <= 0}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const newSelected = new Set(selectedRowIds);
-                  if (isChecked) {
-                    newSelected.delete(item.id);
-                  } else {
-                    newSelected.add(item.id);
-                  }
-                  setSelectedRowIds(newSelected);
-                }}
-                sx={{
-                  opacity: showCheckbox || item.receive_now <= 0 ? 1 : 0,
-                  pointerEvents: showCheckbox ? "auto" : "none",
-                  transition: "opacity 0.2s ease",
-                }}
-              />
-            </Stack>
-          );
-        },
-      },
-
       columnHelper.accessor("item", {
         id: "item",
         header: () => (
@@ -594,22 +503,10 @@ const ReceivePurchaseOrder = () => {
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <Stack direction="row" spacing={4} sx={{ pl: 1 }}>
-              {item.receive_now > 0 && (
-                <TextField
-                  size="small"
-                  type="text"
-                  sx={{ width: "40%" }}
-                  value={item.receive_now}
-                  disabled={order?.status == 5}
-                  inputProps={{
-                    inputMode: "numeric",
-                  }}
-                  onChange={(e) =>
-                    updateReceiveQty(item.product_id, e.target.value)
-                  }
-                />
-              )}
+            <Stack direction="row" alignItems="center" ml={1}>
+              <Typography textTransform="capitalize" className="f-14">
+                {item.receive_now ? item.receive_now : "-"}
+              </Typography>
             </Stack>
           );
         },
@@ -617,6 +514,7 @@ const ReceivePurchaseOrder = () => {
     ],
     [hoveredRow, selectedRowIds],
   );
+
   const table = useReactTable({
     data: products,
     columns,
@@ -698,12 +596,14 @@ const ReceivePurchaseOrder = () => {
             <Typography variant="body2" gutterBottom>
               Receive Date
             </Typography>
-            <TextField
+            <CustomTextField
               type="date"
+              name="receive_date"
               fullWidth
               value={receiveDate}
-              onChange={(e) => setReceiveDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={handleChange}
+              onFocus={(e: any) => e.target.showPicker()}
+              onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
             />
           </Box>
         </Box>
@@ -723,23 +623,19 @@ const ReceivePurchaseOrder = () => {
               gap: 2,
             }}
           >
-            <Button
-              color="error"
-              variant="contained"
-              size="large"
-              onClick={() => {
-                if (selectedRowIds.size === 0) {
-                  toast.error("Select at least one product");
-                  return;
-                }
-                setReceiveModalOpen(true);
-              }}
-              disabled={
-                isSaving || selectedRowIds.size === 0 || order.status == 4
-              }
-            >
-              {isSaving ? "Saving..." : "Cancel"}
-            </Button>
+            {order?.status !== 5 && (
+              <Button
+                color="error"
+                variant="contained"
+                size="large"
+                onClick={() => {
+                  setReceiveModalOpen(true);
+                }}
+                disabled={isSaving || order?.status == 4}
+              >
+                {isSaving ? "Saving..." : "Cancel Order"}
+              </Button>
+            )}
           </Box>
         </Box>
         {/* TABLE */}
@@ -761,7 +657,10 @@ const ReceivePurchaseOrder = () => {
                         sx={{
                           paddingTop: "10px",
                           paddingBottom: "10px",
-                          width: "auto",
+                          width:
+                            header.column.id === "item"
+                              ? "50% !important"
+                              : "auto",
                         }}
                       >
                         <Box
@@ -898,33 +797,211 @@ const ReceivePurchaseOrder = () => {
       </Box>
 
       {/* order receive */}
-      <Dialog
+      <Drawer
+        anchor="right"
         open={receiveModalOpen}
         onClose={() => setReceiveModalOpen(false)}
-        maxWidth="md"
-        fullWidth
+        sx={{
+          width: 500,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 500,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
       >
-        <DialogTitle>Cancel Products</DialogTitle>
+        <Box sx={{ flex: 1, overflowY: "auto", paddingRight: 1 }}>
+          <Box mb={2} display="flex" alignItems="center" gap={1}>
+            <IconButton onClick={onClose}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography variant="h4" fontWeight={700}>
+              Order {order?.order_id || ""}
+            </Typography>
+          </Box>
 
-        <DialogContent>
           <Stack spacing={2}>
-            {products
-              .filter((p) => selectedRowIds.has(p.product_id))
-              .map((item) => (
-                <Box
-                  key={item.product_id}
-                  p={2}
-                  border="1px solid #eee"
-                  borderRadius={2}
+            <Card
+              sx={{
+                borderRadius: "15px",
+                boxShadow: (theme) => theme.shadows[9],
+              }}
+            >
+              <Box p={2}>
+                <Typography>Store: {order?.store_name || ""} </Typography>
+                <Typography>
+                  Supplier: {supplierIdsFromPO.join(", ")}
+                </Typography>
+                <Typography>Items Qty: {order?.order_qty} </Typography>
+                <Typography>Receive On: {order?.date} </Typography>
+                <Typography
+                  display={"flex"}
+                  gap={1}
+                  alignItems={"center"}
+                  justifyContent={"space-between"}
                 >
+                  <Typography display={"flex"} gap={1}>
+                    Status:
+                    <Typography
+                      color={order?.status_color}
+                      variant="h5"
+                      fontWeight={600}
+                    >
+                      {order?.status_text}{" "}
+                    </Typography>
+                  </Typography>
+                  <IconButton
+                    color="error"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+
+                      try {
+                        await api.post(
+                          `purchase-orders/invoice?company_id=${user.company_id}&id=${order?.id}`,
+                        );
+
+                        const res = await api.get(
+                          `purchase-orders/get?company_id=${user.company_id}&id=${order?.id}`,
+                        );
+
+                        if (res.data.IsSuccess) {
+                          const invoiceUrl = res.data.info[0]?.invoice;
+
+                          if (!invoiceUrl) {
+                            return;
+                          }
+
+                          window.open(
+                            invoiceUrl,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Failed to open invoice:", error);
+                      } finally {
+                      }
+                    }}
+                  >
+                    <IconFileTypePdf size={24} />
+                  </IconButton>
+                </Typography>
+              </Box>
+            </Card>
+            {products?.map((item) => (
+              <Box
+                key={item.product_id}
+                alignItems={"start"}
+                display={"flex"}
+                gap={1}
+                p={2}
+                border="1px solid #eee"
+                borderRadius={2}
+              >
+                <CustomCheckbox
+                  checked={selectedRowIds.has(item.product_id)}
+                  disabled={item.receive_now <= 0}
+                  onChange={(e) => {
+                    setSelectedRowIds((prev) => {
+                      const updated = new Set(prev);
+
+                      if (e.target.checked) {
+                        updated.add(item.product_id);
+                      } else {
+                        updated.delete(item.product_id);
+                      }
+
+                      return updated;
+                    });
+                  }}
+                />
+                <Box>
+                  <Image
+                    src={item.image_url || "/images/products/product.svg"}
+                    alt="Product"
+                    height={50}
+                    width={50}
+                  />
+                </Box>
+                <Box ml={3} width={"100%"}>
                   <Typography variant="h6" fontWeight={600} mb={1}>
                     {item.short_name}
                   </Typography>
+                  <Typography variant="h6" mb={1}>
+                    {item.uuid}
+                  </Typography>
+                  <Fab
+                    size="small"
+                    onClick={() => {
+                      setProducts((prev) =>
+                        prev.map((p) =>
+                          p.product_id === item.product_id
+                            ? {
+                                ...p,
+                                receive_now: Math.max(0, p.receive_now - 1),
+                              }
+                            : p,
+                        ),
+                      );
 
+                      setSelectedRowIds((prev) => {
+                        const updated = new Set(prev);
+
+                        if (item.receive_now - 1 <= 0) {
+                          updated.delete(item.product_id);
+                        }
+
+                        return updated;
+                      });
+                    }}
+                  >
+                    <IconMinus size={16} />
+                  </Fab>
+                  <TextField
+                    size="small"
+                    value={item.receive_now}
+                    inputProps={{
+                      style: { textAlign: "center" },
+                    }}
+                    sx={{ width: 60, ml: 1 }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      if (!/^\d*$/.test(value)) return;
+
+                      const num = Number(value || 0);
+
+                      setProducts((prev) =>
+                        prev.map((p) => {
+                          if (p.product_id !== item.product_id) return p;
+
+                          if (num > p.receive_now) return p;
+
+                          return {
+                            ...p,
+                            receive_now: Math.max(0, num),
+                          };
+                        }),
+                      );
+                    }}
+                  />
+
+                  <Box display={"flex"} gap={1} alignItems={"center"}>
+                    <Typography mt={1} variant="h6">
+                      Delivered: {item?.delivered_qty}{" "}
+                    </Typography>
+                    <Typography mt={1} variant="h6">
+                      Cancelled: {item?.cancelled_qty}{" "}
+                    </Typography>
+                  </Box>
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="Enter cancellation reason..."
+                    placeholder="Enter note..."
+                    inputProps={{ maxLength: 50 }}
                     value={item.note || ""}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -937,23 +1014,25 @@ const ReceivePurchaseOrder = () => {
                       );
                     }}
                   />
-
                   <DropzoneComponent item={item} setProducts={setProducts} />
-
                   <Box display="flex" gap={1} mt={1} flexWrap="wrap">
-                    {(item.images || []).map((file: any, index: number) => (
-                      <Box key={index} sx={{ position: "relative" }}>
-                        <Avatar
-                          src={file.preview}
-                          sx={{ width: 60, height: 60 }}
+                    {item.images?.map((img: any, i: number) => (
+                      <Box key={i} position="relative">
+                        <img
+                          src={img.preview}
+                          alt="preview"
+                          width={50}
+                          height={50}
+                          style={{ borderRadius: 6, objectFit: "cover" }}
                         />
 
+                        {/* Remove image */}
                         <IconButton
                           size="small"
                           sx={{
                             position: "absolute",
-                            top: -6,
-                            right: -6,
+                            top: -8,
+                            right: -8,
                             background: "#fff",
                           }}
                           onClick={() => {
@@ -963,7 +1042,7 @@ const ReceivePurchaseOrder = () => {
                                   ? {
                                       ...p,
                                       images: p.images.filter(
-                                        (_: any, i: number) => i !== index,
+                                        (_: any, idx: number) => idx !== i,
                                       ),
                                     }
                                   : p,
@@ -971,32 +1050,36 @@ const ReceivePurchaseOrder = () => {
                             );
                           }}
                         >
-                          <IconTrash size={14} />
+                          ✕
                         </IconButton>
                       </Box>
                     ))}
                   </Box>
                 </Box>
-              ))}
+              </Box>
+            ))}
           </Stack>
-        </DialogContent>
+        </Box>
 
-        <DialogActions>
-          <Button color="error" onClick={() => setReceiveModalOpen(false)}>
-            Cancel
-          </Button>
-
-          <Button
-            variant="contained"
-            onClick={async () => {
-              setReceiveModalOpen(false);
-              await handleCancel();
-            }}
-          >
-            Submit
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* Buttons */}
+        <Box mt={2} display="flex" gap={2}>
+          {order?.status !== 5 && (
+            <Button
+              color="error"
+              variant="contained"
+              sx={{ borderRadius: 3 }}
+              className="drawer_buttons"
+              onClick={async () => {
+                setReceiveModalOpen(false);
+                await handleCancel();
+              }}
+              disabled={isSaving || selectedRowIds.size === 0}
+            >
+              {isSaving ? "Saving..." : "Cancel"}
+            </Button>
+          )}
+        </Box>
+      </Drawer>
     </Drawer>
   );
 };
