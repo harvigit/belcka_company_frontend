@@ -410,7 +410,9 @@ const ProductList = () => {
   const fetchProducts = async (restorePage?: number) => {
     setFetchProduct(true);
     try {
-      const res = await api.get(`products/get?company_id=${user.company_id}`);
+      const res = await api.get(
+        `products/get?company_id=${user.company_id}&is_products=true`,
+      );
       if (res.data) {
         setData(res.data.info);
         setCurrency(res.data.info[0]?.currency);
@@ -829,10 +831,9 @@ const ProductList = () => {
                 className="f-14"
                 variant="body1"
                 sx={{
-                  width: 200,
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 1,
+                  WebkitLineClamp: 3,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
@@ -1170,6 +1171,7 @@ const ProductList = () => {
               className="f-14"
               color={item.status_color}
               fontWeight={500}
+              sx={{ width: 100 }}
             >
               {item.stock_status ? item.stock_status : "-"}
             </Typography>

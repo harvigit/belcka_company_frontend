@@ -152,7 +152,7 @@ const EditStore: React.FC<EditStoreProps> = ({
     setFetchProject(true);
     try {
       const res: AxiosResponse<any> = await api.get(
-        `products/get?company_id=${companyId}`,
+        `products/get?company_id=${companyId}&is_products=true`,
       );
       if (res.data) {
         setData(res.data.info);

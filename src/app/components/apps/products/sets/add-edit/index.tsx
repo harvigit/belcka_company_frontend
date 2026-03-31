@@ -41,7 +41,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
   const fetchProjects = useCallback(async () => {
     if (!companyId) return;
     try {
-      const res = await api.get(`products/get?company_id=${companyId}`);
+      const res = await api.get(`products/get?company_id=${companyId}&is_products=true`);
       if (res.data?.info) {
         setProducts(res.data.info);
       }
