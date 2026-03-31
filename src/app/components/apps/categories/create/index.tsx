@@ -177,6 +177,7 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
 
           <Box height="100%" px={2}>
             <form
+              className="category-form"
               onSubmit={handleSubmit}
               onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
             >

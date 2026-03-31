@@ -675,6 +675,7 @@ const TablePagination = () => {
                   inputStyle={{
                     width: "100%",
                     borderColor: "#c0d1dc9c",
+                    backgroundColor:"transparent"
                   }}
                   inputClass="phone-input"
                   enableSearch

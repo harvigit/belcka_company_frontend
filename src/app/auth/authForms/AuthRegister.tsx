@@ -469,6 +469,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                   width: "100%",
                   borderRadius: "4px",
                   borderColor: "#c0d1dc",
+                  backgroundColor:"transparent"
                 }}
                 containerStyle={{ width: "100%" }}
                 enableSearch
@@ -753,7 +754,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                         extension: `+${country.dialCode}`,
                       })
                     }
-                    inputStyle={{ width: "100%", height: "47px" }}
+                    inputStyle={{ width: "100%", height: "47px" ,backgroundColor:"transparent"}}
                     enableSearch
                     inputProps={{ required: true }}
                   />

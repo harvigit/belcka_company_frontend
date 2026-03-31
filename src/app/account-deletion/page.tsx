@@ -189,6 +189,7 @@ const DeleteAccount = () => {
                   width: "100%",
                   height: "50px",
                   fontSize: "16px",
+                  backgroundColor:"transparent"
                 }}
                 enableSearch
               />

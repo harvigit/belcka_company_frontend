@@ -275,6 +275,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                   width: "100%",
                   height: "47px",
                   borderColor: "#c0d1dc9c",
+                  backgroundColor:"transparent"
                 }}
                 enableSearch
                 inputProps={{ required: true }}
@@ -345,6 +346,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                   width: "100%",
                   height: "47px",
                   borderColor: "#c0d1dc9c",
+                  backgroundColor:"transparent"
                 }}
                 enableSearch
                 inputProps={{ required: true }}

@@ -136,7 +136,11 @@ const ReceivePurchaseOrder = () => {
 
     const { getRootProps, getInputProps } = useDropzone({
       onDrop,
-      accept: { "image/*": [] },
+      accept: {
+        "image/jpeg": [".jpeg", ".jpg"],
+        "image/png": [".png"],
+        "image/webp": [".webp"],
+      },
     });
 
     return (
@@ -326,7 +330,6 @@ const ReceivePurchaseOrder = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong");
     } finally {
       setIsSaving(false);
     }

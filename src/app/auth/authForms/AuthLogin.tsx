@@ -310,7 +310,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                 const numberOnly = value.replace(country.dialCode, "");
                 setNationalPhone(numberOnly);
               }}
-              inputStyle={{ width: "100%" }}
+              inputStyle={{ width: "100%" ,backgroundColor:"transparent"}}
               enableSearch
               inputProps={{ required: true }}
             />
@@ -509,7 +509,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                       extension: `+${country.dialCode}`,
                     })
                   }
-                  inputStyle={{ width: "100%", height: "47px" }}
+                  inputStyle={{ width: "100%", height: "47px",backgroundColor:"transparent" }}
                   enableSearch
                   inputProps={{ required: true }}
                 />

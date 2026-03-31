@@ -279,6 +279,9 @@ input#project_id::placeholder {
   }
   .form_inputs{
     width: 100%;
+    input{
+        height: 17px !important;
+    }
   }
   .share_link:hover{
     color: white !important;

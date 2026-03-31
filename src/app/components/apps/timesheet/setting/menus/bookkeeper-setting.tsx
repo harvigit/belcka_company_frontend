@@ -203,6 +203,7 @@ const BookkeeperSetting: React.FC<BookkeeperSettingProps> = ({
                     inputStyle={{
                       height: "47px",
                       borderColor: "#c0d1dc9c",
+                      backgroundColor:"transparent"
                     }}
                     enableSearch
                   />

@@ -339,6 +339,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                   width: "100%",
                   height: "47px",
                   borderColor: "#c0d1dc9c",
+                  backgroundColor:"transparent"
                 }}
                 enableSearch
                 inputProps={{ required: true }}
@@ -421,6 +422,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                   width: "100%",
                   height: "47px",
                   borderColor: "#c0d1dc9c",
+                  backgroundColor:"transparent"
                 }}
                 enableSearch
                 inputProps={{ required: true }}
