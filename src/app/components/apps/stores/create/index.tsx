@@ -414,8 +414,8 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                   }
                 }}
               >
-                <Box>
-                  <Typography variant="body1">Store Name</Typography>
+                <Box className="form_inputs">
+                  <Typography variant="body2">Store Name</Typography>
                   <CustomTextField
                     name="name"
                     fullWidth
@@ -452,7 +452,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                     inputProps={{ required: true }}
                   />
 
-                  <Typography variant="body1" mt={2}>
+                  <Typography variant="body2" mt={2}>
                     Email
                   </Typography>
                   <CustomTextField
@@ -465,7 +465,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                   <Grid container spacing={2} mt={2}>
                     {/* Postcode Input */}
                     <Grid size={{ xs: 12, md: 3 }}>
-                      <Typography variant="body1" mt={2}>
+                      <Typography variant="body2" mt={2}>
                         Postcode
                       </Typography>
 
@@ -489,7 +489,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
 
                     {/* Address Autocomplete */}
                     <Grid size={{ xs: 12, md: 9 }}>
-                      <Typography variant="body1" mt={2}>
+                      <Typography variant="body2" mt={2}>
                         Select Address
                       </Typography>
 
@@ -569,7 +569,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                     gap={2}
                   >
                     <Box width={"100%"}>
-                      <Typography variant="body1" mt={2}>
+                      <Typography variant="body2" mt={2}>
                         Street
                       </Typography>
                       <CustomTextField
@@ -580,7 +580,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                       />
                     </Box>
                     <Box width={"100%"}>
-                      <Typography variant="body1" mt={2}>
+                      <Typography variant="body2" mt={2}>
                         Town
                       </Typography>
                       <CustomTextField
@@ -592,7 +592,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                     </Box>
                   </Box>
 
-                  <Typography variant="body1" mt={2}>
+                  <Typography variant="body2" mt={2}>
                     Location
                   </Typography>
 
@@ -603,7 +603,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
                     onChange={handleChange}
                   />
 
-                  <Typography variant="body1" mt={2}>
+                  <Typography variant="body2" mt={2}>
                     Store Manager
                   </Typography>
 

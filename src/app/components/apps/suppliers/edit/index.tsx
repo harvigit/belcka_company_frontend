@@ -217,7 +217,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
               />
             </Box>
             <Box className="form_inputs">
-              <Typography variant="body1">Supplier Name</Typography>
+              <Typography variant="body2">Supplier Name</Typography>
               <CustomTextField
                 inputProps={{ maxLength: 50 }}
                 name="name"
@@ -233,7 +233,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                   }));
                 }}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Email
               </Typography>
               <CustomTextField
@@ -243,7 +243,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Company Name
               </Typography>
               <CustomTextField
@@ -259,7 +259,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                   }));
                 }}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Account Number
               </Typography>
 
@@ -276,7 +276,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 }}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Contact Person Name
               </Typography>
 
@@ -294,7 +294,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 }}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Contact Person Email
               </Typography>
 
@@ -306,7 +306,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2} mb={0.5}>
                 Contact Person Phone
               </Typography>
               <PhoneInput
@@ -344,7 +344,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 enableSearch
                 inputProps={{ required: true }}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Street
               </Typography>
               <CustomTextField
@@ -353,7 +353,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 value={formData.street || ""}
                 onChange={handleChange}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Location
               </Typography>
 
@@ -364,7 +364,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Town
               </Typography>
               <CustomTextField
@@ -374,7 +374,7 @@ const EditSupplier: React.FC<EditSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Postcode
               </Typography>
               <CustomTextField

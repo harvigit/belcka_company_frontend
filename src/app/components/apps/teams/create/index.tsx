@@ -195,7 +195,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             </Box>
 
                             {/* ── Name ── */}
-                            <Typography variant="h5" mt={3}>Name</Typography>
+                            <Typography variant="body2" mt={3}>Name</Typography>
                             <CustomTextField
                                 id="name"
                                 name="name"
@@ -207,7 +207,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             />
 
                             {/* ── Supervisor ── */}
-                            <Typography variant="h5" mt={3}>Supervisor</Typography>
+                            <Typography variant="body2" mt={3}>Supervisor</Typography>
                             <Autocomplete
                                 fullWidth
                                 disableCloseOnSelect
@@ -250,7 +250,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             />
 
                             {/* ── Team Members ── */}
-                            <Typography variant="h5" mt={3}>Team Member&apos;s</Typography>
+                            <Typography variant="body2" mt={3}>Team Member&apos;s</Typography>
                             <Autocomplete
                                 multiple
                                 fullWidth
@@ -296,7 +296,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                             />
 
                             {/* ── Max Members ── */}
-                            <Typography variant="h5" mt={3}>Max Members</Typography>
+                            <Typography variant="body1" mt={3}>Max Members</Typography>
                             <TextField
                                 name="max_members"
                                 type="number"
@@ -321,7 +321,7 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                                 }}
                             />
 
-                            <Typography variant="h5" mt={3} mb={1}>
+                            <Typography variant="body1" mt={3} mb={1}>
                                 Trade-wise Max Members
                             </Typography>
 
@@ -344,7 +344,15 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
                                                     border: "1px solid #e0e0e0",
                                                 }}
                                             >
-                                                <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>
+                                                <Typography variant="body2" fontWeight={500} 
+                                                sx={{ flex: 1, display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 3,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    lineHeight: 1.25,
+                                                    wordBreak: "break-word"
+                                                }}>
                                                     {trade.name}
                                                 </Typography>
                                                 <TextField

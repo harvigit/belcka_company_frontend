@@ -164,7 +164,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
               />
             </Box>
             <Box className="form_inputs">
-              <Typography variant="body1">Supplier Name</Typography>
+              <Typography variant="body2">Supplier Name</Typography>
               <CustomTextField
                 inputProps={{ maxLength: 50 }}
                 name="name"
@@ -179,7 +179,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                   }));
                 }}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Email
               </Typography>
               <CustomTextField
@@ -189,7 +189,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Company Name
               </Typography>
               <CustomTextField
@@ -205,7 +205,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                   }));
                 }}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Account Number
               </Typography>
 
@@ -222,7 +222,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 }}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Contact Person Name
               </Typography>
 
@@ -240,7 +240,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 }}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Contact Person Email
               </Typography>
 
@@ -252,7 +252,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Contact Person Phone
               </Typography>
               <PhoneInput
@@ -280,7 +280,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 enableSearch
                 inputProps={{ required: true }}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Street
               </Typography>
               <CustomTextField
@@ -289,7 +289,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 value={formData.street || ""}
                 onChange={handleChange}
               />
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Location
               </Typography>
 
@@ -300,7 +300,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Town
               </Typography>
               <CustomTextField
@@ -310,7 +310,7 @@ const CreateSupplier: React.FC<CreateSupplierProps> = ({
                 onChange={handleChange}
               />
 
-              <Typography variant="body1" mt={2}>
+              <Typography variant="body2" mt={2}>
                 Postcode
               </Typography>
               <CustomTextField

@@ -90,10 +90,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 350,
+        width: 400,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: 350,
+          width: 400,
           padding: 2,
           backgroundColor: "#f9f9f9",
         },
@@ -162,12 +162,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   ))}
                 </Tabs>
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Name
                 </Typography>
                 <CustomTextField
                   id="name"
                   name="name"
+                  className="custom_input"
                   placeholder="Enter address name.."
                   value={formData.name}
                   onChange={handleChange}
@@ -178,12 +179,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
                 {activeTab === 1 && (
                   <>
-                    <Typography variant="h5" mt={2}>
+                    <Typography variant="body2" mt={2}>
                       Units
                     </Typography>
                     <CustomTextField
                       id="units"
                       name="units"
+                      className="custom_input"
                       placeholder="Enter units.."
                       value={formData.units}
                       onChange={handleChange}
@@ -193,13 +195,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   </>
                 )}
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Recommended duration
                 </Typography>
                 <CustomTextField
                   id="duration"
                   name="duration"
                   type="text"
+                  className="custom_input"
                   placeholder="Enter minutes.."
                   value={formData.duration === 0 ? "" : formData.duration}
                   onChange={handleChange}
@@ -214,13 +217,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                 {/* Show rate input only on Pricework tab */}
                 {activeTab === 1 && (
                   <>
-                    <Typography variant="h5" mt={2}>
+                    <Typography variant="body2" mt={2}>
                       Rate
                     </Typography>
                     <CustomTextField
                       id="rate"
                       name="rate"
                       type="text"
+                      className="custom_input"
                       placeholder="Enter rate.."
                       value={formData.rate === 0 ? "" : formData.rate}
                       onChange={(e: any) => {
@@ -246,7 +250,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   </>
                 )}
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Select Trade
                 </Typography>
                 <Autocomplete

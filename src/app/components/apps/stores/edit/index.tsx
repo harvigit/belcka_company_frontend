@@ -447,7 +447,7 @@ const EditStore: React.FC<EditStoreProps> = ({
                 }}
               >
                 <Box className="form_inputs">
-                  <Typography variant="body1">Store Name</Typography>
+                  <Typography variant="body2">Store Name</Typography>
                   <CustomTextField
                     name="name"
                     fullWidth
@@ -493,7 +493,7 @@ const EditStore: React.FC<EditStoreProps> = ({
                     enableSearch
                   />
 
-                  <Typography variant="body1" mt={2}>
+                  <Typography variant="body2" mt={2}>
                     Email
                   </Typography>
                   <CustomTextField
@@ -613,7 +613,7 @@ const EditStore: React.FC<EditStoreProps> = ({
                     gap={2}
                   >
                     <Box width={"100%"}>
-                      <Typography variant="body1" mt={2}>
+                      <Typography variant="body2" mt={2}>
                         Street
                       </Typography>
                       <CustomTextField
@@ -624,7 +624,7 @@ const EditStore: React.FC<EditStoreProps> = ({
                       />
                     </Box>
                     <Box width={"100%"}>
-                      <Typography variant="body1" mt={2}>
+                      <Typography variant="body2" mt={2}>
                         Town
                       </Typography>
                       <CustomTextField
@@ -636,7 +636,7 @@ const EditStore: React.FC<EditStoreProps> = ({
                     </Box>
                   </Box>
 
-                  <Typography variant="body1" mt={2}>
+                  <Typography variant="body2" mt={2}>
                     Location
                   </Typography>
                   <CustomTextField
@@ -646,7 +646,7 @@ const EditStore: React.FC<EditStoreProps> = ({
                     onChange={handleChange}
                   />
 
-                  <Typography variant="body1" mt={2}>
+                  <Typography variant="body2" mt={2}>
                     Store Manager
                   </Typography>
 

@@ -413,7 +413,7 @@ const ProductList = () => {
       const res = await api.get(`products/get?company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
-        setCurrency(res.data.info[0].currency);
+        setCurrency(res.data.info[0]?.currency);
 
         if (restorePage !== undefined) {
           setTimeout(() => {

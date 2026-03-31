@@ -2056,36 +2056,39 @@ const TablePagination = () => {
                             <form onSubmit={handleRegister} className="address-form">
                                 <Grid container spacing={2} mt={1}>
                                     <Grid size={{lg: 12, xs: 12}}>
-                                        <Typography variant="body1" mt={2}>
+                                        <Typography variant="body2" mt={2}>
                                             First Name
                                         </Typography>
                                         <CustomTextField
                                             id="first_name"
                                             variant="outlined"
+                                            className="custom_input"
                                             fullWidth
                                             value={firstName}
                                             onChange={(e: {
                                                 target: { value: SetStateAction<string> };
                                             }) => setfirstName(e.target.value)}
                                         />
-                                        <Typography variant="body1" mt={2}>
+                                        <Typography variant="body2" mt={2}>
                                             Last Name
                                         </Typography>
                                         <CustomTextField
                                             id="last_name"
                                             variant="outlined"
+                                            className="custom_input"
                                             fullWidth
                                             value={lastName}
                                             onChange={(e: {
                                                 target: { value: SetStateAction<string> };
                                             }) => setlastName(e.target.value)}
                                         />
-                                        <Typography variant="body1" mt={2}>
+                                        <Typography variant="body2" mt={2}>
                                             Email Address
                                         </Typography>
                                         <CustomTextField
                                             id="email"
                                             variant="outlined"
+                                            className="custom_input"
                                             fullWidth
                                             value={email}
                                             sx={{mb: 2}}
@@ -2096,18 +2099,18 @@ const TablePagination = () => {
                                         <PhoneInput
                                             country={'gb'}
                                             value={phone}
-                                            inputClass="form_inputs"
+                                            // inputClass="form_inputs"
                                             onChange={(value, country: any) => {
                                                 setPhone(value);
                                                 setExtension('+' + country.dialCode);
                                                 const numberOnly = value.replace(country.dialCode, '');
                                                 setNationalPhone(numberOnly);
                                             }}
-                                            inputStyle={{width: '100%', height: '47px'}}
+                                            inputStyle={{width: '100%', height: '47px',backgroundColor: 'transparent',borderColor: "#c0d1dc9c",}}
                                             enableSearch
                                             inputProps={{required: true}}
                                         />
-                                        <Typography variant="body1" mt={2}>
+                                        <Typography variant="body2" mt={2}>
                                             Select Teams
                                         </Typography>
                                         <Autocomplete
@@ -2132,7 +2135,7 @@ const TablePagination = () => {
                                                 />
                                             )}
                                         />
-                                        <Typography variant="body1" mt={2}>
+                                        <Typography variant="body2" mt={2}>
                                             Select Trades
                                         </Typography>
                                         <Autocomplete

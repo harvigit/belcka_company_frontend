@@ -96,12 +96,13 @@ const EditTradeCategory: React.FC<EditTradeCategoryProps> = ({
                   </Typography>
                 </Box>
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Name
                 </Typography>
                 <CustomTextField
                   id="name"
                   name="name"
+                  className="custom_input"
                   placeholder="Enter address name.."
                   value={formData.name}
                   onChange={handleChange}

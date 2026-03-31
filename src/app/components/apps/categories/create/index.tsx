@@ -194,36 +194,39 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
                 />
               </Box>
 
-              <Typography>Name</Typography>
-              <CustomTextField
-                name="name"
-                fullWidth
-                value={formData.name}
-                onChange={handleChange}
-              />
+              <Box className="form_inputs">
+                <Typography variant="body2">Name</Typography>
+                <CustomTextField
+                  name="name"
+                  fullWidth
+                  value={formData.name}
+                  onChange={handleChange}
+                  sx
+                />
 
-              <Typography mt={2}>Parent Category</Typography>
-              <Autocomplete
-                fullWidth
-                options={units}
-                value={
-                  units.find((t) => t.id === formData.parent_category_id) ??
-                  null
-                }
-                onChange={(_, newValue: any) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    parent_category_id: newValue?.id ?? null,
-                  }))
-                }
-                getOptionLabel={(option: any) => option.name}
-                renderInput={(params) => (
-                  <CustomTextField
-                    {...params}
-                    placeholder="Select parent category"
-                  />
-                )}
-              />
+                <Typography variant="body2" mt={2}>Parent Category</Typography>
+                <Autocomplete
+                  fullWidth
+                  options={units}
+                  value={
+                    units.find((t) => t.id === formData.parent_category_id) ??
+                    null
+                  }
+                  onChange={(_, newValue: any) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      parent_category_id: newValue?.id ?? null,
+                    }))
+                  }
+                  getOptionLabel={(option: any) => option.name}
+                  renderInput={(params) => (
+                    <CustomTextField
+                      {...params}
+                      placeholder="Select parent category"
+                    />
+                  )}
+                />
+              </Box>
 
               <InputLabel sx={{ mt: 2 }}>Upload Image</InputLabel>
 

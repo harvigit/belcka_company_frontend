@@ -80,6 +80,7 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
                     display="flex"
                     alignItems="center"
                     flexWrap="wrap"
+                    mt={2}
                 >
                     <IconButton onClick={onClose} aria-label="close drawer">
                         <ArrowBackIcon />
@@ -91,8 +92,8 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
 
                 <Box height="100%" p={2}>
                     <form onSubmit={handleSubmit} className="address-form">
-                        <Box>
-                            <Typography mt={2}>
+                        <Box className="form_inputs">
+                            <Typography variant='body2'>
                                 Name
                             </Typography>
                             <CustomTextField
@@ -113,6 +114,7 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
                                     color="#1a1a1a"
                                     component="label"
                                     htmlFor="type"
+                                    variant='body2'
                                 >
                                     Leave Type
                                 </Typography>
@@ -180,8 +182,9 @@ const CreateLeave: React.FC<CreateLeaveProps> = ({
                                 variant="outlined"
                                 size="large"
                                 sx={{
+                                    backgroundColor: "transparent",
                                     borderRadius: 3,
-                                    color: 'GrayText',
+                                    color: "GrayText",
                                 }}
                             >
                                 Close

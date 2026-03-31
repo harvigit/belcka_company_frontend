@@ -277,7 +277,7 @@ input#project_id::placeholder {
   ._3zRJQ, ._3KcaM{
     fill: gray !important;
   }
-  .form_inputs{
+  .form_inputs,.custom_input{
     width: 100%;
     input{
         height: 17px !important;
@@ -485,7 +485,7 @@ input[type="range"]::-moz-range-thumb {
   width: 100%;
   padding-right: 4rem;
   box-sizing: border-box;
-  height: 100%;
+  height: 17px !important;
 }
 
 .input-with-unit .unit {

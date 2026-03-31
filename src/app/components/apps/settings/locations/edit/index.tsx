@@ -105,12 +105,13 @@ const EditLocation: React.FC<EditLocationProps> = ({
                     Edit Location
                   </Typography>
                 </Box>
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Name
                 </Typography>
                 <CustomTextField
                   id="name"
                   name="name"
+                  className="custom_input"
                   placeholder="Enter name.."
                   value={formData.name}
                   onChange={handleChange}

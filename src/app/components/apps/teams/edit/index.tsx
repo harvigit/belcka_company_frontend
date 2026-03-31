@@ -309,7 +309,7 @@ const EditTeam: React.FC<Props> = ({
                             </Box>
 
                             {/* ── Name ── */}
-                            <Typography variant="h5" mt={3}>Name</Typography>
+                            <Typography variant="body2" mt={3}>Name</Typography>
                             <CustomTextField
                                 name="name"
                                 placeholder="Enter team name..."
@@ -322,7 +322,7 @@ const EditTeam: React.FC<Props> = ({
                             />
 
                             {/* ── Supervisor ── */}
-                            <Typography variant="h5" mt={3}>Supervisor</Typography>
+                            <Typography variant="body2" mt={3}>Supervisor</Typography>
                             <Autocomplete
                                 fullWidth
                                 disableCloseOnSelect
@@ -364,7 +364,7 @@ const EditTeam: React.FC<Props> = ({
                             />
 
                             {/* ── Team Members ── */}
-                            <Typography variant="h5" mt={3}>Team Member&apos;s</Typography>
+                            <Typography variant="body2" mt={3}>Team Member&apos;s</Typography>
                             <Autocomplete
                                 multiple
                                 fullWidth
@@ -410,7 +410,7 @@ const EditTeam: React.FC<Props> = ({
                             />
 
                             {/* ── Max Members ── */}
-                            <Typography variant="h5" mt={3}>Max Members</Typography>
+                            <Typography variant="body2" mt={3}>Max Members</Typography>
                             <TextField
                                 name="max_members"
                                 type="number"
@@ -438,7 +438,7 @@ const EditTeam: React.FC<Props> = ({
                                 }}
                             />
                             
-                            <Typography variant="h5" mt={3} mb={1}>
+                            <Typography variant="body2" mt={3} mb={1}>
                                 Trade-wise Max Members
                             </Typography>
 
@@ -461,7 +461,15 @@ const EditTeam: React.FC<Props> = ({
                                                     border: "1px solid #e0e0e0",
                                                 }}
                                             >
-                                                <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>
+                                                <Typography variant="body2" fontWeight={500} 
+                                                sx={{ flex: 1, display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 3,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    lineHeight: 1.25,
+                                                    wordBreak: "break-word"
+                                                }}>
                                                     {trade.name}
                                                 </Typography>
                                                 <TextField

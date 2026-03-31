@@ -197,7 +197,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
         )}
         {/* Set Name Input */}
         <Box mb={2}>
-          <Typography mb={1}>Select Product</Typography>
+          <Typography variant="body2" mb={1}>Select Product</Typography>
           <Autocomplete
             fullWidth
             // className="trade-selection"

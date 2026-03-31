@@ -123,10 +123,10 @@ const EditTask: React.FC<EditTaskProps> = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 350,
+        width: 400,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: 350,
+          width: 400,
           padding: 2,
           backgroundColor: "#f9f9f9",
         },
@@ -195,12 +195,13 @@ const EditTask: React.FC<EditTaskProps> = ({
                   ))}
                 </Tabs>
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Name
                 </Typography>
                 <CustomTextField
                   id="name"
                   name="name"
+                  className="custom_input"
                   placeholder="Enter address name.."
                   value={formData.name}
                   onChange={handleChange}
@@ -211,12 +212,13 @@ const EditTask: React.FC<EditTaskProps> = ({
 
                 {activeTab === 1 && (
                   <>
-                    <Typography variant="h5" mt={2}>
+                    <Typography variant="body2" mt={2}>
                       Units
                     </Typography>
                     <CustomTextField
                       id="units"
                       name="units"
+                      className="custom_input"
                       placeholder="Enter units.."
                       value={formData.units}
                       onChange={handleChange}
@@ -225,12 +227,13 @@ const EditTask: React.FC<EditTaskProps> = ({
                     />
                   </>
                 )}
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Recommended duration
                 </Typography>
                 <CustomTextField
                   id="duration"
                   name="duration"
+                  className="custom_input"
                   type="text"
                   placeholder="Enter minutes.."
                   value={formData.duration === 0 ? "" : formData.duration}
@@ -246,12 +249,13 @@ const EditTask: React.FC<EditTaskProps> = ({
                 {/* Show rate field only if Pricework tab */}
                 {activeTab === 1 && (
                   <>
-                    <Typography variant="h5" mt={2}>
+                    <Typography variant="body2" mt={2}>
                       Rate
                     </Typography>
                     <CustomTextField
                       id="rate"
                       name="rate"
+                      className="custom_input"
                       type="text"
                       placeholder="Enter rate.."
                       value={formData.rate === 0 ? "" : formData.rate}
@@ -278,7 +282,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                   </>
                 )}
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Select Trade
                 </Typography>
                 <Autocomplete

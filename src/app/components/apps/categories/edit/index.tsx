@@ -223,7 +223,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
               </Box>
 
               <Box className="form_inputs">
-                <Typography variant="body1">Name</Typography>
+                <Typography variant="body2">Name</Typography>
                 <CustomTextField
                   name="name"
                   fullWidth
@@ -231,7 +231,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
                   onChange={handleChange}
                 />
 
-                <Typography variant="body1" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Parent Category
                 </Typography>
                 <Autocomplete

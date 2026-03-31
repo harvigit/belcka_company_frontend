@@ -559,15 +559,165 @@ const SupplierList = () => {
       },
     }),
 
+    columnHelper.accessor((row) => row?.email, {
+      id: "email",
+      header: () => "Email",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.email ? item.email : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
     columnHelper.accessor((row) => row?.company_name, {
-      id: "companyName",
-      header: () => "Company Name",
+      id: "company",
+      header: () => "Company",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
               {item.company_name ? item.company_name : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.account_number, {
+      id: "account",
+      header: () => "Account",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.account_number ? item.account_number : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.contact_person_name, {
+      id: "contactName",
+      header: () => "Contact Name",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.contact_person_name ? item.contact_person_name : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.contact_person_email, {
+      id: "contactEmail",
+      header: () => "Contact Email",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.contact_person_email ? item.contact_person_email : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.contact_person_email, {
+      id: "contactEmail",
+      header: () => "Contact Email",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.contact_person_email ? item.contact_person_email : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.contact_person_phone, {
+      id: "contact",
+      header: () => "Contact",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.contact_person_phone ? item.contact_person_phone : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.postcode, {
+      id: "postcode",
+      header: () => "Postcode",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.postcode ? item.postcode : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.street, {
+      id: "street",
+      header: () => "Street",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.street ? item.street : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.location, {
+      id: "location",
+      header: () => "Location",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.location ? item.location : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.town, {
+      id: "town",
+      header: () => "Town",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.town ? item.town : "-"}
             </Typography>
           </Stack>
         );

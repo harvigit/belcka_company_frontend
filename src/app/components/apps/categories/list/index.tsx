@@ -44,7 +44,6 @@ import {
   IconChevronRight,
   IconEye,
   IconSearch,
-  IconTableColumn,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -68,7 +67,24 @@ import EditCategory from "../edit";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import { useDropzone } from "react-dropzone";
+import {
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  MouseSensor,
+  TouchSensor,
+  KeyboardSensor,
+} from "@dnd-kit/core";
 
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+
+import { CSS } from "@dnd-kit/utilities";
 dayjs.extend(customParseFormat);
 
 interface CategoryFormData {
@@ -450,6 +466,14 @@ const CategoryList = () => {
         );
       },
     },
+    {
+      id: "drag",
+      header: "",
+      cell: ({ row }: any) => {
+        return <DragHandle id={row.original.id} />;
+      },
+    },
+
     columnHelper.accessor("image_url", {
       id: "image",
       header: () => (
@@ -638,7 +662,13 @@ const CategoryList = () => {
         return (
           <Stack direction="row" spacing={1}>
             <Tooltip title="Edit">
-              <IconButton onClick={() => handleEdit(item.id)} color="primary">
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(item.id);
+                }}
+                color="primary"
+              >
                 <IconEdit size={18} />
               </IconButton>
             </Tooltip>
@@ -647,6 +677,79 @@ const CategoryList = () => {
       },
     }),
   ];
+
+  const DraggableRow = ({ row, children }: any) => {
+    const { setNodeRef, transform, transition } = useSortable({
+      id: row.original.id,
+    });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <TableRow ref={setNodeRef} style={style} hover>
+        {children}
+      </TableRow>
+    );
+  };
+
+  const DragHandle = ({ id }: { id: number }) => {
+    const { attributes, listeners } = useSortable({ id });
+
+    return (
+      <Box
+        {...attributes}
+        {...listeners}
+        sx={{
+          cursor: "grab",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Typography textAlign={"center"}>⋮⋮</Typography>
+      </Box>
+    );
+  };
+
+  const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor),
+  );
+
+  const handleDragEnd = async (event: any) => {
+    try {
+      const { active, over } = event;
+
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = data.findIndex((i) => i.id === active.id);
+      const newIndex = data.findIndex((i) => i.id === over.id);
+
+      const newData = arrayMove(data, oldIndex, newIndex);
+
+      setData(newData);
+
+      const payload = newData.map((item, index) => ({
+        id: item.id,
+        new_position: index + 1,
+      }));
+
+      const res = await api.post("categories/change-bulk-sequence", {
+        company_id: user.company_id,
+        user_id: user.id,
+        sequence: payload,
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchCategories();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
@@ -1178,51 +1281,62 @@ const CategoryList = () => {
                   </TableRow>
                 ))}
               </TableHead>
-              <TableBody>
-                {fetchCategory ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                  />
-                ) : data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
-                        }}
-                      >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <TableBody>
+                  {fetchCategory ? (
+                    <SkeletonLoader
+                      columns={simpleColumns}
+                      rowCount={simpleColumns.length}
+                    />
+                  ) : data.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={columns.length}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            height: "calc(50vh - 100px)",
                           }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      ))}
+                        >
+                          <Image
+                            src="/images/no-data.png"
+                            alt="No data"
+                            style={{
+                              maxWidth: "100%",
+                              maxHeight: "100%",
+                            }}
+                            width={200}
+                            height={200}
+                          />
+                        </Box>
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
+                  ) : (
+                    <SortableContext
+                      items={data.map((row) => row.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {table.getRowModel().rows.map((row) => (
+                        <DraggableRow key={row.id} row={row}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </TableCell>
+                          ))}
+                        </DraggableRow>
+                      ))}
+                    </SortableContext>
+                  )}
+                </TableBody>
+              </DndContext>
             </Table>
           </TableContainer>
           {data.length ? <Divider /> : <></>}

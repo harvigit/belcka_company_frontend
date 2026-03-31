@@ -127,12 +127,13 @@ const EditTrade: React.FC<EditTradeProps> = ({
                   </Typography>
                 </Box>
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Name
                 </Typography>
                 <CustomTextField
                   id="name"
                   name="name"
+                  className="custom_input"
                   placeholder="Enter address name.."
                   value={formData.name}
                   onChange={handleChange}
@@ -141,7 +142,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
                   fullWidth
                 />
 
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Select Trade
                 </Typography>
                 <Autocomplete
@@ -167,7 +168,7 @@ const EditTrade: React.FC<EditTradeProps> = ({
                     <CustomTextField {...params} placeholder="Trades" />
                   )}
                 />
-                <Typography variant="h5" mt={2}>
+                <Typography variant="body2" mt={2}>
                   Status
                 </Typography>
                 <IOSSwitch

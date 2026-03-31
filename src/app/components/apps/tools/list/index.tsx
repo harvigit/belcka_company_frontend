@@ -477,15 +477,20 @@ const ToolsList = () => {
     columnHelper.display({
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => {
+      cell: ({ row }) => {  
         const item = row.original;
         return (
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} alignItems={"center"}>
             <Tooltip title="Edit">
               <IconButton onClick={() => handleEdit(item.id)} color="primary">
                 <IconEdit size={18} />
               </IconButton>
             </Tooltip>
+            {item.need_service && (
+              <Typography color="error" variant="h6" fontWeight={500}>
+                Need service
+              </Typography>
+            )}
           </Stack>
         );
       },
@@ -870,17 +875,7 @@ const ToolsList = () => {
                             paddingTop: "10px",
                             paddingBottom: "10px",
                             width:
-                              header.column.id === "actions" ||
-                              header.column.id === "price" ||
-                              header.column.id === "barcode"
-                                ? 80
-                                : header.column.id === "QrCode"
-                                  ? 120
-                                  : header.column.id === "supplierCode"
-                                    ? 140
-                                    : header.column.id === "select"
-                                      ? 30
-                                      : "auto",
+                              header.column.id === "actions" ? 200 : "auto",
                           }}
                         >
                           <Box

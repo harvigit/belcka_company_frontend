@@ -91,7 +91,7 @@ const TeamMembersLimit: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => 
 
                 {/* Main content */}
                 <Box sx={{ flex: 1 }}>
-                    <Typography variant="h5" mb={1}>
+                    <Typography variant="body2" mb={1}>
                         Max Members
                     </Typography>
 

@@ -263,11 +263,11 @@ const AdjustStock: React.FC<Props> = ({
 
         {/* LOW STOCK */}
         <Box p={3}>
-          <Typography fontWeight={600} mb={1}>
+          <Typography  variant="body2" fontWeight={600} mb={1}>
             Low Stock Indicator
           </Typography>
 
-          <Box display="flex" gap={2}>
+          <Box display="flex" gap={2} className="form_inputs">
             <TextField
               fullWidth
               value={formData.cutoff || ""}
@@ -289,11 +289,11 @@ const AdjustStock: React.FC<Props> = ({
 
         {/* NOTE / USER */}
         <Box p={3}>
-          <Typography fontWeight={600} mb={1}>
+          <Typography variant="body2" fontWeight={600} mb={1}>
             {mode === "note" ? "Note / Reference" : "Select User"}
           </Typography>
 
-          <Box display="flex" gap={2}>
+          <Box display="flex" gap={2} className="form_inputs">
             {mode === "note" ? (
               <TextField
                 fullWidth
@@ -337,7 +337,7 @@ const AdjustStock: React.FC<Props> = ({
 
         {/* STOCK ADJUST */}
         <Box p={3}>
-          <Typography mb={2}>Adjust Stock</Typography>
+          <Typography variant="body2" mb={2} >Adjust Stock</Typography>
 
           <Box display="flex" gap={2} alignContent={"center"}>
             <Button
