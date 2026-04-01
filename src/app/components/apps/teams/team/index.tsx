@@ -143,7 +143,7 @@ const TablePagination = () => {
   const router = useRouter();
   const [enabled, setEnabled] = useState<boolean>(false);
 
-    const [geoSettings, setGeoSettings] = useState({main: false, start: false, stop: false});
+    const [geoSettings, setGeoSettings] = useState({start: false, stop: false});
 
     const handleGeoToggle = (key: string) => async (event: any) => {
         const checked = event.target.checked;
@@ -153,9 +153,8 @@ const TablePagination = () => {
             [key]: checked,
         };
 
-        if (key === "main" && !checked) {
+        if (!checked) {
             updatedSettings = {
-                main: false,
                 start: false,
                 stop: false,
             };
@@ -166,7 +165,6 @@ const TablePagination = () => {
         try {
             const payload = {
                 team_id: Number(teamId),
-                is_location_restricted: updatedSettings.main,
                 is_start_inside_boundary: updatedSettings.start,
                 is_stop_inside_boundary: updatedSettings.stop,
             };
@@ -238,7 +236,7 @@ const TablePagination = () => {
           setEnabled(team.is_check_in ?? false);
 
             const updatedSettings = {
-                main: team.is_location_restricted,
+
                 start: team.is_start_inside_boundary,
                 stop: team.is_stop_inside_boundary,
             };
@@ -703,28 +701,12 @@ const TablePagination = () => {
                             py={1.5}
                             borderBottom="1px solid #eee"
                         >
-                            <Typography>Enable Location Restriction</Typography>
-                            <IOSSwitch
-                                checked={geoSettings.main}
-                                onChange={handleGeoToggle("main")}
-                            />
-                        </Box>
-
-                        <Box
-                            display="flex"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            px={2}
-                            py={1.5}
-                            borderBottom="1px solid #eee"
-                        >
                             <Typography>
                                 Start Work: Inside Boundary Only
                             </Typography>
                             <IOSSwitch
                                 checked={geoSettings.start}
                                 onChange={handleGeoToggle("start")}
-                                disabled={!geoSettings.main}
                             />
                         </Box>
 
@@ -741,7 +723,6 @@ const TablePagination = () => {
                             <IOSSwitch
                                 checked={geoSettings.stop}
                                 onChange={handleGeoToggle("stop")}
-                                disabled={!geoSettings.main}
                             />
                         </Box>
                     </CardContent>
