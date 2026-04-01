@@ -1001,7 +1001,7 @@ const ProductList = () => {
                   const value = e.target.value;
 
                   if (/^\d*$/.test(value)) {
-                    if (value === "" || Number(value) <= 100) {
+                    if (value === "" || Number(value) <= 9999) {
                       setInputValue(value);
                     }
                   }
@@ -1009,7 +1009,7 @@ const ProductList = () => {
                 onBlur={async () => {
                   if (inputValue === "") return;
                   let number = Number(inputValue);
-                  if (number > 10000) {
+                  if (number > 9999) {
                     return;
                   }
                   updateStockLimit(item.id, number);
@@ -1020,7 +1020,7 @@ const ProductList = () => {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     let number = Number(inputValue);
-                    if (number > 100) {
+                    if (number > 9999) {
                       return;
                     }
                     updateStockLimit(item.id, number);

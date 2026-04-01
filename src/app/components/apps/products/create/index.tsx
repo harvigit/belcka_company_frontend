@@ -1152,6 +1152,30 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom mb={1}>
+                      Max Stock Limit
+                    </Typography>
+                    <CustomTextField
+                      className="product_input"
+                      fullWidth
+                      placeholder="Max Stock"
+                      value={formData.max_stock || ""}
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+
+                        if (/^\d*$/.test(value)) {
+                          if (value === "" || Number(value) <= 9999) {
+                            setFormData((p) => ({
+                              ...p,
+                              max_stock: e.target.value,
+                            }));
+                          }
+                        }
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid size={{ xs: 3 }}>
+                    <Typography variant="body2" gutterBottom mb={1}>
                       Pack Off
                     </Typography>
                     <CustomTextField
