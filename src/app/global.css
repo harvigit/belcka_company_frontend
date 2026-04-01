@@ -485,7 +485,7 @@ input[type="range"]::-moz-range-thumb {
   width: 100%;
   padding-right: 4rem;
   box-sizing: border-box;
-  height: 17px !important;
+  height: 41px !important;
 }
 
 .input-with-unit .unit {
