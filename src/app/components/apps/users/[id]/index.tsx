@@ -36,6 +36,7 @@ import Notifications from "../../user-profile-setting/notifications";
 import toast from "react-hot-toast";
 import ComapnyRate from "../../user-profile-setting/company-rate";
 import Payments from "../../user-profile-setting/payments";
+import GeofencePenalty from "../../user-profile-setting/geofence-penalty";
 import UserLeaves from "../../user-profile-setting/user-leaves";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 
@@ -806,6 +807,7 @@ const TablePagination = () => {
                   "Leaves",
                   "Notification Settings",
                   "Payments",
+                  "Geofence & Penalty",
                 ].map((label, index) => (
                   <Tab
                     key={label}
@@ -864,6 +866,13 @@ const TablePagination = () => {
                   userId={Number(userId)}
                   isShow={false}
                   disableDateFilter={true}
+                />
+              </Box>
+                <Box hidden={value !== 6}>
+                <GeofencePenalty
+                  companyId={Number(user.company_id)}
+                  active={value === 6}
+                  userId={Number(userId)}
                 />
               </Box>
             </Box>

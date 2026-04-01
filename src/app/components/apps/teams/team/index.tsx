@@ -143,6 +143,45 @@ const TablePagination = () => {
   const router = useRouter();
   const [enabled, setEnabled] = useState<boolean>(false);
 
+    const [geoSettings, setGeoSettings] = useState({main: false, start: false, stop: false});
+
+    const handleGeoToggle = (key: string) => async (event: any) => {
+        const checked = event.target.checked;
+
+        let updatedSettings = {
+            ...geoSettings,
+            [key]: checked,
+        };
+
+        if (key === "main" && !checked) {
+            updatedSettings = {
+                main: false,
+                start: false,
+                stop: false,
+            };
+        }
+
+        setGeoSettings(updatedSettings);
+
+        try {
+            const payload = {
+                team_id: Number(teamId),
+                is_location_restricted: updatedSettings.main,
+                is_start_inside_boundary: updatedSettings.start,
+                is_stop_inside_boundary: updatedSettings.stop,
+            };
+
+            const res = await api.post("/team/update-geofence-settings", payload);
+
+            if (res.data?.IsSuccess) {
+                toast.success(res.data.message || "Settings updated");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update settings");
+        }
+    };
+    
   const handleSwitchToggle = () => {
     handleToggle(!enabled);
   };
@@ -197,6 +236,14 @@ const TablePagination = () => {
       if (res.data?.info) {
         const flattened = res.data.info.flatMap((team: any) => {
           setEnabled(team.is_check_in ?? false);
+
+            const updatedSettings = {
+                main: team.is_location_restricted,
+                start: team.is_start_inside_boundary,
+                stop: team.is_stop_inside_boundary,
+            };
+            setGeoSettings(updatedSettings)
+            
           if (team.users.length === 0) {
             return [
               {
@@ -362,7 +409,7 @@ const TablePagination = () => {
       return null;
     }
   };
-
+  
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchesTeam = filters.team ? item.name === filters.team : true;
@@ -579,57 +626,128 @@ const TablePagination = () => {
 
   return (
     <Grid container spacing={2}>
-      {/* Render the search and table */}
-      <Grid
-        size={{
-          xs: 12,
-          lg: 3,
-        }}
-      >
-        <BlankCard>
-          <CardContent sx={{ pt: 1 }}>
-            <Box textAlign="center" display="flex" justifyContent="center">
-              <Box>
-                <Avatar
-                  src={data[0]?.supervisor_image || "/images/users/user.png"}
-                  alt={data[0]?.supervisor_name || "user1"}
-                  sx={{ width: 120, height: 120, margin: "0 auto" }}
-                />
-                <Typography variant="h5" mb={1}>
-                  {data[0]?.supervisor_name}
-                </Typography>
-                <Typography variant="subtitle1" color="textSecondary" mb={1}>
-                  Supervisor
-                </Typography>
-              </Box>
-            </Box>
-            <Divider />
-            <Stack direction="row" spacing={2} py={2} alignItems="center">
-              <Box>
-                <Typography variant="h6">Phone</Typography>
-              </Box>
-              <Box
-                sx={{ ml: "auto !important", cursor: "pointer" }}
-                onClick={handleCopy}
-              >
-                <Typography variant="h5" color="textSecondary">
-                  {data[0]?.extension || ""} {data[0]?.supervisor_phone || "-"}
-                </Typography>
-              </Box>
-            </Stack>
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{ mb: 1 }}
-            >
-              <Typography variant="h6">Check-In</Typography>
+        <Grid size={{ xs: 12, lg: 3 }}>
+            <BlankCard>
+                <CardContent sx={{ pt: 1 }}>
+                    <Box textAlign="center" display="flex" justifyContent="center">
+                        <Box>
+                            <Avatar
+                                src={data[0]?.supervisor_image || "/images/users/user.png"}
+                                alt={data[0]?.supervisor_name || "user1"}
+                                sx={{ width: 120, height: 120, margin: "0 auto" }}
+                            />
+                            <Typography variant="h5" mb={1}>
+                                {data[0]?.supervisor_name}
+                            </Typography>
+                            <Typography variant="subtitle1" color="textSecondary" mb={1}>
+                                Supervisor
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <Divider />
+                    <Stack direction="row" spacing={2} py={2} alignItems="center">
+                        <Box>
+                            <Typography variant="h6">Phone</Typography>
+                        </Box>
+                        <Box
+                            sx={{ ml: "auto !important", cursor: "pointer" }}
+                            onClick={handleCopy}
+                        >
+                            <Typography variant="h5" color="textSecondary">
+                                {data[0]?.extension || ""} {data[0]?.supervisor_phone || "-"}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                </CardContent>
+            </BlankCard>
 
-              <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
+            <Box
+                sx={{
+                    mt: 4,
+                    borderRadius: 3,
+                    boxShadow: "0px 2px 8px rgba(0,0,0,0.10)",
+                    backgroundColor: "background.paper",
+                    overflow: "hidden",
+                }}
+            >
+                <BlankCard>
+                    <CardContent>
+                        <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                        >
+                            <Typography variant="h6">Check-In</Typography>
+                            <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
+                        </Box>
+                    </CardContent>
+                </BlankCard>
             </Box>
-          </CardContent>
-        </BlankCard>
-      </Grid>
+
+            <Box
+                sx={{
+                    mt: 4,
+                    borderRadius: 3,
+                    boxShadow: "0px 2px 8px rgba(0,0,0,0.10)",
+                    backgroundColor: "background.paper",
+                    overflow: "hidden",
+                }}
+            >
+                <BlankCard>
+                    <CardContent sx={{ padding: 2 }}>
+                        <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            px={2}
+                            py={1.5}
+                            borderBottom="1px solid #eee"
+                        >
+                            <Typography>Enable Location Restriction</Typography>
+                            <IOSSwitch
+                                checked={geoSettings.main}
+                                onChange={handleGeoToggle("main")}
+                            />
+                        </Box>
+
+                        <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            px={2}
+                            py={1.5}
+                            borderBottom="1px solid #eee"
+                        >
+                            <Typography>
+                                Start Work: Inside Boundary Only
+                            </Typography>
+                            <IOSSwitch
+                                checked={geoSettings.start}
+                                onChange={handleGeoToggle("start")}
+                                disabled={!geoSettings.main}
+                            />
+                        </Box>
+
+                        <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            px={2}
+                            py={1.5}
+                        >
+                            <Typography>
+                                End Work: Inside Boundary Only
+                            </Typography>
+                            <IOSSwitch
+                                checked={geoSettings.stop}
+                                onChange={handleGeoToggle("stop")}
+                                disabled={!geoSettings.main}
+                            />
+                        </Box>
+                    </CardContent>
+                </BlankCard>
+            </Box>
+        </Grid>
       <Grid
         size={{
           xs: 12,
