@@ -78,7 +78,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     if (open && setId) {
       fetchSetData();
     }
-  }, [open, setId, fetchSetData]);
+  }, [open, setId]);
 
   useEffect(() => {
     if (open && !setId) {

@@ -721,7 +721,7 @@ const StockList = () => {
                 onChange={(e) => {
                   const value = e.target.value;
 
-                  if (/^\d*(\.\d{0,2})?$/.test(value)) {
+                  if (/^\d*$/.test(value)) {
                     const num = Number(value);
 
                     if (value === "" || num <= MAX_QTY) {
