@@ -182,7 +182,7 @@ const ProductList = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
   const [editing, setEditing] = useState<{
     id: number | null;
-    field: "price" | "market_price" | null;
+    field: "price" | "market_price" | "max_stock" | null;
   }>({ id: null, field: null });
   const [inputValue, setInputValue] = useState("");
   const [rowCategories, setRowCategories] = useState<Record<string, any[]>>({});
@@ -621,6 +621,24 @@ const ProductList = () => {
     }
   };
 
+  const updateStockLimit = async (id: string, limit: any) => {
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        max_stock: limit,
+      };
+      const res = await api.post("products/update", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+        setOpenCategoryModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const updatePrice = async (
     id: number,
     price?: number,
@@ -939,6 +957,100 @@ const ProductList = () => {
                 ? selectedForRow.map((c) => c.name).join(", ")
                 : item.product_categories || "-"}
             </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.max_stock, {
+      id: "stockLimit",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2" fontWeight="inherit">
+            Stock Limit
+          </Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        const isEditing =
+          editing.id === item.id && editing.field === "max_stock";
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {isEditing ? (
+              <TextField
+                className="f-14"
+                size="small"
+                value={inputValue}
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                variant="standard"
+                sx={{ width: 80 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (/^\d*$/.test(value)) {
+                    if (value === "" || Number(value) <= 9999) {
+                      setInputValue(value);
+                    }
+                  }
+                }}
+                onBlur={async () => {
+                  if (inputValue === "") return;
+                  let number = Number(inputValue);
+                  if (number > 9999) {
+                    return;
+                  }
+                  updateStockLimit(item.id, number);
+
+                  setEditing({ id: null, field: null });
+                }}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    let number = Number(inputValue);
+                    if (number > 9999) {
+                      return;
+                    }
+                    updateStockLimit(item.id, number);
+                    setEditing({ id: null, field: null });
+                  }
+                }}
+              />
+            ) : (
+              <Typography
+                className="f-14"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  border: "1px solid transparent",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    border: "1px solid #1976d2",
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing({ id: item.id, field: "max_stock" });
+                  setInputValue(item.max_stock || "0");
+                }}
+              >
+                {item.max_stock || "0"}
+              </Typography>
+            )}
           </Stack>
         );
       },

@@ -1149,35 +1149,30 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                 </Box>
 
                 {/* Pack off */}
-                <Grid
-                  // sx={{ mb: 2, mt: 2 }}
-                  // display={"flex"}
-                  // container
-                  // gap={3}
-                  // alignItems={"center"}
-                  // justifyItems={"center"}
-                  container
-                  spacing={3}
-                >
-                  {user.user_role_id == 1 && (
-                    <Grid size={{ xs: 3 }}>
-                      <Typography variant="body2" gutterBottom mb={1}>
-                        Max Stock Limit
-                      </Typography>
-                      <CustomTextField
-                        className="product_input"
-                        fullWidth
-                        placeholder="Max Stock"
-                        value={formData.max_stock || ""}
-                        onChange={(e: any) =>
-                          setFormData((p) => ({
-                            ...p,
-                            max_stock: e.target.value,
-                          }))
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 3 }}>
+                    <Typography variant="body2" gutterBottom mb={1}>
+                      Max Stock Limit
+                    </Typography>
+                    <CustomTextField
+                      className="product_input"
+                      fullWidth
+                      placeholder="Max Stock"
+                      value={formData.max_stock || ""}
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+
+                        if (/^\d*$/.test(value)) {
+                          if (value === "" || Number(value) <= 9999) {
+                            setFormData((p) => ({
+                              ...p,
+                              max_stock: e.target.value,
+                            }));
+                          }
                         }
-                      />
-                    </Grid>
-                  )}
+                      }}
+                    />
+                  </Grid>
 
                   <Grid size={{ xs: 3 }}>
                     <Typography variant="body2" gutterBottom mb={1}>
@@ -1370,7 +1365,9 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                                 }}
                               >
                                 <Image
-                                  src={item.src || "/images/products/product.svg"}
+                                  src={
+                                    item.src || "/images/products/product.svg"
+                                  }
                                   alt="Product image"
                                   fill
                                   style={{
