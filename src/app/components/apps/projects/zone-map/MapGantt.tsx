@@ -1,23 +1,19 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
     Avatar,
     Box,
     Button,
-    Chip,
     Collapse,
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle,
+    DialogTitle, Divider,
     Drawer,
-    FormControl,
     IconButton,
-    InputAdornment,
-    MenuItem,
-    Paper,
-    Select,
+    InputAdornment, MenuItem,
+    Paper, Stack,
     Tab,
     Table,
     TableBody,
@@ -25,8 +21,7 @@ import {
     TableHead,
     TableRow,
     Tabs,
-    TextField,
-    Tooltip,
+    TextField, Tooltip,
     Typography,
 } from '@mui/material';
 import {
@@ -40,27 +35,371 @@ import {
 } from '@react-google-maps/api';
 import {
     IconChevronDown,
+    IconChevronLeft,
+    IconChevronRight,
     IconChevronUp,
     IconEdit,
     IconEye,
-    IconEyeOff,
-    IconFilter,
     IconMapPin,
     IconSearch,
     IconTrash,
     IconUsers,
     IconX,
+    IconEyeOff,
+    IconFilter,
 } from '@tabler/icons-react';
-import { AxiosResponse } from 'axios';
-import { User } from 'next-auth';
-import { useSession } from 'next-auth/react';
+import {AxiosResponse} from 'axios';
+import {User} from 'next-auth';
+import {useSession} from 'next-auth/react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 
 import AddZone from './AddZone';
 import EditZone from './EditZone';
-import AddZoneGroup from './AddZoneGroup';
-import EditZoneGroup from './EditZoneGroup';
+
+interface DateTimePickerProps {
+    value: Date;
+    onChange: (date: Date) => void;
+}
+
+const MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function DateTimePicker({value, onChange}: DateTimePickerProps) {
+    const [open, setOpen] = useState(false);
+    const [viewYear, setViewYear] = useState(value.getFullYear());
+    const [viewMonth, setViewMonth] = useState(value.getMonth());
+    const [pickedDate, setPickedDate] = useState<Date>(value);
+    const [hours, setHours] = useState(value.getHours());
+    const [minutes, setMinutes] = useState(value.getMinutes());
+    const anchorRef = useRef<HTMLDivElement>(null);
+    const popoverRef = useRef<HTMLDivElement>(null);
+
+    // Display value: dd-MM-yyyy HH:mm
+    const displayValue = useMemo(() => {
+        const dd = String(value.getDate()).padStart(2, '0');
+        const MM = String(value.getMonth() + 1).padStart(2, '0');
+        const yyyy = value.getFullYear();
+        const hh = String(value.getHours()).padStart(2, '0');
+        const mm = String(value.getMinutes()).padStart(2, '0');
+        return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
+    }, [value]);
+
+    // Close popover on outside click
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent) => {
+            if (
+                popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+                anchorRef.current && !anchorRef.current.contains(e.target as Node)
+            ) setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    // Sync internal state when prop changes
+    useEffect(() => {
+        setViewYear(value.getFullYear());
+        setViewMonth(value.getMonth());
+        setPickedDate(value);
+        setHours(value.getHours());
+        setMinutes(value.getMinutes());
+    }, [value]);
+
+    // Build 6-row calendar grid (Mon-based)
+    const calendarDays = useMemo(() => {
+        const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+        const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+        
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+        const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+        
+        const cells: { day: number; month: 'prev' | 'current' | 'next' }[] = [];
+        for (let i = startOffset - 1; i >= 0; i--) {
+            cells.push({day: daysInPrevMonth - i, month: 'prev'});   
+        }
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+            cells.push({day: d, month: 'current'});
+        }
+        
+        const remaining = 42 - cells.length;
+        for (let d = 1; d <= remaining; d++) {
+            cells.push({day: d, month: 'next'});
+        }
+        
+        return cells;
+    }, [viewYear, viewMonth]);
+
+    const prevMonth = () => {
+        if (viewMonth === 0) {
+            setViewMonth(11);
+            setViewYear(y => y - 1);
+        } else setViewMonth(m => m - 1);
+    };
+    
+    const nextMonth = () => {
+        if (viewMonth === 11) {
+            setViewMonth(0);
+            setViewYear(y => y + 1);
+        } else setViewMonth(m => m + 1);
+    };
+
+    const selectDay = (cell: { day: number; month: string }) => {
+        let m = viewMonth, y = viewYear;
+        if (cell.month === 'prev') {
+            m -= 1;
+            if (m < 0) {
+                m = 11;
+                y -= 1;
+            }
+        }
+        if (cell.month === 'next') {
+            m += 1;
+            if (m > 11) {
+                m = 0;
+                y += 1;
+            }
+        }
+        setPickedDate(new Date(y, m, cell.day, hours, minutes, 0, 0));
+        if (cell.month !== 'current') {
+            setViewMonth(m);
+            setViewYear(y);
+        }
+    };
+    
+    const handleApply = () => {
+        const final = new Date(pickedDate.getFullYear(), pickedDate.getMonth(), pickedDate.getDate(), hours, minutes, 0, 0);
+        onChange(final);
+        setOpen(false);
+    };
+
+    const isToday = (cell: { day: number; month: string }) => {
+        const now = new Date();
+        return cell.month === 'current' && cell.day === now.getDate() && viewMonth === now.getMonth() && viewYear === now.getFullYear();
+    };
+
+    const isSelected = (cell: { day: number; month: string }) =>
+        cell.month === 'current' &&
+        cell.day === pickedDate.getDate() &&
+        viewMonth === pickedDate.getMonth() &&
+        viewYear === pickedDate.getFullYear();
+
+    return (
+        <Box sx={{position: 'relative', display: 'inline-block'}} ref={anchorRef}>
+            {/* ── Input box ── */}
+            <TextField
+                size="small"
+                value={displayValue}
+                onClick={() => setOpen(o => !o)}
+                inputProps={{
+                    readOnly: true,
+                    style: {cursor: 'pointer', caretColor: 'transparent', width: 148, fontSize: 14},
+                }}
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        cursor: 'pointer',
+                        '&:hover fieldset': {borderColor: '#007bff'},
+                        '&.Mui-focused fieldset': {borderColor: '#007bff'},
+                    },
+                }}
+            />
+
+            {open && (
+                <Box
+                    ref={popoverRef}
+                    sx={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: 0,
+                        zIndex: 9999,
+                        backgroundColor: '#fff',
+                        borderRadius: 2,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                        width: 280,
+                        userSelect: 'none',
+                    }}
+                >
+                    {/* Calendar */}
+                    <Box sx={{p: 1.5}}>
+                        {/* Month/Year nav */}
+                        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                            <IconButton size="small" onClick={prevMonth} sx={{p: 0.5}}>
+                                <IconChevronLeft size={18}/>
+                            </IconButton>
+                            <Typography fontWeight={700} fontSize={14} color="#222">
+                                {MONTHS[viewMonth]}&nbsp;&nbsp;{viewYear}
+                            </Typography>
+                            <IconButton size="small" onClick={nextMonth} sx={{p: 0.5}}>
+                                <IconChevronRight size={18}/>
+                            </IconButton>
+                        </Box>
+
+                        {/* Day headers */}
+                        <Box display="grid" gridTemplateColumns="repeat(7, 1fr)" mb={0.5}>
+                            {DAYS.map(d => (
+                                <Typography key={d} align="center"
+                                            sx={{fontSize: 11, fontWeight: 700, color: '#999', py: 0.25}}>
+                                    {d}
+                                </Typography>
+                            ))}
+                        </Box>
+
+                        <Box display="grid" gridTemplateColumns="repeat(7, 1fr)">
+                            {calendarDays.map((cell, i) => {
+                                const selected = isSelected(cell);
+                                const today = isToday(cell);
+                                const faded = cell.month !== 'current';
+                                return (
+                                    <Box
+                                        key={i}
+                                        onClick={() => selectDay(cell)}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: 32,
+                                            width: 32,
+                                            mx: 'auto',
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            fontSize: 13,
+                                            fontWeight: selected ? 700 : today ? 600 : 400,
+                                            color: selected ? '#fff' : faded ? '#ccc' : today ? '#1976d2' : '#333',
+                                            backgroundColor: selected ? '#1976d2' : 'transparent',
+                                            border: today && !selected ? '1px solid #1976d2' : 'none',
+                                            '&:hover': {backgroundColor: selected ? '#1565c0' : '#f0f4ff'},
+                                            transition: 'background 0.12s',
+                                        }}
+                                    >
+                                        {cell.day}
+                                    </Box>
+                                );
+                            })}
+                        </Box>
+                    </Box>
+                    
+                    <Divider />
+                    
+                    {/* ── Time row ── */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        {/* Hours */}
+                        <TextField
+                            type="number"
+                            value={String(hours).padStart(2, '0')}
+                            onChange={(e) => {
+                                let val = Number(e.target.value);
+                                if (isNaN(val)) val = 0;
+                                val = Math.max(0, Math.min(23, val));
+                                setHours(val);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setHours((prev) => (prev + 1) % 24);
+                                }
+                                if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    setHours((prev) => (prev - 1 + 24) % 24);
+                                }
+                            }}
+                            InputProps={{
+                                sx: {
+                                    '& fieldset': { border: 'none' },
+                                    borderRadius: 8,
+                                    height: 48,
+                                    width: 110,
+                                },
+                            }}
+                            inputProps={{
+                                style: {
+                                    textAlign: 'center',
+                                    fontSize: 18,
+                                    fontWeight: 600,
+                                },
+                            }}
+                            sx={{ width: 110 }}
+                        />
+
+                        <Typography sx={{ fontSize: 26, fontWeight: 700, color: '#666', mx: 0.5 }}>
+                            :
+                        </Typography>
+
+                        {/* Minutes */}
+                        <TextField
+                            type="number"
+                            value={String(minutes).padStart(2, '0')}
+                            onChange={(e) => {
+                                let val = Number(e.target.value);
+                                if (isNaN(val)) val = 0;
+                                val = Math.round(val / 5) * 5;
+                                if (val >= 60) val = 55;
+                                if (val < 0) val = 0;
+                                setMinutes(val);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setMinutes((prev) => (prev + 5) % 60);
+                                }
+                                if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    setMinutes((prev) => (prev - 5 + 60) % 60);
+                                }
+                            }}
+                            InputProps={{
+                                sx: {
+                                    '& fieldset': { border: 'none' },
+                                    borderRadius: 8,
+                                    height: 48,
+                                    width: 110,
+                                },
+                            }}
+                            inputProps={{
+                                style: {
+                                    textAlign: 'center',
+                                    fontSize: 18,
+                                },
+                            }}
+                            sx={{ width: 110 }}
+                        />
+                    </Box>
+
+                    <Divider />
+
+                    {/* ── Search button ── */}
+                    <Box sx={{px: 1.5, py: 1.5}}>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            onClick={handleApply}
+                            sx={{
+                                backgroundColor: '#1976d2',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                fontSize: 14,
+                                borderRadius: 1.5,
+                                '&:hover': {backgroundColor: '#1565c0'},
+                            }}
+                        >
+                            Search
+                        </Button>
+                    </Box>
+                </Box>
+            )}
+        </Box>
+    );
+}
 
 type Props = {
     open: boolean;
@@ -71,14 +410,16 @@ type Props = {
 };
 
 const GOOGLE_MAP_LIBRARIES = ['places', 'drawing'];
-const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
+const LONDON_CENTER = {lat: 51.5074, lng: -0.1278};
 const DEFAULT_ZOOM = 18;
 
-const drawerPaperSx = {
-    width: 420,
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#fff',
+const toApiFormat = (date: Date): string => {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const MM = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
 };
 
 const formatDateTime = (dtStr: string | null | undefined): string => {
@@ -87,10 +428,7 @@ const formatDateTime = (dtStr: string | null | undefined): string => {
         const [datePart, timePart] = dtStr.split(' ');
         const [dd, MM, yyyy] = datePart.split('/');
         const [hh, mm] = timePart.split(':');
-        const monthNames = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December',
-        ];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         return `${Number(dd)} ${monthNames[Number(MM) - 1] ?? ''} ${yyyy} ${hh}:${mm}`;
     } catch {
         return dtStr;
@@ -109,13 +447,11 @@ const groupByTeam = (users: any[]): Record<string, any[]> => {
 
 const flyToZone = (map: google.maps.Map, zone: any) => {
     if (zone.type === 'circle') {
-        map.panTo({ lat: Number(zone.latitude), lng: Number(zone.longitude) });
+        map.panTo({lat: Number(zone.latitude), lng: Number(zone.longitude)});
         map.setZoom(DEFAULT_ZOOM);
     } else if (Array.isArray(zone.coordinates) && zone.coordinates.length > 0) {
         const bounds = new google.maps.LatLngBounds();
-        zone.coordinates.forEach((pt: any) =>
-            bounds.extend({ lat: Number(pt.lat), lng: Number(pt.lng) }),
-        );
+        zone.coordinates.forEach((pt: any) => bounds.extend({lat: Number(pt.lat), lng: Number(pt.lng)}));
         map.fitBounds(bounds);
     }
 };
@@ -125,15 +461,9 @@ const buildBoundsFromZones = (zones: any[]): google.maps.LatLngBounds | null => 
     const bounds = new google.maps.LatLngBounds();
     zones.forEach((zone) => {
         if (zone.type === 'circle') {
-            bounds.extend({ lat: Number(zone.latitude), lng: Number(zone.longitude) });
-        } else if (
-            (zone.type === 'polygon' || zone.type === 'polyline') &&
-            Array.isArray(zone.coordinates) &&
-            zone.coordinates.length > 0
-        ) {
-            zone.coordinates.forEach((pt: any) =>
-                bounds.extend({ lat: Number(pt.lat), lng: Number(pt.lng) }),
-            );
+            bounds.extend({lat: Number(zone.latitude), lng: Number(zone.longitude)});
+        } else if ((zone.type === 'polygon' || zone.type === 'polyline') && Array.isArray(zone.coordinates) && zone.coordinates.length > 0) {
+            zone.coordinates.forEach((pt: any) => bounds.extend({lat: Number(pt.lat), lng: Number(pt.lng)}));
         }
     });
     return bounds;
@@ -146,10 +476,10 @@ const spreadOverlappingUsers = (users: any[]): any[] => {
         if (!groups[key]) groups[key] = [];
         groups[key].push(u);
     }
-
+    
     const result: any[] = [];
     const OFFSET = 0.00008;
-
+    
     for (const group of Object.values(groups)) {
         if (group.length === 1) {
             result.push(group[0]);
@@ -161,50 +491,50 @@ const spreadOverlappingUsers = (users: any[]): any[] => {
                     latitude: (Number(u.latitude) + OFFSET * Math.sin(angle)).toString(),
                     longitude: (Number(u.longitude) + OFFSET * Math.cos(angle)).toString(),
                     _originalLatitude: u.latitude,
-                    _originalLongitude: u.longitude,
+                    _originalLongitude: u.longitude
                 });
             });
         }
     }
-
+    
     return result;
 };
 
-export default function MapGantt({ open, onClose, onUpdate, projectId, companyId }: Props) {
+export default function MapGantt({open, onClose, onUpdate, projectId, companyId}: Props) {
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
-
+    
     const mainMapRef = useRef<google.maps.Map | null>(null);
 
-    // Map / zones state
+    const [filterDateTime, setFilterDateTime] = useState<Date>(() => new Date());
+    const apiDateTime = useMemo(() => toApiFormat(filterDateTime), [filterDateTime]);
+
+    const [filterDialogOpen, setFilterDialogOpen] = useState<any | null>(null);
+    const [resources, setResources] = useState<{ teams: any[]; trades: any[]; projects: any[] }>({ teams: [], trades: [], projects: [] });
+    
+    const [filters, setFilters] = useState(
+        { teams: [] as string[], trades: [] as string[], projects: [] as string[] }
+    );
+    const [tempFilters, setTempFilters] = useState(
+        { teams: [] as string[], trades: [] as string[], projects: [] as string[] }
+    );
+    
     const [geofences, setGeofences] = useState<any[]>([]);
     const [selected, setSelected] = useState<any | null>(null);
     const [addresses, setAddresses] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState(0);
-    const [projectList, setProjectList] = useState<any[]>([]);
+
     const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
     const [hiddenZoneIds, setHiddenZoneIds] = useState<Set<number>>(new Set());
 
     // Drawer open states
     const [addZoneOpen, setAddZoneOpen] = useState(false);
-    const [addGroupOpen, setAddGroupOpen] = useState(false);
 
     // Delete dialog
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<number | null>(null);
-
-    // Zones sidebar
-    const [zonesDrawerOpen, setZonesDrawerOpen] = useState(false);
-    const [zonesList, setZonesList] = useState<any[]>([]);
-    const [zonesSearch, setZonesSearch] = useState('');
-    const [zonesLoading, setZonesLoading] = useState(false);
-
-    // Zone Groups
-    const [zoneGroups, setZoneGroups] = useState<any[]>([]);
-    const [editingGroup, setEditingGroup] = useState<any | null>(null);
-    const [openGroupKey, setOpenGroupKey] = useState<string | null>(null);
-
+    
     // Staff sidebar
     const [usersDrawerOpen, setUsersDrawerOpen] = useState(false);
     const [usersSearch, setUsersSearch] = useState('');
@@ -213,57 +543,44 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
     const [usersOnMapVisible] = useState(true);
     const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
 
-    const { isLoaded } = useJsApiLoader({
+    const {isLoaded} = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
         libraries: GOOGLE_MAP_LIBRARIES as any,
     });
-    
-    const toggleZoneVisibility = useCallback((id: number) => {
-        setHiddenZoneIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    }, []);
 
-    const toggleGroupVisibility = useCallback((zoneIds: number[]) => {
-        setHiddenZoneIds((prev) => {
-            const next = new Set(prev);
-            const allHidden = zoneIds.every((id) => next.has(id));
-            if (allHidden) {
-                zoneIds.forEach((id) => next.delete(id));
-            } else {
-                zoneIds.forEach((id) => next.add(id));
-            }
-            return next;
-        });
-    }, []);
-
-    const toggleGroupCollapse = (key: string) => {
-        setOpenGroupKey((prev) => (prev === key ? null : key));
-    };
-    
-    const fetchProjects = async () => {
+    const fetchResources = async () => {
         try {
-            const res = await api.get(`project/get?company_id=${companyId}`);
-            if (res.data?.info) setProjectList(res.data.info);
+            const res = await api.get('work-zone/get-resources', {
+                params: { company_id: user.company_id },
+            });
+            setResources({
+                teams: res.data.teams ?? [],
+                trades: res.data.trades ?? [],
+                projects: res.data.projects ?? [],
+            });
         } catch (err) {
-            console.error('Failed to fetch projects', err);
+            console.error('Resources fetch error:', err);
         }
     };
-
+    
     const fetchProjectDetail = async (pid: number | null) => {
         if (!pid) return;
         try {
             if (activeTab === 0) {
                 const res = await api.get('work-zone/get', {
-                    params: { company_id: user.company_id, is_project: true, project_id: pid },
+                    params: {
+                        company_id: user.company_id,
+                        is_project: true,
+                        datetime: apiDateTime
+                    }
                 });
                 setGeofences(res.data.info ?? []);
             } else {
                 const res: AxiosResponse<any> = await api.get('address/zones', {
-                    params: { project_id: pid },
+                    params: {
+                        project_id: pid,
+                        datetime: apiDateTime
+                    }
                 });
                 setGeofences(res.data.info?.zones ?? []);
             }
@@ -274,54 +591,37 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
 
     const loadAddressList = async () => {
         try {
-            const res = await api.get('address/get', { params: { project_id: activeProjectId } });
+            const res = await api.get('address/get', {params: {project_id: activeProjectId}});
             setAddresses(res.data.info || []);
         } catch (err) {
             console.error('Address list fetch error:', err);
         }
     };
 
-    const fetchZonesList = async () => {
-        setZonesLoading(true);
-        try {
-            if (activeTab === 0) {
-                const res = await api.get('work-zone/get', {
-                    params: { company_id: user.company_id, is_project: true, project_id: activeProjectId },
-                });
-                setZonesList(res.data.info ?? []);
-            } else {
-                const res = await api.get('address/zones', { params: { project_id: activeProjectId } });
-                setZonesList(res.data.info?.zones ?? []);
-            }
-        } catch (err) {
-            console.error('Zones list fetch error:', err);
-        }
-        setZonesLoading(false);
-    };
-
-    const fetchZoneGroups = async () => {
-        if (!user?.company_id) return;
-        try {
-            const res = await api.get('work-zone/get-groups', {
-                params: { company_id: user.company_id },
-            });
-            if (res.data?.IsSuccess) {
-                setZoneGroups(res.data.info ?? []);
-            }
-        } catch (err) {
-            console.error('Zone groups fetch error:', err);
-        }
-    };
-
-    const fetchUserLocations = async () => {
+    const fetchUserLocations = async (applyFilters = false) => {
         setUserLocationsLoading(true);
         try {
             const res = await api.get('user-location/get-user-locations');
             if (res.data?.IsSuccess) {
-                const data: any[] = res.data.info ?? [];
+                let data: any[] = res.data.info ?? [];
+
+                if (applyFilters) {
+                    if (filters.teams.length > 0) {
+                        data = data.filter(u => filters.teams.includes(u.team_name));
+                    }
+                    if (filters.trades.length > 0) {
+                        data = data.filter(u => filters.trades.includes(u.trade_name));
+                    }
+                    if (filters.projects.length > 0) {
+                        data = data.filter(u => filters.projects.includes(u.project_name));
+                    }
+                }
+                
                 setUserLocations(data);
+                
                 const teams = groupByTeam(data);
                 const initial: Record<string, boolean> = {};
+                
                 Object.keys(teams).forEach((t) => { initial[t] = true; });
                 setExpandedTeams(initial);
             }
@@ -338,7 +638,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
                 onUpdate?.();
-                setGeofences((prev) => prev.filter((z) => z.id !== deleteId));
+                setGeofences(prev => prev.filter(z => z.id !== deleteId));
                 setDeleteConfirmOpen(false);
                 setDeleteId(null);
                 fetchProjectDetail(activeProjectId!);
@@ -348,28 +648,21 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
         }
     };
 
-    const handleTabChange = (_: any, newValue: number) => {
-        setActiveTab(newValue);
+    const handleTabChange = (_: any, v: number) => {
+        setActiveTab(v);
         setSelected(null);
     };
 
-    const handleOpenZones = () => {
-        setZonesDrawerOpen(true);
-        fetchZonesList();
-        fetchZoneGroups();
-    };
     const handleOpenUsers = () => {
         setUsersDrawerOpen(true);
-        fetchUserLocations();
+        fetchUserLocations(true);
     };
-    const handleCloseZones = () => {
-        setZonesDrawerOpen(false);
-        setZonesSearch('');
-    };
+  
     const handleCloseUsers = () => {
         setUsersDrawerOpen(false);
         setUsersSearch('');
     };
+    
     const toggleTeam = (teamName: string) => {
         setExpandedTeams((prev) => ({ ...prev, [teamName]: !prev[teamName] }));
     };
@@ -380,29 +673,31 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
 
     useEffect(() => {
         if (open) {
-            fetchProjects();
             setActiveProjectId(projectId);
             fetchProjectDetail(projectId);
-            fetchUserLocations();
-            fetchZoneGroups();
+            fetchUserLocations(true); 
         }
     }, [open]);
+    
+    useEffect(() => {
+        if (open && activeProjectId) fetchProjectDetail(activeProjectId);
+    }, [activeTab]);
 
     useEffect(() => {
-        if (open && activeProjectId) {
-            fetchProjectDetail(activeProjectId);
-        }
-    }, [activeTab]);
-    
+        if (open && activeProjectId) fetchProjectDetail(activeProjectId);
+    }, [apiDateTime]);
+
     const filterData = useMemo(() => {
+        let data = geofences;
         const s = searchTerm.trim().toLowerCase();
-        if (!s) return geofences;
-        return geofences.filter(
-            (item) =>
-                item.address?.toLowerCase().includes(s) ||
-                item.address_name?.toLowerCase().includes(s) ||
-                item.name?.toLowerCase().includes(s),
+        
+        if (s) data = data.filter(z =>
+            z.address?.toLowerCase().includes(s) ||
+            z.address_name?.toLowerCase().includes(s) ||
+            z.name?.toLowerCase().includes(s)
         );
+       
+        return data;
     }, [geofences, searchTerm]);
 
     const visibleZones = useMemo(
@@ -411,17 +706,34 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
     );
 
     const filteredUserLocations = useMemo(() => {
+        let data = userLocations;
+
         const s = usersSearch.trim().toLowerCase();
-        if (!s) return userLocations;
-        return userLocations.filter(
-            (u) =>
-                u.user_name?.toLowerCase().includes(s) ||
-                u.first_name?.toLowerCase().includes(s) ||
-                u.last_name?.toLowerCase().includes(s) ||
-                u.team_name?.toLowerCase().includes(s) ||
-                u.trade_name?.toLowerCase().includes(s),
-        );
-    }, [userLocations, usersSearch]);
+
+        if (s) {
+            data = data.filter(
+                (u) =>
+                    u.user_name?.toLowerCase().includes(s) ||
+                    u.first_name?.toLowerCase().includes(s) ||
+                    u.last_name?.toLowerCase().includes(s) ||
+                    u.team_name?.toLowerCase().includes(s) ||
+                    u.trade_name?.toLowerCase().includes(s) ||
+                    u.project_name?.toLowerCase().includes(s)
+            );
+        }
+
+        if (filters.teams.length > 0) {
+            data = data.filter(u => filters.teams.includes(u.team_name));
+        }
+        if (filters.trades.length > 0) {
+            data = data.filter(u => filters.trades.includes(u.trade_name));
+        }
+        if (filters.projects.length > 0) {
+            data = data.filter(u => filters.projects.includes(u.project_name));
+        }
+
+        return data;
+    }, [userLocations, usersSearch, filters]);
 
     const groupedUsers = useMemo(() => groupByTeam(filteredUserLocations), [filteredUserLocations]);
 
@@ -430,68 +742,29 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
         [userLocations],
     );
     
-    const groupedZonesForSidebar = useMemo(() => {
-        const s = zonesSearch.trim().toLowerCase();
-        const allZones: any[] = s ? zonesList.filter((z) => z.name?.toLowerCase().includes(s)) : zonesList;
-
-        const assignedIds = new Set<number>(
-            zoneGroups.flatMap((g) => g.zones?.map((z: any) => z.id) ?? []),
-        );
-
-        const sections: Array<{
-            key: string;
-            label: string;
-            groupData: any | null;
-            zones: any[];
-        }> = [];
-
-        for (const group of zoneGroups) {
-            const groupZoneIds = new Set<number>(group.zones?.map((z: any) => z.id) ?? []);
-            const zonesInGroup = allZones.filter((z) => groupZoneIds.has(z.id));
-            if (zonesInGroup.length === 0 && s) continue;
-            sections.push({
-                key: `group-${group.id}`,
-                label: group.name,
-                groupData: group,
-                zones: zonesInGroup,
-            });
-        }
-
-        const unassignedZones = allZones.filter((z) => !assignedIds.has(z.id));
-        sections.unshift({
-            key: 'unassigned',
-            label: 'Unassigned',
-            groupData: null,
-            zones: unassignedZones,
-        });
-
-        return sections;
-    }, [zonesList, zoneGroups, zonesSearch]);
-    
     return (
         <Box p={2}>
             <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Box display="flex" width="80%" gap={3} alignItems="center">
-                    <Tabs
+                <Box display="flex" width="80%" gap={1.5} alignItems="center" flexWrap="wrap">
+                    <Tabs 
                         value={activeTab}
                         onChange={handleTabChange}
-                        aria-label="zone-tabs"
                         sx={{
                             minHeight: 36,
-                            '& .MuiTabs-indicator': { backgroundColor: '#007bff', height: 2 },
+                            '& .MuiTabs-indicator': {backgroundColor: '#007bff', height: 2},
                             '& .MuiTab-root': {
                                 minHeight: 36,
                                 textTransform: 'none',
                                 fontSize: 14,
                                 fontWeight: 400,
                                 color: '#555',
-                                padding: '0 8px',
+                                padding: '0 8px'
                             },
-                            '& .Mui-selected': { color: '#007bff', fontWeight: 600 },
+                            '& .Mui-selected': {color: '#007bff', fontWeight: 600}
                         }}
                     >
-                        <Tab label="Project" />
-                        <Tab label="Address" />
+                        <Tab label="Project"/>
+                        <Tab label="Address"/>
                     </Tabs>
 
                     <TextField
@@ -509,51 +782,20 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                         sx={{ width: { xs: '90%', sm: '50%', md: '30%', lg: '25%' } }}
                     />
 
-                    <FormControl sx={{ width: '15%' }} size="small">
-                        <Select
-                            value={activeProjectId ?? ''}
-                            onChange={(e) => {
-                                const newId = e.target.value;
-                                setActiveProjectId(newId as any);
-                                fetchProjectDetail(newId as any);
-                            }}
-                            sx={{
-                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
-                            }}
-                        >
-                            {projectList.map((proj) => (
-                                <MenuItem key={proj.id} value={proj.id.toString()}>
-                                    <Typography
-                                        variant="body1"
-                                        sx={{
-                                            display: '-webkit-box',
-                                            WebkitBoxOrient: 'vertical',
-                                            WebkitLineClamp: 1,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            maxWidth: 250,
-                                        }}
-                                    >
-                                        {proj.name}
-                                    </Typography>
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                    <DateTimePicker value={filterDateTime} onChange={setFilterDateTime}/>
+
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            setFilterDialogOpen(true);
+                            fetchResources();
+                        }}
+                    >
+                        <IconFilter width={18} />
+                    </Button>
                 </Box>
 
                 <Box display="flex" alignItems="center" gap={1}>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        onClick={() => setAddGroupOpen(true)}
-                        sx={{ textTransform: 'none', fontWeight: 600, height: 36, px: 2, whiteSpace: 'nowrap' }}
-                    >
-                        Add Zone Group
-                    </Button>
                     <Button
                         variant="contained"
                         color="primary"
@@ -563,23 +805,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                     >
                         Add Zone
                     </Button>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={handleOpenZones}
-                        startIcon={<IconMapPin size={16} />}
-                        sx={{
-                            borderColor: '#1976d2',
-                            color: '#1976d2',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            height: 36,
-                            px: 2,
-                            whiteSpace: 'nowrap',
-                        }}
-                    >
-                        {visibleZones.length} / {zonesList.length || geofences.length} Zones
-                    </Button>
+                    
                     <Button
                         variant="outlined"
                         size="small"
@@ -603,13 +829,116 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 </Box>
             </Box>
 
+            {/* ── Filter Dialog ── */}
+            <Dialog
+                open={Boolean(filterDialogOpen)}
+                onClose={() => setFilterDialogOpen(false)}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{
+                    sx: {
+                        position: 'fixed',
+                        top: 80,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        m: 0,
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography fontWeight={700} fontSize={16}>Filters</Typography>
+                        <IconButton size="small" onClick={() => setFilterDialogOpen(false)}>
+                            <IconX size={20} />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent>
+                    <Stack spacing={3} mt={1}>
+                        {/* Trade for Users */}
+                        <TextField
+                            select
+                            label="Trade"
+                            value={tempFilters.trades}
+                            onChange={(e) => setTempFilters({ ...tempFilters, trades: e.target.value as unknown as string[] })}
+                            SelectProps={{ multiple: true, renderValue: (sel) => (sel as string[]).join(', ') }}
+                            fullWidth
+                        >
+                            {resources.trades.map((t: any) => (
+                                <MenuItem key={t.id ?? t} value={t.name ?? t}>
+                                    {t.name ?? t}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+
+                        {/* Team for Users */}
+                        <TextField
+                            select
+                            label="Team"
+                            value={tempFilters.teams}
+                            onChange={(e) => setTempFilters({ ...tempFilters, teams: e.target.value as unknown as string[] })}
+                            SelectProps={{ multiple: true, renderValue: (sel) => (sel as string[]).join(', ') }}
+                            fullWidth
+                        >
+                            {resources.teams.map((t: any) => (
+                                <MenuItem key={t.id ?? t} value={t.name ?? t}>
+                                    {t.name ?? t}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+
+                        {/* Project for Users */}
+                        <TextField
+                            select
+                            label="Project"
+                            value={tempFilters.projects}
+                            onChange={(e) => setTempFilters({ ...tempFilters, projects: e.target.value as unknown as string[] })}
+                            SelectProps={{ multiple: true, renderValue: (sel) => (sel as string[]).join(', ') }}
+                            fullWidth
+                        >
+                            {resources.projects.map((p: any) => (
+                                <MenuItem key={p.id ?? p} value={p.name ?? p}>
+                                    {p.name ?? p}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    </Stack>
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        onClick={() => {
+                            const empty = { teams: [], trades: [], projects: [] };
+                            setTempFilters(empty);
+                            setFilters(empty);
+                            setFilterDialogOpen(false);
+                        }}
+                        color="inherit"
+                    >
+                        Clear All
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            setFilters(tempFilters);
+                            fetchUserLocations(true);         
+                            setFilterDialogOpen(false);
+                        }}
+                    >
+                        Apply Filters
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* ── Main Content: Table + Map ── */}
             <Box display="flex" gap={2} mt={2} height="calc(100vh - 120px)">
                 <Box width="35%" overflow="auto">
                     <Paper>
                         <Table>
                             <TableHead>
-                                <TableRow sx={{ background: '#f5f5f5' }}>
+                                <TableRow sx={{background: '#f5f5f5'}}>
                                     <TableCell><b>Name</b></TableCell>
                                     <TableCell width={150}><b>Action</b></TableCell>
                                 </TableRow>
@@ -622,41 +951,91 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filterData.map((z) => (
-                                        <TableRow key={z.id}>
-                                            <TableCell>
-                                                <Typography>{z.name}</Typography>
-                                                <Typography variant="body2" color="textSecondary">
-                                                    {z.address_name}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Box display="flex">
-                                                    <IconButton
-                                                        color="success"
-                                                        onClick={() => setSelected({ ...z, mode: 'view' })}
-                                                    >
-                                                        <IconEye size={20} />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        color="primary"
-                                                        onClick={() => setSelected({ ...z, mode: 'edit' })}
-                                                    >
-                                                        <IconEdit size={20} />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        color="error"
-                                                        onClick={() => {
-                                                            setDeleteId(z.id);
-                                                            setDeleteConfirmOpen(true);
-                                                        }}
-                                                    >
-                                                        <IconTrash size={20} />
-                                                    </IconButton>
-                                                </Box>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                    filterData.map((z) => {
+                                        const isHidden = hiddenZoneIds.has(z.id);
+
+                                        return (
+                                            <TableRow key={z.id}>
+                                                <TableCell>
+                                                    <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>
+                                                        {z.name}
+                                                    </Typography>
+
+                                                    <Typography sx={{ color: 'text.secondary' }}>
+                                                        {z.project_name}
+                                                    </Typography>
+
+                                                    <Tooltip title={z.address_name || z.address} arrow>
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                color: 'text.disabled',
+                                                                maxWidth: 250,     
+                                                                whiteSpace: 'nowrap',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {z.address_name || z.address}
+                                                        </Typography>
+                                                    </Tooltip>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Box display="flex" gap={0.5}>
+                                                        <IconButton
+                                                            color={isHidden ? "default" : "success"}
+                                                            onClick={() => {
+                                                                setHiddenZoneIds((prev) => {
+                                                                    const newSet = new Set(prev);
+                                                                    if (isHidden) {
+                                                                        newSet.delete(z.id);
+                                                                    } else {
+                                                                        newSet.add(z.id);
+                                                                    }
+                                                                    return newSet;
+                                                                });
+                                                            }}
+                                                        >
+                                                            {isHidden ? <IconEyeOff size={20} /> : <IconEye size={20} /> }
+                                                        </IconButton>
+
+                                                        <IconButton
+                                                            color="primary"
+                                                            onClick={() => {
+                                                                if (mainMapRef.current) {
+                                                                    flyToZone(mainMapRef.current, z);
+                                                                    setSelected(null);
+                                                                }
+                                                            }}
+                                                            title="Zoom to zone on map"
+                                                        >
+                                                            <IconMapPin size={20} />
+                                                        </IconButton>
+
+                                                        {/* Edit Icon */}
+                                                        <IconButton
+                                                            color="primary"
+                                                            onClick={() => setSelected({ ...z, mode: 'edit' })}
+                                                        >
+                                                            <IconEdit size={20} />
+                                                        </IconButton>
+
+                                                        {/* Delete Icon */}
+                                                        <IconButton
+                                                            color="error"
+                                                            onClick={() => {
+                                                                setDeleteId(z.id);
+                                                                setDeleteConfirmOpen(true);
+                                                            }}
+                                                        >
+                                                            <IconTrash size={20} />
+                                                        </IconButton>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -689,233 +1068,7 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                     )}
                 </Box>
             </Box>
-
-            <Drawer
-                anchor="right"
-                open={zonesDrawerOpen}
-                onClose={handleCloseZones}
-                sx={{ '& .MuiDrawer-paper': drawerPaperSx }}
-            >
-                <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    px={2.5}
-                    py={1.75}
-                    sx={{ borderBottom: '1px solid #f0f0f0' }}
-                >
-                    <Typography
-                        fontWeight={700}
-                        fontSize={13}
-                        letterSpacing={1}
-                        sx={{ textTransform: 'uppercase', color: '#444' }}
-                    >
-                        Zones
-                    </Typography>
-                    <IconButton size="small" onClick={handleCloseZones}>
-                        <IconX size={18} />
-                    </IconButton>
-                </Box>
-
-                <Box px={2} py={1.5} sx={{ borderBottom: '1px solid #f0f0f0' }}>
-                    <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="Search zones..."
-                        value={zonesSearch}
-                        onChange={(e) => setZonesSearch(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <IconSearch size={15} color="#aaa" />
-                                </InputAdornment>
-                            ),
-                        }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: 2,
-                                backgroundColor: '#fafafa',
-                                fontSize: 14,
-                            },
-                        }}
-                    />
-                </Box>
-
-                <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                    {zonesLoading ? (
-                        <Typography color="textSecondary" textAlign="center" py={4} fontSize={14}>
-                            Loading...
-                        </Typography>
-                    ) : groupedZonesForSidebar.every((s) => s.zones.length === 0) ? (
-                        <Typography color="textSecondary" textAlign="center" py={4} fontSize={14}>
-                            No zones found.
-                        </Typography>
-                    ) : (
-                        groupedZonesForSidebar.map((section) => {
-                            if (section.zones.length === 0) return null;
-
-                            const sectionZoneIds = section.zones.map((z) => z.id);
-                            const allHidden = sectionZoneIds.every((id) => hiddenZoneIds.has(id));
-                            const someHidden = sectionZoneIds.some((id) => hiddenZoneIds.has(id));
-                            const isCollapsed = openGroupKey !== section.key;
-
-                            return (
-                                <Box key={section.key} sx={{ borderBottom: '1px solid #efefef' }}>
-                                    <Box sx={{ backgroundColor: '#f8f8f8', borderBottom: '1px solid #efefef' }}>
-                                        <Box
-                                            display="flex"
-                                            alignItems="center"
-                                            px={1.5}
-                                            py={1}
-                                            pb={1}
-                                            onClick={() => toggleGroupCollapse(section.key)}
-                                            sx={{ cursor: 'pointer', userSelect: 'none' }}
-                                        >
-                                            <Typography
-                                                variant="body2"
-                                                fontWeight={700}
-                                                fontSize={13}
-                                                color="#333"
-                                                sx={{ flex: 1 }}
-                                            >
-                                                {section.label}
-                                            </Typography>
-                                            <IconButton
-                                                size="small"
-                                                sx={{ p: 0.25, flexShrink: 0 }}
-                                                onClick={(e) => { e.stopPropagation(); toggleGroupCollapse(section.key); }}
-                                            >
-                                                {isCollapsed
-                                                    ? <IconChevronDown size={16} color="#888" />
-                                                    : <IconChevronUp size={16} color="#888" />
-                                                }
-                                            </IconButton>
-                                        </Box>
-                                    </Box>
-
-                                    <Collapse in={!isCollapsed}>
-                                        {section.groupData && (
-                                            <Box
-                                                display="flex"
-                                                alignItems="center"
-                                                px={2}
-                                                py={1.1}
-                                                gap={1.5}
-                                                sx={{ borderBottom: '1px solid #f0f0f0' }}
-                                            >
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => toggleGroupVisibility(sectionZoneIds)}
-                                                    sx={{
-                                                        p: 0.5,
-                                                        flexShrink: 0,
-                                                        color: allHidden ? '#ea5455' : someHidden ? '#f59e0b' : '#1976d2',
-                                                    }}
-                                                >
-                                                    {allHidden ? <IconEyeOff size={17} /> : <IconEye size={17} />}
-                                                </IconButton>
-
-                                                <Button
-                                                    size="small"
-                                                    startIcon={<IconEdit size={13} />}
-                                                    onClick={() => setEditingGroup(section.groupData)}
-                                                    sx={{
-                                                        minWidth: 0,
-                                                        px: 1.25,
-                                                        py: 0.3,
-                                                        fontSize: 14,
-                                                        textTransform: 'none',
-                                                        backgroundColor: 'transparent',
-                                                        '&:hover': { color: '#1E4DB7', backgroundColor: '#E7ECE7' },
-                                                    }}
-                                                >
-                                                    Edit
-                                                </Button>
-                                            </Box>
-                                        )}
-
-                                        {section.zones.map((z, idx) => {
-                                            const isHidden = hiddenZoneIds.has(z.id);
-                                            const isLast = idx === section.zones.length - 1;
-
-                                            return (
-                                                <Box
-                                                    key={z.id}
-                                                    display="flex"
-                                                    alignItems="center"
-                                                    px={2}
-                                                    py={1.1}
-                                                    gap={1.5}
-                                                    sx={{
-                                                        borderBottom: isLast ? 'none' : '1px solid #f5f5f5',
-                                                        transition: 'background 0.1s',
-                                                        '&:hover': { backgroundColor: '#fafafa' },
-                                                    }}
-                                                >
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => toggleZoneVisibility(z.id)}
-                                                        sx={{
-                                                            flexShrink: 0,
-                                                            p: 0.5,
-                                                            color: isHidden ? '#ea5455' : '#1976d2',
-                                                        }}
-                                                    >
-                                                        {isHidden ? <IconEyeOff size={17} /> : <IconEye size={17} />}
-                                                    </IconButton>
-
-                                                    <Box flex={1} minWidth={0}>
-                                                        <Typography
-                                                            variant="body2"
-                                                            fontWeight={500}
-                                                            noWrap
-                                                            sx={{ fontSize: 13, color: '#1a1a1a' }}
-                                                        >
-                                                            {z.name}
-                                                        </Typography>
-                                                        {z.address && (
-                                                            <Typography variant="caption" color="textSecondary" noWrap display="block">
-                                                                {z.address}
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-
-                                                    <IconButton
-                                                        size="small"
-                                                        disabled={isHidden}
-                                                        onClick={() => {
-                                                            if (!mainMapRef.current) return;
-                                                            handleCloseZones();
-                                                            setTimeout(() => {
-                                                                if (mainMapRef.current) flyToZone(mainMapRef.current, z);
-                                                            }, 320);
-                                                        }}
-                                                        sx={{
-                                                            flexShrink: 0,
-                                                            p: 0.5,
-                                                            color: isHidden ? '#ccc' : '#555',
-                                                            '&:not(:disabled):hover': { color: '#1976d2' },
-                                                        }}
-                                                    >
-                                                        <IconMapPin size={17} />
-                                                    </IconButton>
-                                                </Box>
-                                            );
-                                        })}
-                                    </Collapse>
-                                </Box>
-                            );
-                        })
-                    )}
-                </Box>
-
-                <Box px={2} py={1.5} sx={{ borderTop: '1px solid #f0f0f0' }}>
-                    <Button fullWidth variant="outlined" onClick={handleCloseZones} sx={{ borderRadius: 2 }}>
-                        Close
-                    </Button>
-                </Box>
-            </Drawer>
-
+            
             <Drawer
                 anchor="right"
                 open={usersDrawerOpen}
@@ -1037,38 +1190,6 @@ export default function MapGantt({ open, onClose, onUpdate, projectId, companyId
                 </DialogActions>
             </Dialog>
 
-            {addGroupOpen && (
-                <AddZoneGroup
-                    projectId={activeProjectId}
-                    companyId={companyId}
-                    geofences={geofences}
-                    onAdded={() => {
-                        fetchProjectDetail(activeProjectId!);
-                        fetchZoneGroups();
-                        setAddGroupOpen(false);
-                    }}
-                    onCancel={() => setAddGroupOpen(false)}
-                />
-            )}
-
-            {editingGroup && (
-                <EditZoneGroup
-                    group={editingGroup}
-                    allZones={zonesList}
-                    onUpdated={() => {
-                        fetchZoneGroups();
-                        fetchZonesList();
-                        setEditingGroup(null);
-                    }}
-                    onDeleted={() => {
-                        fetchZoneGroups();
-                        fetchZonesList();
-                        setEditingGroup(null);
-                    }}
-                    onCancel={() => setEditingGroup(null)}
-                />
-            )}
-
             {addZoneOpen && (
                 <AddZone
                     projectId={activeProjectId}
@@ -1175,9 +1296,9 @@ const StaffMemberRow = ({member, isLast, onPinClick}: {
     );
 };
 
-const UserMarker = ({ user }: { user: any }) => {
+const UserMarker = ({user}: { user: any }) => {
     const [hovered, setHovered] = useState(false);
-    const position = { lat: Number(user.latitude), lng: Number(user.longitude) };
+    const position = {lat: Number(user.latitude), lng: Number(user.longitude)};
     const initials = `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase();
     const isWorking = user.is_working ?? false;
     const pinColor = isWorking ? '#1976d2' : '#fc4b6c';
@@ -1187,7 +1308,7 @@ const UserMarker = ({ user }: { user: any }) => {
         <OverlayView
             position={position}
             mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -h })}
+            getPixelPositionOffset={() => ({ x: -24, y: -58 })}
         >
             <Box
                 onMouseEnter={() => setHovered(true)}
@@ -1399,10 +1520,38 @@ const AllZonesMap = ({zones, isLoaded, userLocations = [], onMapLoad}: {
                                 <OverlayView position={center} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
                                     <Box
                                         onClick={() => onZoneClick(zone)}
-                                        sx={{ cursor: 'pointer', color, width: 'max-content' }}
-                                        className="map-site-label"
+                                        sx={{
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            transform: 'translate(-50%, -100%)',
+                                            width: 'max-content',
+                                        }}
                                     >
-                                        <Typography>{zone.name}</Typography>
+                                        <Box
+                                            sx={{
+                                                backgroundColor: '#fff',
+                                                border: `2px solid ${color}`,
+                                                borderRadius: '4px',
+                                                px: 1.25,
+                                                py: 0.35,
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                                                mb: 0,
+                                            }}
+                                        >
+                                            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#111', whiteSpace: 'nowrap' }}>
+                                                {zone.name}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box
+                                            sx={{
+                                                width: '2px',
+                                                height: '20px',
+                                                backgroundColor: color,
+                                            }}
+                                        />
                                     </Box>
                                 </OverlayView>
                                 <Circle
@@ -1426,10 +1575,38 @@ const AllZonesMap = ({zones, isLoaded, userLocations = [], onMapLoad}: {
                                 <OverlayView position={centroid} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
                                     <Box
                                         onClick={() => onZoneClick(zone)}
-                                        sx={{ cursor: 'pointer', color, width: 'max-content' }}
-                                        className="map-site-label"
+                                        sx={{
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            transform: 'translate(-50%, -100%)',
+                                            width: 'max-content',
+                                        }}
                                     >
-                                        <Typography>{zone.name}</Typography>
+                                        <Box
+                                            sx={{
+                                                backgroundColor: '#fff',
+                                                border: `2px solid ${color}`,
+                                                borderRadius: '4px',
+                                                px: 1.25,
+                                                py: 0.35,
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                                                mb: 0,
+                                            }}
+                                        >
+                                            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#111', whiteSpace: 'nowrap' }}>
+                                                {zone.name}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box
+                                            sx={{
+                                                width: '2px',
+                                                height: '20px',
+                                                backgroundColor: color,
+                                            }}
+                                        />
                                     </Box>
                                 </OverlayView>
                                 <Polygon
@@ -1511,35 +1688,35 @@ const ViewZoneMap = ({ zone, isLoaded }: { zone: any; isLoaded: boolean }) => {
     };
 
     return (
-        <Paper sx={{ height: '90%' }}>
+        <Paper sx={{height: '90%'}}>
             <GoogleMap
-                mapContainerStyle={{ width: '100%', height: '100%' }}
+                mapContainerStyle={{width: '100%', height: '100%'}}
                 zoom={DEFAULT_ZOOM}
                 center={markerPosition}
                 onLoad={handleMapLoad}
             >
                 <Marker
                     position={markerPosition}
-                    label={{ text: zone.name || '', color, className: 'map-site-label' }}
-                    icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 0 }}
+                    label={{text: zone.name || '', color, className: 'map-site-label'}}
+                    icon={{path: google.maps.SymbolPath.CIRCLE, scale: 0}}
                 />
                 {zone.type === 'circle' && (
                     <Circle
                         center={center}
                         radius={Number(zone.radius)}
-                        options={{ strokeColor: color, fillColor: `${color}33` }}
+                        options={{strokeColor: color, fillColor: `${color}33`}}
                     />
                 )}
                 {zone.type === 'polygon' && (
                     <Polygon
                         paths={path}
-                        options={{ strokeColor: color, fillColor: `${color}33` }}
+                        options={{strokeColor: color, fillColor: `${color}33`}}
                     />
                 )}
                 {zone.type === 'polyline' && (
                     <Polyline
                         path={path}
-                        options={{ strokeColor: color, strokeWeight: 3 }}
+                        options={{strokeColor: color, strokeWeight: 3}}
                     />
                 )}
             </GoogleMap>

@@ -152,14 +152,7 @@ const TablePagination = () => {
             ...geoSettings,
             [key]: checked,
         };
-
-        if (!checked) {
-            updatedSettings = {
-                start: false,
-                stop: false,
-            };
-        }
-
+        
         setGeoSettings(updatedSettings);
 
         try {

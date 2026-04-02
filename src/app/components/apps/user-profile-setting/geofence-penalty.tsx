@@ -53,6 +53,10 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
         { key: "stop_work_within_geofence", label: "Only allow to stop work within geofence boundary", value: false },
     ]);
 
+    const isGeofenceMainEnabled = geofenceSettings.find(
+        (item) => item.key === "geofence_main_setting"
+    )?.value ?? false;
+
     const fetchSettings = async () => {
         if (!active) return;
         setLoading(true);
@@ -101,35 +105,39 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
             );
         } else {
             setGeofenceSettings((prev) =>
-                prev.map((item) =>
-                    item.key === key ? { ...item, value: newValue } : item
-                )
+                prev.map((item) => {
+                    if (item.key === key) return { ...item, value: newValue };
+
+                    if (key === "geofence_main_setting" && !newValue) {
+                        return { ...item, value: false };
+                    }
+
+                    return item;
+                })
             );
         }
 
         try {
-            const payload = {
+            const payload: Record<string, unknown> = {
                 user_id: userId,
                 company_id: companyId,
                 [key]: newValue,
             };
+
+            if (key === "geofence_main_setting" && !newValue) {
+                payload["start_work_within_geofence"] = false;
+                payload["stop_work_within_geofence"] = false;
+            }
+
             const res = await api.post("user/update-geofence-penalty-settings", payload);
             if (res.data?.IsSuccess) {
                 toast.success(res.data.message || "Setting updated");
             } else {
-                if (section === "penalty") {
-                    setPenaltySettings((prev) =>
-                        prev.map((item) =>
-                            item.key === key ? { ...item, value: !newValue } : item
-                        )
-                    );
-                } else {
-                    setGeofenceSettings((prev) =>
-                        prev.map((item) =>
-                            item.key === key ? { ...item, value: !newValue } : item
-                        )
-                    );
-                }
+                setGeofenceSettings((prev) =>
+                    prev.map((item) =>
+                        item.key === key ? { ...item, value: !newValue } : item
+                    )
+                );
             }
         } catch (err) {
             console.error("Failed to update setting", err);
@@ -292,7 +300,7 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
                                         sx={{
                                             fontSize: "14px",
                                             fontWeight: 600,
-                                            color: "#2c3e50",
+                                            color: item.key !== "geofence_main_setting" && !isGeofenceMainEnabled ? "#aab4be" : "#2c3e50", 
                                         }}
                                     >
                                         {item.label}
@@ -305,19 +313,19 @@ const GeofencePenalty: React.FC<GeofencePenaltyProps> = ({companyId, active, use
                                         width: 120,
                                         textAlign: "right",
                                         border: "none",
-                                        borderBottom:
-                                            index === geofenceSettings.length - 1
-                                                ? "none"
-                                                : "1px solid #eef0f3",
+                                        borderBottom: index === geofenceSettings.length - 1 ? "none" : "1px solid #eef0f3",
                                     }}
                                 >
                                     <IOSSwitch
                                         checked={item.value}
-                                        disabled={saving === item.key}
+                                        disabled={
+                                        saving === item.key ||
+                                        (item.key !== "geofence_main_setting" && !isGeofenceMainEnabled)
+                                    }
                                         onChange={() =>
-                                            handleToggle("geofence", item.key, !item.value)
-                                        }
-                                    />
+                                        handleToggle("geofence", item.key, !item.value)
+                                    }
+                                        />
                                 </TableCell>
                             </TableRow>
                         ))}
