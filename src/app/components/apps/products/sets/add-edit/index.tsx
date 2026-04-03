@@ -54,7 +54,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     if (!companyId || !setId) return;
     try {
       const res = await api.get(
-        `products/get-sets?company_id=${companyId}&set_id=${setId}`,
+        `products/get-sets?company_id=${companyId}&id=${setId}`,
       );
       const setData = res.data?.info?.[0];
       if (setData) {

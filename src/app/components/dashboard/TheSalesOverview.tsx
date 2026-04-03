@@ -1,182 +1,228 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import {
-  Typography,
-  Box,
-  Stack,
-  FormControl,
-  MenuItem,
-  Select,
-  Card,
-} from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { Typography, Box, Card, Autocomplete } from "@mui/material";
 import dynamic from "next/dynamic";
-const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
-import DashboardCard from "../shared/DashboardCard";
-import { IconCircleFilled } from "@tabler/icons-react";
-import { ApexOptions } from "apexcharts";
 import api from "@/utils/axios";
-interface InventoryChartData {
-  month: string;
-  low_stock: number;
-  in_stock: number;
-  out_of_stock: number;
-}
+import { ApexOptions } from "apexcharts";
+import dayjs from "dayjs";
+import DateRangePickerBox from "../common/DateRangePickerBox";
+import CustomTextField from "../forms/theme-elements/CustomTextField";
 
-const SalesOverview = ({ companyId }: { companyId: number }) => {
-  const theme = useTheme();
-  const [chartData, setChartData] = useState<InventoryChartData[]>([]);
+const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-  const primaryGradientColors = ["#817AF3", "#74B0FA", "#79D0F1"];
-  const secondaryGradientColors = ["#46A46C", "#51CC5D", "#57DA65"];
-  const tertiaryGradientColors = ["#FF9800", "#FFA500", "#FFC107"];
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
-  const fetchInventoryOverview = async (month: string) => {
+const InventoryOverview = ({ companyId }: { companyId: number }) => {
+  const [weekData, setWeekData] = useState<any[]>([]);
+  const [yearData, setYearData] = useState<any[]>([]);
+  const [currency, setCurrency] = useState("");
+  const [stores, setStores] = useState<any[]>([]);
+  const [storeId, setStoreId] = useState<number | null>(null);
+
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+
+  const [startDate, setStartDate] = useState<any>(defaultStart);
+  const [endDate, setEndDate] = useState<any>(defaultEnd);
+
+  // ✅ Fetch stores
+  const fetchResources = async () => {
+    const res = await api.get(
+      `get-inventory-resources?company_id=${companyId}`,
+    );
+    setStores(res.data.stores);
+  };
+
+  // fetch data
+  const fetchData = async (start: Date, end: Date, store?: number | null) => {
     try {
-      const res = await api.get(
-        `/products/inventory-overview?company_id=${companyId}&month=${month}`,
-      );
+      let url = `inventory-overview?company_id=${companyId}`;
+
+      if (start && end) {
+        url += `&start_date=${dayjs(start).format("DD/MM/YYYY")}`;
+        url += `&end_date=${dayjs(end).format("DD/MM/YYYY")}`;
+      }
+
+      if (store) {
+        url += `&store_id=${store}`;
+      }
+
+      const res = await api.get(url);
 
       if (res.data.IsSuccess) {
-        setChartData(res.data.inventory_data);
+        setWeekData(res.data.info || []);
+        setYearData(res.data.year_wise_data || []);
+        setCurrency(res.data.currency);
       }
     } catch (err) {
-      console.error("Failed to fetch inventory overview", err);
+      console.error(err);
     }
   };
 
   useEffect(() => {
-    if (companyId && selectedMonth) {
-      fetchInventoryOverview(selectedMonth);
-    }
-  }, [companyId, selectedMonth]);
+    fetchResources();
+  }, []);
 
-  const options: ApexOptions = {
-    chart: {
-      type: "bar",
-      height: 320,
-      toolbar: { show: false },
-      fontFamily: "'DM Sans', sans-serif",
-      foreColor: "#adb0bb",
-    },
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: "30%",
-        borderRadius: 5,
-        barHeight: "80%",
-      },
-    },
-    colors: [
-      primaryGradientColors[0],
-      secondaryGradientColors[0],
-      tertiaryGradientColors[0],
-    ],
-    fill: {
-      type: "gradient",
-      gradient: {
-        shade: "light",
-        type: "vertical",
-        shadeIntensity: 0.5,
-        inverseColors: false,
-        opacityFrom: 1,
-        opacityTo: 1,
-        stops: [0, 48, 100],
-        gradientToColors: [
-          primaryGradientColors[2],
-          secondaryGradientColors[2],
-          tertiaryGradientColors[2],
-        ],
-      },
-    },
-    dataLabels: { enabled: false },
-    stroke: { show: true, width: 20, lineCap: "butt", colors: ["transparent"] },
-    grid: { show: false },
-    xaxis: {
-      type: "category",
-      categories: chartData.map((d) => d.month),
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-      labels: { rotate: -15 },
-    },
-    yaxis: { show: true },
-    tooltip: { theme: "dark" },
-    legend: { show: false },
+  useEffect(() => {
+    fetchData(startDate, endDate, storeId);
+  }, [companyId, startDate, endDate, storeId]);
+
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+      fetchData(range.from, range.to, storeId);
+    }
   };
 
-  const series = [
-    { name: "Low Stock", data: chartData.map((d) => d.low_stock) },
-    { name: "In Stock", data: chartData.map((d) => d.in_stock) },
-    { name: "Out of Stock", data: chartData.map((d) => d.out_of_stock) },
-  ];
+  const getWeekChart = (days: any[]) => {
+    const options: ApexOptions = {
+      chart: { type: "bar", toolbar: { show: false } },
+      plotOptions: {
+        bar: {
+          columnWidth: days.length <= 3 ? "25%" : "40%",
+          borderRadius: 2,
+          dataLabels: { position: "top" },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        offsetY: -15,
+        formatter: (val: number) => (val > 0 ? `${currency}${val}` : ""),
+        style: {
+          fontSize: "11px",
+          colors: ["#000"],
+          fontWeight: 600,
+        },
+      },
+      stroke: {
+        show: true,
+        width: 8,
+        colors: ["transparent"],
+      },
+      xaxis: {
+        categories: days.map((d) => d.day),
+      },
+      yaxis: {
+        labels: { show: false },
+        max: (max) => max * 1.1,
+      },
+      grid: { show: false },
+      legend: { show: false },
+      colors: ["#2ecc71", "#f39c12"],
+    };
+
+    const series = [
+      { name: "IN", data: days.map((d) => d.in) },
+      { name: "OUT", data: days.map((d) => Math.abs(d.out)) },
+    ];
+
+    return <Chart options={options} series={series} type="bar" height={200} />;
+  };
+
+  const getYearChart = () => {
+    const options: ApexOptions = {
+      chart: { type: "bar", toolbar: { show: false } },
+      plotOptions: {
+        bar: {
+          columnWidth: yearData.length <= 4 ? "20%" : "35%",
+          borderRadius: 2,
+          dataLabels: { position: "top" },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        offsetY: -15,
+        formatter: (val: number) => (val > 0 ? `${currency}${val}` : ""),
+        style: {
+          fontSize: "11px",
+          colors: ["#000"],
+          fontWeight: 600,
+        },
+      },
+      stroke: {
+        show: true,
+        width: 8,
+        colors: ["transparent"],
+      },
+      xaxis: {
+        categories: yearData.map((d) => d.month),
+      },
+      yaxis: {
+        labels: { show: false },
+      },
+      grid: { show: false },
+      legend: { show: false },
+      colors: ["#2ecc71", "#f39c12"],
+    };
+
+    const series = [
+      { name: "IN", data: yearData.map((d) => d.in) },
+      { name: "OUT", data: yearData.map((d) => Math.abs(d.out)) },
+    ];
+
+    return <Chart options={options} series={series} type="bar" height={260} />;
+  };
 
   return (
-    <Card sx={{ p: 2 }}>
-      <Box
-        p={2}
-        pt={0}
-        pb={0}
-        display={"flex"}
-        justifyItems={"center"}
-        justifyContent={"space-between"}
-      >
-        <Typography variant="h1" fontSize={21}>
-          Product Stock Overview
+    <Card sx={{ p: 2, mb: 2, borderRadius: 3 }}>
+      {/* HEADER */}
+      <Box mb={2} display="flex" justifyContent="space-between">
+        <Typography variant="h1" fontSize={21} pl={4}>
+          Inventory
         </Typography>
-        <FormControl
-          size="small"
-          sx={{ minWidth: 160, mb: 2, alignContent: "flex-end" }}
-        >
-          <Select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            {Array.from({ length: 12 }, (_, i) => {
-              const d = new Date();
-              d.setMonth(d.getMonth() - i);
+        <Box display={"flex"} gap={2} textAlign={"center"} mr={3}>
+          <Typography variant="h6" fontWeight={600} color="#2ecc71">
+            IN
+          </Typography>
+          <Typography variant="h6" fontWeight={600} color="#f39c12">
+            OUT
+          </Typography>
+        </Box>
+        {/* <Box display="flex" gap={2}>
+          <DateRangePickerBox
+            from={startDate}
+            to={endDate}
+            onChange={handleDateRangeChange}
+          />
 
-              const value = `${d.getFullYear()}-${String(
-                d.getMonth() + 1,
-              ).padStart(2, "0")}`;
+          <Autocomplete
+            sx={{ width: 200 }}
+            options={stores}
+            value={stores.find((s) => s.id === storeId) || null}
+            onChange={(e, val) => {
+              const id = val?.id || null;
+              setStoreId(id);
+              fetchData(startDate, endDate, id);
+            }}
+            getOptionLabel={(option) => option.name}
+            renderInput={(params) => (
+              <CustomTextField {...params} placeholder="Select Store" />
+            )}
+          />
+        </Box> */}
+      </Box>
 
-              return (
-                <MenuItem key={value} value={value}>
-                  {d.toLocaleString("default", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </FormControl>
-      </Box>
-      <Box height="350px" className="rounded-bars">
-        <Chart options={options} series={series} type="bar" height={290} />
-        <Stack direction="row" spacing={2} mt={2} ml={5}>
-          {["Low Stock", "In Stock", "Out of Stock"].map((label, idx) => (
-            <Typography
-              key={label}
-              variant="h6"
-              display="flex"
-              alignItems="center"
-              sx={{ color: options.colors![idx] }}
-            >
-              <IconCircleFilled
-                width={10}
-                height={10}
-                style={{ marginRight: 5 }}
-              />
-              {label}
-            </Typography>
-          ))}
-        </Stack>
-      </Box>
+      {/* <Typography fontWeight={600} mb={1}>
+        Weekly Data
+      </Typography>
+
+      {weekData.map((week: any, i: number) => (
+        <Card key={i} sx={{ p: 2, mb: 2 }}>
+          <Typography textAlign="center" mb={1}>
+            {week.week}
+          </Typography>
+          {getWeekChart(week.days)}
+        </Card>
+      ))} */}
+
+      <Box sx={{ p: 2 }}>{getYearChart()}</Box>
     </Card>
   );
 };
 
-export default SalesOverview;
+export default InventoryOverview;
