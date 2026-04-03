@@ -462,11 +462,15 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         projects: []
     });
 
-    const [filters, setFilters] = useState({teams: [] as string[], trades: [] as string[], projects: [] as string[]});
+    const [filters, setFilters] = useState({
+        teams: [] as number[],
+        trades: [] as number[],
+        projects: [] as number[],
+    });
     const [tempFilters, setTempFilters] = useState({
-        teams: [] as string[],
-        trades: [] as string[],
-        projects: [] as string[]
+        teams: [] as number[],
+        trades: [] as number[],
+        projects: [] as number[],
     });
 
     const [geofences, setGeofences] = useState<any[]>([]);
@@ -520,7 +524,6 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     params: {
                         company_id: user.company_id,
                         is_project: true,
-                        datetime: apiDateTime
                     }
                 });
                 setGeofences(res.data.info ?? []);
@@ -546,23 +549,30 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         }
     };
 
-    const fetchUserLocations = async (applyFilters = false) => {
+    const fetchUserLocations = async () => {
+        await fetchUserLocationsWithFilters(filters);
+    };
+
+    const fetchUserLocationsWithFilters = async (activeFilters: typeof filters) => {
         setUserLocationsLoading(true);
         try {
-            const res = await api.get('user-location/get-user-locations');
+            const params: Record<string, any> = {
+                company_id: user.company_id,
+                datetime: apiDateTime,
+            };
+
+            if (activeFilters.teams.length > 0)    params.teams    = activeFilters.teams.join(',');
+            if (activeFilters.trades.length > 0)   params.trades   = activeFilters.trades.join(',');
+            if (activeFilters.projects.length > 0) params.projects = activeFilters.projects.join(',');
+
+            const res = await api.get('user-location/get-user-locations', { params });
+
             if (res.data?.IsSuccess) {
-                let data: any[] = res.data.info ?? [];
-                if (applyFilters) {
-                    if (filters.teams.length > 0) data = data.filter(u => filters.teams.includes(u.team_name));
-                    if (filters.trades.length > 0) data = data.filter(u => filters.trades.includes(u.trade_name));
-                    if (filters.projects.length > 0) data = data.filter(u => filters.projects.includes(u.project_name));
-                }
+                const data: any[] = res.data.info ?? [];
                 setUserLocations(data);
                 const teams = groupByTeam(data);
                 const initial: Record<string, boolean> = {};
-                Object.keys(teams).forEach((t) => {
-                    initial[t] = true;
-                });
+                Object.keys(teams).forEach((t) => { initial[t] = true; });
                 setExpandedTeams(initial);
             }
         } catch (err) {
@@ -595,11 +605,6 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         setSelected(null);
     };
 
-    const handleOpenUsers = () => {
-        setUsersDrawerOpen(true);
-        fetchUserLocations(true);
-    };
-
     const handleCloseUsers = () => {
         setUsersDrawerOpen(false);
         setUsersSearch('');
@@ -617,17 +622,28 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         if (open) {
             setActiveProjectId(projectId);
             fetchProjectDetail(projectId);
-            fetchUserLocations(true);
+            fetchUserLocationsWithFilters(filters);
         }
     }, [open]);
 
     useEffect(() => {
-        if (open && activeProjectId) fetchProjectDetail(activeProjectId);
+        if (open && activeProjectId) {
+            fetchProjectDetail(activeProjectId);
+            fetchUserLocationsWithFilters(filters);
+        }
     }, [activeTab]);
 
     useEffect(() => {
-        if (open && activeProjectId) fetchProjectDetail(activeProjectId);
+        if (open && activeProjectId) {
+            fetchProjectDetail(activeProjectId);
+            fetchUserLocationsWithFilters(filters);
+        }
     }, [apiDateTime]);
+
+    const handleOpenUsers = () => {
+        setUsersDrawerOpen(true);
+        fetchUserLocationsWithFilters(filters);
+    };
 
     const filterData = useMemo(() => {
         let data = geofences;
@@ -824,15 +840,18 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             select
                             label="Trade"
                             value={tempFilters.trades}
-                            onChange={(e) => setTempFilters({
-                                ...tempFilters,
-                                trades: e.target.value as unknown as string[]
-                            })}
-                            SelectProps={{multiple: true, renderValue: (sel) => (sel as string[]).join(', ')}}
+                            onChange={(e) => setTempFilters({ ...tempFilters, trades: e.target.value as unknown as number[] })}
+                            SelectProps={{
+                                multiple: true,
+                                renderValue: (sel) =>
+                                    (sel as number[])
+                                        .map((id) => resources.trades.find((t: any) => t.id == id)?.name ?? id)
+                                        .join(', '),
+                            }}
                             fullWidth
                         >
                             {resources.trades.map((t: any) => (
-                                <MenuItem key={t.id ?? t} value={t.name ?? t}>{t.name ?? t}</MenuItem>
+                                <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
                             ))}
                         </TextField>
 
@@ -840,15 +859,18 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             select
                             label="Team"
                             value={tempFilters.teams}
-                            onChange={(e) => setTempFilters({
-                                ...tempFilters,
-                                teams: e.target.value as unknown as string[]
-                            })}
-                            SelectProps={{multiple: true, renderValue: (sel) => (sel as string[]).join(', ')}}
+                            onChange={(e) => setTempFilters({ ...tempFilters, teams: e.target.value as unknown as number[] })}
+                            SelectProps={{
+                                multiple: true,
+                                renderValue: (sel) =>
+                                    (sel as number[])
+                                        .map((id) => resources.teams.find((t: any) => t.id == id)?.name ?? id)
+                                        .join(', '),
+                            }}
                             fullWidth
                         >
                             {resources.teams.map((t: any) => (
-                                <MenuItem key={t.id ?? t} value={t.name ?? t}>{t.name ?? t}</MenuItem>
+                                <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
                             ))}
                         </TextField>
 
@@ -856,27 +878,31 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             select
                             label="Project"
                             value={tempFilters.projects}
-                            onChange={(e) => setTempFilters({
-                                ...tempFilters,
-                                projects: e.target.value as unknown as string[]
-                            })}
-                            SelectProps={{multiple: true, renderValue: (sel) => (sel as string[]).join(', ')}}
+                            onChange={(e) => setTempFilters({ ...tempFilters, projects: e.target.value as unknown as number[] })}
+                            SelectProps={{
+                                multiple: true,
+                                renderValue: (sel) =>
+                                    (sel as number[])
+                                        .map((id) => resources.projects.find((p: any) => p.id == id)?.name ?? id)
+                                        .join(', '),
+                            }}
                             fullWidth
                         >
                             {resources.projects.map((p: any) => (
-                                <MenuItem key={p.id ?? p} value={p.name ?? p}>{p.name ?? p}</MenuItem>
+                                <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
                             ))}
                         </TextField>
                     </Stack>
                 </DialogContent>
 
-                <DialogActions sx={{px: 3, pb: 2}}>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button
                         onClick={() => {
-                            const empty = {teams: [], trades: [], projects: []};
+                            const empty = { teams: [], trades: [], projects: [] };
                             setTempFilters(empty);
                             setFilters(empty);
                             setFilterDialogOpen(false);
+                            fetchUserLocationsWithFilters(empty);
                         }}
                         color="inherit"
                     >
@@ -886,8 +912,8 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                         variant="contained"
                         onClick={() => {
                             setFilters(tempFilters);
-                            fetchUserLocations(true);
                             setFilterDialogOpen(false);
+                            fetchUserLocationsWithFilters(tempFilters);
                         }}
                     >
                         Apply Filters
