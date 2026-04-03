@@ -574,6 +574,21 @@ const SupplierList = () => {
       },
     }),
 
+    columnHelper.accessor((row) => row?.phone, {
+      id: "phone",
+      header: () => "Phone",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {item.phone ? item.phone : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
     columnHelper.accessor((row) => row?.company_name, {
       id: "company",
       header: () => "Company",
@@ -613,21 +628,6 @@ const SupplierList = () => {
           <Stack direction="row" alignItems="center" spacing={1} ml={1}>
             <Typography textTransform="capitalize" className="f-14">
               {item.contact_person_name ? item.contact_person_name : "-"}
-            </Typography>
-          </Stack>
-        );
-      },
-    }),
-
-    columnHelper.accessor((row) => row?.contact_person_email, {
-      id: "contactEmail",
-      header: () => "Contact Email",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" alignItems="center" spacing={1} ml={1}>
-            <Typography textTransform="capitalize" className="f-14">
-              {item.contact_person_email ? item.contact_person_email : "-"}
             </Typography>
           </Stack>
         );
