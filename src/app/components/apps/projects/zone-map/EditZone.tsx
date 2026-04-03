@@ -52,6 +52,7 @@ interface ToolbarProps {
     isActive: boolean;
 }
 
+// FIX 4: Toolbar centered horizontally (left: '50%' + transform)
 const MapToolbar = ({ drawMode, onMode, pointCount, isActive }: ToolbarProps) => {
     const tools: { mode: DrawMode; icon: React.ReactNode; tip: string }[] = [
         { mode: 'pan', icon: <HandSvg />, tip: 'Pan / Move map' },
@@ -75,7 +76,8 @@ const MapToolbar = ({ drawMode, onMode, pointCount, isActive }: ToolbarProps) =>
         <Box sx={{
             position: 'absolute',
             top: 10,
-            left: 10,
+            left: '50%',                    // FIX 4: center horizontally
+            transform: 'translateX(-50%)',  // FIX 4: pull back by half own width
             zIndex: 20,
             display: 'flex',
             alignItems: 'center',
@@ -168,14 +170,18 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
     const circleRef = useRef<google.maps.Circle | null>(null);
     const polygonRef = useRef<google.maps.Polygon | null>(null);
 
-    const drawModeRef = useRef(drawMode);
-    const drawPathRef = useRef(drawPath);
-    const isClosedRef = useRef(isClosed);
-    const isDrawingRef = useRef(false);
-    drawModeRef.current = drawMode;
-    drawPathRef.current = drawPath;
-    isClosedRef.current = isClosed;
-    isDrawingRef.current = drawMode === 'polygon';
+    // FIX 3: Single stateRef object so the map click handler always reads
+    // the latest values without stale closures — same pattern as AddZone fix.
+    const stateRef = useRef({
+        drawMode: (initType === 'circle' ? 'circle' : 'pan') as DrawMode,
+        drawPath: (zone.coordinates || []) as { lat: number; lng: number }[],
+        isClosed: initType === 'polygon' && (zone.coordinates?.length ?? 0) >= 3,
+    });
+
+    // Keep stateRef in sync on every render
+    stateRef.current.drawMode = drawMode;
+    stateRef.current.drawPath = drawPath;
+    stateRef.current.isClosed = isClosed;
 
     const isDrawingActive = drawMode === 'polygon';
 
@@ -192,11 +198,16 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
         circleRef.current?.setCenter(nl);
     };
 
+    // FIX 1: Math.round so radius is always a whole integer — no decimals
     const onRadiusChanged = () => {
         if (!circleRef.current) return;
         const r = circleRef.current.getRadius();
-        setRadius(r > 10000 ? 10000 : r);
-        if (r > 10000) circleRef.current.setRadius(10000);
+        if (r > 10000) {
+            circleRef.current.setRadius(10000);
+            setRadius(10000);
+        } else {
+            setRadius(Math.round(r));
+        }
     };
 
     const syncFromPolygon = () => {
@@ -243,7 +254,10 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
         setCursorLatLng(null);
         setNearStart(false);
         setIsClosed(false);
-        drawModeRef.current = mode;
+        // FIX 3: also update stateRef immediately so click handler sees new mode
+        stateRef.current.drawMode = mode;
+        stateRef.current.isClosed = false;
+        stateRef.current.drawPath = [];
         mapRef.current?.setOptions({ draggableCursor: mode === 'polygon' ? 'crosshair' : '' });
         if (mode === 'circle') {
             setZoneType('circle');
@@ -257,12 +271,13 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
 
     // ── Mouse move for live preview and near-start snap ──────────────────────
     const handleMouseMove = useCallback((e: google.maps.MapMouseEvent) => {
-        if (!isDrawingRef.current || isClosedRef.current) return;
+        // FIX 3: read from stateRef — never stale
+        if (stateRef.current.drawMode !== 'polygon' || stateRef.current.isClosed) return;
         if (!e.latLng) return;
         const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
         setCursorLatLng(pos);
-        if (drawPathRef.current.length >= 3 && mapRef.current) {
-            const sp = latLngToPixel(mapRef.current, drawPathRef.current[0]);
+        if (stateRef.current.drawPath.length >= 3 && mapRef.current) {
+            const sp = latLngToPixel(mapRef.current, stateRef.current.drawPath[0]);
             const cp = latLngToPixel(mapRef.current, pos);
             if (sp && cp) setNearStart(pixelDistance(sp, cp) < CLOSE_THRESHOLD_PX);
         } else {
@@ -270,24 +285,35 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
         }
     }, []);
 
-    // ── Map click ────────────────────────────────────────────────────────────
+    // FIX 3: Click handler uses stateRef (never stale) and is passed via
+    // GoogleMap's onClick prop — NOT addListener inside onLoad.
+    // addListener captures a stale closure; onClick re-binds on every render.
     const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-        if (!isDrawingRef.current || isClosedRef.current) return;
+        if (stateRef.current.drawMode !== 'polygon') return;
+        if (stateRef.current.isClosed) return;
         if (!e.latLng) return;
-        const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        if ((e as any).placeId) { e.stop?.(); return; }
 
-        if (drawPathRef.current.length >= 3 && mapRef.current) {
-            const sp = latLngToPixel(mapRef.current, drawPathRef.current[0]);
+        const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        const currentPath = stateRef.current.drawPath;
+
+        if (currentPath.length >= 3 && mapRef.current) {
+            const sp = latLngToPixel(mapRef.current, currentPath[0]);
             const cp = latLngToPixel(mapRef.current, pt);
             if (sp && cp && pixelDistance(sp, cp) < CLOSE_THRESHOLD_PX) {
                 setIsClosed(true);
+                stateRef.current.isClosed = true;
                 setNearStart(false);
                 setCursorLatLng(null);
                 setZoneType('polygon');
                 return;
             }
         }
-        setDrawPath((prev) => [...prev, pt]);
+
+        // Update stateRef synchronously so the very next click sees the new point
+        const newPath = [...currentPath, pt];
+        stateRef.current.drawPath = newPath;
+        setDrawPath(newPath);
     }, []);
 
     const previewPath = !isClosed && cursorLatLng && drawPath.length > 0
@@ -356,13 +382,27 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                     </FormControl>
                 )}
 
+                {/* FIX 2: InputLabelProps shrink:true + legend span override prevents
+                    MUI's outlined notch from clipping the "Name" label text */}
                 {activeTab === 0 && (
                     <TextField
                         fullWidth
                         label="Name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        sx={{ mb: 2 }}
+                        placeholder="Name"
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                            mb: 2,
+                            '& .MuiInputLabel-root': { overflow: 'visible' },
+                            '& .MuiOutlinedInput-notchedOutline > legend > span': {
+                                paddingRight: '6px',
+                                paddingLeft: '2px',
+                                maxWidth: 'unset',
+                                overflow: 'visible',
+                                display: 'inline-block',
+                            },
+                        }}
                     />
                 )}
 
@@ -372,6 +412,18 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                         label="Search location"
                         value={address}
                         onChange={handleInputChange}
+                        placeholder="Search location..."
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                            '& .MuiInputLabel-root': { overflow: 'visible' },
+                            '& .MuiOutlinedInput-notchedOutline > legend > span': {
+                                paddingRight: '6px',
+                                paddingLeft: '2px',
+                                maxWidth: 'unset',
+                                overflow: 'visible',
+                                display: 'inline-block',
+                            },
+                        }}
                     />
                     {typedAddress && predictions.length > 0 && (
                         <List sx={{
@@ -398,6 +450,7 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                     )}
                 </Box>
 
+                {/* FIX 1: Math.round(radius) — no decimal point, whole number only */}
                 {drawMode === 'circle' && (
                     <>
                         <Typography fontWeight={600} mb={1}>Area size [{Math.round(radius)} Meter]</Typography>
@@ -448,13 +501,11 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                         center={location}
                         mapContainerStyle={{ height: 400, width: '100%' }}
                         onMouseMove={handleMouseMove}
-                        onLoad={(map) => {
-                            mapRef.current = map;
-                            map.addListener('click', (e: google.maps.MapMouseEvent) => {
-                                if ((e as any).placeId) { e.stop?.(); return; }
-                                handleMapClick(e);
-                            });
-                        }}
+                        // FIX 3: Use onClick prop instead of addListener inside onLoad.
+                        // addListener captures a stale closure on mount and never updates.
+                        // The onClick prop re-binds on every render → always reads fresh stateRef.
+                        onClick={handleMapClick}
+                        onLoad={(map) => { mapRef.current = map; }}
                         options={{
                             clickableIcons: false,
                             disableDoubleClickZoom: true,
@@ -496,6 +547,9 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                             />
                         )}
 
+                        {/* FIX 3: clickable:false so Polyline never swallows map clicks.
+                            This was the root cause — after first line segment rendered,
+                            the Polyline absorbed all subsequent clicks silently. */}
                         {drawMode === 'polygon' && !isClosed && previewPath.length >= 2 && (
                             <Polyline
                                 path={previewPath}
@@ -503,32 +557,43 @@ const EditZone = ({ zone, onSaved, onCancel, projectId, companyId, addresses, ac
                                     strokeColor: nearStart ? '#ff5722' : color,
                                     strokeWeight: 2.5,
                                     strokeOpacity: 0.85,
+                                    clickable: false,
+                                    zIndex: 0,
                                 }}
                             />
                         )}
 
-                        {isDrawingActive && drawPath.map((pt, i) => (
-                            <Marker
-                                key={`dp-${i}`}
-                                position={pt}
-                                icon={{
-                                    path: google.maps.SymbolPath.CIRCLE,
-                                    scale: i === 0 ? 8 : i === drawPath.length - 1 ? 6 : 5,
-                                    fillColor: i === 0 ? '#ff5722' : color,
-                                    fillOpacity: 1,
-                                    strokeColor: '#fff',
-                                    strokeWeight: 2,
-                                }}
-                                onClick={i === 0 && drawPath.length >= 3 && !isClosed
-                                    ? () => {
-                                        setIsClosed(true);
-                                        setNearStart(false);
-                                        setCursorLatLng(null);
-                                    }
-                                    : undefined}
-                                cursor={i === 0 && drawPath.length >= 3 && !isClosed ? 'pointer' : undefined}
-                            />
-                        ))}
+                        {/* FIX 3: clickable={canClose} — only the first marker (to close
+                            the polygon) is clickable. All other markers get clickable:false
+                            so clicks pass through to the map and register immediately. */}
+                        {isDrawingActive && drawPath.map((pt, i) => {
+                            const isFirst = i === 0;
+                            const canClose = isFirst && drawPath.length >= 3 && !isClosed;
+                            return (
+                                <Marker
+                                    key={`dp-${i}`}
+                                    position={pt}
+                                    clickable={canClose}
+                                    icon={{
+                                        path: google.maps.SymbolPath.CIRCLE,
+                                        scale: isFirst ? 8 : i === drawPath.length - 1 ? 6 : 5,
+                                        fillColor: isFirst ? '#ff5722' : color,
+                                        fillOpacity: 1,
+                                        strokeColor: '#fff',
+                                        strokeWeight: 2,
+                                    }}
+                                    onClick={canClose
+                                        ? () => {
+                                            setIsClosed(true);
+                                            stateRef.current.isClosed = true;
+                                            setNearStart(false);
+                                            setCursorLatLng(null);
+                                        }
+                                        : undefined}
+                                    cursor={canClose ? 'pointer' : undefined}
+                                />
+                            );
+                        })}
 
                         {nearStart && drawPath.length > 0 && (
                             <GCircle
