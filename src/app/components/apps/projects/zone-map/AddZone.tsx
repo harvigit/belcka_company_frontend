@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, {useRef, useState, useCallback} from 'react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import {
-    Box, Button, Drawer, FormControl, IconButton, InputLabel,
+    Box, Button, FormControl, IconButton, InputLabel,
     List, ListItem, ListItemButton, MenuItem, Select, Slider,
     TextField, Tooltip, Typography,
 } from '@mui/material';
-import { IconX } from '@tabler/icons-react';
-import { Grid } from '@mui/system';
-import { Circle as GCircle, GoogleMap, Marker, Polygon, Polyline } from '@react-google-maps/api';
+import {Grid} from '@mui/system';
+import {Circle as GCircle, GoogleMap, Marker, Polygon, Polyline} from '@react-google-maps/api';
 
-const LONDON_CENTER = { lat: 51.5074, lng: -0.1278 };
+const LONDON_CENTER = {lat: 51.5074, lng: -0.1278};
 const CLOSE_THRESHOLD_PX = 20;
 
 interface AddZoneProps {
@@ -28,23 +27,26 @@ type ZoneType = 'circle' | 'polygon';
 type DrawMode = 'pan' | 'circle' | 'polygon';
 
 const HandSvg = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
-        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
-        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
-        <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+        <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
     </svg>
 );
 
 const PolygonSvg = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 3 21 9 18 20 6 20 3 9" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 3 21 9 18 20 6 20 3 9"/>
     </svg>
 );
 
 const CircleSvg = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9"/>
     </svg>
 );
 
@@ -55,12 +57,11 @@ interface ToolbarProps {
     isActive: boolean;
 }
 
-// FIX 4: Toolbar moved to top-center using left:'50%' + transform
-const MapToolbar = ({ drawMode, onMode, pointCount, isActive }: ToolbarProps) => {
+const MapToolbar = ({drawMode, onMode, pointCount, isActive}: ToolbarProps) => {
     const tools: { mode: DrawMode; icon: React.ReactNode; tip: string }[] = [
-        { mode: 'pan', icon: <HandSvg />, tip: 'Pan / Move map' },
-        { mode: 'polygon', icon: <PolygonSvg />, tip: 'Draw polygon' },
-        { mode: 'circle', icon: <CircleSvg />, tip: 'Circle zone' },
+        {mode: 'pan', icon: <HandSvg/>, tip: 'Pan / Move map'},
+        {mode: 'polygon', icon: <PolygonSvg/>, tip: 'Draw polygon'},
+        {mode: 'circle', icon: <CircleSvg/>, tip: 'Circle zone'},
     ];
 
     const btn = {
@@ -79,7 +80,6 @@ const MapToolbar = ({ drawMode, onMode, pointCount, isActive }: ToolbarProps) =>
         <Box sx={{
             position: 'absolute',
             top: 10,
-            // FIX 4: center the toolbar horizontally
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 20,
@@ -94,7 +94,7 @@ const MapToolbar = ({ drawMode, onMode, pointCount, isActive }: ToolbarProps) =>
             boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
             pointerEvents: 'all',
         }}>
-            {tools.map(({ mode, icon, tip }) => {
+            {tools.map(({mode, icon, tip}) => {
                 const active = drawMode === mode;
                 return (
                     <Tooltip key={mode} title={tip} placement="bottom" arrow>
@@ -105,7 +105,7 @@ const MapToolbar = ({ drawMode, onMode, pointCount, isActive }: ToolbarProps) =>
                                 color: active ? '#1565c0' : '#555',
                                 backgroundColor: active ? '#dbeafe' : 'transparent',
                                 border: active ? '1.5px solid #1976d2' : '1.5px solid transparent',
-                                '&:hover': { backgroundColor: active ? '#dbeafe' : '#f0f4ff', color: '#1976d2' },
+                                '&:hover': {backgroundColor: active ? '#dbeafe' : '#f0f4ff', color: '#1976d2'},
                             }}
                         >
                             {icon}
@@ -144,14 +144,14 @@ function latLngToPixel(map: google.maps.Map, latLng: { lat: number; lng: number 
     const scale = Math.pow(2, map.getZoom() ?? 10);
     const pt = proj.fromLatLngToPoint(new google.maps.LatLng(latLng.lat, latLng.lng));
     if (!pt) return null;
-    return { x: (pt.x - sw.x) * scale, y: (pt.y - ne.y) * scale };
+    return {x: (pt.x - sw.x) * scale, y: (pt.y - ne.y) * scale};
 }
 
 function pixelDistance(a: { x: number; y: number }, b: { x: number; y: number }) {
     return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab }: AddZoneProps) => {
+const AddZone = ({onAdded, onCancel, projectId, companyId, addresses, activeTab}: AddZoneProps) => {
     const [addressId, setAddressId] = useState<number | null>(null);
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
@@ -174,8 +174,6 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
     const polygonRef = useRef<google.maps.Polygon | null>(null);
     const lastCenterRef = useRef<{ lat: number; lng: number } | null>(null);
 
-    // FIX 3: Use a single stable ref object to hold all mutable state
-    // so the map click handler always reads the latest values without stale closure
     const stateRef = useRef({
         drawMode: 'pan' as DrawMode,
         drawPath: [] as { lat: number; lng: number }[],
@@ -184,7 +182,6 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
 
     const isDrawingActive = drawMode === 'polygon';
 
-    // Keep stateRef in sync with React state
     stateRef.current.drawMode = drawMode;
     stateRef.current.drawPath = drawPath;
     stateRef.current.isClosed = isClosed;
@@ -194,7 +191,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
         setAddressId(id);
         const addr = addresses.find((a: any) => a.id === id);
         if (addr) {
-            const loc = { lat: Number(addr.latitude), lng: Number(addr.longitude) };
+            const loc = {lat: Number(addr.latitude), lng: Number(addr.longitude)};
             setLocation(loc);
             setRadius(addr.radius || 200);
             mapRef.current?.panTo(loc);
@@ -203,7 +200,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
 
     const fetchPredictions = (input: string) => {
         if (!input) return setPredictions([]);
-        new google.maps.places.AutocompleteService().getPlacePredictions({ input }, (p) =>
+        new google.maps.places.AutocompleteService().getPlacePredictions({input}, (p) =>
             setPredictions(p || [])
         );
     };
@@ -216,12 +213,12 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
 
     const selectPrediction = (placeId: string) => {
         new google.maps.places.PlacesService(document.createElement('div')).getDetails(
-            { placeId },
+            {placeId},
             (place, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK && place) {
                     setAddress(place.formatted_address || place.name || '');
                     if (place.geometry?.location) {
-                        const loc = { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() };
+                        const loc = {lat: place.geometry.location.lat(), lng: place.geometry.location.lng()};
                         setLocation(loc);
                         mapRef.current?.panTo(loc);
                         mapRef.current?.setZoom(15);
@@ -236,7 +233,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
     // ── Circle handlers ──────────────────────────────────────────────────────
     const onMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return;
-        const nl = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        const nl = {lat: e.latLng.lat(), lng: e.latLng.lng()};
         setLocation(nl);
         circleRef.current?.setCenter(nl);
     };
@@ -255,7 +252,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
     const syncFromPolygon = () => {
         if (!polygonRef.current) return;
         setDrawPath(
-            polygonRef.current.getPath().getArray().map((p) => ({ lat: p.lat(), lng: p.lng() }))
+            polygonRef.current.getPath().getArray().map((p) => ({lat: p.lat(), lng: p.lng()}))
         );
     };
 
@@ -268,7 +265,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
         stateRef.current.drawMode = mode;
         stateRef.current.isClosed = false;
         stateRef.current.drawPath = [];
-        mapRef.current?.setOptions({ draggableCursor: mode === 'polygon' ? 'crosshair' : '' });
+        mapRef.current?.setOptions({draggableCursor: mode === 'polygon' ? 'crosshair' : ''});
         if (mode === 'circle') {
             setZoneType('circle');
             setDrawPath([]);
@@ -283,7 +280,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
     const handleMouseMove = useCallback((e: google.maps.MapMouseEvent) => {
         if (stateRef.current.drawMode !== 'polygon' || stateRef.current.isClosed) return;
         if (!e.latLng) return;
-        const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        const pos = {lat: e.latLng.lat(), lng: e.latLng.lng()};
         setCursorLatLng(pos);
         if (stateRef.current.drawPath.length >= 3 && mapRef.current) {
             const sp = latLngToPixel(mapRef.current, stateRef.current.drawPath[0]);
@@ -294,25 +291,18 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
         }
     }, []);
 
-    // FIX 3: Map click handler — use stateRef (never stale) instead of closure refs
-    // Also registered via GoogleMap's onClick prop (not addListener) to avoid
-    // the double-fire / event-queue issue that caused dots to skip registration.
     const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-        // Guard: only act in polygon drawing mode and if not yet closed
         if (stateRef.current.drawMode !== 'polygon') return;
         if (stateRef.current.isClosed) return;
         if (!e.latLng) return;
-
-        // Prevent click on POI overlays from adding spurious points
         if ((e as any).placeId) {
             e.stop?.();
             return;
         }
 
-        const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        const pt = {lat: e.latLng.lat(), lng: e.latLng.lng()};
         const currentPath = stateRef.current.drawPath;
 
-        // Check if clicking near the start point to close the polygon
         if (currentPath.length >= 3 && mapRef.current) {
             const sp = latLngToPixel(mapRef.current, currentPath[0]);
             const cp = latLngToPixel(mapRef.current, pt);
@@ -325,7 +315,6 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
             }
         }
 
-        // Add new point — update both React state AND stateRef immediately
         const newPath = [...currentPath, pt];
         stateRef.current.drawPath = newPath;
         setDrawPath(newPath);
@@ -350,7 +339,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
             let boundary: any;
             let lat = location.lat, lng = location.lng;
             if (zoneType === 'circle') {
-                boundary = { lat, lng, radius };
+                boundary = {lat, lng, radius};
             } else {
                 boundary = drawPath;
                 lat = drawPath.reduce((s, p) => s + p.lat, 0) / drawPath.length;
@@ -382,31 +371,23 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
     };
 
     return (
-        <Drawer
-            anchor="right"
-            open={true}
-            onClose={onCancel}
+        <Box
             sx={{
-                '& .MuiDrawer-paper': {
-                    width: 500,
-                    padding: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    backgroundColor: '#f9f9f9',
-                },
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                p: {xs: 1, sm: 2},
+                minHeight: 0,
             }}
         >
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6" fontWeight={600}>Add Zone</Typography>
-                <IconButton onClick={onCancel}><IconX /></IconButton>
-            </Box>
+            <Box sx={{flex: 1, overflowY: 'auto', minHeight: 0, pr: {xs: 0, sm: 0.5}}}>
+                <Typography variant="h6" mb={1}>Add Zone</Typography>
 
-            <Box sx={{ flex: 1, overflowY: 'auto', pr: 1 }}>
                 <Grid container>
-                    <Grid size={{ lg: 12, xs: 12 }}>
+                    <Grid size={{lg: 12, xs: 12}}>
 
                         {activeTab === 1 && (
-                            <FormControl fullWidth sx={{ mb: 2 }}>
+                            <FormControl fullWidth sx={{mb: 2}}>
                                 <InputLabel>Select Address</InputLabel>
                                 <Select
                                     value={addressId || ''}
@@ -419,7 +400,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                 </Select>
                             </FormControl>
                         )}
-                        
+
                         {activeTab === 0 && (
                             <TextField
                                 fullWidth
@@ -427,19 +408,39 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Name"
-                                InputLabelProps={{ shrink: true }}
-                                sx={{ my: 2 }}
+                                InputLabelProps={{shrink: true}}
+                                sx={{
+                                    my: 2,
+                                    '& .MuiInputLabel-root': {overflow: 'visible'},
+                                    '& .MuiOutlinedInput-notchedOutline > legend > span': {
+                                        paddingRight: '6px',
+                                        paddingLeft: '2px',
+                                        maxWidth: 'unset',
+                                        overflow: 'visible',
+                                        display: 'inline-block',
+                                    },
+                                }}
                             />
                         )}
 
-                        <Box sx={{ position: 'relative', mb: 2 }}>
+                        <Box sx={{position: 'relative', mb: 2}}>
                             <TextField
                                 fullWidth
                                 label="Search location"
                                 value={address}
                                 onChange={handleInputChange}
                                 placeholder="Search location..."
-                                InputLabelProps={{ shrink: true }}
+                                InputLabelProps={{shrink: true}}
+                                sx={{
+                                    '& .MuiInputLabel-root': {overflow: 'visible'},
+                                    '& .MuiOutlinedInput-notchedOutline > legend > span': {
+                                        paddingRight: '6px',
+                                        paddingLeft: '2px',
+                                        maxWidth: 'unset',
+                                        overflow: 'visible',
+                                        display: 'inline-block',
+                                    },
+                                }}
                             />
                             {typedAddress && predictions.length > 0 && (
                                 <List sx={{
@@ -451,9 +452,9 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                     border: '1px solid #ccc',
                                     borderRadius: 1,
                                     maxHeight: 200,
-                                    overflow: 'auto',
                                     backgroundColor: '#fff',
                                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                    overflow: 'auto',
                                 }}>
                                     {predictions.map((p) => (
                                         <ListItem key={p.place_id} disablePadding>
@@ -466,19 +467,20 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                             )}
                         </Box>
 
-                        {/* FIX 1: Show radius with max 2 decimal places using toFixed(2) */}
                         {drawMode === 'circle' && (
                             <>
                                 <Typography fontWeight={600} mb={1}>
-                                    Area Radius [{Math.round(radius)} Meter]
+                                    Area size [{Math.round(radius)} Meter]
                                 </Typography>
-                                <Slider
-                                    min={0}
-                                    max={10000}
-                                    value={radius}
-                                    onChange={(_, v) => setRadius(v as number)}
-                                    sx={{ mb: 2, width: '98%' }}
-                                />
+                                <Box sx={{px: 1.5, boxSizing: 'border-box', width: '100%', overflow: 'hidden'}}>
+                                    <Slider
+                                        min={0}
+                                        max={10000}
+                                        value={radius}
+                                        onChange={(_, v) => setRadius(v as number)}
+                                        sx={{width: '100%', display: 'block'}}
+                                    />
+                                </Box>
                             </>
                         )}
 
@@ -499,13 +501,10 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                     height: 8,
                                     borderRadius: '50%',
                                     flexShrink: 0,
-                                    backgroundColor: isClosed ? '#43a047' : '#1976d2',
-                                }} />
-                                <Typography
-                                    variant="caption"
-                                    color={isClosed ? 'success.main' : 'primary'}
-                                    fontWeight={600}
-                                >
+                                    backgroundColor: isClosed ? '#43a047' : '#1976d2'
+                                }}/>
+                                <Typography variant="caption" color={isClosed ? 'success.main' : 'primary'}
+                                            fontWeight={600}>
                                     {isClosed
                                         ? `Zone closed · ${drawPath.length} points · ready to save ✓`
                                         : `Click to add points${drawPath.length >= 3 ? ' · click near start to close' : ''}${drawPath.length > 0 ? ` · ${drawPath.length} pt${drawPath.length !== 1 ? 's' : ''}` : ''}`}
@@ -513,16 +512,22 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                             </Box>
                         )}
 
-                        <Box sx={{ height: 400, mb: 2, mt: 1, position: 'relative', borderRadius: 1, overflow: 'hidden' }}>
+                        <Box
+                            sx={{
+                                height: {xs: 280, sm: 340, md: 400},
+                                mb: 2,
+                                mt: 1,
+                                position: 'relative',
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                backgroundColor: '#e8e8e8',
+                            }}
+                        >
                             <GoogleMap
                                 zoom={13}
                                 center={location}
-                                mapContainerStyle={{ width: '100%', height: '400px' }}
+                                mapContainerStyle={{width: '100%', height: '100%'}}
                                 onMouseMove={handleMouseMove}
-                                // FIX 3: Use GoogleMap's built-in onClick prop instead of addListener inside onLoad.
-                                // addListener inside onLoad captures a stale closure and can fire with a delay
-                                // due to the internal event queue, causing dots to be skipped.
-                                // The onClick prop re-binds correctly on every render, always getting fresh stateRef.
                                 onClick={handleMapClick}
                                 onLoad={(map) => {
                                     mapRef.current = map;
@@ -535,7 +540,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                             >
                                 {drawMode === 'circle' && (
                                     <>
-                                        <Marker position={location} draggable onDragEnd={onMarkerDragEnd} />
+                                        <Marker position={location} draggable onDragEnd={onMarkerDragEnd}/>
                                         <GCircle
                                             center={location}
                                             radius={radius}
@@ -543,7 +548,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                                 strokeColor: color,
                                                 fillColor: color + '33',
                                                 editable: true,
-                                                draggable: true,
+                                                draggable: true
                                             }}
                                             onRadiusChanged={onRadiusChanged}
                                             onLoad={(circle) => {
@@ -551,7 +556,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                                 circle.addListener('center_changed', () => {
                                                     const c = circle.getCenter();
                                                     if (!c) return;
-                                                    const nl = { lat: c.lat(), lng: c.lng() };
+                                                    const nl = {lat: c.lat(), lng: c.lng()};
                                                     if (lastCenterRef.current?.lat === nl.lat && lastCenterRef.current?.lng === nl.lng) return;
                                                     lastCenterRef.current = nl;
                                                     setLocation(nl);
@@ -569,9 +574,11 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                             fillColor: color + '33',
                                             strokeWeight: 2,
                                             editable: true,
-                                            draggable: true,
+                                            draggable: true
                                         }}
-                                        onLoad={(p) => { polygonRef.current = p; }}
+                                        onLoad={(p) => {
+                                            polygonRef.current = p;
+                                        }}
                                         onMouseUp={syncFromPolygon}
                                         onDragEnd={syncFromPolygon}
                                     />
@@ -584,8 +591,8 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                             strokeColor: nearStart ? '#ff5722' : color,
                                             strokeWeight: 2.5,
                                             strokeOpacity: 0.85,
-                                            clickable: false, // ← THE REAL BUG: Polyline was swallowing all map clicks after first segment appeared
-                                            zIndex: 0,
+                                            clickable: false,
+                                            zIndex: 0
                                         }}
                                     />
                                 )}
@@ -597,11 +604,6 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                         <Marker
                                             key={`pt-${i}`}
                                             position={pt}
-                                            // FIX 3: Non-first markers must NOT be clickable.
-                                            // When clickable:true (default), each Marker swallows
-                                            // the click event so it never reaches the map — that's
-                                            // why subsequent dots appeared to need 7-8 clicks.
-                                            // Only the first marker needs to be clickable (to close).
                                             clickable={canClose}
                                             icon={{
                                                 path: google.maps.SymbolPath.CIRCLE,
@@ -611,14 +613,12 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                                 strokeColor: '#fff',
                                                 strokeWeight: 2,
                                             }}
-                                            onClick={canClose
-                                                ? () => {
-                                                    setIsClosed(true);
-                                                    stateRef.current.isClosed = true;
-                                                    setNearStart(false);
-                                                    setCursorLatLng(null);
-                                                }
-                                                : undefined}
+                                            onClick={canClose ? () => {
+                                                setIsClosed(true);
+                                                stateRef.current.isClosed = true;
+                                                setNearStart(false);
+                                                setCursorLatLng(null);
+                                            } : undefined}
                                             cursor={canClose ? 'pointer' : undefined}
                                         />
                                     );
@@ -632,7 +632,7 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                                             strokeColor: '#ff5722',
                                             strokeWeight: 2,
                                             fillColor: '#ff572233',
-                                            clickable: false,
+                                            clickable: false
                                         }}
                                     />
                                 )}
@@ -651,21 +651,26 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                             type="color"
                             value={color}
                             onChange={(e) => setColor(e.target.value)}
-                            style={{ width: '100%', height: 40, border: 'none', cursor: 'pointer' }}
+                            style={{width: '100%', height: 40, border: 'none', cursor: 'pointer'}}
                         />
 
                     </Grid>
                 </Grid>
             </Box>
 
-            <Box display="flex" gap={2} mt={2}>
+            <Box
+                display="flex"
+                gap={2}
+                mt={2}
+                sx={{flexShrink: 0, pt: 1.5, borderTop: '1px solid #f0f0f0'}}
+            >
                 <Button
                     variant="contained"
                     color="primary"
                     size="large"
                     onClick={handleSave}
                     disabled={isSaving}
-                    sx={{ borderRadius: 3 }}
+                    sx={{borderRadius: 3}}
                 >
                     {isSaving ? 'Saving...' : 'Save'}
                 </Button>
@@ -674,12 +679,12 @@ const AddZone = ({ onAdded, onCancel, projectId, companyId, addresses, activeTab
                     color="inherit"
                     size="large"
                     onClick={onCancel}
-                    sx={{ borderRadius: 3, backgroundColor: 'transparent', color: 'GrayText' }}
+                    sx={{borderRadius: 3, backgroundColor: 'transparent', color: 'GrayText'}}
                 >
                     Cancel
                 </Button>
             </Box>
-        </Drawer>
+        </Box>
     );
 };
 
