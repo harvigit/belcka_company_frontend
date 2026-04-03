@@ -980,7 +980,7 @@ const PurchaseProductList: React.FC<Props> = ({
               <IconFilter width={18} />
             </Button>
             <Box display={"flex"} gap={2}>
-              {tempFilters.project && (
+              {filters.project && (
                 <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
                   <b>Project</b>
                   <p
@@ -990,11 +990,11 @@ const PurchaseProductList: React.FC<Props> = ({
                       display: "flex",
                     }}
                   >
-                    {tempFilters.project} <IconChevronRight />
+                    {filters.project} <IconChevronRight />
                   </p>
                 </Typography>
               )}
-              {tempFilters.supplier && (
+              {filters.supplier && (
                 <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
                   <b>Supplier</b>{" "}
                   <p
@@ -1004,12 +1004,12 @@ const PurchaseProductList: React.FC<Props> = ({
                       display: "flex",
                     }}
                   >
-                    {tempFilters.supplier}
+                    {filters.supplier}
                     <IconChevronRight />
                   </p>
                 </Typography>
               )}
-              {tempFilters.address && (
+              {filters.address && (
                 <Typography display={"flex"} alignItems={"flex-start"} gap={2}>
                   <b>Address</b>{" "}
                   <p
@@ -1019,7 +1019,7 @@ const PurchaseProductList: React.FC<Props> = ({
                       display: "flex",
                     }}
                   >
-                    {tempFilters.address}
+                    {filters.address}
                     <IconChevronRight />
                   </p>
                 </Typography>
