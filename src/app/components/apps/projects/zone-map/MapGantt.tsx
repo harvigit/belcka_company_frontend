@@ -56,6 +56,7 @@ import api from '@/utils/axios';
 
 import AddZone from './AddZone';
 import EditZone from './EditZone';
+import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 
 interface DateTimePickerProps {
     value: Date;
@@ -489,6 +490,10 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
     const [usersOnMapVisible] = useState(true);
     const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
 
+    // ── Zones list pagination ──
+    const [zonePage, setZonePage] = useState(0);
+    const [zonePageSize, setZonePageSize] = useState(50);
+
     const {isLoaded} = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
         libraries: GOOGLE_MAP_LIBRARIES as any,
@@ -522,8 +527,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
             } else {
                 const res: AxiosResponse<any> = await api.get('address/zones', {
                     params: {
-                        project_id: pid,
-                        datetime: apiDateTime
+                        company_id: user.company_id,
                     }
                 });
                 setGeofences(res.data.info?.zones ?? []);
@@ -590,17 +594,17 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         setActiveTab(v);
         setSelected(null);
     };
-    
+
     const handleOpenUsers = () => {
         setUsersDrawerOpen(true);
         fetchUserLocations(true);
     };
-    
+
     const handleCloseUsers = () => {
         setUsersDrawerOpen(false);
         setUsersSearch('');
     };
-    
+
     const toggleTeam = (teamName: string) => {
         setExpandedTeams((prev) => ({...prev, [teamName]: !prev[teamName]}));
     };
@@ -635,6 +639,19 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         );
         return data;
     }, [geofences, searchTerm]);
+
+    // Reset to page 0 whenever the filtered list changes
+    useEffect(() => {
+        setZonePage(0);
+    }, [filterData]);
+
+    // Paginated slice of filterData for the table
+    const paginatedZones = useMemo(() => {
+        const start = zonePage * zonePageSize;
+        return filterData.slice(start, start + zonePageSize);
+    }, [filterData, zonePage, zonePageSize]);
+
+    const totalZonePages = Math.max(1, Math.ceil(filterData.length / zonePageSize));
 
     const visibleZones = useMemo(
         () => filterData.filter((z) => !hiddenZoneIds.has(z.id)),
@@ -888,117 +905,177 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     overflow: {xs: 'visible', md: 'hidden'},
                 }}
             >
+                {/* ── Zones list panel ── */}
                 <Box
                     sx={{
                         width: {xs: '100%', md: '32%'},
                         minWidth: {md: 260},
                         flexShrink: 0,
-                        overflow: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
                         maxHeight: {xs: 360, md: 'unset'},
                     }}
                 >
-                    <Paper>
-                        <Table>
-                            <TableHead>
-                                <TableRow sx={{background: '#f5f5f5'}}>
-                                    <TableCell><b>Name</b></TableCell>
-                                    <TableCell width={150}><b>Action</b></TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filterData.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={2} align="center" sx={{py: 4}}>
-                                            No zones found.
-                                        </TableCell>
+                    {/* Scrollable table area */}
+                    <Box sx={{flex: 1, overflow: 'auto'}}>
+                        <Paper>
+                            <Table>
+                                <TableHead>
+                                    <TableRow sx={{background: '#f5f5f5'}}>
+                                        <TableCell><b>Name</b></TableCell>
+                                        <TableCell width={150}><b>Action</b></TableCell>
                                     </TableRow>
-                                ) : (
-                                    filterData.map((z) => {
-                                        const isHidden = hiddenZoneIds.has(z.id);
-                                        return (
-                                            <TableRow key={z.id}>
-                                                <TableCell>
-                                                    <Typography sx={{color: 'text.primary', fontWeight: 600}}>
-                                                        {z.name}
-                                                    </Typography>
-                                                    <Typography sx={{color: 'text.secondary'}}>
-                                                        {z.project_name}
-                                                    </Typography>
-                                                    <Tooltip title={z.address_name || z.address} arrow>
-                                                        <Typography
-                                                            variant="body2"
-                                                            sx={{
-                                                                color: 'text.disabled',
-                                                                maxWidth: 250,
-                                                                whiteSpace: 'nowrap',
-                                                                overflow: 'hidden',
-                                                                textOverflow: 'ellipsis',
-                                                                cursor: 'pointer',
-                                                            }}
-                                                        >
-                                                            {z.address_name || z.address}
+                                </TableHead>
+                                <TableBody>
+                                    {filterData.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={2} align="center" sx={{py: 4}}>
+                                                No zones found.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        paginatedZones.map((z) => {
+                                            const isHidden = hiddenZoneIds.has(z.id);
+                                            return (
+                                                <TableRow key={z.id}>
+                                                    <TableCell>
+                                                        <Typography sx={{color: 'text.primary', fontWeight: 600}}>
+                                                            {z.name}
                                                         </Typography>
-                                                    </Tooltip>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Box display="flex" gap={0.5}>
-                                                        <IconButton
-                                                            color={isHidden ? 'default' : 'success'}
-                                                            onClick={() => {
-                                                                setHiddenZoneIds((prev) => {
-                                                                    const newSet = new Set(prev);
-                                                                    if (isHidden) newSet.delete(z.id);
-                                                                    else newSet.add(z.id);
-                                                                    return newSet;
-                                                                });
-                                                            }}
-                                                        >
-                                                            {isHidden ? <IconEyeOff size={20}/> : <IconEye size={20}/>}
-                                                        </IconButton>
+                                                        <Typography sx={{color: 'text.secondary'}}>
+                                                            {z.project_name}
+                                                        </Typography>
+                                                        <Tooltip title={z.address_name || z.address} arrow>
+                                                            <Typography
+                                                                variant="body2"
+                                                                sx={{
+                                                                    color: 'text.disabled',
+                                                                    maxWidth: 250,
+                                                                    whiteSpace: 'nowrap',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                {z.address_name || z.address}
+                                                            </Typography>
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Box display="flex" gap={0.5}>
+                                                            <IconButton
+                                                                color={isHidden ? 'default' : 'success'}
+                                                                onClick={() => {
+                                                                    setHiddenZoneIds((prev) => {
+                                                                        const newSet = new Set(prev);
+                                                                        if (isHidden) newSet.delete(z.id);
+                                                                        else newSet.add(z.id);
+                                                                        return newSet;
+                                                                    });
+                                                                }}
+                                                            >
+                                                                {isHidden ? <IconEyeOff size={20}/> :
+                                                                    <IconEye size={20}/>}
+                                                            </IconButton>
 
-                                                        <IconButton
-                                                            color="primary"
-                                                            onClick={() => {
-                                                                if (mainMapRef.current) {
-                                                                    flyToZone(mainMapRef.current, z);
-                                                                    setSelected(null);
-                                                                }
-                                                            }}
-                                                            title="Zoom to zone on map"
-                                                        >
-                                                            <IconMapPin size={20}/>
-                                                        </IconButton>
+                                                            <IconButton
+                                                                color="primary"
+                                                                onClick={() => {
+                                                                    if (mainMapRef.current) {
+                                                                        flyToZone(mainMapRef.current, z);
+                                                                        setSelected(null);
+                                                                    }
+                                                                }}
+                                                                title="Zoom to zone on map"
+                                                            >
+                                                                <IconMapPin size={20}/>
+                                                            </IconButton>
 
-                                                        <IconButton
-                                                            color="primary"
-                                                            onClick={() => {
-                                                                setAddZoneOpen(false);
-                                                                setSelected({...z, mode: 'edit'});
-                                                            }}
-                                                        >
-                                                            <IconEdit size={20}/>
-                                                        </IconButton>
+                                                            <IconButton
+                                                                color="primary"
+                                                                onClick={() => {
+                                                                    setAddZoneOpen(false);
+                                                                    setSelected({...z, mode: 'edit'});
+                                                                }}
+                                                            >
+                                                                <IconEdit size={20}/>
+                                                            </IconButton>
 
-                                                        <IconButton
-                                                            color="error"
-                                                            onClick={() => {
-                                                                setDeleteId(z.id);
-                                                                setDeleteConfirmOpen(true);
-                                                            }}
-                                                        >
-                                                            <IconTrash size={20}/>
-                                                        </IconButton>
-                                                    </Box>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
-                    </Paper>
+                                                            <IconButton
+                                                                color="error"
+                                                                onClick={() => {
+                                                                    setDeleteId(z.id);
+                                                                    setDeleteConfirmOpen(true);
+                                                                }}
+                                                            >
+                                                                <IconTrash size={20}/>
+                                                            </IconButton>
+                                                        </Box>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </Paper>
+                    </Box>
+
+                    {/* ── Pagination footer ── */}
+                    {filterData.length > 0 && (
+                        <>
+                            <Divider/>
+                            <Stack
+                                direction="row"
+                                alignItems="center"
+                                justifyContent="space-between"
+                                px={1.5}
+                                pt={1}
+                                pb={0.5}
+                                flexShrink={0}
+                            >
+                                <Typography color="textSecondary" fontSize={13}>
+                                    {filterData.length} Zones
+                                </Typography>
+
+                                <Box display="flex" alignItems="center" gap={0.5}>
+                                    <Typography color="textSecondary" fontSize={13}>
+                                        Page {zonePage + 1} of {totalZonePages} | Entries:
+                                    </Typography>
+                                    <CustomSelect
+                                        value={zonePageSize}
+                                        onChange={(e: { target: { value: any } }) => {
+                                            setZonePageSize(Number(e.target.value));
+                                            setZonePage(0);
+                                        }}
+                                    >
+                                        {[10, 25, 50, 100, 200].map((size) => (
+                                            <MenuItem key={size} value={size}>{size}</MenuItem>
+                                        ))}
+                                    </CustomSelect>
+                                    <IconButton
+                                        size="small"
+                                        sx={{width: 30}}
+                                        onClick={() => setZonePage((p) => p - 1)}
+                                        disabled={zonePage === 0}
+                                    >
+                                        <IconChevronLeft/>
+                                    </IconButton>
+                                    <IconButton
+                                        size="small"
+                                        sx={{width: 30}}
+                                        onClick={() => setZonePage((p) => p + 1)}
+                                        disabled={(zonePage + 1) * zonePageSize >= filterData.length}
+                                    >
+                                        <IconChevronRight/>
+                                    </IconButton>
+                                </Box>
+                            </Stack>
+                        </>
+                    )}
                 </Box>
 
+                {/* ── Map / Edit / Add panel ── */}
                 <Box
                     sx={{
                         flex: 1,
@@ -1044,7 +1121,6 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                         />
                     )}
 
-                    {/* Add Zone */}
                     {addZoneOpen && (
                         <AddZone
                             projectId={activeProjectId}
@@ -1061,6 +1137,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                 </Box>
             </Box>
 
+            {/* ── Staff on Site Drawer ── */}
             <Drawer
                 anchor="right"
                 open={usersDrawerOpen}
@@ -1174,6 +1251,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                 </Box>
             </Drawer>
 
+            {/* ── Delete Confirm Dialog ── */}
             <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
                 <DialogTitle>
                     Delete Zone
