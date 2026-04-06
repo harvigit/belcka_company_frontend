@@ -272,7 +272,7 @@ function DateTimePicker({value, onChange}: DateTimePickerProps) {
                     </Box>
 
                     <Divider/>
-
+                    
                     <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                         <TextField
                             type="number"
@@ -549,10 +549,6 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         }
     };
 
-    const fetchUserLocations = async () => {
-        await fetchUserLocationsWithFilters(filters);
-    };
-
     const fetchUserLocationsWithFilters = async (activeFilters: typeof filters) => {
         setUserLocationsLoading(true);
         try {
@@ -565,11 +561,12 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
             if (activeFilters.trades.length > 0)   params.trades   = activeFilters.trades.join(',');
             if (activeFilters.projects.length > 0) params.projects = activeFilters.projects.join(',');
 
-            const res = await api.get('user-location/get-user-locations', { params });
+            const res = await api.get('user-location/get-user-locations', {params});
 
             if (res.data?.IsSuccess) {
                 const data: any[] = res.data.info ?? [];
                 setUserLocations(data);
+                
                 const teams = groupByTeam(data);
                 const initial: Record<string, boolean> = {};
                 Object.keys(teams).forEach((t) => { initial[t] = true; });
@@ -687,11 +684,8 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                 u.project_name?.toLowerCase().includes(s)
             );
         }
-        if (filters.teams.length > 0) data = data.filter(u => filters.teams.includes(u.team_name));
-        if (filters.trades.length > 0) data = data.filter(u => filters.trades.includes(u.trade_name));
-        if (filters.projects.length > 0) data = data.filter(u => filters.projects.includes(u.project_name));
         return data;
-    }, [userLocations, usersSearch, filters]);
+    }, [userLocations, usersSearch]);
 
     const groupedUsers = useMemo(() => groupByTeam(filteredUserLocations), [filteredUserLocations]);
 
@@ -949,7 +943,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                                 <TableHead>
                                     <TableRow sx={{background: '#f5f5f5'}}>
                                         <TableCell><b>Name</b></TableCell>
-                                        <TableCell width={150}><b>Action</b></TableCell>
+                                        <TableCell sx={{width: 152, minWidth: 152}}><b>Action</b></TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -987,8 +981,8 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                                                             </Typography>
                                                         </Tooltip>
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Box display="flex" gap={0.5}>
+                                                    <TableCell sx={{width: 152, minWidth: 152}}>
+                                                        <Box display="flex" gap={0.5} flexWrap="nowrap">
                                                             <IconButton
                                                                 color={isHidden ? 'default' : 'success'}
                                                                 onClick={() => {
@@ -1059,14 +1053,16 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                                 pt={1}
                                 pb={0.5}
                                 flexShrink={0}
+                                flexWrap="wrap"
+                                gap={0.5}
                             >
                                 <Typography color="textSecondary" fontSize={13}>
                                     {filterData.length} Zones
                                 </Typography>
 
-                                <Box display="flex" alignItems="center" gap={0.5}>
-                                    <Typography color="textSecondary" fontSize={13}>
-                                        Page {zonePage + 1} of {totalZonePages} | Entries:
+                                <Box display="flex" alignItems="center" gap={0.5} flexWrap="nowrap">
+                                    <Typography color="textSecondary" fontSize={13} sx={{whiteSpace: 'nowrap'}}>
+                                        Pg {zonePage + 1}/{totalZonePages} |
                                     </Typography>
                                     <CustomSelect
                                         value={zonePageSize}
@@ -1185,8 +1181,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     py={1.75}
                     sx={{borderBottom: '1px solid #f0f0f0'}}
                 >
-                    <Typography fontWeight={700} fontSize={13} letterSpacing={1}
-                                sx={{textTransform: 'uppercase', color: '#444'}}>
+                    <Typography fontWeight={700} fontSize={13} letterSpacing={1} sx={{textTransform: 'uppercase', color: '#444'}}>
                         Staff on Site
                     </Typography>
                     <IconButton size="small" onClick={handleCloseUsers}>
