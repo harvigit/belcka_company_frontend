@@ -555,10 +555,12 @@ const NearMissReporting = ({ companyId }: Props) => {
             formData.append('company_id', String(companyId));
             formData.append('hazard_id', form.hazardId);
             formData.append('description', form.description || '');
+            
             if (isEditing && editingId) {
                 formData.append('near_miss_id', String(editingId));
                 removedIds.forEach(id => formData.append('remove_attachment_ids[]', String(id)));
             }
+            
             attachments.filter(a => a.source === 'new' && a.file)
                 .forEach(a => formData.append('files', a.file!));
 
@@ -941,11 +943,14 @@ const NearMissReporting = ({ companyId }: Props) => {
 
                     <Box px={3} py={2} borderTop="1px solid" sx={{ borderColor: 'divider' }}>
                         <Stack direction="row" gap={1.5}>
-                            <Button variant="contained" color="primary" onClick={handleSubmit}
-                                    disabled={submitting} sx={{ flex: 1, textTransform: 'none', fontWeight: 600 }}>
-                                {submitting
-                                    ? (isEditing ? 'Updating…' : 'Submitting…')
-                                    : (isEditing ? 'Update Report' : 'Submit Report')}
+                            <Button 
+                                variant="contained"
+                                color="primary"
+                                onClick={handleSubmit}
+                                disabled={submitting} 
+                                sx={{ flex: 1, textTransform: 'none', fontWeight: 600 }}
+                            >
+                                {submitting ? (isEditing ? 'Updating…' : 'Submitting…') : (isEditing ? 'Update Report' : 'Submit Report')}
                             </Button>
                             <Button variant="outlined" onClick={resetAndClose} disabled={submitting}
                                     sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}>
