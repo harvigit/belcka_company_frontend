@@ -137,10 +137,10 @@ const PurchaseProductList: React.FC<Props> = ({
   const handleModelClose = () => setOpenModel(false);
 
   const closeFilterModel = () => {
-    setTempFilters({ project: "", supplier: "", address: "" });
+    setTempFilters(filters);
     setFilterOpen(false);
   };
-  
+
   const handleFileChange = (acceptedFiles: File[]) => {
     const selectedFile = acceptedFiles[0];
     setFile(selectedFile);
@@ -984,7 +984,13 @@ const PurchaseProductList: React.FC<Props> = ({
                 },
               }}
             />
-            <Button variant="contained" onClick={() => setFilterOpen(true)}>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setTempFilters(filters);
+                setFilterOpen(true);
+              }}
+            >
               <IconFilter width={18} />
             </Button>
             <Box display={"flex"} gap={2}>
