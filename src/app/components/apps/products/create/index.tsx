@@ -1228,6 +1228,22 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         <CustomTextField
                           {...params}
                           placeholder="Select or add unit"
+                          onBlur={(e: any) => {
+                            const value = e.target.value.trim();
+                            if (!value) return;
+
+                            if (!packOffs.some((u) => u.name === value)) {
+                              setPackOffs((prev) => [
+                                ...prev,
+                                { id: Date.now(), name: value },
+                              ]);
+                            }
+
+                            setFormData((prev) => ({
+                              ...prev,
+                              pack_off_unit: value,
+                            }));
+                          }}
                         />
                       )}
                     />
