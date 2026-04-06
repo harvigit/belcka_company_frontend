@@ -133,7 +133,14 @@ const PurchaseProductList: React.FC<Props> = ({
     setPreview(null);
     setOpenModel(true);
   };
+
   const handleModelClose = () => setOpenModel(false);
+
+  const closeFilterModel = () => {
+    setTempFilters({ project: "", supplier: "", address: "" });
+    setFilterOpen(false);
+  };
+  
   const handleFileChange = (acceptedFiles: File[]) => {
     const selectedFile = acceptedFiles[0];
     setFile(selectedFile);
@@ -157,6 +164,7 @@ const PurchaseProductList: React.FC<Props> = ({
     link.download = "purchase-order-sample-file.xlsx";
     link.click();
   };
+
   const importProducts = async () => {
     if (!file) {
       toast.error("Please select a file");
@@ -1027,7 +1035,7 @@ const PurchaseProductList: React.FC<Props> = ({
             </Box>
             <Dialog
               open={filterOpen}
-              onClose={() => setFilterOpen(false)}
+              onClose={() => closeFilterModel()}
               fullWidth
               maxWidth="sm"
             >
@@ -1037,7 +1045,7 @@ const PurchaseProductList: React.FC<Props> = ({
                 Filters
                 <IconButton
                   aria-label="close"
-                  onClick={() => setFilterOpen(false)}
+                  onClick={() => closeFilterModel()}
                   size="large"
                   sx={{
                     position: "absolute",
@@ -1130,7 +1138,7 @@ const PurchaseProductList: React.FC<Props> = ({
                       project: "",
                       address: "",
                     });
-                    setFilterOpen(false);
+                    closeFilterModel();
                   }}
                   color="inherit"
                 >

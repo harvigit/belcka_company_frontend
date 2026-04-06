@@ -511,9 +511,9 @@ const BuyerDashboard = () => {
                   />
                 </Box>
               ) : (
-                suppliers.map((topcard) => (
+                suppliers.map((topcard,index) => (
                   <Grid
-                    key={topcard.digits}
+                    key={index}
                     size={{
                       xs: 6,
                       lg: 6,
