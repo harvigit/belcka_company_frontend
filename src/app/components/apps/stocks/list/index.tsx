@@ -106,6 +106,8 @@ export interface ProductFormData {
   is_sub_qty?: boolean;
   store_ids?: string;
   max_stock?: number | null;
+  manufacture?: number | null;
+  model?: number | null;
 }
 
 const StockList = () => {
@@ -1582,7 +1584,7 @@ const StockList = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {history.map((h,index) => {
+                {history.map((h, index) => {
                   const qtyNum = parseFloat(h.qty);
                   const qtyColor =
                     qtyNum > 0 ? "#1a8f03ff" : qtyNum < 0 ? "red" : "inherit";

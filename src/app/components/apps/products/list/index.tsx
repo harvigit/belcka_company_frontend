@@ -119,6 +119,8 @@ export interface ProductFormData {
   store_ids?: string;
   remove_image?: boolean;
   max_stock?: number | null;
+  manufacture?: number | null;
+  model?: number | null;
 }
 
 const ProductList = () => {
