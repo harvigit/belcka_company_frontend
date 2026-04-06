@@ -304,9 +304,7 @@ function DateTimePicker({value, onChange}: DateTimePickerProps) {
                             onChange={(e) => {
                                 let val = Number(e.target.value);
                                 if (isNaN(val)) val = 0;
-                                val = Math.round(val / 5) * 5;
-                                if (val >= 60) val = 55;
-                                if (val < 0) val = 0;
+                                val = Math.max(0, Math.min(59, val));
                                 setMinutes(val);
                             }}
                             onKeyDown={(e) => {
@@ -805,7 +803,12 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
             {/* ── Filter Dialog ── */}
             <Dialog
                 open={Boolean(filterDialogOpen)}
-                onClose={() => setFilterDialogOpen(false)}
+                onClick={() => {
+                    const empty = { teams: [], trades: [], projects: [] };
+
+                    setFilters(empty);
+                    setFilterDialogOpen(false);
+                }}
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -822,7 +825,15 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                 <DialogTitle sx={{pb: 1}}>
                     <Box display="flex" justifyContent="space-between" alignItems="center">
                         <Typography fontWeight={700} fontSize={16}>Filters</Typography>
-                        <IconButton size="small" onClick={() => setFilterDialogOpen(false)}>
+                        <IconButton 
+                            size="small"
+                            onClick={() => {
+                                const empty = { teams: [], trades: [], projects: [] };
+
+                                setFilters(empty);
+                                setFilterDialogOpen(false);
+                            }}
+                        >
                             <IconX size={20}/>
                         </IconButton>
                     </Box>
@@ -893,6 +904,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     <Button
                         onClick={() => {
                             const empty = { teams: [], trades: [], projects: [] };
+                            
                             setTempFilters(empty);
                             setFilters(empty);
                             setFilterDialogOpen(false);
