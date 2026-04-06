@@ -1582,13 +1582,13 @@ const StockList = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {history.map((h) => {
+                {history.map((h,index) => {
                   const qtyNum = parseFloat(h.qty);
                   const qtyColor =
                     qtyNum > 0 ? "#1a8f03ff" : qtyNum < 0 ? "red" : "inherit";
                   return (
                     <>
-                      <TableRow key={h.id} sx={{ alignItems: "start" }}>
+                      <TableRow key={index} sx={{ alignItems: "start" }}>
                         <TableCell>
                           <Box>{h.date || "-"}</Box>
                           <Box

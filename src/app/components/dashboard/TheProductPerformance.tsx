@@ -20,6 +20,8 @@ const LowStockProduct = ({
   products: any;
   loading: boolean;
 }) => {
+  if (products.length <= 0) return null;
+
   return (
     <Card sx={{ p: 2 }}>
       <Box
@@ -27,16 +29,17 @@ const LowStockProduct = ({
         pt={0}
         pb={0}
         display={"flex"}
-        justifyItems={"center"}
         justifyContent={"space-between"}
       >
         <Typography variant="h1" fontSize={21}>
           Low Quantity Stock
         </Typography>
+
         <Link href={"/apps/products/list"} style={{ color: "#1E4DB7" }}>
           See all
         </Link>
       </Box>
+
       <Box
         sx={{
           mt: 1,
@@ -58,15 +61,11 @@ const LowStockProduct = ({
             {!loading ? (
               products.map((product: any) => (
                 <TableRow key={product.id}>
-                  <TableCell
-                    sx={{
-                      pl: 0,
-                    }}
-                  >
+                  <TableCell sx={{ pl: 0 }}>
                     <Box display="flex" alignItems="center" gap={2}>
                       <Avatar
                         src={product.image_url}
-                        alt={product.image_url}
+                        alt={product.short_name}
                         sx={{
                           borderRadius: "10px",
                           height: "70px",
@@ -88,6 +87,7 @@ const LowStockProduct = ({
                       </Box>
                     </Box>
                   </TableCell>
+
                   <TableCell>
                     <Typography variant="h5">
                       {product.currency}
@@ -97,16 +97,14 @@ const LowStockProduct = ({
                 </TableRow>
               ))
             ) : (
-              <>
-                <SkeletonLoader
-                  columns={[
-                    { name: "Image" },
-                    { name: "Name" },
-                    { name: "Price" },
-                  ]}
-                  rowCount={3}
-                />
-              </>
+              <SkeletonLoader
+                columns={[
+                  { name: "Image" },
+                  { name: "Name" },
+                  { name: "Price" },
+                ]}
+                rowCount={3}
+              />
             )}
           </TableBody>
         </Table>
