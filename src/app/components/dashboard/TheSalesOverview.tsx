@@ -85,7 +85,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       plotOptions: {
         bar: {
           columnWidth: days.length <= 3 ? "25%" : "40%",
-          borderRadius: 2,
+          borderRadius: 4,
           dataLabels: { position: "top" },
         },
       },
@@ -113,7 +113,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       },
       grid: { show: false },
       legend: { show: false },
-      colors: ["#2ecc71", "#f39c12"],
+      colors: ["#1a97f5", "#1e4db7"],
     };
 
     const series = [
@@ -130,7 +130,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       plotOptions: {
         bar: {
           columnWidth: yearData.length <= 4 ? "20%" : "35%",
-          borderRadius: 2,
+          borderRadius: 4,
           dataLabels: { position: "top" },
         },
       },
@@ -157,7 +157,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       },
       grid: { show: false },
       legend: { show: false },
-      colors: ["#2ecc71", "#f39c12"],
+      colors: ["#1a97f5", "#1e4db7"],
     };
 
     const series = [
@@ -176,10 +176,10 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
           Inventory
         </Typography>
         <Box display={"flex"} gap={2} textAlign={"center"} mr={3}>
-          <Typography variant="h6" fontWeight={600} color="#2ecc71">
+          <Typography variant="h6" fontWeight={600} color="#1a97f5">
             IN
           </Typography>
-          <Typography variant="h6" fontWeight={600} color="#f39c12">
+          <Typography variant="h6" fontWeight={600} color="#1e4db7">
             OUT
           </Typography>
         </Box>
