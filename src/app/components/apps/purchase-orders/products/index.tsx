@@ -737,10 +737,10 @@ const PurchaseProductList: React.FC<Props> = ({
                 className="f-14"
                 variant="body1"
                 sx={{
-                  width: 400,
+                  width: 300,
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 3,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
@@ -1433,12 +1433,7 @@ const PurchaseProductList: React.FC<Props> = ({
                           sx={{
                             paddingTop: "10px",
                             paddingBottom: "10px",
-                            width:
-                              header.column.id === "select"
-                                ? 30
-                                : header.column.id === "shortName"
-                                  ? 400
-                                  : "auto",
+                            width: header.column.id === "select" ? 30 : "auto",
                           }}
                         >
                           <Box

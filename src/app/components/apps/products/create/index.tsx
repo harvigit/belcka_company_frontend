@@ -803,7 +803,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                           <TextField
                             {...params}
                             variant="outlined"
-                            placeholder="Select category"
+                            placeholder={
+                              selectedCategories.length === 0
+                                ? "Select category"
+                                : ""
+                            }
                           />
                         )}
                         sx={{ mb: 2 }}
