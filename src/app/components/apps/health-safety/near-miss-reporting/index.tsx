@@ -23,6 +23,7 @@ import SkeletonLoader from '@/app/components/SkeletonLoader';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import Settings from '../setting/settings';
+import {IncidentRow} from '@/app/components/apps/health-safety/report-incident';
 
 export type NearMissRow = {
     id: number;
@@ -633,38 +634,49 @@ const NearMissReporting = ({ companyId }: Props) => {
         {
             id: 'select',
             header: () => (
-                <Stack direction="row" alignItems="center" ml={0.5}>
+                <Box sx={{ px: 1.5, py: 1 }}>   {/* Consistent padding */}
                     <CustomCheckbox
                         checked={selectedRowIds.size === filteredData.length && filteredData.length > 0}
                         indeterminate={selectedRowIds.size > 0 && selectedRowIds.size < filteredData.length}
                         onChange={(e: any) => {
                             e.stopPropagation();
                             setSelectedRowIds(
-                                e.target.checked ? new Set(filteredData.map(r => r.id)) : new Set()
+                                e.target.checked
+                                    ? new Set(filteredData.map((r: NearMissRow) => r.id))
+                                    : new Set()
                             );
                         }}
                     />
-                </Stack>
+                </Box>
             ),
             cell: ({ row }: any) => {
                 const item = row.original as NearMissRow;
                 const isChecked = selectedRowIds.has(item.id);
                 const show = isChecked || hoveredRow === item.id;
+
                 return (
-                    <Stack direction="row" alignItems="center"
-                           onMouseEnter={() => setHoveredRow(item.id)}
-                           onMouseLeave={() => setHoveredRow(null)}>
-                        <CustomCheckbox
-                            checked={isChecked}
-                            onClick={(e: any) => e.stopPropagation()}
-                            onChange={() => {
-                                const s = new Set(selectedRowIds);
-                                isChecked ? s.delete(item.id) : s.add(item.id);
-                                setSelectedRowIds(s);
-                            }}
-                            sx={{ opacity: show ? 1 : 0, transition: 'opacity 0.2s' }}
-                        />
-                    </Stack>
+                    <Box sx={{ px: 1.5, py: 1 }}>   {/* Same padding as header */}
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            onMouseEnter={() => setHoveredRow(item.id)}
+                            onMouseLeave={() => setHoveredRow(null)}
+                        >
+                            <CustomCheckbox
+                                checked={isChecked}
+                                onClick={(e: any) => e.stopPropagation()}
+                                onChange={() => {
+                                    const s = new Set(selectedRowIds);
+                                    isChecked ? s.delete(item.id) : s.add(item.id);
+                                    setSelectedRowIds(s);
+                                }}
+                                sx={{
+                                    opacity: show ? 1 : 0,
+                                    transition: 'opacity 0.2s'
+                                }}
+                            />
+                        </Stack>
+                    </Box>
                 );
             },
         },
@@ -703,14 +715,28 @@ const NearMissReporting = ({ companyId }: Props) => {
             header: 'Attachment',
             cell: ({ row }: any) => {
                 const item = row.original as NearMissRow;
-                return item.files?.length ? (
-                    <Tooltip title="View Attachment">
-                        <IconButton size="small" color="primary" onClick={() => handleViewAttachments(item)}>
-                            <IconPaperclip size={18} />
-                        </IconButton>
-                    </Tooltip>
-                ) : (
-                    <Typography color="text.secondary" className="f-14">-</Typography>
+
+                return (
+                    <Box
+                        display="flex"
+                        justifyContent="start"
+                        alignItems="center"
+                        width="100%"
+                    >
+                        {item.files?.length ? (
+                            <Tooltip title="View Attachments">
+                                <IconButton
+                                    size="small"
+                                    color="primary"
+                                    onClick={() => handleViewAttachments(item)}
+                                >
+                                    <IconPaperclip size={18} />
+                                </IconButton>
+                            </Tooltip>
+                        ) : (
+                            <Typography color="text.secondary">-</Typography>
+                        )}
+                    </Box>
                 );
             },
         },
@@ -782,7 +808,14 @@ const NearMissReporting = ({ companyId }: Props) => {
                         {table.getHeaderGroups().map(hg => (
                             <TableRow key={hg.id}>
                                 {hg.headers.map(header => (
-                                    <TableCell key={header.id} sx={{ p: 0, whiteSpace: 'nowrap' }}>
+                                    <TableCell
+                                        key={header.id}
+                                        sx={{
+                                            p: 0,
+                                            whiteSpace: 'nowrap',
+                                            verticalAlign: 'middle'
+                                        }}
+                                    >
                                         <Box onClick={header.column.getToggleSortingHandler()}
                                              sx={{
                                                  cursor: header.column.getCanSort() ? 'pointer' : 'default',
@@ -812,7 +845,14 @@ const NearMissReporting = ({ companyId }: Props) => {
                             table.getRowModel().rows.map(row => (
                                 <TableRow hover key={row.id}>
                                     {row.getVisibleCells().map(cell => (
-                                        <TableCell key={cell.id} sx={{ py: 1.5, px: 1.5 }}>
+                                        <TableCell
+                                            key={cell.id}
+                                            sx={{
+                                                py: 1.5,
+                                                px: 1.5,
+                                                verticalAlign: 'middle'
+                                            }}
+                                        >
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}

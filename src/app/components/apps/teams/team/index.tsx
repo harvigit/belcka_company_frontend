@@ -68,6 +68,7 @@ import GenerateCodeDialog from "../../modals/generate-code";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import PermissionGuard from '@/app/auth/PermissionGuard';
 
 dayjs.extend(customParseFormat);
 
@@ -616,682 +617,684 @@ const TablePagination = () => {
   }));
 
   return (
-    <Grid container spacing={2}>
-        <Grid size={{ xs: 12, lg: 3 }}>
-            <BlankCard>
-                <CardContent sx={{ pt: 1 }}>
-                    <Box textAlign="center" display="flex" justifyContent="center">
-                        <Box>
-                            <Avatar
-                                src={data[0]?.supervisor_image || "/images/users/user.png"}
-                                alt={data[0]?.supervisor_name || "user1"}
-                                sx={{ width: 120, height: 120, margin: "0 auto" }}
-                            />
-                            <Typography variant="h5" mb={1}>
-                                {data[0]?.supervisor_name}
-                            </Typography>
-                            <Typography variant="subtitle1" color="textSecondary" mb={1}>
-                                Supervisor
-                            </Typography>
-                        </Box>
+      <PermissionGuard permission="Teams">
+          <Grid container spacing={2}>
+              <Grid size={{ xs: 12, lg: 3 }}>
+                    <BlankCard>
+                        <CardContent sx={{ pt: 1 }}>
+                            <Box textAlign="center" display="flex" justifyContent="center">
+                                <Box>
+                                    <Avatar
+                                        src={data[0]?.supervisor_image || "/images/users/user.png"}
+                                        alt={data[0]?.supervisor_name || "user1"}
+                                        sx={{ width: 120, height: 120, margin: "0 auto" }}
+                                    />
+                                    <Typography variant="h5" mb={1}>
+                                        {data[0]?.supervisor_name}
+                                    </Typography>
+                                    <Typography variant="subtitle1" color="textSecondary" mb={1}>
+                                        Supervisor
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            <Divider />
+                            <Stack direction="row" spacing={2} py={2} alignItems="center">
+                                <Box>
+                                    <Typography variant="h6">Phone</Typography>
+                                </Box>
+                                <Box
+                                    sx={{ ml: "auto !important", cursor: "pointer" }}
+                                    onClick={handleCopy}
+                                >
+                                    <Typography variant="h5" color="textSecondary">
+                                        {data[0]?.extension || ""} {data[0]?.supervisor_phone || "-"}
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        </CardContent>
+                    </BlankCard>
+        
+                    <Box
+                        sx={{
+                            mt: 4,
+                            borderRadius: 3,
+                            boxShadow: "0px 2px 8px rgba(0,0,0,0.10)",
+                            backgroundColor: "background.paper",
+                            overflow: "hidden",
+                        }}
+                    >
+                        <BlankCard>
+                            <CardContent>
+                                <Box
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="space-between"
+                                >
+                                    <Typography variant="h6">Check-In</Typography>
+                                    <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
+                                </Box>
+                            </CardContent>
+                        </BlankCard>
                     </Box>
-                    <Divider />
-                    <Stack direction="row" spacing={2} py={2} alignItems="center">
-                        <Box>
-                            <Typography variant="h6">Phone</Typography>
-                        </Box>
-                        <Box
-                            sx={{ ml: "auto !important", cursor: "pointer" }}
-                            onClick={handleCopy}
-                        >
-                            <Typography variant="h5" color="textSecondary">
-                                {data[0]?.extension || ""} {data[0]?.supervisor_phone || "-"}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                </CardContent>
-            </BlankCard>
-
-            <Box
-                sx={{
-                    mt: 4,
-                    borderRadius: 3,
-                    boxShadow: "0px 2px 8px rgba(0,0,0,0.10)",
-                    backgroundColor: "background.paper",
-                    overflow: "hidden",
+        
+                    <Box
+                        sx={{
+                            mt: 4,
+                            borderRadius: 3,
+                            boxShadow: "0px 2px 8px rgba(0,0,0,0.10)",
+                            backgroundColor: "background.paper",
+                            overflow: "hidden",
+                        }}
+                    >
+                        <BlankCard>
+                            <CardContent sx={{ padding: 2 }}>
+                                <Box
+                                    display="flex"
+                                    justifyContent="space-between"
+                                    alignItems="center"
+                                    px={2}
+                                    py={1.5}
+                                    borderBottom="1px solid #eee"
+                                >
+                                    <Typography>
+                                        Start Work: Inside Boundary Only
+                                    </Typography>
+                                    <IOSSwitch
+                                        checked={geoSettings.start}
+                                        onChange={handleGeoToggle("start")}
+                                    />
+                                </Box>
+        
+                                <Box
+                                    display="flex"
+                                    justifyContent="space-between"
+                                    alignItems="center"
+                                    px={2}
+                                    py={1.5}
+                                >
+                                    <Typography>
+                                        End Work: Inside Boundary Only
+                                    </Typography>
+                                    <IOSSwitch
+                                        checked={geoSettings.stop}
+                                        onChange={handleGeoToggle("stop")}
+                                    />
+                                </Box>
+                            </CardContent>
+                        </BlankCard>
+                    </Box>
+                </Grid>
+              <Grid
+                size={{
+                  xs: 12,
+                  lg: 9,
                 }}
-            >
+              >
                 <BlankCard>
-                    <CardContent>
-                        <Box
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="space-between"
-                        >
-                            <Typography variant="h6">Check-In</Typography>
-                            <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
-                        </Box>
-                    </CardContent>
-                </BlankCard>
-            </Box>
-
-            <Box
-                sx={{
-                    mt: 4,
-                    borderRadius: 3,
-                    boxShadow: "0px 2px 8px rgba(0,0,0,0.10)",
-                    backgroundColor: "background.paper",
-                    overflow: "hidden",
-                }}
-            >
-                <BlankCard>
-                    <CardContent sx={{ padding: 2 }}>
-                        <Box
-                            display="flex"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            px={2}
-                            py={1.5}
-                            borderBottom="1px solid #eee"
-                        >
-                            <Typography>
-                                Start Work: Inside Boundary Only
-                            </Typography>
-                            <IOSSwitch
-                                checked={geoSettings.start}
-                                onChange={handleGeoToggle("start")}
-                            />
-                        </Box>
-
-                        <Box
-                            display="flex"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            px={2}
-                            py={1.5}
-                        >
-                            <Typography>
-                                End Work: Inside Boundary Only
-                            </Typography>
-                            <IOSSwitch
-                                checked={geoSettings.stop}
-                                onChange={handleGeoToggle("stop")}
-                            />
-                        </Box>
-                    </CardContent>
-                </BlankCard>
-            </Box>
-        </Grid>
-      <Grid
-        size={{
-          xs: 12,
-          lg: 9,
-        }}
-      >
-        <BlankCard>
-          <Grid display="flex" gap={1} mt={2} ml={2}>
-            <Typography variant="h3">{data[0]?.team_name}</Typography>
-          </Grid>
-
-          <Stack
-            mr={2}
-            ml={2}
-            mb={2}
-            justifyContent="space-between"
-            direction={{ xs: "column", sm: "row" }}
-            spacing={{ xs: 1, sm: 2, md: 4 }}
-          >
-            <Grid display="flex" gap={1} alignItems={"center"}>
-              <TextField
-                id="search"
-                type="text"
-                size="small"
-                variant="outlined"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconSearch size={"16"} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-              <Button variant="contained" onClick={() => setOpen(true)}>
-                <IconFilter width={18} />
-              </Button>
-
-              <Dialog
-                open={open}
-                onClose={() => setOpen(false)}
-                fullWidth
-                maxWidth="sm"
-              >
-                <DialogTitle
-                  sx={{ m: 0, position: "relative", overflow: "visible" }}
-                >
-                  Filters
-                  <IconButton
-                    aria-label="close"
-                    onClick={() => setOpen(false)}
-                    size="large"
-                    sx={{
-                      position: "absolute",
-                      right: 12,
-                      top: 8,
-                      color: (theme) => theme.palette.grey[900],
-                      backgroundColor: "transparent",
-                      zIndex: 10,
-                      width: 50,
-                      height: 50,
-                    }}
+                  <Grid display="flex" gap={1} mt={2} ml={2}>
+                    <Typography variant="h3">{data[0]?.team_name}</Typography>
+                  </Grid>
+        
+                  <Stack
+                    mr={2}
+                    ml={2}
+                    mb={2}
+                    justifyContent="space-between"
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={{ xs: 1, sm: 2, md: 4 }}
                   >
-                    <IconX size={40} style={{ width: 40, height: 40 }} />
-                  </IconButton>
-                </DialogTitle>
-                <DialogContent>
-                  <Stack spacing={2} mt={1}>
-                    <TextField
-                      select
-                      label="Team member"
-                      value={tempFilters.team}
-                      onChange={(e) =>
-                        setTempFilters({ ...tempFilters, team: e.target.value })
-                      }
-                      fullWidth
-                    >
-                      <MenuItem value="">Users</MenuItem>
-                      {members.map((name, i) => (
-                        <MenuItem key={i} value={name}>
-                          {name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                    <TextField
-                      select
-                      label="Trade"
-                      value={tempFilters.trade}
-                      onChange={(e) =>
-                        setTempFilters({
-                          ...tempFilters,
-                          trade: e.target.value,
-                        })
-                      }
-                      fullWidth
-                    >
-                      <MenuItem value="">Trades</MenuItem>
-                      {trades.map((name, i) => (
-                        <MenuItem key={i} value={name}>
-                          {name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Stack>
-                </DialogContent>
-
-                <DialogActions>
-                  <Button
-                    onClick={() => {
-                      setTempFilters({
-                        team: "",
-                        trade: "",
-                      });
-                      setFilters({
-                        team: "",
-                        trade: "",
-                      });
-                      setOpen(false);
-                    }}
-                    color="inherit"
-                  >
-                    Clear
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    onClick={() => {
-                      setFilters(tempFilters);
-                      setOpen(false);
-                    }}
-                  >
-                    Apply
-                  </Button>
-                </DialogActions>
-              </Dialog>
-            </Grid>
-            <Stack direction={"row-reverse"} mb={1} mr={1}>
-              <IconButton
-                sx={{ margin: "0px" }}
-                id="basic-button"
-                aria-controls={openMenu ? "basic-menu" : undefined}
-                aria-haspopup="true"
-                aria-expanded={openMenu ? "true" : undefined}
-                onClick={handleClick}
-              >
-                <IconDotsVertical width={18} />
-              </IconButton>
-              <Menu
-                id="basic-menu"
-                anchorEl={anchorEl}
-                open={openMenu}
-                onClose={close}
-                slotProps={{ list: { "aria-labelledby": "basic-button" } }}
-              >
-                <MenuItem
-                  onClick={() => {
-                    setOpenOtpDialog(true);
-                    close();
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconUserPlus width={18} />
-                  </ListItemIcon>
-                  Join Company
-                </MenuItem>
-
-                <MenuItem
-                  onClick={() => {
-                    setOpenGenerateDialog(true);
-                    handleClose();
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconRotate width={18} />
-                  </ListItemIcon>
-                  Create Code
-                </MenuItem>
-              </Menu>
-              <IconButton
-                onClick={handlePopoverOpen}
-                sx={{ ml: 1 }}
-                color="primary"
-              >
-                <IconEye />
-              </IconButton>
-              <Popover
-                open={Boolean(anchorEl2)}
-                anchorEl={anchorEl2}
-                onClose={handlePopoverClose}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-                PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
-              >
-                <TextField
-                  size="small"
-                  placeholder="Search"
-                  fullWidth
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  sx={{ mb: 1 }}
-                />
-                <FormGroup>
-                  {table
-                    .getAllLeafColumns()
-                    .filter((col: any) => {
-                      const excludedColumns = ["conflicts", "select"];
-                      if (excludedColumns.includes(col.id)) return false;
-
-                      return col.id
-                        .toLowerCase()
-                        .includes(search.toLowerCase());
-                    })
-                    .map((col: any) => (
-                      <FormControlLabel
-                        key={col.id}
-                        control={
-                          <Checkbox
-                            checked={col.getIsVisible()}
-                            onChange={col.getToggleVisibilityHandler()}
-                            disabled={col.id === "conflicts"}
-                          />
-                        }
-                        sx={{ textTransform: "none" }}
-                        label={
-                          col.columnDef.meta?.label ||
-                          (typeof col.columnDef.header === "string" &&
-                          col.columnDef.header.trim() !== ""
-                            ? col.columnDef.header
-                            : col.id
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (str: string) =>
-                                  str.toUpperCase(),
-                                )
-                                .trim())
-                        }
+                    <Grid display="flex" gap={1} alignItems={"center"}>
+                      <TextField
+                        id="search"
+                        type="text"
+                        size="small"
+                        variant="outlined"
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        slotProps={{
+                          input: {
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconSearch size={"16"} />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
                       />
-                    ))}
-                </FormGroup>
-              </Popover>
-              <GenerateCodeDialog
-                title="Create Code"
-                mode="create"
-                open={openGenerateDialog}
-                onClose={() => setOpenGenerateDialog(false)}
-                onGenerate={handleGenerateCode}
-              />
-              <JoinCompanyDialog
-                open={openOtpDialog}
-                onClose={() => setOpenOtpDialog(false)}
-                onSubmit={joinCompany}
-                otp={otp}
-                setOtp={setOtp}
-              />
-              {/* add User to team */}
-              <Dialog
-                open={modelopen}
-                onClose={handleClose}
-                keepMounted
-                fullWidth
-                maxWidth="sm"
-              >
-                <form onSubmit={handleSubmit}>
-                  <DialogTitle>Add User To Team</DialogTitle>
-                  <DialogContent dividers>
-                    <TextField
-                      select
-                      label="User"
-                      value={selectedUserId}
-                      onChange={(e) => setSelectedUserId(e.target.value)}
-                      fullWidth
-                    >
-                      <MenuItem value="">Select User</MenuItem>
-                      {user.map((user, i) => (
-                        <MenuItem key={i} value={user.id}>
-                          {user.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </DialogContent>
-                  <DialogActions>
-                    <Button onClick={handleClose} color="error">
-                      Cancel
-                    </Button>
-                    <Button type="submit" variant="contained" color="primary">
-                      Submit
-                    </Button>
-                  </DialogActions>
-                </form>
-              </Dialog>
-
-              {selectedRowIds.size > 0 && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<IconTrash width={18} />}
-                  sx={{ marginRight: "5px" }}
-                  onClick={() => {
-                    const selectedIds = Array.from(selectedRowIds).map(
-                      (index) => filteredData[index]?.id,
-                    );
-                    setUsersToDelete(selectedIds);
-                    setConfirmOpen(true);
-                  }}
-                >
-                  Remove
-                </Button>
-              )}
-              <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-                <DialogTitle>Confirm Deletion</DialogTitle>
-                <DialogContent>
-                  <Typography color="textSecondary">
-                    Are you sure you want to remove {usersToDelete.length} user
-                    {usersToDelete.length > 1 ? "s" : ""} from the team?
-                  </Typography>
-                </DialogContent>
-                <DialogActions>
-                  <Button
-                    onClick={() => setConfirmOpen(false)}
-                    variant="outlined"
-                    color="primary"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const payload = {
-                          team_id: Number(teamId),
-                          user_ids: usersToDelete.join(","),
-                        };
-                        const response = await api.post(
-                          "team/remove-users-to-team",
-                          payload,
-                        );
-                        toast.success(
-                          response.data.message || "Users removed successfully",
-                        );
-                        setSelectedRowIds(new Set());
-                        await fetchData(); // Refresh the table
-                      } catch (error) {
-                        console.error("Failed to remove users", error);
-                      } finally {
-                        setConfirmOpen(false);
-                      }
-                    }}
-                    variant="outlined"
-                    color="error"
-                  >
-                    Delete
-                  </Button>
-                </DialogActions>
-              </Dialog>
-            </Stack>
-          </Stack>
-          <Divider />
-          <Box
-            sx={{
-              height: "calc(88vh - 100px)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Box
-              sx={{
-                flex: 1,
-                minHeight: 0,
-                overflow: "auto",
-              }}
-            >
-              <TableContainer>
-                <Table stickyHeader aria-label="sticky table">
-                  <TableHead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => {
-                          const isActive = header.column.getIsSorted();
-                          const isAsc = header.column.getIsSorted() === "asc";
-                          const isSortable = header.column.getCanSort();
-
-                          return (
-                            <TableCell
-                              key={header.id}
-                              align="center"
-                              sx={{
-                                paddingTop: "10px",
-                                paddingBottom: "10px",
-                                width:
-                                  header.column.id === "actions"
-                                    ? 120
-                                    : header.column.id === "select"
-                                      ? 30
-                                      : "auto",
-                              }}
-                            >
-                              <Box
-                                onClick={header.column.getToggleSortingHandler()}
-                                p={0}
-                                sx={{
-                                  cursor: isSortable ? "pointer" : "default",
-                                  border: "2px solid transparent",
-                                  borderRadius: "6px",
-                                  display: "flex",
-                                  justifyContent: "flex-start",
-                                  "&:hover": { color: "#888" },
-                                  "&:hover .hoverIcon": { opacity: 1 },
-                                }}
-                              >
-                                <Typography variant="subtitle2">
-                                  {flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext(),
-                                  )}
-                                </Typography>
-                                {isSortable && (
-                                  <Box
-                                    component="span"
-                                    className="hoverIcon"
-                                    ml={0.5}
-                                    sx={{
-                                      transition: "opacity 0.2s",
-                                      opacity: isActive ? 1 : 0,
-                                      fontSize: "0.9rem",
-                                      color: isActive ? "#000" : "#888",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                    }}
-                                  >
-                                    {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                                  </Box>
-                                )}
-                              </Box>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableHead>
-                  <TableBody>
-                    {fetchTeam ? (
-                      <SkeletonLoader
-                        columns={simpleColumns}
-                        rowCount={simpleColumns.length}
-                        hasAvatar={true}
-                      />
-                    ) : data.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={columns.length}>
-                          <Box
+                      <Button variant="contained" onClick={() => setOpen(true)}>
+                        <IconFilter width={18} />
+                      </Button>
+        
+                      <Dialog
+                        open={open}
+                        onClose={() => setOpen(false)}
+                        fullWidth
+                        maxWidth="sm"
+                      >
+                        <DialogTitle
+                          sx={{ m: 0, position: "relative", overflow: "visible" }}
+                        >
+                          Filters
+                          <IconButton
+                            aria-label="close"
+                            onClick={() => setOpen(false)}
+                            size="large"
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              height: "calc(50vh - 100px)",
+                              position: "absolute",
+                              right: 12,
+                              top: 8,
+                              color: (theme) => theme.palette.grey[900],
+                              backgroundColor: "transparent",
+                              zIndex: 10,
+                              width: 50,
+                              height: 50,
                             }}
                           >
-                            <Image
-                              src="/images/no-data.png"
-                              alt="No data"
-                              style={{
-                                maxWidth: "100%",
-                                maxHeight: "100%",
-                              }}
-                              width={200}
-                              height={200}
-                            />
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext(),
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              {data.length ? <Divider /> : <></>}
-            </Box>
-            <Divider />
-            <Stack
-              gap={1}
-              pr={3}
-              pt={1}
-              pl={3}
-              pb={1}
-              alignItems="center"
-              direction={{ xs: "column", sm: "row" }}
-              justifyContent="space-between"
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <Typography color="textSecondary">
-                  {table.getPrePaginationRowModel().rows.length} Rows
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: {
-                    xs: "block",
-                    sm: "flex",
-                  },
-                }}
-                alignItems="center"
-                gap={1}
-              >
-                <Stack direction="row" alignItems="center">
-                  <Typography color="textSecondary">Page </Typography>
-                  <Typography color="textSecondary" fontWeight={600} ml={1}>
-                    {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </Typography>
-                  <Typography color="textSecondary" ml={"3px"}>
-                    | Entries :{" "}
-                  </Typography>
-                </Stack>
-                <Stack
-                  ml={"5px"}
-                  direction="row"
-                  alignItems="center"
-                  color="textSecondary"
-                >
-                  <CustomSelect
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e: { target: { value: any } }) => {
-                      table.setPageSize(Number(e.target.value));
+                            <IconX size={40} style={{ width: 40, height: 40 }} />
+                          </IconButton>
+                        </DialogTitle>
+                        <DialogContent>
+                          <Stack spacing={2} mt={1}>
+                            <TextField
+                              select
+                              label="Team member"
+                              value={tempFilters.team}
+                              onChange={(e) =>
+                                setTempFilters({ ...tempFilters, team: e.target.value })
+                              }
+                              fullWidth
+                            >
+                              <MenuItem value="">Users</MenuItem>
+                              {members.map((name, i) => (
+                                <MenuItem key={i} value={name}>
+                                  {name}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+        
+                            <TextField
+                              select
+                              label="Trade"
+                              value={tempFilters.trade}
+                              onChange={(e) =>
+                                setTempFilters({
+                                  ...tempFilters,
+                                  trade: e.target.value,
+                                })
+                              }
+                              fullWidth
+                            >
+                              <MenuItem value="">Trades</MenuItem>
+                              {trades.map((name, i) => (
+                                <MenuItem key={i} value={name}>
+                                  {name}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </Stack>
+                        </DialogContent>
+        
+                        <DialogActions>
+                          <Button
+                            onClick={() => {
+                              setTempFilters({
+                                team: "",
+                                trade: "",
+                              });
+                              setFilters({
+                                team: "",
+                                trade: "",
+                              });
+                              setOpen(false);
+                            }}
+                            color="inherit"
+                          >
+                            Clear
+                          </Button>
+        
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              setFilters(tempFilters);
+                              setOpen(false);
+                            }}
+                          >
+                            Apply
+                          </Button>
+                        </DialogActions>
+                      </Dialog>
+                    </Grid>
+                    <Stack direction={"row-reverse"} mb={1} mr={1}>
+                      <IconButton
+                        sx={{ margin: "0px" }}
+                        id="basic-button"
+                        aria-controls={openMenu ? "basic-menu" : undefined}
+                        aria-haspopup="true"
+                        aria-expanded={openMenu ? "true" : undefined}
+                        onClick={handleClick}
+                      >
+                        <IconDotsVertical width={18} />
+                      </IconButton>
+                      <Menu
+                        id="basic-menu"
+                        anchorEl={anchorEl}
+                        open={openMenu}
+                        onClose={close}
+                        slotProps={{ list: { "aria-labelledby": "basic-button" } }}
+                      >
+                        <MenuItem
+                          onClick={() => {
+                            setOpenOtpDialog(true);
+                            close();
+                          }}
+                        >
+                          <ListItemIcon>
+                            <IconUserPlus width={18} />
+                          </ListItemIcon>
+                          Join Company
+                        </MenuItem>
+        
+                        <MenuItem
+                          onClick={() => {
+                            setOpenGenerateDialog(true);
+                            handleClose();
+                          }}
+                        >
+                          <ListItemIcon>
+                            <IconRotate width={18} />
+                          </ListItemIcon>
+                          Create Code
+                        </MenuItem>
+                      </Menu>
+                      <IconButton
+                        onClick={handlePopoverOpen}
+                        sx={{ ml: 1 }}
+                        color="primary"
+                      >
+                        <IconEye />
+                      </IconButton>
+                      <Popover
+                        open={Boolean(anchorEl2)}
+                        anchorEl={anchorEl2}
+                        onClose={handlePopoverClose}
+                        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                        transformOrigin={{ vertical: "top", horizontal: "right" }}
+                        PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+                      >
+                        <TextField
+                          size="small"
+                          placeholder="Search"
+                          fullWidth
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          sx={{ mb: 1 }}
+                        />
+                        <FormGroup>
+                          {table
+                            .getAllLeafColumns()
+                            .filter((col: any) => {
+                              const excludedColumns = ["conflicts", "select"];
+                              if (excludedColumns.includes(col.id)) return false;
+        
+                              return col.id
+                                .toLowerCase()
+                                .includes(search.toLowerCase());
+                            })
+                            .map((col: any) => (
+                              <FormControlLabel
+                                key={col.id}
+                                control={
+                                  <Checkbox
+                                    checked={col.getIsVisible()}
+                                    onChange={col.getToggleVisibilityHandler()}
+                                    disabled={col.id === "conflicts"}
+                                  />
+                                }
+                                sx={{ textTransform: "none" }}
+                                label={
+                                  col.columnDef.meta?.label ||
+                                  (typeof col.columnDef.header === "string" &&
+                                  col.columnDef.header.trim() !== ""
+                                    ? col.columnDef.header
+                                    : col.id
+                                        .replace(/([A-Z])/g, " $1")
+                                        .replace(/^./, (str: string) =>
+                                          str.toUpperCase(),
+                                        )
+                                        .trim())
+                                }
+                              />
+                            ))}
+                        </FormGroup>
+                      </Popover>
+                      <GenerateCodeDialog
+                        title="Create Code"
+                        mode="create"
+                        open={openGenerateDialog}
+                        onClose={() => setOpenGenerateDialog(false)}
+                        onGenerate={handleGenerateCode}
+                      />
+                      <JoinCompanyDialog
+                        open={openOtpDialog}
+                        onClose={() => setOpenOtpDialog(false)}
+                        onSubmit={joinCompany}
+                        otp={otp}
+                        setOtp={setOtp}
+                      />
+                      {/* add User to team */}
+                      <Dialog
+                        open={modelopen}
+                        onClose={handleClose}
+                        keepMounted
+                        fullWidth
+                        maxWidth="sm"
+                      >
+                        <form onSubmit={handleSubmit}>
+                          <DialogTitle>Add User To Team</DialogTitle>
+                          <DialogContent dividers>
+                            <TextField
+                              select
+                              label="User"
+                              value={selectedUserId}
+                              onChange={(e) => setSelectedUserId(e.target.value)}
+                              fullWidth
+                            >
+                              <MenuItem value="">Select User</MenuItem>
+                              {user.map((user, i) => (
+                                <MenuItem key={i} value={user.id}>
+                                  {user.name}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </DialogContent>
+                          <DialogActions>
+                            <Button onClick={handleClose} color="error">
+                              Cancel
+                            </Button>
+                            <Button type="submit" variant="contained" color="primary">
+                              Submit
+                            </Button>
+                          </DialogActions>
+                        </form>
+                      </Dialog>
+        
+                      {selectedRowIds.size > 0 && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<IconTrash width={18} />}
+                          sx={{ marginRight: "5px" }}
+                          onClick={() => {
+                            const selectedIds = Array.from(selectedRowIds).map(
+                              (index) => filteredData[index]?.id,
+                            );
+                            setUsersToDelete(selectedIds);
+                            setConfirmOpen(true);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogContent>
+                          <Typography color="textSecondary">
+                            Are you sure you want to remove {usersToDelete.length} user
+                            {usersToDelete.length > 1 ? "s" : ""} from the team?
+                          </Typography>
+                        </DialogContent>
+                        <DialogActions>
+                          <Button
+                            onClick={() => setConfirmOpen(false)}
+                            variant="outlined"
+                            color="primary"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              try {
+                                const payload = {
+                                  team_id: Number(teamId),
+                                  user_ids: usersToDelete.join(","),
+                                };
+                                const response = await api.post(
+                                  "team/remove-users-to-team",
+                                  payload,
+                                );
+                                toast.success(
+                                  response.data.message || "Users removed successfully",
+                                );
+                                setSelectedRowIds(new Set());
+                                await fetchData(); // Refresh the table
+                              } catch (error) {
+                                console.error("Failed to remove users", error);
+                              } finally {
+                                setConfirmOpen(false);
+                              }
+                            }}
+                            variant="outlined"
+                            color="error"
+                          >
+                            Delete
+                          </Button>
+                        </DialogActions>
+                      </Dialog>
+                    </Stack>
+                  </Stack>
+                  <Divider />
+                  <Box
+                    sx={{
+                      height: "calc(88vh - 100px)",
+                      display: "flex",
+                      flexDirection: "column",
                     }}
                   >
-                    {[50, 100, 250, 500].map((pageSize) => (
-                      <MenuItem key={pageSize} value={pageSize}>
-                        {pageSize}
-                      </MenuItem>
-                    ))}
-                  </CustomSelect>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <IconChevronLeft />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{ width: "30px" }}
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <IconChevronRight />
-                  </IconButton>
-                </Stack>
-              </Box>
-            </Stack>
-          </Box>
-        </BlankCard>
-      </Grid>
-    </Grid>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        minHeight: 0,
+                        overflow: "auto",
+                      }}
+                    >
+                      <TableContainer>
+                        <Table stickyHeader aria-label="sticky table">
+                          <TableHead>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                              <TableRow key={headerGroup.id}>
+                                {headerGroup.headers.map((header) => {
+                                  const isActive = header.column.getIsSorted();
+                                  const isAsc = header.column.getIsSorted() === "asc";
+                                  const isSortable = header.column.getCanSort();
+        
+                                  return (
+                                    <TableCell
+                                      key={header.id}
+                                      align="center"
+                                      sx={{
+                                        paddingTop: "10px",
+                                        paddingBottom: "10px",
+                                        width:
+                                          header.column.id === "actions"
+                                            ? 120
+                                            : header.column.id === "select"
+                                              ? 30
+                                              : "auto",
+                                      }}
+                                    >
+                                      <Box
+                                        onClick={header.column.getToggleSortingHandler()}
+                                        p={0}
+                                        sx={{
+                                          cursor: isSortable ? "pointer" : "default",
+                                          border: "2px solid transparent",
+                                          borderRadius: "6px",
+                                          display: "flex",
+                                          justifyContent: "flex-start",
+                                          "&:hover": { color: "#888" },
+                                          "&:hover .hoverIcon": { opacity: 1 },
+                                        }}
+                                      >
+                                        <Typography variant="subtitle2">
+                                          {flexRender(
+                                            header.column.columnDef.header,
+                                            header.getContext(),
+                                          )}
+                                        </Typography>
+                                        {isSortable && (
+                                          <Box
+                                            component="span"
+                                            className="hoverIcon"
+                                            ml={0.5}
+                                            sx={{
+                                              transition: "opacity 0.2s",
+                                              opacity: isActive ? 1 : 0,
+                                              fontSize: "0.9rem",
+                                              color: isActive ? "#000" : "#888",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "space-between",
+                                            }}
+                                          >
+                                            {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                                          </Box>
+                                        )}
+                                      </Box>
+                                    </TableCell>
+                                  );
+                                })}
+                              </TableRow>
+                            ))}
+                          </TableHead>
+                          <TableBody>
+                            {fetchTeam ? (
+                              <SkeletonLoader
+                                columns={simpleColumns}
+                                rowCount={simpleColumns.length}
+                                hasAvatar={true}
+                              />
+                            ) : data.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={columns.length}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      height: "calc(50vh - 100px)",
+                                    }}
+                                  >
+                                    <Image
+                                      src="/images/no-data.png"
+                                      alt="No data"
+                                      style={{
+                                        maxWidth: "100%",
+                                        maxHeight: "100%",
+                                      }}
+                                      width={200}
+                                      height={200}
+                                    />
+                                  </Box>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              table.getRowModel().rows.map((row) => (
+                                <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                                  {row.getVisibleCells().map((cell) => (
+                                    <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                                      {flexRender(
+                                        cell.column.columnDef.cell,
+                                        cell.getContext(),
+                                      )}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      {data.length ? <Divider /> : <></>}
+                    </Box>
+                    <Divider />
+                    <Stack
+                      gap={1}
+                      pr={3}
+                      pt={1}
+                      pl={3}
+                      pb={1}
+                      alignItems="center"
+                      direction={{ xs: "column", sm: "row" }}
+                      justifyContent="space-between"
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography color="textSecondary">
+                          {table.getPrePaginationRowModel().rows.length} Rows
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: {
+                            xs: "block",
+                            sm: "flex",
+                          },
+                        }}
+                        alignItems="center"
+                        gap={1}
+                      >
+                        <Stack direction="row" alignItems="center">
+                          <Typography color="textSecondary">Page </Typography>
+                          <Typography color="textSecondary" fontWeight={600} ml={1}>
+                            {table.getState().pagination.pageIndex + 1} of{" "}
+                            {table.getPageCount()}
+                          </Typography>
+                          <Typography color="textSecondary" ml={"3px"}>
+                            | Entries :{" "}
+                          </Typography>
+                        </Stack>
+                        <Stack
+                          ml={"5px"}
+                          direction="row"
+                          alignItems="center"
+                          color="textSecondary"
+                        >
+                          <CustomSelect
+                            value={table.getState().pagination.pageSize}
+                            onChange={(e: { target: { value: any } }) => {
+                              table.setPageSize(Number(e.target.value));
+                            }}
+                          >
+                            {[50, 100, 250, 500].map((pageSize) => (
+                              <MenuItem key={pageSize} value={pageSize}>
+                                {pageSize}
+                              </MenuItem>
+                            ))}
+                          </CustomSelect>
+                          <IconButton
+                            size="small"
+                            sx={{ width: "30px" }}
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                          >
+                            <IconChevronLeft />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            sx={{ width: "30px" }}
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                          >
+                            <IconChevronRight />
+                          </IconButton>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </Box>
+                </BlankCard>
+              </Grid>
+        </Grid>
+      </PermissionGuard>
   );
 };
 

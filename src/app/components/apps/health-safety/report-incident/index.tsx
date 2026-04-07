@@ -632,43 +632,54 @@ const ReportIncident = ({ companyId }: Props) => {
             }),
         [data, searchTerm]
     );
-    
+
     const columns = useMemo(() => [
         {
             id: 'select',
             header: () => (
-                <Stack direction="row" alignItems="center" ml={0.5}>
+                <Box sx={{ px: 1.5, py: 1.5 }}>   {/* Consistent padding with body */}
                     <CustomCheckbox
                         checked={selectedRowIds.size === filteredData.length && filteredData.length > 0}
                         indeterminate={selectedRowIds.size > 0 && selectedRowIds.size < filteredData.length}
                         onChange={(e: any) => {
                             e.stopPropagation();
                             setSelectedRowIds(
-                                e.target.checked ? new Set(filteredData.map(r => r.id)) : new Set()
+                                e.target.checked
+                                    ? new Set(filteredData.map((r: IncidentRow) => r.id))
+                                    : new Set()
                             );
                         }}
                     />
-                </Stack>
+                </Box>
             ),
             cell: ({ row }: any) => {
                 const item = row.original as IncidentRow;
                 const isChecked = selectedRowIds.has(item.id);
                 const show = isChecked || hoveredRow === item.id;
+
                 return (
-                    <Stack direction="row" alignItems="center"
-                           onMouseEnter={() => setHoveredRow(item.id)}
-                           onMouseLeave={() => setHoveredRow(null)}>
-                        <CustomCheckbox
-                            checked={isChecked}
-                            onClick={(e: any) => e.stopPropagation()}
-                            onChange={() => {
-                                const s = new Set(selectedRowIds);
-                                isChecked ? s.delete(item.id) : s.add(item.id);
-                                setSelectedRowIds(s);
-                            }}
-                            sx={{ opacity: show ? 1 : 0, transition: 'opacity 0.2s' }}
-                        />
-                    </Stack>
+                    <Box sx={{ px: 1.5, py: 1.5 }}>   {/* Same padding as header */}
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            onMouseEnter={() => setHoveredRow(item.id)}
+                            onMouseLeave={() => setHoveredRow(null)}
+                        >
+                            <CustomCheckbox
+                                checked={isChecked}
+                                onClick={(e: any) => e.stopPropagation()}
+                                onChange={() => {
+                                    const s = new Set(selectedRowIds);
+                                    isChecked ? s.delete(item.id) : s.add(item.id);
+                                    setSelectedRowIds(s);
+                                }}
+                                sx={{
+                                    opacity: show ? 1 : 0,
+                                    transition: 'opacity 0.2s'
+                                }}
+                            />
+                        </Stack>
+                    </Box>
                 );
             },
         },
@@ -689,7 +700,11 @@ const ReportIncident = ({ companyId }: Props) => {
             id: 'incident_type',
             header: 'Incident Type',
             accessorKey: 'incident_type',
-            cell: ({ getValue }: any) => <Typography className="f-14">{getValue() || '-'}</Typography>,
+            cell: ({ getValue }: any) => (
+                <Typography className="f-14" sx={{ verticalAlign: 'middle' }}>
+                    {getValue() || '-'}
+                </Typography>
+            ),
         },
         {
             id: 'threat_level',
@@ -697,10 +712,22 @@ const ReportIncident = ({ companyId }: Props) => {
             accessorKey: 'threat_level',
             cell: ({ getValue }: any) => {
                 const val = getValue();
-                return val && val !== '-'
-                    ? <Chip label={val} color={getThreatColor(val)} size="small"
-                            sx={{ width: 80, height: 26, fontWeight: 600, fontSize: '0.75rem', textTransform: 'capitalize' }} />
-                    : <Typography color="textSecondary" variant="body2">-</Typography>;
+                return val && val !== '-' ? (
+                    <Chip
+                        label={val}
+                        color={getThreatColor(val)}
+                        size="small"
+                        sx={{
+                            width: 80,
+                            height: 26,
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            textTransform: 'capitalize'
+                        }}
+                    />
+                ) : (
+                    <Typography color="textSecondary" className="f-14">-</Typography>
+                );
             },
         },
         {
@@ -708,14 +735,28 @@ const ReportIncident = ({ companyId }: Props) => {
             header: 'Attachment',
             cell: ({ row }: any) => {
                 const item = row.original as IncidentRow;
-                return item.files?.length ? (
-                    <Tooltip title="View Attachments">
-                        <IconButton size="small" color="primary" onClick={() => handleViewAttachments(item)}>
-                            <IconPaperclip size={18} />
-                        </IconButton>
-                    </Tooltip>
-                ) : (
-                    <Typography color="text.secondary" className="f-14">-</Typography>
+
+                return (
+                    <Box
+                        display="flex"
+                        justifyContent="start"
+                        alignItems="center"
+                        width="100%"
+                    >
+                        {item.files?.length ? (
+                            <Tooltip title="View Attachments">
+                                <IconButton
+                                    size="small"
+                                    color="primary"
+                                    onClick={() => handleViewAttachments(item)}
+                                >
+                                    <IconPaperclip size={18} />
+                                </IconButton>
+                            </Tooltip>
+                        ) : (
+                            <Typography color="text.secondary">-</Typography>
+                        )}
+                    </Box>
                 );
             },
         },

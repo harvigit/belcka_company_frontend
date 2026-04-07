@@ -39,6 +39,7 @@ import Payments from "../../user-profile-setting/payments";
 import GeofencePenalty from "../../user-profile-setting/geofence-penalty";
 import UserLeaves from "../../user-profile-setting/user-leaves";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import PermissionGuard from '@/app/auth/PermissionGuard';
 
 dayjs.extend(customParseFormat);
 
@@ -448,665 +449,667 @@ const TablePagination = () => {
   }
 
   return (
-    <Box>
-      <BlankCard>
-        <Dialog
-          fullWidth
-          open={otpModalOpen}
-          onClose={() => {
-            setOtpModalOpen(false);
-            otpResolve?.(null);
-          }}
-        >
-          <DialogTitle>
-            <Typography color="GrayText" fontWeight={700}>
-              Enter OTP
-            </Typography>
-            <IconButton
-              onClick={() => {
-                setOtpModalOpen(false);
-                otpResolve?.(null);
-              }}
-              sx={{
-                position: "absolute",
-                right: 12,
-                top: 8,
-                backgroundColor: "transparent",
-              }}
-            >
-              <IconX size={40} />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent>
-            <CustomTextField
-              fullWidth
-              value={otpValue}
-              onChange={(e: any) => setOtpValue(e.target.value)}
-              placeholder="Enter OTP"
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => {
-                setOtpModalOpen(false);
-                otpResolve?.(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setOtpModalOpen(false);
-                otpResolve?.(otpValue);
-              }}
-              variant="contained"
-              color="primary"
-            >
-              Submit
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <CardContent sx={{ pt: 1 }}>
-          <Box
-            display="flex"
-            alignItems={"center"}
-            justifyContent={"space-between"}
-          >
-            <Box display={"flex"} alignItems={"center"}>
-              <IconButton onClick={() => router.back()} sx={{ mr: 1 }}>
-                <IconArrowLeft />
-              </IconButton>
-
-              <Badge
-                overlap="circular"
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                variant="dot"
-                sx={{
-                  "& .MuiBadge-badge": {
-                    backgroundColor: data?.is_working ? "#22bf22" : "#df2626",
-                    color: data?.is_working ? "#22bf22" : "#df2626",
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    boxShadow: "0 0 0 2px white",
-                    cursor: "pointer",
-                  },
-                }}
-              >
-                <Avatar
-                  src={
-                    data?.user_image
-                      ? data.user_image
-                      : "/images/users/user.png"
-                  }
-                  alt={data?.first_name}
-                  sx={{ width: 60, height: 60, cursor: "pointer" }}
-                  onClick={() => setOpenImageDialog(true)}
-                />
-              </Badge>
-
-              <Box display={"block"}>
-                <Typography
-                  color="textSecondary"
-                  fontWeight={600}
-                  ml={2}
-                  mr={2}
-                  fontSize={"20px !important"}
-                  sx={{
-                    display: "-webkit-box",
-                    WebkitBoxOrient: "vertical",
-                    WebkitLineClamp: 3,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    lineHeight: 1.15,
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {data?.name ?? null}
-                </Typography>
-                <Typography
-                  fontSize={"16px !important"}
-                  color="textSecondary"
-                  ml={2}
-                >
-                  {data?.trade_name ?? null}{" "}
-                  {data?.user_code ? `| ${data.user_code}` : ""}
-                </Typography>
-              </Box>
-            </Box>
-            <Box display={"flex"} gap={2}>
-              {data?.is_working && user.user_role_id == 1 && (
-                <Button
-                  variant="outlined"
-                  color="success"
-                  onClick={handleUserStopWork}
-                >
-                  Stop Work
-                </Button>
-              )}
-
-              {data?.user_role_id == 2 && user.user_role_id == 1 && (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  onClick={() => {
-                    setOpenModel(true);
-                  }}
-                >
-                  Make an admin
-                </Button>
-              )}
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={() => {
-                  setSelectedUser(data);
-                  setOpenIdCard(true);
-                }}
-              >
-                <IconMedal size={30} style={{ cursor: "pointer" }} />
-              </Button>
-            </Box>
-          </Box>
-        </CardContent>
-      </BlankCard>
-
-      <Grid container spacing={2} mt={3}>
-        <Grid
-          display={"block"}
-          justifyContent={"center"}
-          overflow={"visible"}
-          size={{
-            xs: 3,
-            lg: 3,
-          }}
-        >
+      <PermissionGuard permission="Users">
+        <Box>
           <BlankCard>
-            <Box sx={{ m: 3 }} className="person_info_wrapper">
-              <Box
-                display={"flex"}
-                justifyContent={"space-between"}
-                alignItems={"baseline"}
-              >
-                <Typography fontSize="16px !important" color="#487bb3ff">
-                  Personal Details
+            <Dialog
+              fullWidth
+              open={otpModalOpen}
+              onClose={() => {
+                setOtpModalOpen(false);
+                otpResolve?.(null);
+              }}
+            >
+              <DialogTitle>
+                <Typography color="GrayText" fontWeight={700}>
+                  Enter OTP
                 </Typography>
-              </Box>
-              <form>
-                <Typography color="textSecondary" variant="h5" mt={1}>
-                  First Name
-                </Typography>
-                <CustomTextField
-                  id="first_name"
-                  className="custom_color"
-                  name="first_name"
-                  placeholder="Enter first name.."
-                  value={formData.first_name}
-                  onChange={(e: any) =>
-                    handleFieldChange("first_name", e.target.value)
-                  }
-                  inputProps={{ maxLength: 25 }}
-                  fullWidth
-                />
-
-                <Typography color="textSecondary" variant="h5" mt={2}>
-                  Last Name
-                </Typography>
-                <CustomTextField
-                  id="last_name"
-                  name="last_name"
-                  className="custom_color"
-                  placeholder="Enter last name.."
-                  value={formData.last_name}
-                  onChange={(e: any) =>
-                    handleFieldChange("last_name", e.target.value)
-                  }
-                  inputProps={{ maxLength: 25 }}
-                  fullWidth
-                />
-
-                <Typography color="textSecondary" variant="h5" mt={2} mb={1}>
-                  Mobile phone
-                </Typography>
-                <PhoneInput
-                  country={"gb"}
-                  value={phone}
-                  onChange={handlePhoneInputChange}
-                  inputStyle={{
-                    width: "100%",
-                    borderColor: "#c0d1dc9c",
-                    backgroundColor:"transparent"
+                <IconButton
+                  onClick={() => {
+                    setOtpModalOpen(false);
+                    otpResolve?.(null);
                   }}
-                  inputClass="phone-input"
-                  enableSearch
-                />
-
-                <Typography color="textSecondary" variant="h5" mt={2}>
-                  Email
-                </Typography>
-                <CustomTextField
-                  id="email"
-                  name="email"
-                  className="custom_color"
-                  placeholder="Enter email.."
-                  value={formData.email}
-                  onChange={(e: any) =>
-                    handleFieldChange("email", e.target.value)
-                  }
-                  fullWidth
-                />
-
-                <Typography color="textSecondary" variant="h5" mt={2}>
-                  User Code
-                </Typography>
-                <CustomTextField
-                  id="user_code"
-                  name="user_code"
-                  className="custom_color"
-                  placeholder="Enter user code.."
-                  value={formData.user_code}
-                  onChange={(e: any) =>
-                    handleFieldChange("user_code", e.target.value)
-                  }
-                  inputProps={{ maxLength: 10 }}
-                  fullWidth
-                />
-
-                <Typography color="textSecondary" variant="h5" mt={2}>
-                  Expired At
-                </Typography>
-                <CustomTextField
-                  type="date"
-                  className="custom_color"
-                  id="expired_at"
-                  placeholder="Choose Expiry date"
-                  fullWidth
-                  value={formData.expired_at}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const newDate = e.target.value;
-                    setFormData((prev) => ({
-                      ...prev,
-                      expired_at: newDate,
-                    }));
+                  sx={{
+                    position: "absolute",
+                    right: 12,
+                    top: 8,
+                    backgroundColor: "transparent",
                   }}
+                >
+                  <IconX size={40} />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent>
+                <CustomTextField
+                  fullWidth
+                  value={otpValue}
+                  onChange={(e: any) => setOtpValue(e.target.value)}
+                  placeholder="Enter OTP"
                 />
-              </form>
-              <Box mt={2}>
+              </DialogContent>
+              <DialogActions>
                 <Button
+                  onClick={() => {
+                    setOtpModalOpen(false);
+                    otpResolve?.(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    setOtpModalOpen(false);
+                    otpResolve?.(otpValue);
+                  }}
                   variant="contained"
                   color="primary"
-                  disabled={isPhoneUpdate}
-                  onClick={handleUpdatePersonalDetails}
                 >
-                  {isPhoneUpdate ? "Sending otp in your phone.." : "Update"}
+                  Submit
                 </Button>
+              </DialogActions>
+            </Dialog>
+    
+            <CardContent sx={{ pt: 1 }}>
+              <Box
+                display="flex"
+                alignItems={"center"}
+                justifyContent={"space-between"}
+              >
+                <Box display={"flex"} alignItems={"center"}>
+                  <IconButton onClick={() => router.back()} sx={{ mr: 1 }}>
+                    <IconArrowLeft />
+                  </IconButton>
+    
+                  <Badge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    variant="dot"
+                    sx={{
+                      "& .MuiBadge-badge": {
+                        backgroundColor: data?.is_working ? "#22bf22" : "#df2626",
+                        color: data?.is_working ? "#22bf22" : "#df2626",
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        boxShadow: "0 0 0 2px white",
+                        cursor: "pointer",
+                      },
+                    }}
+                  >
+                    <Avatar
+                      src={
+                        data?.user_image
+                          ? data.user_image
+                          : "/images/users/user.png"
+                      }
+                      alt={data?.first_name}
+                      sx={{ width: 60, height: 60, cursor: "pointer" }}
+                      onClick={() => setOpenImageDialog(true)}
+                    />
+                  </Badge>
+    
+                  <Box display={"block"}>
+                    <Typography
+                      color="textSecondary"
+                      fontWeight={600}
+                      ml={2}
+                      mr={2}
+                      fontSize={"20px !important"}
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 3,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        lineHeight: 1.15,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {data?.name ?? null}
+                    </Typography>
+                    <Typography
+                      fontSize={"16px !important"}
+                      color="textSecondary"
+                      ml={2}
+                    >
+                      {data?.trade_name ?? null}{" "}
+                      {data?.user_code ? `| ${data.user_code}` : ""}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box display={"flex"} gap={2}>
+                  {data?.is_working && user.user_role_id == 1 && (
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      onClick={handleUserStopWork}
+                    >
+                      Stop Work
+                    </Button>
+                  )}
+    
+                  {data?.user_role_id == 2 && user.user_role_id == 1 && (
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={() => {
+                        setOpenModel(true);
+                      }}
+                    >
+                      Make an admin
+                    </Button>
+                  )}
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => {
+                      setSelectedUser(data);
+                      setOpenIdCard(true);
+                    }}
+                  >
+                    <IconMedal size={30} style={{ cursor: "pointer" }} />
+                  </Button>
+                </Box>
               </Box>
-            </Box>
+            </CardContent>
           </BlankCard>
 
-          <Card sx={{ mt: 3 }}>
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{ p: 3 }}
+          <Grid container spacing={2} mt={3}>
+            <Grid
+              display={"block"}
+              justifyContent={"center"}
+              overflow={"visible"}
+              size={{
+                xs: 3,
+                lg: 3,
+              }}
             >
-              <Typography fontSize="16px !important" color="#487bb3ff">
-                Check-In
-              </Typography>
-
-              <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
-            </Box>
-          </Card>
-
-            {(userRole === 1 || Number(user?.id) === Number(userId)) && (
-                <Card sx={{mt: 3}}>
-                    <Box sx={{m: 3}}>
-                        <Button
-                            variant="outlined"
-                            color="error"
-                            onClick={() => {
-                                setUserToDelete(Number(data?.id));
-                                setConfirmOpen(true);
-                            }}
-                            fullWidth
-                        >
-                            Remove Account
-                        </Button>
-                    </Box>
-                </Card>
-            )}
-        </Grid>
-
-        <Grid
-          size={{
-            xs: 9,
-            lg: 9,
-          }}
-          sx={{ boxShadow: (theme) => theme.shadows[8] }}
-        >
-          <BlankCard>
-            <Box>
-              <Tabs
-                className="user-tabs"
-                value={value}
-                onChange={handleTabChange}
-                aria-label="Sidebar Tabs"
-                sx={{
-                  borderRadius: "12px",
-                  minHeight: "40px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                {[
-                  "Health Info",
-                  "Billing Info",
-                  "Rate",
-                  "Leaves",
-                  "Notification Settings",
-                  "Payments",
-                  "Geofence & Penalty",
-                ].map((label, index) => (
-                  <Tab
-                    key={label}
-                    label={label}
+              <BlankCard>
+                <Box sx={{ m: 3 }} className="person_info_wrapper">
+                  <Box
+                    display={"flex"}
+                    justifyContent={"space-between"}
+                    alignItems={"baseline"}
+                  >
+                    <Typography fontSize="16px !important" color="#487bb3ff">
+                      Personal Details
+                    </Typography>
+                  </Box>
+                  <form>
+                    <Typography color="textSecondary" variant="h5" mt={1}>
+                      First Name
+                    </Typography>
+                    <CustomTextField
+                      id="first_name"
+                      className="custom_color"
+                      name="first_name"
+                      placeholder="Enter first name.."
+                      value={formData.first_name}
+                      onChange={(e: any) =>
+                        handleFieldChange("first_name", e.target.value)
+                      }
+                      inputProps={{ maxLength: 25 }}
+                      fullWidth
+                    />
+    
+                    <Typography color="textSecondary" variant="h5" mt={2}>
+                      Last Name
+                    </Typography>
+                    <CustomTextField
+                      id="last_name"
+                      name="last_name"
+                      className="custom_color"
+                      placeholder="Enter last name.."
+                      value={formData.last_name}
+                      onChange={(e: any) =>
+                        handleFieldChange("last_name", e.target.value)
+                      }
+                      inputProps={{ maxLength: 25 }}
+                      fullWidth
+                    />
+    
+                    <Typography color="textSecondary" variant="h5" mt={2} mb={1}>
+                      Mobile phone
+                    </Typography>
+                    <PhoneInput
+                      country={"gb"}
+                      value={phone}
+                      onChange={handlePhoneInputChange}
+                      inputStyle={{
+                        width: "100%",
+                        borderColor: "#c0d1dc9c",
+                        backgroundColor:"transparent"
+                      }}
+                      inputClass="phone-input"
+                      enableSearch
+                    />
+    
+                    <Typography color="textSecondary" variant="h5" mt={2}>
+                      Email
+                    </Typography>
+                    <CustomTextField
+                      id="email"
+                      name="email"
+                      className="custom_color"
+                      placeholder="Enter email.."
+                      value={formData.email}
+                      onChange={(e: any) =>
+                        handleFieldChange("email", e.target.value)
+                      }
+                      fullWidth
+                    />
+    
+                    <Typography color="textSecondary" variant="h5" mt={2}>
+                      User Code
+                    </Typography>
+                    <CustomTextField
+                      id="user_code"
+                      name="user_code"
+                      className="custom_color"
+                      placeholder="Enter user code.."
+                      value={formData.user_code}
+                      onChange={(e: any) =>
+                        handleFieldChange("user_code", e.target.value)
+                      }
+                      inputProps={{ maxLength: 10 }}
+                      fullWidth
+                    />
+    
+                    <Typography color="textSecondary" variant="h5" mt={2}>
+                      Expired At
+                    </Typography>
+                    <CustomTextField
+                      type="date"
+                      className="custom_color"
+                      id="expired_at"
+                      placeholder="Choose Expiry date"
+                      fullWidth
+                      value={formData.expired_at}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const newDate = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          expired_at: newDate,
+                        }));
+                      }}
+                    />
+                  </form>
+                  <Box mt={2}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      disabled={isPhoneUpdate}
+                      onClick={handleUpdatePersonalDetails}
+                    >
+                      {isPhoneUpdate ? "Sending otp in your phone.." : "Update"}
+                    </Button>
+                  </Box>
+                </Box>
+              </BlankCard>
+    
+              <Card sx={{ mt: 3 }}>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ p: 3 }}
+                >
+                  <Typography fontSize="16px !important" color="#487bb3ff">
+                    Check-In
+                  </Typography>
+    
+                  <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
+                </Box>
+              </Card>
+    
+                {(userRole === 1 || Number(user?.id) === Number(userId)) && (
+                    <Card sx={{mt: 3}}>
+                        <Box sx={{m: 3}}>
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                onClick={() => {
+                                    setUserToDelete(Number(data?.id));
+                                    setConfirmOpen(true);
+                                }}
+                                fullWidth
+                            >
+                                Remove Account
+                            </Button>
+                        </Box>
+                    </Card>
+                )}
+            </Grid>
+    
+            <Grid
+              size={{
+                xs: 9,
+                lg: 9,
+              }}
+              sx={{ boxShadow: (theme) => theme.shadows[8] }}
+            >
+              <BlankCard>
+                <Box>
+                  <Tabs
+                    className="user-tabs"
+                    value={value}
+                    onChange={handleTabChange}
+                    aria-label="Sidebar Tabs"
                     sx={{
-                      textTransform: "none",
-                      borderRadius: "10px",
-                      px: 3,
-                      py: 0.5,
-                      fontSize: "14px",
-                      fontWeight: value === index ? "600" : "400",
-                      transition: "all 0.3s ease",
+                      borderRadius: "12px",
+                      minHeight: "40px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    {[
+                      "Health Info",
+                      "Billing Info",
+                      "Rate",
+                      "Leaves",
+                      "Notification Settings",
+                      "Payments",
+                      "Geofence & Penalty",
+                    ].map((label, index) => (
+                      <Tab
+                        key={label}
+                        label={label}
+                        sx={{
+                          textTransform: "none",
+                          borderRadius: "10px",
+                          px: 3,
+                          py: 0.5,
+                          fontSize: "14px",
+                          fontWeight: value === index ? "600" : "400",
+                          transition: "all 0.3s ease",
+                        }}
+                      />
+                    ))}
+                  </Tabs>
+                </Box>
+                <Box>
+                  <Box hidden={value !== 0}>
+                    <HealthInfo userId={Number(userId)} active={value === 0} />
+                  </Box>
+                  <Box hidden={value !== 1}>
+                    <BillingInfo
+                      companyId={Number(user.company_id)}
+                      onUpdate={fetchData}
+                      userId={Number(userId)}
+                      active={value === 1}
+                    />
+                  </Box>
+                  <Box hidden={value !== 2}>
+                    <ComapnyRate
+                      active={value === 2}
+                      name={formData.first_name}
+                      userId={Number(userId)}
+                    />
+                  </Box>
+                  <Box hidden={value !== 3}>
+                    <UserLeaves
+                      active={value === 3}
+                      name={formData.first_name}
+                      userId={Number(userId)}
+                      companyId={Number(user.company_id)}
+                    />
+                  </Box>
+                  <Box hidden={value !== 4}>
+                    <Notifications
+                      companyId={Number(user.company_id)}
+                      active={value === 4}
+                      userId={Number(userId)}
+                    />
+                  </Box>
+                  <Box hidden={value !== 5}>
+                    <Payments
+                      companyId={Number(user.company_id)}
+                      active={value === 5}
+                      userId={Number(userId)}
+                      isShow={false}
+                      disableDateFilter={true}
+                    />
+                  </Box>
+                    <Box hidden={value !== 6}>
+                    <GeofencePenalty
+                      companyId={Number(user.company_id)}
+                      active={value === 6}
+                      userId={Number(userId)}
+                    />
+                  </Box>
+                </Box>
+              </BlankCard>
+            </Grid>
+          </Grid>
+          {openIdCard && (
+            <DigitalIDCard
+              open={openIdCard}
+              onClose={() => setOpenIdCard(false)}
+              userId={Number(userId)}
+            />
+          )}
+          <Dialog
+            open={openImageDialog}
+            onClose={() => setOpenImageDialog(false)}
+            maxWidth="xs"
+            fullWidth
+          >
+            <Box
+              display={"flex"}
+              justifyContent={"space-between"}
+              alignItems={"center"}
+              p={2}
+            >
+              <Typography>Change Profile Picture</Typography>
+              <IconButton onClick={() => setOpenImageDialog(false)}>
+                <IconX />
+              </IconButton>
+            </Box>
+            <DialogContent>
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                gap={2}
+              >
+                <Avatar
+                  src={previewImage || data?.user_image || "/images/users/user.jpg"}
+                  alt="Preview"
+                  sx={{ width: 150, height: 150, mb: 2 }}
+                />
+                <Button variant="contained" component="label">
+                  Upload profile picture
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setPreviewImage(URL.createObjectURL(file));
+                      }
                     }}
                   />
-                ))}
-              </Tabs>
-            </Box>
-            <Box>
-              <Box hidden={value !== 0}>
-                <HealthInfo userId={Number(userId)} active={value === 0} />
+                </Button>
               </Box>
-              <Box hidden={value !== 1}>
-                <BillingInfo
-                  companyId={Number(user.company_id)}
-                  onUpdate={fetchData}
-                  userId={Number(userId)}
-                  active={value === 1}
-                />
-              </Box>
-              <Box hidden={value !== 2}>
-                <ComapnyRate
-                  active={value === 2}
-                  name={formData.first_name}
-                  userId={Number(userId)}
-                />
-              </Box>
-              <Box hidden={value !== 3}>
-                <UserLeaves
-                  active={value === 3}
-                  name={formData.first_name}
-                  userId={Number(userId)}
-                  companyId={Number(user.company_id)}
-                />
-              </Box>
-              <Box hidden={value !== 4}>
-                <Notifications
-                  companyId={Number(user.company_id)}
-                  active={value === 4}
-                  userId={Number(userId)}
-                />
-              </Box>
-              <Box hidden={value !== 5}>
-                <Payments
-                  companyId={Number(user.company_id)}
-                  active={value === 5}
-                  userId={Number(userId)}
-                  isShow={false}
-                  disableDateFilter={true}
-                />
-              </Box>
-                <Box hidden={value !== 6}>
-                <GeofencePenalty
-                  companyId={Number(user.company_id)}
-                  active={value === 6}
-                  userId={Number(userId)}
-                />
-              </Box>
-            </Box>
-          </BlankCard>
-        </Grid>
-      </Grid>
-      {openIdCard && (
-        <DigitalIDCard
-          open={openIdCard}
-          onClose={() => setOpenIdCard(false)}
-          userId={Number(userId)}
-        />
-      )}
-      <Dialog
-        open={openImageDialog}
-        onClose={() => setOpenImageDialog(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <Box
-          display={"flex"}
-          justifyContent={"space-between"}
-          alignItems={"center"}
-          p={2}
-        >
-          <Typography>Change Profile Picture</Typography>
-          <IconButton onClick={() => setOpenImageDialog(false)}>
-            <IconX />
-          </IconButton>
-        </Box>
-        <DialogContent>
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            gap={2}
-          >
-            <Avatar
-              src={previewImage || data?.user_image || "/images/users/user.jpg"}
-              alt="Preview"
-              sx={{ width: 150, height: 150, mb: 2 }}
-            />
-            <Button variant="contained" component="label">
-              Upload profile picture
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setSelectedFile(file);
-                    setPreviewImage(URL.createObjectURL(file));
-                  }
-                }}
-              />
-            </Button>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenImageDialog(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="primary"
-            disabled={!selectedFile}
-            onClick={async () => {
-              if (selectedFile) {
-                const formData = new FormData();
-                formData.append("user_image", selectedFile);
-                formData.append("user_id", String(userId));
-                try {
-                  const res = await api.post("user/update-profile", formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                  });
-                  if (res.data.IsSuccess) {
-                    toast.success(res.data.message);
-                    setOpenImageDialog(false);
-                    setSelectedFile(null);
-                    setPreviewImage(null);
-                    fetchData();
-                    if (Number(userId) === Number(user?.id)) {
-                      const updatedUser = {
-                        ...user,
-                        user_image: res.data.info.user_image
-                          ? res.data.info.user_image
-                          : user?.user_image,
-                        user_thumb_image: res.data.info.user_image
-                          ? res.data.info.user_image
-                          : user?.user_thumb_image,
-                      };
-                      await update({
-                        ...session,
-                        user: updatedUser,
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenImageDialog(false)}>Cancel</Button>
+              <Button
+                variant="contained"
+                color="primary"
+                disabled={!selectedFile}
+                onClick={async () => {
+                  if (selectedFile) {
+                    const formData = new FormData();
+                    formData.append("user_image", selectedFile);
+                    formData.append("user_id", String(userId));
+                    try {
+                      const res = await api.post("user/update-profile", formData, {
+                        headers: { "Content-Type": "multipart/form-data" },
                       });
+                      if (res.data.IsSuccess) {
+                        toast.success(res.data.message);
+                        setOpenImageDialog(false);
+                        setSelectedFile(null);
+                        setPreviewImage(null);
+                        fetchData();
+                        if (Number(userId) === Number(user?.id)) {
+                          const updatedUser = {
+                            ...user,
+                            user_image: res.data.info.user_image
+                              ? res.data.info.user_image
+                              : user?.user_image,
+                            user_thumb_image: res.data.info.user_image
+                              ? res.data.info.user_image
+                              : user?.user_thumb_image,
+                          };
+                          await update({
+                            ...session,
+                            user: updatedUser,
+                          });
+                        }
+                      }
+                    } catch (err) {
+                      console.error("Image upload failed:", err);
                     }
                   }
-                } catch (err) {
-                  console.error("Image upload failed:", err);
-                }
-              }
-            }}
-          >
-            Upload
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-        <DialogTitle>
-          Confirm Deletion
-          <IconButton
-            aria-label="close"
-            onClick={() => setConfirmOpen(false)}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <IconX />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent>
-          <Typography color="textSecondary" fontWeight={500}>
-            This will permanently erase all actions, history, and activity
-            associated with the user. Once deleted, the data cannot be
-            recovered.
-            <br />
-            <br />
-            To remove the user without losing their information, please select
-            the Archive option instead.
-          </Typography>
-        </DialogContent>
-
-        <DialogActions>
-          <Button
-            disabled={archiveLoading}
-            onClick={async () => {
-              setArchiveLoading(true);
-              try {
-                const payload = {
-                  user_ids: String(userToDelete),
-                  company_id: user.company_id,
-                };
-                const response = await api.post(
-                  "user/archive-user-account",
-                  payload,
-                );
-                toast.success(response.data.message);
-                router.push("/apps/users/list");
-              } catch (error) {
-                console.error("Failed to archive users", error);
-              } finally {
-                setConfirmOpen(false);
-              }
-              setArchiveLoading(false);
-            }}
-            variant="outlined"
-            color="primary"
-          >
-            Archive
-          </Button>
-          <Button
-            disabled={deleteLoading}
-            onClick={async () => {
-              setDeleteLoading(true);
-              try {
-                const payload = {
-                  user_id: userToDelete,
-                  company_id: user.company_id,
-                };
-                const response = await api.post("user/delete-account", payload);
-                toast.success(response.data.message);
-                router.push("/apps/users/list");
-              } catch (error) {
-                console.error("Failed to remove users", error);
-                // toast.error('Failed to remove users');
-              } finally {
-                setConfirmOpen(false);
-              }
-              setDeleteLoading(false);
-            }}
-            variant="outlined"
-            color="error"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={openModel} onClose={() => setOpenModel(false)}>
-        <DialogTitle>
-          Confirmation
-          <IconButton
-            aria-label="close"
-            onClick={() => setOpenModel(false)}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <IconX />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to make this user an admin?
-          </Typography>
-        </DialogContent>
-
-        <DialogActions>
-          <Button
-            onClick={() => setOpenModel(false)}
-            variant="outlined"
-            color="error"
-          >
-            Cancel
-          </Button>
-
-          <Button
-            onClick={handleConfirmAdmin}
-            color="primary"
-            variant="contained"
-            disabled={loading}
-          >
-            {loading ? "Updating..." : "Yes, Confirm"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                }}
+              >
+                Upload
+              </Button>
+            </DialogActions>
+          </Dialog>
+    
+          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>
+              Confirm Deletion
+              <IconButton
+                aria-label="close"
+                onClick={() => setConfirmOpen(false)}
+                sx={{
+                  position: "absolute",
+                  right: 8,
+                  top: 8,
+                  color: (theme) => theme.palette.grey[500],
+                }}
+              >
+                <IconX />
+              </IconButton>
+            </DialogTitle>
+    
+            <DialogContent>
+              <Typography color="textSecondary" fontWeight={500}>
+                This will permanently erase all actions, history, and activity
+                associated with the user. Once deleted, the data cannot be
+                recovered.
+                <br />
+                <br />
+                To remove the user without losing their information, please select
+                the Archive option instead.
+              </Typography>
+            </DialogContent>
+    
+            <DialogActions>
+              <Button
+                disabled={archiveLoading}
+                onClick={async () => {
+                  setArchiveLoading(true);
+                  try {
+                    const payload = {
+                      user_ids: String(userToDelete),
+                      company_id: user.company_id,
+                    };
+                    const response = await api.post(
+                      "user/archive-user-account",
+                      payload,
+                    );
+                    toast.success(response.data.message);
+                    router.push("/apps/users/list");
+                  } catch (error) {
+                    console.error("Failed to archive users", error);
+                  } finally {
+                    setConfirmOpen(false);
+                  }
+                  setArchiveLoading(false);
+                }}
+                variant="outlined"
+                color="primary"
+              >
+                Archive
+              </Button>
+              <Button
+                disabled={deleteLoading}
+                onClick={async () => {
+                  setDeleteLoading(true);
+                  try {
+                    const payload = {
+                      user_id: userToDelete,
+                      company_id: user.company_id,
+                    };
+                    const response = await api.post("user/delete-account", payload);
+                    toast.success(response.data.message);
+                    router.push("/apps/users/list");
+                  } catch (error) {
+                    console.error("Failed to remove users", error);
+                    // toast.error('Failed to remove users');
+                  } finally {
+                    setConfirmOpen(false);
+                  }
+                  setDeleteLoading(false);
+                }}
+                variant="outlined"
+                color="error"
+              >
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
+    
+          <Dialog open={openModel} onClose={() => setOpenModel(false)}>
+            <DialogTitle>
+              Confirmation
+              <IconButton
+                aria-label="close"
+                onClick={() => setOpenModel(false)}
+                sx={{
+                  position: "absolute",
+                  right: 8,
+                  top: 8,
+                  color: (theme) => theme.palette.grey[500],
+                }}
+              >
+                <IconX />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <Typography>
+                Are you sure you want to make this user an admin?
+              </Typography>
+            </DialogContent>
+    
+            <DialogActions>
+              <Button
+                onClick={() => setOpenModel(false)}
+                variant="outlined"
+                color="error"
+              >
+                Cancel
+              </Button>
+    
+              <Button
+                onClick={handleConfirmAdmin}
+                color="primary"
+                variant="contained"
+                disabled={loading}
+              >
+                {loading ? "Updating..." : "Yes, Confirm"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Box>
+      </PermissionGuard>
   );
 };
 

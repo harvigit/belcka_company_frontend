@@ -24,6 +24,8 @@ import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
+import {NearMissRow} from '@/app/components/apps/health-safety/near-miss-reporting';
+import {IncidentRow} from '@/app/components/apps/health-safety/report-incident';
 
 export type TrainingRow = {
     id: number;
@@ -627,7 +629,7 @@ const InductionTraining = ({ companyId }: Props) => {
         {
             id: 'select',
             header: () => (
-                <Stack direction="row" alignItems="center" ml={0.5}>
+                <Box sx={{ px: 1.5, py: 1 }}>
                     <CustomCheckbox
                         checked={selectedRowIds.size === filteredData.length && filteredData.length > 0}
                         indeterminate={selectedRowIds.size > 0 && selectedRowIds.size < filteredData.length}
@@ -638,27 +640,36 @@ const InductionTraining = ({ companyId }: Props) => {
                             );
                         }}
                     />
-                </Stack>
+                </Box>
             ),
             cell: ({ row }: any) => {
                 const item = row.original as TrainingRow;
                 const isChecked = selectedRowIds.has(item.id);
                 const show = isChecked || hoveredRow === item.id;
+
                 return (
-                    <Stack direction="row" alignItems="center"
-                           onMouseEnter={() => setHoveredRow(item.id)}
-                           onMouseLeave={() => setHoveredRow(null)}>
-                        <CustomCheckbox
-                            checked={isChecked}
-                            onClick={(e: any) => e.stopPropagation()}
-                            onChange={() => {
-                                const s = new Set(selectedRowIds);
-                                isChecked ? s.delete(item.id) : s.add(item.id);
-                                setSelectedRowIds(s);
-                            }}
-                            sx={{ opacity: show ? 1 : 0, transition: 'opacity 0.2s' }}
-                        />
-                    </Stack>
+                    <Box sx={{ px: 1.5, py: 1 }}>   {/* Same padding as header */}
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            onMouseEnter={() => setHoveredRow(item.id)}
+                            onMouseLeave={() => setHoveredRow(null)}
+                        >
+                            <CustomCheckbox
+                                checked={isChecked}
+                                onClick={(e: any) => e.stopPropagation()}
+                                onChange={() => {
+                                    const s = new Set(selectedRowIds);
+                                    isChecked ? s.delete(item.id) : s.add(item.id);
+                                    setSelectedRowIds(s);
+                                }}
+                                sx={{
+                                    opacity: show ? 1 : 0,
+                                    transition: 'opacity 0.2s'
+                                }}
+                            />
+                        </Stack>
+                    </Box>
                 );
             },
         },
@@ -715,14 +726,28 @@ const InductionTraining = ({ companyId }: Props) => {
             header: 'Attachment',
             cell: ({ row }: any) => {
                 const item = row.original as TrainingRow;
-                return item.files?.length ? (
-                    <Tooltip title="View Attachments">
-                        <IconButton size="small" color="primary" onClick={() => handleViewAttachments(item)}>
-                            <IconPaperclip size={18} />
-                        </IconButton>
-                    </Tooltip>
-                ) : (
-                    <Typography color="text.secondary" className="f-14">-</Typography>
+
+                return (
+                    <Box
+                        display="flex"
+                        justifyContent="start"
+                        alignItems="center"
+                        width="100%"
+                    >
+                        {item.files?.length ? (
+                            <Tooltip title="View Attachments">
+                                <IconButton
+                                    size="small"
+                                    color="primary"
+                                    onClick={() => handleViewAttachments(item)}
+                                >
+                                    <IconPaperclip size={18} />
+                                </IconButton>
+                            </Tooltip>
+                        ) : (
+                            <Typography color="text.secondary">-</Typography>
+                        )}
+                    </Box>
                 );
             },
         },
@@ -900,7 +925,13 @@ const InductionTraining = ({ companyId }: Props) => {
                                     onChange={(_, v) => setForm(f => ({ ...f, team: v.map((t: any) => t.id) }))}
                                     getOptionLabel={o => o.title || ''}
                                     isOptionEqualToValue={(o, v) => o.id === v.id}
-                                    renderInput={params => <CustomTextField {...params} placeholder="Select Teams" fullWidth />}
+                                    renderInput={params => (
+                                        <CustomTextField
+                                            {...params}
+                                            placeholder={form.team.length === 0 ? 'Select Teams' : ''}
+                                            fullWidth
+                                        />
+                                    )}
                                 />
                             </Box>
 
@@ -939,8 +970,13 @@ const InductionTraining = ({ companyId }: Props) => {
                                             </Stack>
                                         ))
                                     }
-                                    renderInput={params => <CustomTextField {...params} placeholder="Select Users" fullWidth />}
-                                />
+                                    renderInput={params => (
+                                        <CustomTextField
+                                            {...params}
+                                            placeholder={form.users.length === 0 ? 'Select Users' : ''}
+                                            fullWidth
+                                        />
+                                    )}                                />
                             </Box>
 
                             {/* Description */}

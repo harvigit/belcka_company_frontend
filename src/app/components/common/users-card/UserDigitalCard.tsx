@@ -160,7 +160,6 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
             pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, CARD_WIDTH, CARD_HEIGHT);
             pdf.save(`${cardData.first_name}_${cardData.last_name}_ID_Card.pdf`);
         } catch (err) {
-            console.error('PDF generation error:', err);
             alert('Failed to generate PDF. Please try again.');
         }
     };
