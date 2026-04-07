@@ -460,7 +460,7 @@ input[type="range"]::-moz-range-thumb {
     width: 20px !important;
 }
 
-.product_selection  .mui-3q9hdc-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-clearIndicator{
+.product_selection  button.MuiAutocomplete-clearIndicator{
     display: none;
 }
 

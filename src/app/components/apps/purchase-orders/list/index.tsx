@@ -626,7 +626,7 @@ const PurchaseOrderList = () => {
     return data.filter((item) => {
       const matchStatus =
         filters.status && filters.status !== "all"
-          ? item.status_text === filters.status
+          ? item.status === Number(filters.status)
           : true;
 
       const matchesSearch =
@@ -1504,11 +1504,11 @@ const PurchaseOrderList = () => {
                     fullWidth
                   >
                     <MenuItem value="all">All</MenuItem>
-                    <MenuItem value="Received">Received</MenuItem>
-                    <MenuItem value="Partially Received">
-                      Partially Received
-                    </MenuItem>
-                    <MenuItem value="Issued">Issued</MenuItem>
+                    <MenuItem value="1">Partially Delivered</MenuItem>
+                    <MenuItem value="2">Upcoming</MenuItem>
+                    <MenuItem value="3">Processing</MenuItem>
+                    <MenuItem value="4">Cancelled</MenuItem>
+                    <MenuItem value="5">On stock</MenuItem>
                   </TextField>
                 </Stack>
               </DialogContent>

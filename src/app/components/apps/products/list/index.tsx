@@ -119,6 +119,8 @@ export interface ProductFormData {
   store_ids?: string;
   remove_image?: boolean;
   max_stock?: number | null;
+  manufacture?: number | null;
+  model?: number | null;
 }
 
 const ProductList = () => {
@@ -186,6 +188,7 @@ const ProductList = () => {
   }>({ id: null, field: null });
   const [inputValue, setInputValue] = useState("");
   const [rowCategories, setRowCategories] = useState<Record<string, any[]>>({});
+  const [draftCategories, setDraftCategories] = useState<any[]>([]);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
   useEffect(() => {
@@ -594,15 +597,29 @@ const ProductList = () => {
   const handleEditCategories = (item: any) => {
     setEditingRowId(item.id);
 
+    let initialCategories: any[] = [];
+
+    if (rowCategories[item.id]) {
+      initialCategories = rowCategories[item.id];
+    }
+    else if (Array.isArray(item.product_categories)) {
+      initialCategories = item.product_categories;
+    }
+    else if (typeof item.product_categories === "string") {
+      initialCategories = item.product_categories
+        .split(",")
+        .map((name: string) => ({ name: name.trim() }));
+    }
+
     const selectedIds = item.category_ids
       ? item.category_ids.split(",").map((id: string) => Number(id))
       : [];
-    const selected = categories.filter((cat) => selectedIds.includes(cat.id));
+    initialCategories = categories.filter((cat) => selectedIds.includes(cat.id));
 
-    setRowCategories((prev) => ({ ...prev, [item.id]: selected }));
+    setDraftCategories(initialCategories);
+
     setOpenCategoryModal(true);
   };
-
   const updateCategories = async (id: string, selected: any[]) => {
     try {
       const payload = {
@@ -1346,29 +1363,43 @@ const ProductList = () => {
               className="product_selection"
               options={categories || []}
               getOptionLabel={(option) => option.name}
-              value={editingRowId ? rowCategories[editingRowId] || [] : []}
+              value={Array.isArray(draftCategories) ? draftCategories : []}
               onChange={(_, newValue) => {
-                setRowCategories((prev) => ({
-                  ...prev,
-                  [editingRowId!]: newValue,
-                }));
+                setDraftCategories(newValue);
               }}
               renderInput={(params) => (
-                <TextField {...params} placeholder="Select categories" />
+                <TextField
+                  {...params}
+                  placeholder={
+                    draftCategories.length === 0 ? "Select categories" : ""
+                  }
+                />
               )}
               size="small"
               sx={{ width: 400 }}
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenCategoryModal(false)} color="error">
+            <Button
+              onClick={() => {
+                setOpenCategoryModal(false);
+                setDraftCategories([]);
+              }}
+              color="error"
+            >
               Cancel
             </Button>
             <Button
               onClick={() => {
                 if (editingRowId) {
-                  updateCategories(editingRowId, rowCategories[editingRowId]);
+                  setRowCategories((prev) => ({
+                    ...prev,
+                    [editingRowId]: draftCategories,
+                  }));
+
+                  updateCategories(editingRowId, draftCategories);
                 }
+
                 setOpenCategoryModal(false);
               }}
               variant="contained"

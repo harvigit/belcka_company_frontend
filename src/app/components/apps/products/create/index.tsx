@@ -68,6 +68,8 @@ export interface ProductFormData {
   store_ids?: string;
   remove_image?: boolean;
   max_stock?: number | null;
+  manufacture?: number | null;
+  model?: number | null;
 }
 
 interface Category {
@@ -234,6 +236,8 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         is_sub_qty: false,
         remove_image: false,
         max_stock: 0,
+        model: null,
+        manufacture: null,
       });
       setBarcodes([""]);
       setSelectedCategories([]);
@@ -277,6 +281,8 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         is_sub_qty: Boolean(product.is_sub_qty),
         store_ids: product.store_ids ?? "",
         max_stock: product.max_stock ?? 0,
+        model: product.model ?? null,
+        manufacture: product.manufacture ?? null,
       });
 
       setBarcodes(
@@ -785,6 +791,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       </Typography>
 
                       <Autocomplete
+                        className="product_selection"
                         multiple
                         options={categories}
                         getOptionLabel={(option) => option.name}
@@ -796,10 +803,13 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                           <TextField
                             {...params}
                             variant="outlined"
-                            placeholder="Select category"
+                            placeholder={
+                              selectedCategories.length === 0
+                                ? "Select category"
+                                : ""
+                            }
                           />
                         )}
-                        className="product_input"
                         sx={{ mb: 2 }}
                       />
                     </Box>
@@ -1016,25 +1026,33 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     </Typography>
                     <Autocomplete
                       className="product_input"
+                      freeSolo
                       fullWidth
                       options={manufactures}
-                      value={
-                        manufactures.find(
-                          (s) => s.id === formData.manufacturer_id,
-                        ) ?? null
-                      }
+                      value={formData.manufacture || null}
                       onChange={(_, newValue) => {
                         if (newValue) {
                           setFormData((prev) => ({
                             ...prev,
-                            manufacturer_id: newValue.id,
+                            manufacture: newValue.value,
                           }));
                         }
                       }}
-                      getOptionLabel={(option) => option.name || ""}
+                      getOptionLabel={(option) =>
+                        typeof option === "string" ? option : option.name
+                      }
                       renderInput={(params) => (
                         <CustomTextField
                           {...params}
+                          onBlur={(e: any) => {
+                            const value = e.target.value.trim();
+                            if (!value) return;
+
+                            setFormData((prev) => ({
+                              ...prev,
+                              manufacture: value,
+                            }));
+                          }}
                           placeholder="Select manufacture"
                         />
                       )}
@@ -1045,26 +1063,35 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <Typography variant="body2" gutterBottom>
                       Model
                     </Typography>
-
                     <Autocomplete
                       className="product_input"
+                      freeSolo
                       fullWidth
                       options={models}
-                      value={
-                        models.find((s) => s.id === formData.model_id) ?? null
-                      }
+                      value={formData.model || null}
                       onChange={(_, newValue) => {
                         if (newValue) {
                           setFormData((prev) => ({
                             ...prev,
-                            model_id: newValue.id,
+                            model: newValue.name,
                           }));
                         }
                       }}
-                      getOptionLabel={(option) => option.name || ""}
+                      getOptionLabel={(option) =>
+                        typeof option === "string" ? option : option.name
+                      }
                       renderInput={(params) => (
                         <CustomTextField
                           {...params}
+                          onBlur={(e: any) => {
+                            const value = e.target.value.trim();
+                            if (!value) return;
+
+                            setFormData((prev) => ({
+                              ...prev,
+                              model: value,
+                            }));
+                          }}
                           placeholder="Select model"
                         />
                       )}
@@ -1228,6 +1255,22 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                         <CustomTextField
                           {...params}
                           placeholder="Select or add unit"
+                          onBlur={(e: any) => {
+                            const value = e.target.value.trim();
+                            if (!value) return;
+
+                            if (!packOffs.some((u) => u.name === value)) {
+                              setPackOffs((prev) => [
+                                ...prev,
+                                { id: Date.now(), name: value },
+                              ]);
+                            }
+
+                            setFormData((prev) => ({
+                              ...prev,
+                              pack_off_unit: value,
+                            }));
+                          }}
                         />
                       )}
                     />
