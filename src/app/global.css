@@ -189,7 +189,7 @@ input#project_id::placeholder {
     }
 }
 
-.project-selection .mui-3q9hdc-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-clearIndicator, .project-selection button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.MuiAutocomplete-clearIndicator.mui-lp6drn{
+.project-selection .mui-3q9hdc-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-clearIndicator, .project-selection button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.MuiAutocomplete-clearIndicator.mui-lp6drn , .report_selection .MuiAutocomplete-clearIndicator{
     display: none;
 }
 
@@ -510,4 +510,8 @@ input[type="range"]::-moz-range-thumb {
 /* tip tap editor css */
 .MuiTiptap-FieldContainer-root{
     min-height: 300px;
+}
+
+.report_range {
+    width: 90%;
 }
