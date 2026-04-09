@@ -237,7 +237,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                         alignItems: 'flex-start',
                         width: '100%',
                         overflow: 'hidden',
-                        pt: { sm: 2 },
+                        py: { sm: 2 },
                         px: { xs: 0, sm: 2 },
                     }}
                 >
@@ -288,7 +288,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                         flexShrink: 0,
                                         border: '3px solid #f0f0f0',
                                         backgroundColor: '#e5e7eb',
-                                        mb: '16px',
+                                        mb: '10px',
                                     }}
                                 >
                                     <img
@@ -319,18 +319,6 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                     {cardData.trade_name}
                                 </Typography>
 
-                                {/* Company Logo */}
-                                <Box sx={{ display: 'inline-flex', width: 'fit-content' }}>
-                                    <img
-                                        src={cardData.company_logo}
-                                        alt="Company Logo"
-                                        style={{ width: '100px', height: '60px', objectFit: 'contain', display: 'block' }}
-                                    />
-                                </Box>
-
-                                {/* Spacer */}
-                                <Box sx={{ flex: 1 }} />
-
                                 {/* Valid Until */}
                                 {validUntilDisplay && (
                                     <Typography
@@ -351,15 +339,17 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                     width: '140px',
                                 }}
                             >
-                                {/* Belcka Logo */}
-                                <img
-                                    src="/belcka.svg"
-                                    alt="Belcka Logo"
-                                    style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }}
-                                />
+                                {/* Company Logo */}
+                                <Box sx={{ display: 'inline-flex', width: 'fit-content' }}>
+                                    <img
+                                        src={cardData.company_logo}
+                                        alt="Company Logo"
+                                        style={{ width: '122px', height: '60px', objectFit: 'contain', display: 'block' }}
+                                    />
+                                </Box>
 
+                                {/* QR Code */}
                                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                                    {/* QR Code */}
                                     <Box
                                         sx={{
                                             background: '#fff',
