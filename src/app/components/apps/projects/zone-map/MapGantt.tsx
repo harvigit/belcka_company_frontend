@@ -1412,18 +1412,14 @@ const UserMarker = ({user}: { user: any }) => {
         <OverlayView
             position={position}
             mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            getPixelPositionOffset={() => ({x: -24, y: -58})}
+            getPixelPositionOffset={() => ({x: 0, y: 0})}
         >
-            <Box
-                onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
-                sx={{position: 'relative', width: 48, height: 58, cursor: 'pointer'}}
-            >
+            <div style={{position: 'relative', width: 0, height: 0}}>
                 {hovered && (
                     <Box
                         sx={{
                             position: 'absolute',
-                            bottom: 66,
+                            bottom: 66,        
                             left: '50%',
                             transform: 'translateX(-50%)',
                             background: 'white',
@@ -1452,14 +1448,26 @@ const UserMarker = ({user}: { user: any }) => {
                         <Typography variant="body2" fontWeight={700} sx={{mb: 0.25}}>
                             {user.user_name || `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()}
                         </Typography>
-                        {user.trade_name && <Typography variant="caption" color="textSecondary"
-                                                        display="block">{user.trade_name}</Typography>}
-                        {user.team_name && <Typography variant="caption" color="textSecondary"
-                                                       display="block">Team: {user.team_name}</Typography>}
-                        {user.supervisor_name && <Typography variant="caption" color="textSecondary"
-                                                             display="block">Supervisor: {user.supervisor_name}</Typography>}
-                        {user.last_seen && <Typography variant="caption" color="textSecondary"
-                                                       display="block">{formatDateTime(user.last_seen)}</Typography>}
+                        {user.trade_name && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                {user.trade_name}
+                            </Typography>
+                        )}
+                        {user.team_name && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                Team: {user.team_name}
+                            </Typography>
+                        )}
+                        {user.supervisor_name && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                Supervisor: {user.supervisor_name}
+                            </Typography>
+                        )}
+                        {user.last_seen && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                                {formatDateTime(user.last_seen)}
+                            </Typography>
+                        )}
                         <Box display="inline-flex" alignItems="center" gap={0.5} mt={0.5}>
                             <Box sx={{width: 7, height: 7, borderRadius: '50%', backgroundColor: dotColor}}/>
                             <Typography variant="caption" sx={{color: dotColor, fontWeight: 600}}>
@@ -1470,23 +1478,28 @@ const UserMarker = ({user}: { user: any }) => {
                 )}
 
                 <Box
+                    onMouseEnter={() => setHovered(true)}
+                    onMouseLeave={() => setHovered(false)}
                     sx={{
-                        position: 'relative',
+                        position: 'absolute',
                         width: 48,
                         height: 58,
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'center',
+                        left: -24,
+                        top: -58,
+                        cursor: 'pointer',
                         filter: hovered ? 'drop-shadow(0 6px 14px rgba(0,0,0,0.38))' : 'drop-shadow(0 3px 6px rgba(0,0,0,0.26))',
-                        transition: 'filter 0.15s ease, transform 0.15s ease',
                         transform: hovered ? 'scale(1.12) translateY(-2px)' : 'scale(1)',
+                        transition: 'filter 0.15s ease, transform 0.15s ease',
                     }}
                 >
                     <svg width="48" height="58" viewBox="0 0 48 58" style={{position: 'absolute', top: 0, left: 0}}>
-                        <path d="M24 0C13.507 0 5 8.507 5 19c0 14.25 19 39 19 39S43 33.25 43 19C43 8.507 34.493 0 24 0z"
-                              fill={pinColor}/>
+                        <path
+                            d="M24 0C13.507 0 5 8.507 5 19c0 14.25 19 39 19 39S43 33.25 43 19C43 8.507 34.493 0 24 0z"
+                            fill={pinColor}
+                        />
                         <circle cx="24" cy="19" r="16" fill="white"/>
                     </svg>
+
                     <Box
                         sx={{
                             position: 'absolute',
@@ -1503,15 +1516,18 @@ const UserMarker = ({user}: { user: any }) => {
                         }}
                     >
                         {user.user_thumb_image ? (
-                            <img src={user.user_thumb_image} alt={user.user_name}
-                                 style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}/>
+                            <img
+                                src={user.user_thumb_image}
+                                alt={user.user_name}
+                                style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}
+                            />
                         ) : (
-                            <Typography
-                                sx={{color: 'white', fontWeight: 700, fontSize: 13, lineHeight: 1, userSelect: 'none'}}>
+                            <Typography sx={{color: 'white', fontWeight: 700, fontSize: 13, lineHeight: 1, userSelect: 'none'}}>
                                 {initials || <IconUsers size={16} color="white"/>}
                             </Typography>
                         )}
                     </Box>
+
                     <Box
                         sx={{
                             position: 'absolute',
@@ -1526,7 +1542,7 @@ const UserMarker = ({user}: { user: any }) => {
                         }}
                     />
                 </Box>
-            </Box>
+            </div>
         </OverlayView>
     );
 };
