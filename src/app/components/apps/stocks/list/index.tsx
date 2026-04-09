@@ -289,7 +289,7 @@ const StockList = () => {
       const storeFilter = storeIdParam ?? storeId ?? store?.id;
 
       if (!storeFilter) return;
-      let url = `products/get?company_id=${user.company_id}&store_ids=${storeFilter}&is_products=true`;
+      let url = `products/get?company_id=${user.company_id}&store_ids=${storeFilter}&is_products=true&is_web=true`;
 
       if (productIdParam) {
         url += `&product_id=${productIdParam}`;

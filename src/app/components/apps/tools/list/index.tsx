@@ -29,6 +29,7 @@ import {
   FormControlLabel,
   Checkbox,
   Autocomplete,
+  Select,
 } from "@mui/material";
 import {
   flexRender,
@@ -44,6 +45,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconEdit,
+  IconPlaylistAdd,
   IconSearch,
   IconTrash,
   IconX,
@@ -64,6 +66,8 @@ import Image from "next/image";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import { IconEye } from "@tabler/icons-react";
 import AddEditTool from "../add-edit";
+import AssignUserTool from "../assign-user";
+import ProductAddEdit from "../../products/create";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -119,6 +123,8 @@ const ToolsList = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openToolDrawer, setOpenToolDrawer] = useState(false);
+  const [openProductDrawer, setOpenProductDrawer] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -130,6 +136,20 @@ const ToolsList = () => {
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [trades, setTrades] = useState<any[]>([]);
+  const [stores, setStores] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [openStoreDialog, setOpenStoreDialog] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<number | null>(null);
+  const [formData, setFormData] = useState<any>({
+    id: 0,
+    company_id: user?.company_id,
+    name: "",
+    sort_id: 0,
+    short_name: "",
+    description: "",
+    uuid: "",
+    status: true,
+  });
 
   // trades
   const fetchTrades = async () => {
@@ -150,6 +170,8 @@ const ToolsList = () => {
 
   const onClose = () => {
     setDrawerOpen(false);
+    setOpenToolDrawer(false);
+    setOpenProductDrawer(false);
     setSelectedTaskId(null);
   };
 
@@ -162,7 +184,7 @@ const ToolsList = () => {
     setFetchProduct(true);
     try {
       const res = await api.get(
-        `products/get-product-trade?company_id=${user.company_id}`,
+        `products/get-product-trade?company_id=${user.company_id}&is_web=true`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -183,6 +205,69 @@ const ToolsList = () => {
     fetchProducts();
     fetchTrades();
   }, []);
+
+  // add product
+  const handleSubmit = async (
+    e: React.FormEvent,
+    galleryFiles: File[],
+    barcodes: string[],
+  ) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    try {
+      const formPayload = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+
+        if (key === "image") return;
+
+        if (Array.isArray(value)) {
+          value.forEach((v) => {
+            formPayload.append(`${key}[]`, String(v));
+          });
+          return;
+        }
+
+        if (typeof value === "boolean") {
+          formPayload.append(key, value ? "1" : "0");
+          return;
+        }
+
+        formPayload.append(key, String(value));
+      });
+
+      if (formData.image instanceof File) {
+        formPayload.append("image", formData.image);
+      }
+
+      galleryFiles.forEach((file) => {
+        formPayload.append("files", file);
+      });
+
+      formPayload.append("barcode_text", barcodes.join(","));
+      formPayload.append("is_trade", "true");
+      formPayload.append("store_id", String(selectedStore));
+
+      const result = await api.post("products/create", formPayload, {
+        headers: {
+          "Content-Type": undefined,
+        },
+      });
+
+      if (result.data.IsSuccess) {
+        toast.success(result.data.message);
+        setOpenProductDrawer(false);
+        fetchProducts();
+      } else {
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsSaving(false);
+    }
+    setIsSaving(false);
+  };
 
   // UseCallback to memoize these functions
   const handleEdit = useCallback((id: number) => {
@@ -225,6 +310,22 @@ const ToolsList = () => {
       console.error(err);
     }
   };
+
+  const fetchResources = async () => {
+    try {
+      let url = `get-inventory-resources?company_id=${user.company_id}`;
+      const res = await api.get(url);
+      if (res.data) {
+        setStores(res.data.stores);
+      }
+    } catch (err) {
+      console.error("Failed to fetch inventory resources", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchResources();
+  }, [api]);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -385,10 +486,9 @@ const ToolsList = () => {
                 className="f-14"
                 variant="body1"
                 sx={{
-                  width: 200,
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 1,
+                  WebkitLineClamp: 3,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
@@ -402,6 +502,21 @@ const ToolsList = () => {
                 </Typography>
               </Typography>
             </Tooltip>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.store_name, {
+      id: "store",
+      header: () => "Store",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center">
+            <Typography textTransform="capitalize" className="f-14">
+              {item.store_name ? item.store_name : "-"}
+            </Typography>
           </Stack>
         );
       },
@@ -477,7 +592,7 @@ const ToolsList = () => {
     columnHelper.display({
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => {  
+      cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" spacing={1} alignItems={"center"}>
@@ -673,21 +788,6 @@ const ToolsList = () => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-            {selectedRowIds.size > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<IconTrash width={18} />}
-                sx={{ marginRight: "5px", marginLeft: 1 }}
-                onClick={() => {
-                  const selectedIds = Array.from(selectedRowIds);
-                  setUsersToDelete(selectedIds);
-                  setConfirmOpen(true);
-                }}
-              >
-                Archive
-              </Button>
-            )}
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -837,12 +937,58 @@ const ToolsList = () => {
                   Add New
                 </Link>
               </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setOpenStoreDialog(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconPlaylistAdd width={18} />
+                  </ListItemIcon>
+                  Add Product
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setOpenToolDrawer(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconEdit width={18} />
+                  </ListItemIcon>
+                  Assign tool to user
+                </Link>
+              </MenuItem>
             </Menu>
           </Stack>
         </Stack>
         <Divider />
 
-        {/* Add product */}
+        {/* Add Edit Tool */}
         <AddEditTool
           open={drawerOpen}
           onClose={() => onClose()}
@@ -850,6 +996,66 @@ const ToolsList = () => {
           onWorkUpdated={fetchProducts}
           setId={selectedTaskId}
         />
+
+        {/* Add product */}
+        <ProductAddEdit
+          open={openProductDrawer}
+          onClose={() => setOpenProductDrawer(false)}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleSubmit}
+          isSaving={isSaving}
+          companyId={user?.company_id ?? null}
+        />
+
+        {/* Assign tool */}
+        <AssignUserTool
+          open={openToolDrawer}
+          onClose={() => onClose()}
+          companyId={user?.company_id ?? null}
+          onWorkUpdated={fetchProducts}
+          setId={selectedTaskId}
+        />
+
+        <Dialog
+          maxWidth={"sm"}
+          fullWidth
+          open={openStoreDialog}
+          onClose={() => setOpenStoreDialog(false)}
+        >
+          <DialogTitle>Select Store</DialogTitle>
+
+          <DialogContent>
+            <Select
+              fullWidth
+              value={selectedStore || ""}
+              onChange={(e) => setSelectedStore(Number(e.target.value))}
+            >
+              {stores.map((store) => (
+                <MenuItem key={store.id} value={store.id}>
+                  {store.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </DialogContent>
+
+          <DialogActions>
+            <Button onClick={() => setOpenStoreDialog(false)}>Cancel</Button>
+
+            <Button
+              variant="contained"
+              disabled={!selectedStore}
+              onClick={() => {
+                if (!selectedStore) return;
+
+                setOpenStoreDialog(false);
+                setOpenProductDrawer(true);
+              }}
+            >
+              Continue
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Box
           sx={{
