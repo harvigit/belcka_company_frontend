@@ -503,12 +503,20 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
 
     const fetchResources = async () => {
         try {
-            const res = await api.get('work-zone/get-resources', {params: {company_id: user.company_id}});
-            setResources({
-                teams: res.data.teams ?? [],
-                trades: res.data.trades ?? [],
-                projects: res.data.projects ?? []
+            const { data } = await api.get('work-zone/get-resources', {
+                params: { company_id: user.company_id }
             });
+
+            const mapped = Object.fromEntries(
+                (data.info || []).map((i: any) => [i.key, i.data])
+            );
+
+            setResources({
+                teams: mapped.teams ?? [],
+                trades: mapped.trades ?? [],
+                projects: mapped.projects ?? []
+            });
+
         } catch (err) {
             console.error('Resources fetch error:', err);
         }
@@ -803,12 +811,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
             {/* ── Filter Dialog ── */}
             <Dialog
                 open={Boolean(filterDialogOpen)}
-                onClick={() => {
-                    const empty = { teams: [], trades: [], projects: [] };
-
-                    setFilters(empty);
-                    setFilterDialogOpen(false);
-                }}
+                onClose={() => setFilterDialogOpen(false)} 
                 fullWidth
                 maxWidth="sm"
                 PaperProps={{
@@ -822,17 +825,12 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     },
                 }}
             >
-                <DialogTitle sx={{pb: 1}}>
+                <DialogTitle sx={{ pb: 1 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center">
                         <Typography fontWeight={700} fontSize={16}>Filters</Typography>
-                        <IconButton 
+                        <IconButton
                             size="small"
-                            onClick={() => {
-                                const empty = { teams: [], trades: [], projects: [] };
-
-                                setFilters(empty);
-                                setFilterDialogOpen(false);
-                            }}
+                            onClick={() => setFilterDialogOpen(false)}
                         >
                             <IconX size={20}/>
                         </IconButton>
@@ -845,18 +843,25 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             select
                             label="Trade"
                             value={tempFilters.trades}
-                            onChange={(e) => setTempFilters({ ...tempFilters, trades: e.target.value as unknown as number[] })}
+                            onChange={(e) => setTempFilters({
+                                ...tempFilters,
+                                trades: typeof e.target.value === 'string'
+                                    ? e.target.value.split(',').map(Number).filter(Boolean)
+                                    : e.target.value as number[]
+                            })}
                             SelectProps={{
                                 multiple: true,
-                                renderValue: (sel) =>
-                                    (sel as number[])
-                                        .map((id) => resources.trades.find((t: any) => t.id == id)?.name ?? id)
+                                renderValue: (selected) =>
+                                    (selected as number[])
+                                        .map((id) => resources.trades.find((t: any) => t.id === id)?.name ?? id)
                                         .join(', '),
                             }}
                             fullWidth
                         >
                             {resources.trades.map((t: any) => (
-                                <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                                <MenuItem key={t.id} value={t.id}>
+                                    {t.name}
+                                </MenuItem>
                             ))}
                         </TextField>
 
@@ -864,18 +869,25 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             select
                             label="Team"
                             value={tempFilters.teams}
-                            onChange={(e) => setTempFilters({ ...tempFilters, teams: e.target.value as unknown as number[] })}
+                            onChange={(e) => setTempFilters({
+                                ...tempFilters,
+                                teams: typeof e.target.value === 'string'
+                                    ? e.target.value.split(',').map(Number).filter(Boolean)
+                                    : e.target.value as number[]
+                            })}
                             SelectProps={{
                                 multiple: true,
-                                renderValue: (sel) =>
-                                    (sel as number[])
-                                        .map((id) => resources.teams.find((t: any) => t.id == id)?.name ?? id)
+                                renderValue: (selected) =>
+                                    (selected as number[])
+                                        .map((id) => resources.teams.find((t: any) => t.id === id)?.name ?? id)
                                         .join(', '),
                             }}
                             fullWidth
                         >
                             {resources.teams.map((t: any) => (
-                                <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                                <MenuItem key={t.id} value={t.id}>
+                                    {t.name}
+                                </MenuItem>
                             ))}
                         </TextField>
 
@@ -883,18 +895,25 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             select
                             label="Project"
                             value={tempFilters.projects}
-                            onChange={(e) => setTempFilters({ ...tempFilters, projects: e.target.value as unknown as number[] })}
+                            onChange={(e) => setTempFilters({
+                                ...tempFilters,
+                                projects: typeof e.target.value === 'string'
+                                    ? e.target.value.split(',').map(Number).filter(Boolean)
+                                    : e.target.value as number[]
+                            })}
                             SelectProps={{
                                 multiple: true,
-                                renderValue: (sel) =>
-                                    (sel as number[])
-                                        .map((id) => resources.projects.find((p: any) => p.id == id)?.name ?? id)
+                                renderValue: (selected) =>
+                                    (selected as number[])
+                                        .map((id) => resources.projects.find((p: any) => p.id === id)?.name ?? id)
                                         .join(', '),
                             }}
                             fullWidth
                         >
                             {resources.projects.map((p: any) => (
-                                <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                                <MenuItem key={p.id} value={p.id}>
+                                    {p.name}
+                                </MenuItem>
                             ))}
                         </TextField>
                     </Stack>
@@ -904,7 +923,6 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     <Button
                         onClick={() => {
                             const empty = { teams: [], trades: [], projects: [] };
-                            
                             setTempFilters(empty);
                             setFilters(empty);
                             setFilterDialogOpen(false);
@@ -914,12 +932,13 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                     >
                         Clear All
                     </Button>
+
                     <Button
                         variant="contained"
                         onClick={() => {
-                            setFilters(tempFilters);
+                            setFilters(tempFilters);                   
                             setFilterDialogOpen(false);
-                            fetchUserLocationsWithFilters(tempFilters);
+                            fetchUserLocationsWithFilters(tempFilters); 
                         }}
                     >
                         Apply Filters

@@ -23,7 +23,6 @@ import SkeletonLoader from '@/app/components/SkeletonLoader';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import Settings from '../setting/settings';
-import {IncidentRow} from '@/app/components/apps/health-safety/report-incident';
 
 export type NearMissRow = {
     id: number;
@@ -865,8 +864,7 @@ const NearMissReporting = ({ companyId }: Props) => {
 
             {/* ── Pagination ── */}
             {filteredData.length > 0 && (
-                <Stack gap={1} pr={3} pt={1} pl={3} pb={1} alignItems="center"
-                       direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between">
+                <Stack gap={1} pr={3} pt={1} pl={3} pb={1} alignItems="center" direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between">
                     <Typography color="textSecondary" className="f-14">
                         {table.getPrePaginationRowModel().rows.length} Rows
                     </Typography>
@@ -890,8 +888,7 @@ const NearMissReporting = ({ companyId }: Props) => {
             )}
 
             {/* ── Create / Edit Drawer ── */}
-            <Drawer anchor="right" open={drawerOpen} onClose={resetAndClose}
-                    PaperProps={{ sx: { width: 520, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 } }}>
+            <Drawer anchor="right" open={drawerOpen} onClose={resetAndClose} PaperProps={{ sx: { width: 520, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 } }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <Box sx={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -911,7 +908,8 @@ const NearMissReporting = ({ companyId }: Props) => {
                         <Stack spacing={3}>
                             <Box>
                                 <Typography variant="subtitle2" mb={0.75} fontWeight={600}>
-                                    Hazard Type <Box component="span" color="error.main">*</Box>
+                                    Hazard Type
+                                    <Box component="span" color="error.main">*</Box>
                                 </Typography>
                                 <Autocomplete
                                     options={hazardOptions}
@@ -949,8 +947,12 @@ const NearMissReporting = ({ companyId }: Props) => {
                                     <Stack spacing={1} mt={2}>
                                         {existingCount > 0 && (
                                             <>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={700}
-                                                            sx={{ textTransform: 'uppercase', letterSpacing: 0.5, px: 0.5 }}>
+                                                <Typography 
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    fontWeight={700} 
+                                                    sx={{ textTransform: 'uppercase', letterSpacing: 0.5, px: 0.5 }}
+                                                >
                                                     Saved Files ({existingCount})
                                                 </Typography>
                                                 {attachments.filter(a => a.source === 'existing').map(af => (
@@ -960,8 +962,12 @@ const NearMissReporting = ({ companyId }: Props) => {
                                         )}
                                         {newCount > 0 && (
                                             <>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={700}
-                                                            sx={{ textTransform: 'uppercase', letterSpacing: 0.5, px: 0.5, mt: existingCount > 0 ? 1 : 0 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    fontWeight={700}
+                                                    sx={{ textTransform: 'uppercase', letterSpacing: 0.5, px: 0.5, mt: existingCount > 0 ? 1 : 0 }}
+                                                >
                                                     New Files ({newCount})
                                                 </Typography>
                                                 {attachments.filter(a => a.source === 'new').map(af => (
@@ -972,8 +978,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                                     </Stack>
                                 )}
                                 {attachments.length === 0 && (
-                                    <Typography variant="caption" color="text.secondary"
-                                                sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}>
                                         No attachments added yet
                                     </Typography>
                                 )}
@@ -992,8 +997,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                             >
                                 {submitting ? (isEditing ? 'Updating…' : 'Submitting…') : (isEditing ? 'Update Report' : 'Submit Report')}
                             </Button>
-                            <Button variant="outlined" onClick={resetAndClose} disabled={submitting}
-                                    sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}>
+                            <Button variant="outlined" onClick={resetAndClose} disabled={submitting} sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}>
                                 Cancel
                             </Button>
                         </Stack>
@@ -1042,9 +1046,13 @@ const NearMissReporting = ({ companyId }: Props) => {
 
                     {/* Footer */}
                     <Box sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-                        <Button fullWidth variant="outlined" size="large"
-                                onClick={() => setAttachmentDrawerOpen(false)}
-                                sx={{ textTransform: 'none', fontWeight: 600 }}>
+                        <Button
+                            fullWidth 
+                            variant="outlined"
+                            size="large"
+                            onClick={() => setAttachmentDrawerOpen(false)}
+                            sx={{ textTransform: 'none', fontWeight: 600 }}
+                        >
                             Close
                         </Button>
                     </Box>
@@ -1052,8 +1060,7 @@ const NearMissReporting = ({ companyId }: Props) => {
             </Drawer>
 
             {/* ── Delete Dialog ── */}
-            <Dialog open={deleteDialogOpen} onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
-                    PaperProps={{ sx: { borderRadius: '14px' } }}>
+            <Dialog open={deleteDialogOpen} onClose={() => !deleteLoading && setDeleteDialogOpen(false)} PaperProps={{ sx: { borderRadius: '14px' } }}>
                 <DialogTitle sx={{ fontWeight: 700 }}>Delete Near Miss Report?</DialogTitle>
                 <DialogContent>
                     <Typography color="text.secondary">

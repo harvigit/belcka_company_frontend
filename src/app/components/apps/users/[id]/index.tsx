@@ -158,45 +158,54 @@ const TablePagination = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const fetchData = async () => {
-    if (!userId) return;
-    setLoading(true);
-    try {
-      const res = await api.get(`user/get-user-lists?user_id=${userId}`);
-      if (res.data?.info) {
-        const data = res.data.info[0];
-        setData(res.data.info[0]);
-        setEnabled(data?.is_check_in ?? false);
+    const fetchData = async () => {
+        if (!userId) return;
+        setLoading(true);
+        try {
+            const res = await api.get(`user/get-user-lists?user_id=${userId}`);
 
-        const ext = data?.extension || "";
-        const number = data?.phone || "";
-        const userInfo = data;
-        setOriginalPhone({
-          phone: userInfo.phone || "",
-          extension: userInfo.extension || "",
-        });
+            if (!res.data?.IsSuccess) {
+                router.replace('/apps/users/list');
+                return;
+            }
 
-        setFormData({
-          first_name: userInfo.first_name || "",
-          last_name: userInfo.last_name || "",
-          email: userInfo.email || "",
-          extension: ext,
-          phone: number,
-          user_code: userInfo.user_code,
-          expired_at: userInfo.expired_at
-            ? userInfo.expired_at.split("T")[0]
-            : "",
-        });
-        if (ext && number) {
-          const combined = ext.replace("+", "") + number;
-          setPhone(combined);
+            if (res.data?.info) {
+                const data = res.data.info[0];
+                setData(res.data.info[0]);
+                setEnabled(data?.is_check_in ?? false);
+
+                const ext = data?.extension || '';
+                const number = data?.phone || '';
+                const userInfo = data;
+                setOriginalPhone({
+                    phone: userInfo.phone || '',
+                    extension: userInfo.extension || '',
+                });
+
+                setFormData({
+                    first_name: userInfo.first_name || '',
+                    last_name: userInfo.last_name || '',
+                    email: userInfo.email || '',
+                    extension: ext,
+                    phone: number,
+                    user_code: userInfo.user_code,
+                    expired_at: userInfo.expired_at ? userInfo.expired_at.split('T')[0] : '',
+                });
+                if (ext && number) {
+                    const combined = ext.replace('+', '') + number;
+                    setPhone(combined);
+                }
+            }
+        } catch (err: any) {
+            const message = err?.response?.data?.message;
+            if (message === 'Access denied.') {
+                router.replace('/apps/users/list');
+                return;
+            }
+            console.error('Failed to fetch users', err);
         }
-      }
-    } catch (err) {
-      console.error("Failed to fetch users", err);
-    }
-    setLoading(false);
-  };
+        setLoading(false);
+    };
 
   useEffect(() => {
     fetchData();
