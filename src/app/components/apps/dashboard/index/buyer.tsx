@@ -5,6 +5,15 @@ import {
   Typography,
   Box,
   CircularProgress,
+  IconButton,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Autocomplete,
+  DialogActions,
+  Button,
 } from "@mui/material";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -18,12 +27,15 @@ import {
   IconHomeDollar,
   IconMapPinCheck,
   IconNotes,
+  IconReportAnalytics,
   IconUserCircle,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { IconChartBar } from "@tabler/icons-react";
 import SalesOverview from "@/app/components/dashboard/TheSalesOverview";
 import LowStockProduct from "@/app/components/dashboard/TheProductPerformance";
+import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
 const BuyerDashboard = () => {
   const session = useSession();
@@ -33,11 +45,172 @@ const BuyerDashboard = () => {
   const [sales, setSales] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [suppliersData, setSuppliersData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const borderColor = theme.palette.divider;
   const [currency, setCurrency] = useState("");
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(today.getDate() - today.getDay() + 1);
+
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+
+  // Load from localStorage or use defaults
+  const getInitialDates = () => {
+    return {
+      startDate: defaultStart,
+      endDate: defaultEnd,
+    };
+  };
+
+  const initialDates = getInitialDates();
+  ("");
+  const [startDate, setStartDate] = useState<Date | null>(
+    initialDates.startDate,
+  );
+  const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
+
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [stores, setStores] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
+  const [selectedItems, setSelectedItems] = useState<any[]>([]);
+  const [selectedReportType, setSelectedReportType] = useState("");
+
+  const REPORT_DATA_MAP: Record<string, any[]> = {
+    project: projects,
+    address: addresses,
+    store: stores,
+    supplier: suppliers,
+    user: users,
+    trade: trades,
+    team: teams,
+    item: items,
+  };
+
+  const REPORT_TYPES = [
+    { label: "Project Report", value: "project" },
+    { label: "Address Report", value: "address" },
+    { label: "Store Report", value: "store" },
+    { label: "Supplier Report", value: "supplier" },
+    { label: "User Report", value: "user" },
+    { label: "Trade Report", value: "trade" },
+    { label: "Team Report", value: "team" },
+    { label: "Item Report", value: "item" },
+  ];
+
+  const ALL_OPTION = { id: "all", name: "All" };
+
+  const optionsWithAll = [
+    ALL_OPTION,
+    ...(REPORT_DATA_MAP[selectedReportType] || []),
+  ];
+
+  const handleChange = (event: any, newValue: any) => {
+    if (newValue.some((item: any) => item.id === "all")) {
+      setSelectedItems([ALL_OPTION]);
+    } else {
+      setSelectedItems(newValue);
+    }
+  };
+
+  const handleMenuClick = (report: any) => {
+    setDialogTitle(report.label);
+    setSelectedReportType(report.value);
+
+    setSelectedItems([ALL_OPTION]);
+
+    setOpenDialog(true);
+    handleClose();
+  };
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleDateRangeChange = (range: {
+    from: Date | null;
+    to: Date | null;
+  }) => {
+    if (range.from && range.to) {
+      setStartDate(range.from);
+      setEndDate(range.to);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const res = await api.get(`get-modules?company_id=${user.company_id}`);
+      if (res.data) {
+        setProjects(res.data.projects);
+        setAddresses(res.data.addresses);
+        setStores(res.data.stores);
+        setSuppliers(res.data.suppliers);
+        setUsers(res.data.users);
+        setTrades(res.data.trades);
+        setTeams(res.data.teams);
+        setItems(res.data.items);
+      }
+    } catch (err) {
+      console.error("Failed to fetch projects", err);
+    }
+  };
+  useEffect(() => {
+    if (user.company_id) {
+      fetchProjects();
+    }
+  }, [user.company_id, user.id]);
+
+  const handleExport = async () => {
+    const allOptions = REPORT_DATA_MAP[selectedReportType] || [];
+
+    let idsArray = [];
+
+    if (selectedItems.some((item) => item.id === "all")) {
+      idsArray = allOptions.map((item) => item.id);
+    } else {
+      idsArray = selectedItems.map((item) => item.id);
+    }
+
+    const module_ids = idsArray.join(",");
+    const response = await api.get(
+      `export-reports?company_id=${user.company_id}&start_date=${startDate}&end_date=${endDate}&report_type=${selectedReportType}&module_ids=${module_ids}`,
+      {
+        responseType: "blob",
+      },
+    );
+
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `report_export.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
 
   const fetchOverview = async () => {
     try {
@@ -48,7 +221,6 @@ const BuyerDashboard = () => {
 
       if (res.data.IsSuccess) {
         setProducts(res.data.low_stock_product);
-        const data = res.data.info;
       }
     } catch (error) {
       console.error(error);
@@ -103,7 +275,7 @@ const BuyerDashboard = () => {
       if (res.data.IsSuccess) {
         const data = res.data;
 
-        setSuppliers([
+        setSuppliersData([
           {
             btnText: "primary.main",
             title: "suppliers",
@@ -134,255 +306,362 @@ const BuyerDashboard = () => {
     fetchResorces();
   }, [user.company_id]);
   return (
-    <Grid container spacing={2}>
-      <Grid size={{ xs: 8 }}>
-        <Card
+    <Box
+      mt={0}
+      display={"flex"}
+      flexDirection={"column"}
+      alignContent={"flex-end"}
+      alignItems={"flex-end"}
+    >
+      <IconButton
+        id="basic-button"
+        aria-controls={openMenu ? "basic-menu" : undefined}
+        aria-haspopup="true"
+        aria-expanded={openMenu ? "true" : undefined}
+        onClick={handleClick}
+      >
+        <IconReportAnalytics size={30} stroke={1.5} color="#629FF4" />
+      </IconButton>
+      <Menu
+        id="basic-menu"
+        anchorEl={anchorEl}
+        open={openMenu}
+        onClose={handleClose}
+        slotProps={{
+          list: {
+            "aria-labelledby": "basic-button",
+          },
+        }}
+      >
+        {REPORT_TYPES.map((report) => (
+          <MenuItem key={report.value} onClick={() => handleMenuClick(report)}>
+            <Link
+              href="#"
+              style={{
+                width: "100%",
+                color: "#11142D",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {report.label}
+            </Link>
+          </MenuItem>
+        ))}
+      </Menu>
+
+      <Dialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { position: "fixed", top: "20%", m: 0 } }}
+      >
+        <DialogTitle>{dialogTitle}</DialogTitle>
+
+        <DialogContent
           sx={{
-            borderRadius: "15px",
-            boxShadow: (theme) => theme.shadows[9],
+            display: "block",
+            justifyContent: "space-between",
+            alignContent: "center",
+            alignItems: "flex-end",
           }}
         >
-          <Typography pl={4} pt={2} variant="h3">
-            Delivery details
-          </Typography>
-
-          <Grid container>
-            {/* 1 */}
-            <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
-              <CardContent
-                sx={{
-                  borderRight: {
-                    xs: "0",
-                    sm: `1px solid ${borderColor}`,
-                  },
-                  p: 4,
-                  textAlign: "center",
-                }}
-              >
-                <IconCoins
-                  stroke={1.5}
-                  size={40}
-                  color="#629FF4"
-                  style={{
-                    backgroundColor: "#E8F1FD",
-                    padding: 6,
-                    borderRadius: 6,
-                  }}
-                />
-
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  mt={3}
-                  color="text.secondary"
-                >
-                  <Typography variant="h3">40</Typography>
-                  <Typography variant="h6">Will be delivery</Typography>
-                </Box>
-              </CardContent>
-            </Grid>
-
-            {/* 2 */}
-            <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
-              <CardContent
-                sx={{
-                  borderRight: {
-                    xs: "0",
-                    sm: `1px solid ${borderColor}`,
-                  },
-                  p: 4,
-                  textAlign: "center",
-                }}
-              >
-                <IconChartLine
-                  size={40}
-                  color="#817AF3"
-                  style={{
-                    backgroundColor: "#ECEAFF",
-                    padding: 6,
-                    borderRadius: 6,
-                  }}
-                />
-
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  mt={3}
-                  color="text.secondary"
-                >
-                  <Typography variant="h3">5</Typography>
-                  <Typography variant="h6">In Transit</Typography>
-                </Box>
-              </CardContent>
-            </Grid>
-
-            {/* 3 */}
-            <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
-              <CardContent
-                sx={{
-                  borderRight: {
-                    xs: "0",
-                    sm: `1px solid ${borderColor}`,
-                  },
-                  p: 4,
-                  textAlign: "center",
-                }}
-              >
-                <IconChartBar
-                  size={40}
-                  color="#DBA362"
-                  style={{
-                    backgroundColor: "#FFEEDB",
-                    padding: 6,
-                    borderRadius: 6,
-                  }}
-                />
-
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  mt={3}
-                  color="text.secondary"
-                >
-                  <Typography variant="h3">20</Typography>
-                  <Typography variant="h6">Delivered</Typography>
-                </Box>
-              </CardContent>
-            </Grid>
-
-            {/* 4 */}
-            <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
-              <CardContent
-                sx={{
-                  borderRight: {
-                    xs: "0",
-                    sm: `1px solid ${borderColor}`,
-                  },
-                  p: 4,
-                  textAlign: "center",
-                }}
-              >
-                <IconHomeDollar
-                  size={40}
-                  color="#58D365"
-                  style={{
-                    backgroundColor: "#EBFFED",
-                    padding: 6,
-                    borderRadius: 6,
-                  }}
-                />
-
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  mt={3}
-                  color="text.secondary"
-                >
-                  <Typography variant="h3">
-                    {currency ? currency : "£"}17,432
-                  </Typography>
-                  <Typography variant="h6">Cost</Typography>
-                </Box>
-              </CardContent>
-            </Grid>
-          </Grid>
-        </Card>
-      </Grid>
-
-      <Grid size={{ xs: 4 }}>
-        <Card
-          sx={{
-            borderRadius: "15px",
-            boxShadow: (theme) => theme.shadows[9],
-          }}
-        >
-          <Box>
-            <Typography variant="h3" pl={4} pt={2}>
-              Inventory Summary
-            </Typography>
+          <Box className="report_range">
+            <DateRangePickerBox
+              from={startDate}
+              to={endDate}
+              onChange={handleDateRangeChange}
+              payrollCycle={"2_week"}
+            />
           </Box>
 
-          <Grid container>
-            {inventory.map((topcard) => (
-              <Grid
-                key={topcard.digits}
-                size={{
-                  xs: 6,
-                  lg: 6,
-                  sm: 6,
-                }}
-              >
-                {!loading ? (
-                  <CardContent
-                    sx={{
-                      borderRight: {
-                        xs: "0",
-                        sm: `1px solid ${borderColor}`,
-                      },
-                      p: 4,
-                      textAlign: "center",
-                    }}
-                  >
-                    {topcard.title == "order_in_hands" ? (
-                      <IconBox
-                        size={40}
-                        color="#DBA362"
-                        style={{
-                          backgroundColor: "#FFEEDB",
-                          padding: 6,
-                          borderRadius: 6,
-                        }}
-                      />
-                    ) : (
-                      <IconMapPinCheck
-                        size={40}
-                        color="#817AF399"
-                        style={{
-                          backgroundColor: "#ECEAFF",
-                          padding: 6,
-                          borderRadius: 6,
-                        }}
-                      />
-                    )}
-                    <Box
-                      display="block"
-                      alignItems="center"
-                      color="text.secondary"
-                      mt={0.5}
-                    >
-                      <Typography variant="h3" fontWeight="400">
-                        {topcard.digits}
-                      </Typography>
+          <Autocomplete
+            fullWidth
+            multiple
+            className="report_selection"
+            options={optionsWithAll}
+            value={selectedItems}
+            onChange={handleChange}
+            sx={{ mt: 2 }}
+            getOptionLabel={(option) => option?.name || ""}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => (
+              <CustomTextField
+                {...params}
+                placeholder={
+                  selectedItems.length > 0 ? "" : `Select ${selectedReportType}`
+                }
+              />
+            )}
+          />
+        </DialogContent>
 
-                      <Typography
-                        color="textSecondary"
-                        variant="h6"
-                        fontWeight="400"
-                      >
-                        {topcard.text2}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                ) : (
-                  <>
-                    {" "}
-                    <CircularProgress
-                      size={30}
-                      color="primary"
-                      sx={{ ml: 5 }}
-                    />
-                  </>
-                )}
+        <DialogActions>
+          <Button color="error" onClick={() => setOpenDialog(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleExport();
+              setOpenDialog(false);
+            }}
+          >
+            Export
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 8 }}>
+          <Card
+            sx={{
+              borderRadius: "15px",
+              boxShadow: (theme) => theme.shadows[9],
+            }}
+          >
+            <Typography pl={4} pt={2} variant="h3">
+              Delivery details
+            </Typography>
+
+            <Grid container>
+              {/* 1 */}
+              <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
+                <CardContent
+                  sx={{
+                    borderRight: {
+                      xs: "0",
+                      sm: `1px solid ${borderColor}`,
+                    },
+                    p: 4,
+                    textAlign: "center",
+                  }}
+                >
+                  <IconCoins
+                    stroke={1.5}
+                    size={40}
+                    color="#629FF4"
+                    style={{
+                      backgroundColor: "#E8F1FD",
+                      padding: 6,
+                      borderRadius: 6,
+                    }}
+                  />
+
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mt={3}
+                    color="text.secondary"
+                  >
+                    <Typography variant="h3">40</Typography>
+                    <Typography variant="h6">Will be delivery</Typography>
+                  </Box>
+                </CardContent>
               </Grid>
-            ))}
-          </Grid>
-        </Card>
-      </Grid>
-      {/* <Grid size={{ xs: 8 }}>
+
+              {/* 2 */}
+              <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
+                <CardContent
+                  sx={{
+                    borderRight: {
+                      xs: "0",
+                      sm: `1px solid ${borderColor}`,
+                    },
+                    p: 4,
+                    textAlign: "center",
+                  }}
+                >
+                  <IconChartLine
+                    size={40}
+                    color="#817AF3"
+                    style={{
+                      backgroundColor: "#ECEAFF",
+                      padding: 6,
+                      borderRadius: 6,
+                    }}
+                  />
+
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mt={3}
+                    color="text.secondary"
+                  >
+                    <Typography variant="h3">5</Typography>
+                    <Typography variant="h6">In Transit</Typography>
+                  </Box>
+                </CardContent>
+              </Grid>
+
+              {/* 3 */}
+              <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
+                <CardContent
+                  sx={{
+                    borderRight: {
+                      xs: "0",
+                      sm: `1px solid ${borderColor}`,
+                    },
+                    p: 4,
+                    textAlign: "center",
+                  }}
+                >
+                  <IconChartBar
+                    size={40}
+                    color="#DBA362"
+                    style={{
+                      backgroundColor: "#FFEEDB",
+                      padding: 6,
+                      borderRadius: 6,
+                    }}
+                  />
+
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mt={3}
+                    color="text.secondary"
+                  >
+                    <Typography variant="h3">20</Typography>
+                    <Typography variant="h6">Delivered</Typography>
+                  </Box>
+                </CardContent>
+              </Grid>
+
+              {/* 4 */}
+              <Grid size={{ xs: 6, sm: 3, lg: 3 }}>
+                <CardContent
+                  sx={{
+                    borderRight: {
+                      xs: "0",
+                      sm: `1px solid ${borderColor}`,
+                    },
+                    p: 4,
+                    textAlign: "center",
+                  }}
+                >
+                  <IconHomeDollar
+                    size={40}
+                    color="#58D365"
+                    style={{
+                      backgroundColor: "#EBFFED",
+                      padding: 6,
+                      borderRadius: 6,
+                    }}
+                  />
+
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mt={3}
+                    color="text.secondary"
+                  >
+                    <Typography variant="h3">
+                      {currency ? currency : "£"}17,432
+                    </Typography>
+                    <Typography variant="h6">Cost</Typography>
+                  </Box>
+                </CardContent>
+              </Grid>
+            </Grid>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 4 }}>
+          <Card
+            sx={{
+              borderRadius: "15px",
+              boxShadow: (theme) => theme.shadows[9],
+            }}
+          >
+            <Box>
+              <Typography variant="h3" pl={4} pt={2}>
+                Inventory Summary
+              </Typography>
+            </Box>
+
+            <Grid container>
+              {inventory.map((topcard) => (
+                <Grid
+                  key={topcard.digits}
+                  size={{
+                    xs: 6,
+                    lg: 6,
+                    sm: 6,
+                  }}
+                >
+                  {!loading ? (
+                    <CardContent
+                      sx={{
+                        borderRight: {
+                          xs: "0",
+                          sm: `1px solid ${borderColor}`,
+                        },
+                        p: 4,
+                        textAlign: "center",
+                      }}
+                    >
+                      {topcard.title == "order_in_hands" ? (
+                        <IconBox
+                          size={40}
+                          color="#DBA362"
+                          style={{
+                            backgroundColor: "#FFEEDB",
+                            padding: 6,
+                            borderRadius: 6,
+                          }}
+                        />
+                      ) : (
+                        <IconMapPinCheck
+                          size={40}
+                          color="#817AF399"
+                          style={{
+                            backgroundColor: "#ECEAFF",
+                            padding: 6,
+                            borderRadius: 6,
+                          }}
+                        />
+                      )}
+                      <Box
+                        display="block"
+                        alignItems="center"
+                        color="text.secondary"
+                        mt={0.5}
+                      >
+                        <Typography variant="h3" fontWeight="400">
+                          {topcard.digits}
+                        </Typography>
+
+                        <Typography
+                          color="textSecondary"
+                          variant="h6"
+                          fontWeight="400"
+                        >
+                          {topcard.text2}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  ) : (
+                    <>
+                      {" "}
+                      <CircularProgress
+                        size={30}
+                        color="primary"
+                        sx={{ ml: 5 }}
+                      />
+                    </>
+                  )}
+                </Grid>
+              ))}
+            </Grid>
+          </Card>
+        </Grid>
+        {/* <Grid size={{ xs: 8 }}>
         <Card
           sx={{
             borderRadius: "15px",
@@ -473,114 +752,115 @@ const BuyerDashboard = () => {
         </Card>
       </Grid> */}
 
-      <Grid size={{ xs: 8 }}>
-        <SalesOverview companyId={user.company_id} />
-      </Grid>
-      <Grid size={{ xs: 4 }}>
-        <Grid size={{ xs: 12 }}>
-          <Card
-            sx={{
-              mb: 2,
-              borderRadius: "15px",
-              boxShadow: (theme) => theme.shadows[9],
-            }}
-          >
-            <Box
-              display={"flex"}
-              justifyContent={"space-between"}
-              alignItems={"center"}
-              width={"95%"}
+        <Grid size={{ xs: 8 }}>
+          <SalesOverview companyId={user.company_id} />
+        </Grid>
+        <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 12 }}>
+            <Card
+              sx={{
+                mb: 2,
+                borderRadius: "15px",
+                boxShadow: (theme) => theme.shadows[9],
+              }}
             >
-              <Typography variant="h3" pl={4} pt={2}>
-                Suppliers
-              </Typography>
-              <Link
-                href={"/apps/suppliers/list"}
-                style={{ color: "#1E4DB7", paddingTop: 16 }}
+              <Box
+                display={"flex"}
+                justifyContent={"space-between"}
+                alignItems={"center"}
+                width={"95%"}
               >
-                See all
-              </Link>
-            </Box>
-            <Grid container>
-              {loading ? (
-                <Box width={"100%"} textAlign={"center"}>
-                  <CircularProgress
-                    size={30}
-                    color="primary"
-                    sx={{ m: "auto" }}
-                  />
-                </Box>
-              ) : (
-                suppliers.map((topcard,index) => (
-                  <Grid
-                    key={index}
-                    size={{
-                      xs: 6,
-                      lg: 6,
-                      sm: 6,
-                    }}
-                  >
-                    <CardContent
-                      sx={{
-                        borderRight: {
-                          xs: "0",
-                          sm: `1px solid ${borderColor}`,
-                        },
-                        p: 4,
-                        textAlign: "center",
+                <Typography variant="h3" pl={4} pt={2}>
+                  Suppliers
+                </Typography>
+                <Link
+                  href={"/apps/suppliers/list"}
+                  style={{ color: "#1E4DB7", paddingTop: 16 }}
+                >
+                  See all
+                </Link>
+              </Box>
+              <Grid container>
+                {loading ? (
+                  <Box width={"100%"} textAlign={"center"}>
+                    <CircularProgress
+                      size={30}
+                      color="primary"
+                      sx={{ m: "auto" }}
+                    />
+                  </Box>
+                ) : (
+                  suppliersData.map((topcard, index) => (
+                    <Grid
+                      key={index}
+                      size={{
+                        xs: 6,
+                        lg: 6,
+                        sm: 6,
                       }}
                     >
-                      {topcard.title == "suppliers" ? (
-                        <IconUserCircle
-                          size={40}
-                          color="#24B8F1"
-                          style={{
-                            backgroundColor: "#E5F7FD",
-                            padding: 6,
-                            borderRadius: 6,
-                          }}
-                        />
-                      ) : (
-                        <IconNotes
-                          size={40}
-                          color="#817AF399"
-                          style={{
-                            backgroundColor: "#ECEAFF",
-                            padding: 6,
-                            borderRadius: 6,
-                          }}
-                        />
-                      )}
-                      <Box
-                        display="block"
-                        alignItems="center"
-                        mt={1}
-                        color="text.secondary"
+                      <CardContent
+                        sx={{
+                          borderRight: {
+                            xs: "0",
+                            sm: `1px solid ${borderColor}`,
+                          },
+                          p: 4,
+                          textAlign: "center",
+                        }}
                       >
-                        <Typography variant="h3" fontWeight="400">
-                          {topcard.digits}
-                        </Typography>
-
-                        <Typography
-                          color="textSecondary"
-                          variant="h6"
-                          fontWeight="400"
+                        {topcard.title == "suppliers" ? (
+                          <IconUserCircle
+                            size={40}
+                            color="#24B8F1"
+                            style={{
+                              backgroundColor: "#E5F7FD",
+                              padding: 6,
+                              borderRadius: 6,
+                            }}
+                          />
+                        ) : (
+                          <IconNotes
+                            size={40}
+                            color="#817AF399"
+                            style={{
+                              backgroundColor: "#ECEAFF",
+                              padding: 6,
+                              borderRadius: 6,
+                            }}
+                          />
+                        )}
+                        <Box
+                          display="block"
+                          alignItems="center"
+                          mt={1}
+                          color="text.secondary"
                         >
-                          {topcard.text2}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Grid>
-                ))
-              )}
-            </Grid>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <LowStockProduct products={products} loading={loading} />
+                          <Typography variant="h3" fontWeight="400">
+                            {topcard.digits}
+                          </Typography>
+
+                          <Typography
+                            color="textSecondary"
+                            variant="h6"
+                            fontWeight="400"
+                          >
+                            {topcard.text2}
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Grid>
+                  ))
+                )}
+              </Grid>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <LowStockProduct products={products} loading={loading} />
+          </Grid>
         </Grid>
       </Grid>
-    </Grid>
+    </Box>
   );
 };
 
