@@ -80,7 +80,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
 
       if (setData) {
         setProductId(setData.product_id);
-
+        setStoreId(setData.store_id);
         const preSelected = setData.trades.map((t: any) => t.trade_id);
 
         setSelectedIds(preSelected);
