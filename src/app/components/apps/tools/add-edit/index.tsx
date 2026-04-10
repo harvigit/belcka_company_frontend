@@ -227,7 +227,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
           <Autocomplete
             fullWidth
             size="small"
-            options={products}
+            options={products.filter((item) => item.status !== 4)}
             disabled={setId ? true : false}
             value={
               products.find((t: any) => t.id === Number(productId)) ?? null

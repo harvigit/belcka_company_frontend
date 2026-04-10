@@ -172,7 +172,7 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
             <IconArrowLeft />
           </IconButton>
           <Typography variant="h6" fontWeight={700}>
-            {setId ? "Edit Tools" : "Assign tool"}
+            {setId ? "Edit Assign tool" : "Assign tool"}
           </Typography>
         </Box>
 
