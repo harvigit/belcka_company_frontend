@@ -220,27 +220,23 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                           gap={1}
                           alignItems="center"
                         >
-                          {product.order_status == hireStatus.REQUEST && (
-                            <>
-                              <Box
-                                display={"flex"}
-                                alignItems={"center"}
-                                justifyContent={"space-between"}
-                                sx={{ p: 1 }}
-                              >
-                                <Typography fontWeight={500}>
-                                  {order.from_date} - {order.to_date}
-                                </Typography>
-                                <Typography
-                                  fontWeight={500}
-                                  color="textSecondary"
-                                >
-                                  {order.user_name}
-                                </Typography>
-                              </Box>
-                              <Divider />
-                            </>
-                          )}
+                          <Typography fontWeight={500} textAlign={"end"}>
+                            {order.user_name}
+                          </Typography>
+                          <Box
+                            display={"block "}
+                            alignItems={"center"}
+                            justifyContent={"space-between"}
+                            sx={{ p: 1 }}
+                          >
+                            <Typography color="textSecondary">
+                              Hire: {order.from_date_formate} -{" "}
+                              {order.from_date_formate}
+                            </Typography>
+                            <Typography color="textSecondary">
+                              Order Date: {order.date}
+                            </Typography>
+                          </Box>
                           <Box
                             display="flex"
                             gap={1}
@@ -376,23 +372,57 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                       sx={{ top: -8, position: "absolute" }}
                       flexWrap="wrap"
                     >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          px: 1.2,
-                          py: 0.2,
-                          borderRadius: "12px",
-                          bgcolor: "#FF7F00",
-                          color: "#fff",
-                          fontSize: "0.75rem",
-                          fontWeight: 500,
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        Order: #{work.order_id}
+                      {work.order_status == hireStatus.AVAILABLE ? (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            px: 1.2,
+                            py: 0.2,
+                            borderRadius: "12px",
+                            bgcolor: work.status_color,
+                            color: "#fff",
+                            fontSize: "0.75rem",
+                            fontWeight: 500,
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {work.stock_status}
+                        </Typography>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            px: 1.2,
+                            py: 0.2,
+                            borderRadius: "12px",
+                            bgcolor: "#FF7F00",
+                            color: "#fff",
+                            fontSize: "0.75rem",
+                            fontWeight: 500,
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          Order: #{work.order_id}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Typography fontWeight={500} textAlign={"end"}>
+                      {work.user_name}
+                    </Typography>
+                    <Box
+                      display={"block "}
+                      alignItems={"center"}
+                      justifyContent={"space-between"}
+                      sx={{ p: 1 }}
+                    >
+                      <Typography color="textSecondary">
+                        Hire: {work.from_date_formate} -{" "}
+                        {work.from_date_formate}
+                      </Typography>
+                      <Typography color="textSecondary">
+                        Order Date: {work.date}
                       </Typography>
                     </Box>
-
                     <Box display="block" gap={1} alignItems="center">
                       <Box display="flex" gap={1} alignItems="center">
                         <Image
@@ -447,27 +477,7 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                                   Return
                                 </Button>
                               )}
-                              {work.order_status === hireStatus.CANCELLED && (
-                                <Typography
-                                  sx={{
-                                    px: 1.6,
-                                    py: 0.7,
-                                    borderRadius: "18px",
-                                    border: 2,
-                                    bgcolor: "#FF0000",
-                                    color: "#fff",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 500,
-                                    textTransform: "capitalize",
-                                    "&:hover": {
-                                      bgcolor: "#FF0000",
-                                      color: "#fff",
-                                    },
-                                  }}
-                                >
-                                  Cancel
-                                </Typography>
-                              )}
+
                               {work.order_status === hireStatus.IN_SERVICE && (
                                 <Box display="flex" gap={1}>
                                   <Button
@@ -533,9 +543,15 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                             {work.supplier_name}
                           </Typography>
                           {work.approve_by_user_name &&
-                            work.order_status !== hireStatus.CANCELLED && (
+                            work.order_status == hireStatus.HIRED && (
                               <Typography variant="body2">
                                 Approved by: {work.approve_by_user_name}
+                              </Typography>
+                            )}
+                          {work.approve_by_user_name &&
+                            work.order_status == hireStatus.IN_SERVICE && (
+                              <Typography variant="body2">
+                                Qty: {work.available_qty}
                               </Typography>
                             )}
                         </Box>
