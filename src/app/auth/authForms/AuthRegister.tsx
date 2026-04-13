@@ -13,20 +13,18 @@ import {
   Tab,
   TextField,
   Autocomplete,
-  IconButton,
   Paper,
-  Tooltip,
 } from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
-import { IconX } from "@tabler/icons-react";
 import { Grid } from "@mui/system";
+import Cookies from "js-cookie";
 
 const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   const [preview, setPreview] = useState<string | null>(null);
@@ -173,8 +171,15 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
   // register new user
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { first_name, last_name, extension, nationalPhone, otp, user_image ,email} =
-      registerData;
+    const {
+      first_name,
+      last_name,
+      extension,
+      nationalPhone,
+      otp,
+      user_image,
+      email,
+    } = registerData;
 
     if (!user_image)
       return toast.error("Please select your profile picture !!");
@@ -400,6 +405,13 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
     }
   }, [isCodeVerified]);
 
+  const userLogout = async () => {
+    toast.success("Logged out successfully!!");
+    Cookies.remove(`user_store_${user.id}_${user.company_id}`);
+    await signOut({ callbackUrl: "/auth" });
+    return loading;
+  };
+
   return (
     <>
       <form onSubmit={handleRegister} style={{ width: "100%" }}>
@@ -469,7 +481,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                   width: "100%",
                   borderRadius: "4px",
                   borderColor: "#c0d1dc",
-                  backgroundColor:"transparent"
+                  backgroundColor: "transparent",
                 }}
                 containerStyle={{ width: "100%" }}
                 enableSearch
@@ -562,33 +574,19 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
         maxWidth="sm"
       >
         <DialogContent>
-          <Box display="flex" justifyContent="space-between">
+          <Box display="flex" justifyContent="space-between" alignItems={"center"} mb={2}>
             <Tabs
               value={tabValue}
               onChange={(e, newVal) => setTabValue(newVal)}
               centered
-              sx={{ mb: 3 }}
             >
               <Tab label="Join Company" />
               <Tab label="Create Company" />
             </Tabs>
-            <Tooltip
-              placement="top"
-              title={
-                canCloseModal ? "Close" : "Complete company setup to close"
-              }
-            >
-              <span>
-                <IconButton
-                  onClick={() => {
-                    if (canCloseModal) setOpenCompanyModal(false);
-                  }}
-                  disabled={!canCloseModal}
-                >
-                  <IconX />
-                </IconButton>
-              </span>
-            </Tooltip>
+
+            <Button onClick={userLogout} color="primary" sx={{ height: "10%"}}>
+              Exit
+            </Button>
           </Box>
 
           {tabValue === 0 && (
@@ -754,7 +752,11 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
                         extension: `+${country.dialCode}`,
                       })
                     }
-                    inputStyle={{ width: "100%", height: "47px" ,backgroundColor:"transparent"}}
+                    inputStyle={{
+                      width: "100%",
+                      height: "47px",
+                      backgroundColor: "transparent",
+                    }}
                     enableSearch
                     inputProps={{ required: true }}
                   />

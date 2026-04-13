@@ -8,6 +8,7 @@ import {
   Tabs,
   Tab,
   Button,
+  Divider,
 } from "@mui/material";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -219,9 +220,31 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                           gap={1}
                           alignItems="center"
                         >
+                          {product.order_status == hireStatus.REQUEST && (
+                            <>
+                              <Box
+                                display={"flex"}
+                                alignItems={"center"}
+                                justifyContent={"space-between"}
+                                sx={{ p: 1 }}
+                              >
+                                <Typography fontWeight={500}>
+                                  {order.from_date} - {order.to_date}
+                                </Typography>
+                                <Typography
+                                  fontWeight={500}
+                                  color="textSecondary"
+                                >
+                                  {order.user_name}
+                                </Typography>
+                              </Box>
+                              <Divider />
+                            </>
+                          )}
                           <Box
                             display="flex"
                             gap={1}
+                            mt={1}
                             alignItems="center"
                           >
                             <Image
