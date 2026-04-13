@@ -44,6 +44,7 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconClock,
   IconEdit,
   IconPlaylistAdd,
   IconSearch,
@@ -68,6 +69,7 @@ import { IconEye } from "@tabler/icons-react";
 import AddEditTool from "../add-edit";
 import AssignUserTool from "../assign-user";
 import ProductAddEdit from "../../products/create";
+import HireHistory from "../history";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -124,6 +126,7 @@ const ToolsList = () => {
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openToolDrawer, setOpenToolDrawer] = useState(false);
+  const [historyDrawer, setHistoryDrawer] = useState(false);
   const [openProductDrawer, setOpenProductDrawer] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
@@ -172,6 +175,7 @@ const ToolsList = () => {
     setDrawerOpen(false);
     setOpenToolDrawer(false);
     setOpenProductDrawer(false);
+    setHistoryDrawer(false);
     setSelectedTaskId(null);
   };
 
@@ -983,6 +987,29 @@ const ToolsList = () => {
                   Assign tool to user
                 </Link>
               </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setHistoryDrawer(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconClock width={18} />
+                  </ListItemIcon>
+                  History
+                </Link>
+              </MenuItem>
             </Menu>
           </Stack>
         </Stack>
@@ -1011,6 +1038,15 @@ const ToolsList = () => {
         {/* Assign tool */}
         <AssignUserTool
           open={openToolDrawer}
+          onClose={() => onClose()}
+          companyId={user?.company_id ?? null}
+          onWorkUpdated={fetchProducts}
+          setId={selectedTaskId}
+        />
+
+        {/* history */}
+        <HireHistory
+          open={historyDrawer}
           onClose={() => onClose()}
           companyId={user?.company_id ?? null}
           onWorkUpdated={fetchProducts}

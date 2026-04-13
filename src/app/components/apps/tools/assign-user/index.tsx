@@ -132,6 +132,7 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
         user_Id: Number(userId),
         from_date: convertToDDMMYYYY(fromDate),
         to_date: convertToDDMMYYYY(toDate),
+        status: 3,
       };
 
       const res = await api.post("hire-orders/create", payload);

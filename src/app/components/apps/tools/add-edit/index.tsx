@@ -6,15 +6,11 @@ import {
   IconButton,
   Typography,
   Button,
-  TextField,
-  Chip,
-  Stack,
   Autocomplete,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
-import Image from "next/image";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 
