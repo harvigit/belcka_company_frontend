@@ -13,8 +13,9 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+import { DateTime } from "luxon";
 
-interface AddEditToolProps {
+interface AssignUserToolProps {
   open: boolean;
   onClose: () => void;
   onWorkUpdated?: () => void;
@@ -22,7 +23,7 @@ interface AddEditToolProps {
   setId?: number | null;
 }
 
-const AddEditTool: React.FC<AddEditToolProps> = ({
+const AssignUserTool: React.FC<AssignUserToolProps> = ({
   open,
   onClose,
   onWorkUpdated,
@@ -30,13 +31,22 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
   setId,
 }) => {
   const [products, setProducts] = useState<any[]>([]);
-  const [stores, setStores] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [userId, setUserId] = useState<number[]>([]);
   const [productId, setProductId] = useState("");
-  const [storeId, setStoreId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
   const [trades, setTrades] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [fromDate, setFromDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const convertToDDMMYYYY = (dateStr: string) => {
+    const [year, month, day] = dateStr.split("-");
+    return `${day}/${month}/${year}`;
+  };
 
   // trades
   const fetchTrades = async () => {
@@ -53,52 +63,35 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
     if (!companyId) return;
     try {
       const res = await api.get(
-        `get-inventory-resources?company_id=${companyId}`,
+        `products/get?company_id=${companyId}&is_products=true`,
       );
-      if (res.data) {
-        setProducts(res.data.products);
-        setStores(res.data.stores);
+      if (res.data?.info) {
+        setProducts(res.data.info);
       }
     } catch (err) {
       console.error("Failed to fetch projects", err);
     }
   }, [companyId]);
-
-  const fetchSetData = useCallback(async () => {
-    if (!companyId || !setId) return;
-
+  const fetchResources = async () => {
     try {
-      const res = await api.get(
-        `products/product-trade-detail?company_id=${companyId}&id=${setId}`,
-      );
-
-      const setData = res.data?.info;
-
-      if (setData) {
-        setProductId(setData.product_id);
-        setStoreId(setData.store_id);
-        const preSelected = setData.trades.map((t: any) => t.trade_id);
-
-        setSelectedIds(preSelected);
-        setSelectAll(preSelected.length === trades.length);
+      let url = `get-inventory-resources?company_id=${companyId}`;
+      const res = await api.get(url);
+      if (res.data) {
+        setUsers(res.data.users);
       }
     } catch (err) {
-      console.error("Failed to fetch set data", err);
+      console.error("Failed to fetch inventory resources", err);
     }
-  }, [companyId, setId, trades.length]);
+  };
 
   useEffect(() => {
     if (open) {
       fetchProjects();
       fetchTrades();
+      fetchResources();
+      setUserId([]);
     }
   }, [open, fetchProjects]);
-
-  useEffect(() => {
-    if (open && setId) {
-      fetchSetData();
-    }
-  }, [open, setId]);
 
   useEffect(() => {
     if (open && !setId) {
@@ -118,20 +111,15 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
     if (selectAll) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(trades.map((t) => t.id));
+      setSelectedIds(products.map((t) => t.id));
     }
     setSelectAll(!selectAll);
   };
   const handleSave = async () => {
     if (!companyId) return;
 
-    if (!productId) {
-      toast.error("Please select product!");
-      return;
-    }
-
     if (selectedIds.length === 0) {
-      toast.error("Please select at least one project");
+      toast.error("Please select at least one product");
       return;
     }
 
@@ -140,13 +128,14 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
     try {
       const payload: any = {
         company_id: companyId,
-        product_id: productId,
-        store_id: storeId,
-        trade_ids: selectedIds.join(","),
+        product_ids: selectedIds.join(","),
+        user_Id: Number(userId),
+        from_date: convertToDDMMYYYY(fromDate),
+        to_date: convertToDDMMYYYY(toDate),
+        status: 3,
       };
-      if (setId) payload.id = setId;
 
-      const res = await api.post("products/manage-trades", payload);
+      const res = await api.post("hire-orders/create", payload);
 
       if (res.data?.IsSuccess) {
         toast.success(res.data.message);
@@ -154,7 +143,6 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
         onClose();
         setSelectedIds([]);
         setProductId("");
-      } else {
       }
     } catch (err: any) {
     } finally {
@@ -185,7 +173,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
             <IconArrowLeft />
           </IconButton>
           <Typography variant="h6" fontWeight={700}>
-            {setId ? "Edit Tools" : "Add Tools"}
+            {setId ? "Edit Assign tool" : "Assign tool"}
           </Typography>
         </Box>
 
@@ -197,53 +185,61 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
             </Button>
           </Box>
         )}
+        {/* Set Name Input */}
+        <Box mb={2}>
+          <Typography variant="body2" gutterBottom>
+            Hire From
+          </Typography>
+          <CustomTextField
+            type="date"
+            name="from_date"
+            fullWidth
+            value={fromDate}
+            onChange={(e: any) => setFromDate(e.target.value)}
+            onFocus={(e: any) => e.target.showPicker()}
+            onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
+          />
+        </Box>
 
         <Box mb={2}>
           <Typography variant="body2" gutterBottom>
-            Store
+            Hire To
           </Typography>
-          <Autocomplete
+          <CustomTextField
+            type="date"
+            name="to_date"
             fullWidth
-            options={stores}
-            disabled={setId ? true : false}
-            value={stores.find((p) => p.id === storeId) || null}
-            onChange={(e, val) => setStoreId(val?.id || "")}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderInput={(params) => (
-              <CustomTextField {...params} placeholder="Select Store" />
-            )}
+            value={toDate}
+            onChange={(e: any) => setToDate(e.target.value)}
+            onFocus={(e: any) => e.target.showPicker()}
+            onClick={(e: any) => (e.target as HTMLInputElement).showPicker()}
           />
         </Box>
 
         <Box mb={2}>
           <Typography variant="body2" mb={1}>
-            Select Product
+            Select User
           </Typography>
           <Autocomplete
             fullWidth
             size="small"
-            options={products.filter((item) => item.status !== 4)}
-            disabled={setId ? true : false}
-            value={
-              products.find((t: any) => t.id === Number(productId)) ?? null
-            }
-            onChange={(e, val) => setProductId(val?.id || "")}
-            getOptionLabel={(option) => option.short_name ?? option.name}
+            options={users}
+            value={users.find((t: any) => t.id === userId) ?? null}
+            onChange={(e, val) => setUserId(val?.id || "")}
+            getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             renderInput={(params) => (
-              <CustomTextField {...params} placeholder="Select Product" />
+              <CustomTextField {...params} placeholder="Select User" />
             )}
           />
         </Box>
-
-        {/* Trades List */}
-        <Typography variant="body2" gutterBottom>
-          Select Trades
+        {/* Products List */}
+        <Typography variant="body2" mb={1}>
+          Select Products
         </Typography>
-        {trades.map((trade) => (
+        {products.map((product) => (
           <Box
-            key={trade.id}
+            key={product.id}
             mt={1}
             p={1}
             display="flex"
@@ -256,10 +252,12 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
           >
             <Box display="flex" alignItems="center" gap={1}>
               <CustomCheckbox
-                checked={selectedIds.includes(trade.id)}
-                onChange={() => handleCheckboxChange(trade.id)}
+                checked={selectedIds.includes(product.id)}
+                onChange={() => handleCheckboxChange(product.id)}
               />
-              <Typography variant="body2">{trade.name} </Typography>
+              <Typography variant="body2">
+                {product.short_name ?? product.name}{" "}
+              </Typography>
             </Box>
           </Box>
         ))}
@@ -295,4 +293,4 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
   );
 };
 
-export default AddEditTool;
+export default AssignUserTool;
