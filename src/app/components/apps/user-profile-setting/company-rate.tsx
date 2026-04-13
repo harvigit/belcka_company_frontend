@@ -31,6 +31,21 @@ export interface TradeList {
   name: string;
 }
 
+const calculateRates = (netRate: number, cisPercentage: number) => {
+    if (cisPercentage === 30) {
+        return {
+            cis: (netRate * 0.4286).toFixed(2),
+            gross: (netRate * 1.4286).toFixed(2),
+        };
+    } else {
+        // Default: 20%
+        return {
+            cis: (netRate * 0.25).toFixed(2),
+            gross: (netRate * 1.25).toFixed(2),
+        };
+    }
+};
+
 const ComapnyRate: React.FC<ProjectListingProps> = ({
   active,
   name,
@@ -85,11 +100,16 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
           ? (companyData?.diff_data?.net_rate_perday?.old ?? 0)
           : (companyData?.net_rate_perDay ?? 0);
 
-        const cisAmount = netRate * (cisPercentage / 100);
-        const grossAmount = netRate + cisAmount;
+        // const cisAmount = netRate * (cisPercentage / 100);
+        // const grossAmount = netRate + cisAmount;
+        //
+        // setCis(cisAmount.toFixed(2));
+        // setGross(grossAmount.toFixed(2));
 
-        setCis(cisAmount.toFixed(2));
-        setGross(grossAmount.toFixed(2));
+          const { cis, gross } = calculateRates(netRate, cisPercentage);
+          setCis(cis);
+          setGross(gross);
+          
         setFormData({
           trade_id: companyData.trade_id ?? null,
           rate: netRate,
@@ -350,11 +370,15 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
           rate: netRate,
         }));
 
-        const cisAmount = netRate * (cisPer / 100);
-        const grossAmount = netRate + cisAmount;
+        // const cisAmount = netRate * (cisPer / 100);
+        // const grossAmount = netRate + cisAmount;
+        //
+        // setCis(cisAmount.toFixed(2));
+        // setGross(grossAmount.toFixed(2));
 
-        setCis(cisAmount.toFixed(2));
-        setGross(grossAmount.toFixed(2));
+          const { cis, gross } = calculateRates(netRate, cisPer);
+          setCis(cis);
+          setGross(gross);
       }
     }
 
