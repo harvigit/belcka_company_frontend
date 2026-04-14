@@ -414,20 +414,22 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                     <Typography fontWeight={500} textAlign={"end"}>
                       {work.user_name}
                     </Typography>
-                    <Box
-                      display={"block "}
-                      alignItems={"center"}
-                      justifyContent={"space-between"}
-                      sx={{ p: 1 }}
-                    >
-                      <Typography color="textSecondary">
-                        Hire: {work.from_date_formate} -{" "}
-                        {work.from_date_formate}
-                      </Typography>
-                      <Typography color="textSecondary">
-                        Order Date: {work.date}
-                      </Typography>
-                    </Box>
+                    {work.order_status !== hireStatus.AVAILABLE && (
+                      <Box
+                        display={"block "}
+                        alignItems={"center"}
+                        justifyContent={"space-between"}
+                        sx={{ p: 1 }}
+                      >
+                        <Typography color="textSecondary">
+                          Hire: {work.from_date_formate} -{" "}
+                          {work.from_date_formate}
+                        </Typography>
+                        <Typography color="textSecondary">
+                          Order Date: {work.date}
+                        </Typography>
+                      </Box>
+                    )}
                     <Box display="block" gap={1} alignItems="center">
                       <Box display="flex" gap={1} alignItems="center">
                         <Image
@@ -500,7 +502,11 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                               </Typography>
                             )}
                           {work.order_status === hireStatus.IN_SERVICE && (
-                            <Box display="flex" gap={1} justifyContent={"flex-end"}>
+                            <Box
+                              display="flex"
+                              gap={1}
+                              justifyContent={"flex-end"}
+                            >
                               <Button
                                 onClick={() =>
                                   handleStatusChange({
