@@ -80,6 +80,7 @@ export interface ProductFormData {
   is_sub_qty?: boolean;
   store_ids?: string;
   max_stock?: number | null;
+  qty?: number | null;
 }
 
 interface ProductViewProps {
@@ -192,6 +193,7 @@ const ProductView: React.FC<ProductViewProps> = ({
           description: "",
           uuid: "",
           status: true,
+          qty: 0,
         });
         setEditDrawerOpen(false);
         triggerRefresh();

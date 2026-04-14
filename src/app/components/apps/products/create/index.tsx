@@ -70,6 +70,7 @@ export interface ProductFormData {
   max_stock?: number | null;
   manufacture?: number | null;
   model?: number | null;
+  qty?: number | null;
 }
 
 interface Category {
@@ -91,6 +92,7 @@ interface ProductAddEditProps {
   ) => void;
   isSaving: boolean;
   isEdit?: boolean;
+  storeId?: number | null;
   productId?: number | null;
 }
 
@@ -142,6 +144,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   isSaving,
   companyId,
   isEdit,
+  storeId,
   productId,
 }) => {
   const [barcodes, setBarcodes] = useState<string[]>([""]);
@@ -238,6 +241,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         max_stock: 0,
         model: null,
         manufacture: null,
+        qty: 0,
       });
       setBarcodes([""]);
       setSelectedCategories([]);
@@ -283,6 +287,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         max_stock: product.max_stock ?? 0,
         model: product.model ?? null,
         manufacture: product.manufacture ?? null,
+        qty: 0,
       });
 
       setBarcodes(
@@ -756,6 +761,32 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       sx={{ mb: 2 }}
                     />
                   </Box>
+                  {storeId && (
+                    <Box width={"30%"}>
+                      <Typography variant="body2" gutterBottom>
+                        Qty
+                      </Typography>
+                      <CustomTextField
+                        className="product_input"
+                        placeholder="Qty"
+                        fullWidth
+                        value={formData.qty || ""}
+                        onChange={(e: any) => {
+                          const value = e.target.value;
+
+                          if (/^\d*(\.\d{0,2})?$/.test(value)) {
+                            if (value === "" || Number(value) <= 999) {
+                              setFormData((p) => ({
+                                ...p,
+                                qty: value,
+                              }));
+                            }
+                          }
+                        }}
+                        sx={{ mb: 2 }}
+                      />
+                    </Box>
+                  )}
                 </Box>
                 <Box display={"flex"} justifyItems={"center"} gap={3}>
                   <Box width={"100%"}>

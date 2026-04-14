@@ -1032,6 +1032,7 @@ const ToolsList = () => {
           setFormData={setFormData}
           handleSubmit={handleSubmit}
           isSaving={isSaving}
+          storeId={selectedStore ?? null}
           companyId={user?.company_id ?? null}
         />
 
