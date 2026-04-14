@@ -234,11 +234,11 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                             justifyContent={"space-between"}
                             sx={{ p: 1 }}
                           >
-                            <Typography color="textSecondary">
+                            <Typography color="textSecondary" className="f-14">
                               Hire: {order.from_date_formate} -{" "}
                               {order.from_date_formate}
                             </Typography>
-                            <Typography color="textSecondary">
+                            <Typography color="textSecondary" className="f-14">
                               Order Date: {order.date}
                             </Typography>
                           </Box>
@@ -421,11 +421,11 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                         justifyContent={"space-between"}
                         sx={{ p: 1 }}
                       >
-                        <Typography color="textSecondary">
+                        <Typography color="textSecondary" className="f-14">
                           Hire: {work.from_date_formate} -{" "}
                           {work.from_date_formate}
                         </Typography>
-                        <Typography color="textSecondary">
+                        <Typography color="textSecondary" className="f-14">
                           Order Date: {work.date}
                         </Typography>
                       </Box>
@@ -493,6 +493,12 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                             work.order_status == hireStatus.HIRED && (
                               <Typography variant="body2">
                                 Approved by: {work.approve_by_user_name}
+                              </Typography>
+                            )}
+                          {work.reject_by_user_name &&
+                            work.order_status == hireStatus.CANCELLED && (
+                              <Typography variant="body2">
+                                Cancel by: {work.reject_by_user_name}
                               </Typography>
                             )}
                           {work.approve_by_user_name &&
