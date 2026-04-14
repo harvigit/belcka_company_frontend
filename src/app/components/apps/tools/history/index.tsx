@@ -154,7 +154,12 @@ const HireHistory: React.FC<HireHistoryProps> = ({
     >
       <Box sx={{ flex: 1, overflowY: "auto", p: 1 }}>
         {/* HEADER */}
-        <Box display="flex" justifyContent="space-between" p={2} pb={0}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          textAlign={"center"}
+          px={1}
+        >
           <Typography fontWeight={600}>Hire</Typography>
           <IconButton onClick={onClose}>
             <CloseIcon />
@@ -452,7 +457,7 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                                   disabled={loadingId === work.id}
                                   onClick={() =>
                                     handleStatusChange({
-                                      orderId: work.id,
+                                      orderId: work.order_id_int,
                                       productIds: [work.product_id],
                                       status: hireStatus.IN_SERVICE,
                                       needService: true,
@@ -477,66 +482,6 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                                   Return
                                 </Button>
                               )}
-
-                              {work.order_status === hireStatus.IN_SERVICE && (
-                                <Box display="flex" gap={1}>
-                                  <Button
-                                    onClick={() =>
-                                      handleStatusChange({
-                                        orderId: work.id,
-                                        productIds: [work.product_id],
-                                        status: hireStatus.AVAILABLE,
-                                        needService: false,
-                                      })
-                                    }
-                                    sx={{
-                                      px: 1.6,
-                                      py: 0.7,
-                                      borderRadius: "18px",
-                                      border: 2,
-                                      bgcolor: "#32A852",
-                                      color: "#fff",
-                                      fontSize: "0.75rem",
-                                      fontWeight: 500,
-                                      textTransform: "capitalize",
-                                      "&:hover": {
-                                        bgcolor: "#32A852",
-                                        color: "#fff",
-                                      },
-                                    }}
-                                  >
-                                    Available To
-                                  </Button>
-
-                                  <Button
-                                    onClick={() =>
-                                      handleStatusChange({
-                                        orderId: work.id,
-                                        productIds: [work.product_id],
-                                        status: hireStatus.DAMAGED,
-                                        needService: false,
-                                      })
-                                    }
-                                    sx={{
-                                      px: 1.6,
-                                      py: 0.7,
-                                      borderRadius: "18px",
-                                      border: 2,
-                                      bgcolor: "#FF0000",
-                                      color: "#fff",
-                                      fontSize: "0.75rem",
-                                      fontWeight: 500,
-                                      textTransform: "capitalize",
-                                      "&:hover": {
-                                        bgcolor: "#FF0000",
-                                        color: "#fff",
-                                      },
-                                    }}
-                                  >
-                                    Damaged
-                                  </Button>
-                                </Box>
-                              )}
                             </Box>
                           </Box>
                           <Typography variant="body2" fontWeight={500}>
@@ -554,6 +499,65 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                                 Qty: {work.available_qty}
                               </Typography>
                             )}
+                          {work.order_status === hireStatus.IN_SERVICE && (
+                            <Box display="flex" gap={1} justifyContent={"flex-end"}>
+                              <Button
+                                onClick={() =>
+                                  handleStatusChange({
+                                    orderId: work.order_id_int,
+                                    productIds: [work.product_id],
+                                    status: hireStatus.AVAILABLE,
+                                    needService: false,
+                                  })
+                                }
+                                sx={{
+                                  px: 1.6,
+                                  py: 0.7,
+                                  borderRadius: "18px",
+                                  border: 2,
+                                  bgcolor: "#32A852",
+                                  color: "#fff",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 500,
+                                  textTransform: "capitalize",
+                                  "&:hover": {
+                                    bgcolor: "#32A852",
+                                    color: "#fff",
+                                  },
+                                }}
+                              >
+                                Available To
+                              </Button>
+
+                              <Button
+                                onClick={() =>
+                                  handleStatusChange({
+                                    orderId: work.order_id_int,
+                                    productIds: [work.product_id],
+                                    status: hireStatus.DAMAGED,
+                                    needService: false,
+                                  })
+                                }
+                                sx={{
+                                  px: 1.6,
+                                  py: 0.7,
+                                  borderRadius: "18px",
+                                  border: 2,
+                                  bgcolor: "#FF0000",
+                                  color: "#fff",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 500,
+                                  textTransform: "capitalize",
+                                  "&:hover": {
+                                    bgcolor: "#FF0000",
+                                    color: "#fff",
+                                  },
+                                }}
+                              >
+                                Damaged
+                              </Button>
+                            </Box>
+                          )}
                         </Box>
                       </Box>
                     </Box>

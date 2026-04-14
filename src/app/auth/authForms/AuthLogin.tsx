@@ -5,25 +5,24 @@ import {
   Button,
   Dialog,
   DialogContent,
-  IconButton,
   MenuItem,
   Paper,
   Select,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
-import { getSession, signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomFormLabel from "@/app/components/forms/theme-elements/CustomFormLabel";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { loginType } from "@/app/(DashboardLayout)/types/auth/auth";
-import { IconX } from "@tabler/icons-react";
 import { Grid } from "@mui/system";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
+import { User } from "next-auth";
 
 const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const [phone, setPhone] = useState("");
@@ -46,6 +45,9 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const [id, setId] = useState(0);
   const [token, setToken] = useState("");
   const { data: session, update } = useSession();
+  const user = session?.user as User & {
+    id: number;
+  } & { company_id: number };
   const router = useRouter();
   const [createData, setCreateData] = useState({
     name: "",
@@ -284,6 +286,13 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
     }
   };
 
+  const userLogout = async () => {
+    toast.success("Logged out successfully!!");
+    Cookies.remove(`user_store_${user.id}_${user.company_id}`);
+    await signOut({ callbackUrl: "/auth" });
+    return loading;
+  };
+
   return (
     <>
       {title && (
@@ -310,7 +319,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                 const numberOnly = value.replace(country.dialCode, "");
                 setNationalPhone(numberOnly);
               }}
-              inputStyle={{ width: "100%" ,backgroundColor:"transparent"}}
+              inputStyle={{ width: "100%", backgroundColor: "transparent" }}
               enableSearch
               inputProps={{ required: true }}
             />
@@ -395,8 +404,8 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             {loading
               ? "Loading..."
               : showVerification
-              ? "Verify & Continue"
-              : "Continue"}
+                ? "Verify & Continue"
+                : "Continue"}
           </Button>
         </Box>
       </form>
@@ -421,23 +430,9 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             <Typography sx={{ fontSize: "16px !important" }} variant="h1">
               Create new company
             </Typography>
-            <Tooltip
-              placement="top"
-              title={
-                canCloseModal ? "Close" : "Complete company setup to close"
-              }
-            >
-              <span>
-                <IconButton
-                  onClick={() => {
-                    if (canCloseModal) setShowCompanyPopup(false);
-                  }}
-                  disabled={!canCloseModal}
-                >
-                  <IconX />
-                </IconButton>
-              </span>
-            </Tooltip>
+            <Button onClick={userLogout} color="primary" sx={{ height: "10%" }}>
+              Exit
+            </Button>
           </Box>
           <>
             {/* basic info */}
@@ -509,7 +504,11 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                       extension: `+${country.dialCode}`,
                     })
                   }
-                  inputStyle={{ width: "100%", height: "47px",backgroundColor:"transparent" }}
+                  inputStyle={{
+                    width: "100%",
+                    height: "47px",
+                    backgroundColor: "transparent",
+                  }}
                   enableSearch
                   inputProps={{ required: true }}
                 />
