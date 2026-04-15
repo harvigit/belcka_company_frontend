@@ -38,6 +38,7 @@ interface Props {
   onUpdate: () => void;
   isSaving: boolean;
   editData?: any;
+  is_product?: boolean;
 }
 
 const AdjustStock: React.FC<Props> = ({
@@ -50,9 +51,13 @@ const AdjustStock: React.FC<Props> = ({
   onChange,
   onProductChange,
   editData,
+  is_product,
 }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [mode, setMode] = useState<"note" | "user">("note");
+  const [products, setProducts] = useState<any[]>([]);
+  const [productId, setProductId] = useState("");
+  const [product, setProduct] = useState<any>([]);
 
   const [adjustQty, setAdjustQty] = useState<number | string>("");
   const [loading, setLoading] = useState(false);
@@ -78,7 +83,7 @@ const AdjustStock: React.FC<Props> = ({
 
   useEffect(() => {
     if (!open) return;
-
+    setProductId("");
     fetchResources();
 
     if (editData) {
@@ -95,6 +100,27 @@ const AdjustStock: React.FC<Props> = ({
     }
   }, [open]);
 
+  const fetchProducts = async () => {
+    try {
+      const res = await api.get(
+        `products/get?company_id=${companyId}&product_id=${productId}&is_products=true`,
+      );
+      if (res.data.info) {
+        setProduct(res.data.info);
+        setIsSubQty(res.data.info.is_sub_qty);
+        setPackOffQty(res.data.info.pack_off_qty || 1);
+        setPackOffUnit(res.data.info.pack_off_unit || "");
+      }
+    } catch (err) {
+      console.error("Failed to fetch product", err);
+    }
+  };
+
+  useEffect(() => {
+    if (productId) {
+      fetchProducts();
+    }
+  },[productId]);
   const fetchResources = async () => {
     try {
       const res = await api.get(
@@ -102,6 +128,7 @@ const AdjustStock: React.FC<Props> = ({
       );
 
       setUsers(res.data.users);
+      setProducts(res.data.products);
     } catch (error) {
       console.error(error);
     }
@@ -112,7 +139,7 @@ const AdjustStock: React.FC<Props> = ({
 
     const value = Number(adjustQty);
 
-    if (isNaN(value)) return; // skip invalid input
+    if (isNaN(value)) return;
 
     let newValue = value;
     if (value > 10000) newValue = 10000;
@@ -122,6 +149,7 @@ const AdjustStock: React.FC<Props> = ({
       setAdjustQty(newValue);
     }
   }, [adjustQty]);
+
   const handleCutoff = async () => {
     try {
       const payload = {
@@ -151,7 +179,12 @@ const AdjustStock: React.FC<Props> = ({
 
   const submitStock = async (type: "add" | "deduct") => {
     if (!adjustQty) {
-      toast.error("Quantity required");
+      toast.error("Quantity required!");
+      return;
+    }
+
+    if (is_product && !productId) {
+      toast.error("Please select product!");
       return;
     }
 
@@ -167,7 +200,7 @@ const AdjustStock: React.FC<Props> = ({
       }
       const payload: any = {
         store_id: Number(store?.id),
-        product_id: editData?.product_id,
+        product_id: is_product ? Number(productId) : editData?.product_id,
         qty: qty,
         reference: formData.note,
         user_id: formData.user_id,
@@ -214,7 +247,7 @@ const AdjustStock: React.FC<Props> = ({
           </IconButton>
 
           <Typography variant="h6" fontWeight={600}>
-            Edit Stock
+            {is_product ? "Add Stock" : "Edit Stock"}
           </Typography>
         </Box>
 
@@ -236,34 +269,66 @@ const AdjustStock: React.FC<Props> = ({
       <Divider />
 
       <Box sx={{ flex: 1, overflowY: "auto" }}>
-        <Box p={3} display="flex" justifyContent="space-between">
-          <Box display="flex" gap={2}>
-            <Image
-              src={editData?.image_url || "/images/products/product.svg"}
-              alt="product"
-              width={110}
-              height={110}
-            />
+        {!is_product && (
+          <>
+            <Box p={3} display="flex" justifyContent="space-between">
+              <Box display="flex" gap={2}>
+                <Image
+                  src={editData?.image_url || "/images/products/product.svg"}
+                  alt="product"
+                  width={110}
+                  height={110}
+                />
 
-            <Box>
-              <Typography fontWeight={700}>{editData?.short_name}</Typography>
+                <Box>
+                  <Typography fontWeight={700}>
+                    {editData?.short_name}
+                  </Typography>
 
-              <Typography fontSize={13}>{editData?.supplier_code}</Typography>
+                  <Typography fontSize={13}>
+                    {editData?.supplier_code}
+                  </Typography>
 
-              <Typography fontSize={13}>{editData?.supplier_name}</Typography>
+                  <Typography fontSize={13}>
+                    {editData?.supplier_name}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Typography fontWeight="bold" variant="h3">
+                {editData?.qty}
+              </Typography>
             </Box>
+
+            <Divider />
+          </>
+        )}
+
+        {is_product && (
+          <Box p={3}>
+            <Typography variant="body2" fontWeight={600} mb={1}>
+              Select Product
+            </Typography>
+            <Autocomplete
+              fullWidth
+              size="small"
+              options={products.filter((item) => item.status !== 4)}
+              value={
+                products.find((t: any) => t.id === Number(productId)) ?? null
+              }
+              onChange={(e, val) => setProductId(val?.id || "")}
+              getOptionLabel={(option) => option.short_name ?? option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => (
+                <CustomTextField {...params} placeholder="Select Product" />
+              )}
+            />
           </Box>
-
-          <Typography fontWeight="bold" variant="h3">
-            {editData?.qty}
-          </Typography>
-        </Box>
-
-        <Divider />
+        )}
 
         {/* LOW STOCK */}
         <Box p={3}>
-          <Typography  variant="body2" fontWeight={600} mb={1}>
+          <Typography variant="body2" fontWeight={600} mb={1}>
             Low Stock Indicator
           </Typography>
 
@@ -337,7 +402,9 @@ const AdjustStock: React.FC<Props> = ({
 
         {/* STOCK ADJUST */}
         <Box p={3}>
-          <Typography variant="body2" mb={2} >Adjust Stock</Typography>
+          <Typography variant="body2" mb={2}>
+            Adjust Stock
+          </Typography>
 
           <Box display="flex" gap={2} alignContent={"center"}>
             <Button

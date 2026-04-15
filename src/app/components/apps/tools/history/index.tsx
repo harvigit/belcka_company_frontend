@@ -501,6 +501,12 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                                 Cancel by: {work.reject_by_user_name}
                               </Typography>
                             )}
+                          {work.return_by_user_name &&
+                            work.order_status == hireStatus.IN_SERVICE && (
+                              <Typography variant="body2">
+                                In service by: {work.return_by_user_name}
+                              </Typography>
+                            )}
                           {work.approve_by_user_name &&
                             work.order_status == hireStatus.IN_SERVICE && (
                               <Typography variant="body2">

@@ -626,6 +626,7 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
 
         {/* Edit unit */}
         <EditUnit
+          key={selectedTaskId}
           open={editDrawerOpen}
           onClose={() => setEditDrawerOpen(false)}
           id={selectedTaskId}

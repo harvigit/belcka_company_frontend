@@ -553,6 +553,20 @@ const ToolsList = () => {
         );
       },
     }),
+    columnHelper.accessor((row) => row?.hire_qty, {
+      id: "qty",
+      header: () => "Qty",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center">
+            <Typography textTransform="capitalize" className="f-14">
+              {item.hire_qty ? item.hire_qty : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
 
     columnHelper.accessor((row) => row.product_trades, {
       id: "trades",
