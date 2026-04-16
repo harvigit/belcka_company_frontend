@@ -15,7 +15,8 @@ import {
     IconExclamationCircle,
     IconCategory2,
     IconClock,
-    IconUsers
+    IconUsers,
+    IconCalendarOff
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -32,6 +33,7 @@ import TradeCategoryList from '@/app/components/apps/trade-categories/list';
 import UnitList from '@/app/components/apps/units/list';
 import StockHistoryList from '@/app/components/apps/settings/history/stock-history';
 import ClientList from '@/app/components/apps/clients/list';
+import HolidayList from '@/app/components/apps/holidays/list';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -170,6 +172,13 @@ const AdminSetting = () => {
                                         label="History"
                                         {...a11yProps(9)}
                                     />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconCalendarOff size="20"/>}
+                                        label="Holidays"
+                                        {...a11yProps(10)}
+                                    />
                                 </Tabs>
                             </Stack>
                         </BlankCard>
@@ -211,6 +220,9 @@ const AdminSetting = () => {
                             </TabPanel>
                             <TabPanel value={value} index={9}>
                                 <HistoryList/>
+                            </TabPanel>
+                            <TabPanel value={value} index={10}>
+                                <HolidayList/>
                             </TabPanel>
                         </BlankCard>
                     </Grid>

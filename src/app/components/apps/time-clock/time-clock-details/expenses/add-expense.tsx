@@ -25,17 +25,18 @@ import { debounce } from 'lodash';
 import SearchIcon from '@mui/icons-material/Search';
 import { AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
+import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 
 interface Project { id: number; name: string; }
-interface Address { id: number; name: string; project_id: number;}
-interface Category { id: number; name: string; }
+interface Address { id: number; name: string; project_id: number; }
+interface Category { id: number; name: string; is_transport_category: boolean; }
 
 interface UploadedFile {
     file: File;
     preview?: string;
 }
 
-const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number ,selecteUser: boolean}> = ({onClose, userId, companyId,selecteUser}) => {
+const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number; selecteUser: boolean }> = ({ onClose, userId, companyId, selecteUser }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -51,9 +52,17 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
     const [notes, setNotes] = useState<string>('');
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [carRegisterNumber, setCarRegisterNumber] = useState<string>('');
 
     // Date picker popover state
     const [dateAnchorEl, setDateAnchorEl] = useState<HTMLElement | null>(null);
+
+    // Derived: check if selected category is a transport category
+    const isTransportCategory = React.useMemo(() => {
+        if (!selectedCategory) return false;
+        const category = categories.find((c) => c.id === Number(selectedCategory));
+        return category?.is_transport_category === true;
+    }, [selectedCategory, categories]);
 
     // Fetch resources
     useEffect(() => {
@@ -94,10 +103,13 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         fetchProjects();
     }, [selecteUser, selectedUser]);
 
-
     useEffect(() => {
         setSelectedAddress('');
     }, [selectedProject]);
+
+    useEffect(() => {
+        setCarRegisterNumber('');
+    }, [selectedCategory]);
 
     const getUsers = useCallback(async () => {
         setLoading(true);
@@ -117,16 +129,14 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
     }, [selecteUser == true]);
 
     const filteredAddresses = React.useMemo(() => {
-    if (!selectedProject) return [];
+        if (!selectedProject) return [];
 
-    return addresses.filter((addr) => {
-        const matchesProject = addr.project_id === Number(selectedProject);
-
-        const name = (addr.name || '').toLowerCase();
-        const matchesSearch = name.includes(searchTerm.toLowerCase());
-
-        return matchesProject && matchesSearch;
-    });
+        return addresses.filter((addr) => {
+            const matchesProject = addr.project_id === Number(selectedProject);
+            const name = (addr.name || '').toLowerCase();
+            const matchesSearch = name.includes(searchTerm.toLowerCase());
+            return matchesProject && matchesSearch;
+        });
     }, [addresses, selectedProject, searchTerm]);
 
     const handleSearchChange = useCallback(
@@ -201,13 +211,19 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         e.preventDefault();
         setError(null);
 
-        if(selecteUser == true && !selectedUser){
+        if (selecteUser == true && !selectedUser) {
             setError('Please select user.');
             return;
         }
 
         if (!selectedProject || !selectedAddress || !selectedCategory || !amount || !date) {
             setError('Please fill in all required fields.');
+            return;
+        }
+
+        // Validate car register number if transport category is selected
+        if (isTransportCategory && !carRegisterNumber.trim()) {
+            setError('Please enter the car registration number.');
             return;
         }
 
@@ -221,6 +237,8 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         formData.append('total_amount', amount);
         formData.append('receipt_date', formatDate(date));
         formData.append('note', notes || '');
+
+        formData.append('car_register_number', isTransportCategory ? carRegisterNumber.trim() : '');
 
         // Append all files
         uploadedFiles.forEach((item, index) => {
@@ -236,7 +254,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             });
 
             if (response.data.IsSuccess) {
-                toast.success(response.data.message)
+                toast.success(response.data.message);
                 onClose();
             } else {
                 setError(response.data.message || 'Failed to add expense.');
@@ -307,7 +325,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                 )}
 
                 <Box px={3} py={3} display="flex" flexDirection="column" gap={3}>
-                   {selecteUser == true && (
+                    {selecteUser == true && (
                         /* User */
                         <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
                             <Typography variant="body2" fontWeight={600} color="#1a1a1a">
@@ -330,29 +348,29 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                     {users.map((user) => (
                                         <MenuItem key={user.id} value={user.id.toString()}>
                                             <Box display="flex" alignItems="center" gap={1}>
-                                            <Avatar
-                                                src={user?.user_image || user?.image}
-                                                sx={{ width: 24, height: 24, fontSize: '12px' }}
-                                            >
-                                                {user?.first_name?.[0]?.toUpperCase()}
-                                            </Avatar>
-                                            <Typography
-                                                component={"span"}
-                                                variant="body1"
-                                                className="f-14"
-                                                sx={{
-                                                    display: "-webkit-box",
-                                                    WebkitBoxOrient: "vertical",
-                                                    WebkitLineClamp: 1,
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    maxWidth: 250,
-                                                    wordBreak: "break-word",
-                                                }}
-                                            >
-                                                {user?.first_name} {user?.last_name}
-                                            </Typography>
-                                        </Box>
+                                                <Avatar
+                                                    src={user?.user_image || user?.image}
+                                                    sx={{ width: 24, height: 24, fontSize: '12px' }}
+                                                >
+                                                    {user?.first_name?.[0]?.toUpperCase()}
+                                                </Avatar>
+                                                <Typography
+                                                    component={"span"}
+                                                    variant="body1"
+                                                    className="f-14"
+                                                    sx={{
+                                                        display: "-webkit-box",
+                                                        WebkitBoxOrient: "vertical",
+                                                        WebkitLineClamp: 1,
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        maxWidth: 250,
+                                                        wordBreak: "break-word",
+                                                    }}
+                                                >
+                                                    {user?.first_name} {user?.last_name}
+                                                </Typography>
+                                            </Box>
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -376,34 +394,34 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
                                 }}
                                 renderValue={(selected) => {
-                                if (!selected)
+                                    if (!selected)
+                                        return (
+                                            <Typography color="#999" component="span">
+                                                Select Project
+                                            </Typography>
+                                        );
+                                    const project = projects.find((u) => u.id === Number(selected));
                                     return (
-                                        <Typography color="#999" component="span">
-                                            Select Project
-                                        </Typography>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <Typography
+                                                component={"span"}
+                                                variant="body1"
+                                                className="f-14"
+                                                sx={{
+                                                    display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 1,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: 250,
+                                                    wordBreak: "break-word",
+                                                }}
+                                            >
+                                                {project?.name}
+                                            </Typography>
+                                        </Box>
                                     );
-                                const project = projects.find((u) => u.id === Number(selected));
-                                return (
-                                    <Box display="flex" alignItems="center" gap={1}>
-                                        <Typography
-                                            component={"span"}
-                                            variant="body1"
-                                            className="f-14"
-                                            sx={{
-                                                display: "-webkit-box",
-                                                WebkitBoxOrient: "vertical",
-                                                WebkitLineClamp: 1,
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                maxWidth: 250,
-                                                wordBreak: "break-word",
-                                            }}
-                                        >
-                                            {project?.name}
-                                        </Typography>
-                                    </Box>
-                                );
-                            }}
+                                }}
                             >
                                 {projects.map((proj) => (
                                     <MenuItem key={proj.id} value={proj.id.toString()}>
@@ -421,116 +439,54 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                                 wordBreak: "break-word",
                                             }}
                                         >
-                                        {proj.name}
+                                            {proj.name}
                                         </Typography>
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Box>
-                    
-                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
-                        
+
                     {/* Address */}
-                    <Typography
-                        variant="body2"
-                        fontWeight={600}
-                        color="#1a1a1a"
-                        component="div"
-                    >
-                        Select address
-                    </Typography>
-                    <FormControl fullWidth>
-                        <Select
-                            name="userId"
-                            value={selectedAddress}
-                            onChange={(e) => setSelectedAddress(e.target.value)}
-                            displayEmpty
-                            size="small"
-                            sx={{
-                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#bdbdbd',
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#50ABFF',
-                                },
-                            }}
-                            MenuProps={{
-                                PaperProps: { style: { maxHeight: 400 } },
-                                autoFocus: false,
-                            }}
-                            renderValue={(selected) => {
-                                if (!selected)
-                                    return (
-                                        <Typography color="#999" component="span">
-                                            Select Address
-                                        </Typography>
-                                    );
-                                const address = filteredAddresses.find((u) => u.id === Number(selected));
-                                return (
-                                    <Box display="flex" alignItems="center" gap={1}>
-                                        <Typography
-                                            component={"span"}
-                                            variant="body1"
-                                            className="f-14"
-                                            sx={{
-                                                display: "-webkit-box",
-                                                WebkitBoxOrient: "vertical",
-                                                WebkitLineClamp: 1,
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                maxWidth: 250,
-                                                wordBreak: "break-word",
-                                            }}
-                                        >
-                                            {address?.name}
-                                        </Typography>
-                                    </Box>
-                                );
-                            }}
+                    <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                        <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            color="#1a1a1a"
+                            component="div"
                         >
-                            <Box
-                                px={2}
-                                py={1.5}
-                                position="sticky"
-                                top={0}
-                                bgcolor="white"
-                                zIndex={1}
-                            >
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    placeholder="Search address"
-                                    onChange={(e) => handleSearchChange(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onKeyDown={(e) => e.stopPropagation()}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <SearchIcon sx={{ color: '#999', fontSize: 20 }} />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            '& fieldset': { borderColor: '#e0e0e0' },
-                                            '&:hover fieldset': { borderColor: '#bdbdbd' },
-                                            '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
-                                        },
-                                    }}
-                                />
-                            </Box>
-                            {filteredAddresses.length === 0 ? (
-                                <MenuItem disabled>
-                                    <Typography color="text.secondary" component="span">
-                                        No address found
-                                    </Typography>
-                                </MenuItem>
-                            ) : (
-                                filteredAddresses.map((adress) => (
-                                    <MenuItem key={adress.id} value={adress.id.toString()}>
-                                        <Box display="flex" alignItems="center" gap={1.5}>
+                            Select address
+                        </Typography>
+                        <FormControl fullWidth>
+                            <Select
+                                name="userId"
+                                value={selectedAddress}
+                                onChange={(e) => setSelectedAddress(e.target.value)}
+                                displayEmpty
+                                size="small"
+                                sx={{
+                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#bdbdbd',
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#50ABFF',
+                                    },
+                                }}
+                                MenuProps={{
+                                    PaperProps: { style: { maxHeight: 400 } },
+                                    autoFocus: false,
+                                }}
+                                renderValue={(selected) => {
+                                    if (!selected)
+                                        return (
+                                            <Typography color="#999" component="span">
+                                                Select Address
+                                            </Typography>
+                                        );
+                                    const address = filteredAddresses.find((u) => u.id === Number(selected));
+                                    return (
+                                        <Box display="flex" alignItems="center" gap={1}>
                                             <Typography
                                                 component={"span"}
                                                 variant="body1"
@@ -541,18 +497,79 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                                     WebkitLineClamp: 1,
                                                     overflow: "hidden",
                                                     textOverflow: "ellipsis",
-                                                    maxWidth: 450,
+                                                    maxWidth: 250,
                                                     wordBreak: "break-word",
                                                 }}
-                                                >
-                                                {adress.name}
+                                            >
+                                                {address?.name}
                                             </Typography>
                                         </Box>
+                                    );
+                                }}
+                            >
+                                <Box
+                                    px={2}
+                                    py={1.5}
+                                    position="sticky"
+                                    top={0}
+                                    bgcolor="white"
+                                    zIndex={1}
+                                >
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        placeholder="Search address"
+                                        onChange={(e) => handleSearchChange(e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => e.stopPropagation()}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <SearchIcon sx={{ color: '#999', fontSize: 20 }} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                '& fieldset': { borderColor: '#e0e0e0' },
+                                                '&:hover fieldset': { borderColor: '#bdbdbd' },
+                                                '&.Mui-focused fieldset': { borderColor: '#50ABFF' },
+                                            },
+                                        }}
+                                    />
+                                </Box>
+                                {filteredAddresses.length === 0 ? (
+                                    <MenuItem disabled>
+                                        <Typography color="text.secondary" component="span">
+                                            No address found
+                                        </Typography>
                                     </MenuItem>
-                                ))
-                            )}
-                        </Select>
-                    </FormControl>
+                                ) : (
+                                    filteredAddresses.map((adress) => (
+                                        <MenuItem key={adress.id} value={adress.id.toString()}>
+                                            <Box display="flex" alignItems="center" gap={1.5}>
+                                                <Typography
+                                                    component={"span"}
+                                                    variant="body1"
+                                                    className="f-14"
+                                                    sx={{
+                                                        display: "-webkit-box",
+                                                        WebkitBoxOrient: "vertical",
+                                                        WebkitLineClamp: 1,
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        maxWidth: 450,
+                                                        wordBreak: "break-word",
+                                                    }}
+                                                >
+                                                    {adress.name}
+                                                </Typography>
+                                            </Box>
+                                        </MenuItem>
+                                    ))
+                                )}
+                            </Select>
+                        </FormControl>
                     </Box>
 
                     {/* Category */}
@@ -570,35 +587,35 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bbb' },
                                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#50ABFF' },
                                 }}
-                                 renderValue={(selected) => {
-                                if (!selected)
+                                renderValue={(selected) => {
+                                    if (!selected)
+                                        return (
+                                            <Typography color="#999" component="span">
+                                                Select Category
+                                            </Typography>
+                                        );
+                                    const category = categories.find((u) => u.id === Number(selected));
                                     return (
-                                        <Typography color="#999" component="span">
-                                            Select Category
-                                        </Typography>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <Typography
+                                                component={"span"}
+                                                variant="body1"
+                                                className="f-14"
+                                                sx={{
+                                                    display: "-webkit-box",
+                                                    WebkitBoxOrient: "vertical",
+                                                    WebkitLineClamp: 1,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: 250,
+                                                    wordBreak: "break-word",
+                                                }}
+                                            >
+                                                {category?.name}
+                                            </Typography>
+                                        </Box>
                                     );
-                                const category = categories.find((u) => u.id === Number(selected));
-                                return (
-                                    <Box display="flex" alignItems="center" gap={1}>
-                                        <Typography
-                                            component={"span"}
-                                            variant="body1"
-                                            className="f-14"
-                                            sx={{
-                                                display: "-webkit-box",
-                                                WebkitBoxOrient: "vertical",
-                                                WebkitLineClamp: 1,
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                maxWidth: 250,
-                                                wordBreak: "break-word",
-                                            }}
-                                        >
-                                            {category?.name}
-                                        </Typography>
-                                    </Box>
-                                );
-                            }}
+                                }}
                             >
                                 {categories.map((cat) => (
                                     <MenuItem key={cat.id} value={cat.id.toString()}>
@@ -616,13 +633,33 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                                                 wordBreak: "break-word",
                                             }}
                                         >
-                                        {cat.name}
+                                            {cat.name}
                                         </Typography>
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Box>
+
+                    {/* Car Register Number - shown only when transport category is selected */}
+                    {isTransportCategory && (
+                        <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
+                            <Typography variant="body2" fontWeight={600} color="#1a1a1a">
+                                Car Register Number
+                            </Typography>
+                            <CustomTextField
+                                id="name"
+                                name="name"
+                                className="custom_input"
+                                placeholder="Car registration number"
+                                value={carRegisterNumber}
+                                onChange={(e: any) => setCarRegisterNumber(e.target.value)}
+                                variant="outlined"
+                                fullWidth
+                                inputProps={{ maxLength: 10 }}
+                            />
+                        </Box>
+                    )}
 
                     {/* Amount */}
                     <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
@@ -867,11 +904,10 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                     </Box>
                 </Box>
             </Box>
-            
+
             {/* Footer */}
             <Box
                 display="flex"
-                // justifyContent="flex-end"
                 gap={2}
                 px={3}
                 py={2.5}
@@ -881,15 +917,23 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                 <Button
                     variant="contained"
                     onClick={handleSubmit}
-                    disabled={loading || !selectedProject || !selectedAddress || !selectedCategory || !amount || !date}
+                    disabled={
+                        loading ||
+                        !selectedProject ||
+                        !selectedAddress ||
+                        !selectedCategory ||
+                        !amount ||
+                        !date ||
+                        (isTransportCategory && !carRegisterNumber.trim())
+                    }
                     sx={{
                         textTransform: "none",
                         fontWeight: 500,
-                        bgcolor:"#1e4db7",
+                        bgcolor: "#1e4db7",
                         color: "white",
                         boxShadow: "none",
                         px: 3,
-                            '&:hover': { bgcolor: '#173a8c' },
+                        '&:hover': { bgcolor: '#173a8c' },
                         '&:disabled': { bgcolor: '#e0e0e0' },
                     }}
                 >

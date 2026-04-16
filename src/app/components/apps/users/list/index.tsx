@@ -105,6 +105,7 @@ export interface UserList {
     trade_name: string;
     email: string;
     phone: number;
+    extension: string;
     team_name: string;
     shifts: string;
     status: number;
@@ -267,9 +268,7 @@ const TablePagination = () => {
 
                 const link = document.createElement('a');
                 link.href = url;
-                link.download =
-                    filename ||
-                    `timeclock_details_export_${new Date().toISOString()}.${option}`;
+                link.download = filename || `timeclock_details_export_${new Date().toISOString()}.${option}`;
                 document.body.appendChild(link);
                 link.click();
 
@@ -756,11 +755,15 @@ const TablePagination = () => {
                     Phone
                 </Typography>
             ),
-            cell: (info) => (
-                <Typography className="f-14" color="textPrimary">
-                    {info.getValue() ?? '-'}
-                </Typography>
-            ),
+            cell: (info) => {
+                const user = info.row.original;
+
+                return (
+                    <Typography className="f-14" color="textPrimary">
+                        {user.extension ?? '0'}{info.getValue() ?? '-'}
+                    </Typography>
+                )
+            },
         }),
 
         columnHelper.accessor((row) => row.permissions, {

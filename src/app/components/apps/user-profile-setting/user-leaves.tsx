@@ -116,6 +116,8 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const searchParams = useSearchParams();
 
     const [data, setData] = useState<any[]>([]);
+    const [totalLeaves, setTotalLeaves] = useState<number>(0);
+    
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [sorting, setSorting] = useState<SortingState>([]);
@@ -229,7 +231,9 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                 user_id: userId,
             };
             const res = await api.post(`user-leaves/get-list`, payload);
-            if (res.data?.IsSuccess) setHistory(res.data.data || []);
+            if (res.data?.IsSuccess){
+                setHistory(res.data.data || []);   
+            }
         } catch (err) {
             console.error("Failed to fetch history:", err);
         }
@@ -253,7 +257,10 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                 user_id: userId,
             };
             const res = await api.post(`user-leaves/get-list`, payload);
-            if (res.data) setData(res.data.data);
+            if (res.data) {
+                setData(res.data.data);
+                setTotalLeaves(res.data.total_leaves);
+            }
         } catch (err) {
             console.error("Failed to fetch leaves", err);
         }
@@ -625,6 +632,16 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             alignItems="center"
                             sx={{ flexShrink: 0 }}
                         >
+                            <Typography 
+                                sx={{
+                                    color: "#047bff",
+                                    bgcolor: "action.hover",
+                                    borderRadius: 2,
+                                }}
+                            >
+                                Leaves Taken ({totalLeaves})
+                            </Typography>
+                            
                             <Button
                                 color="inherit"
                                 startIcon={<IconHistory />}

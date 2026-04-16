@@ -905,7 +905,7 @@ const InductionTraining = ({ companyId }: Props) => {
                             {/* Title */}
                             <Box>
                                 <Typography variant="subtitle2" mb={0.75} fontWeight={600}>
-                                    Title <Box component="span" color="error.main">*</Box>
+                                    Title
                                 </Typography>
                                 <CustomTextField
                                     placeholder="Enter training title..."

@@ -909,7 +909,6 @@ const NearMissReporting = ({ companyId }: Props) => {
                             <Box>
                                 <Typography variant="subtitle2" mb={0.75} fontWeight={600}>
                                     Hazard Type
-                                    <Box component="span" color="error.main">*</Box>
                                 </Typography>
                                 <Autocomplete
                                     options={hazardOptions}

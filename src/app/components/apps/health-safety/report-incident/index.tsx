@@ -29,6 +29,7 @@ export type IncidentRow = {
     id: number;
     added_by: string;
     user_thumb_image?: string;
+    title: string;
     incident_type: string;
     incident_type_id: number | null;
     threat_level: string;
@@ -54,10 +55,13 @@ interface AttachmentFile {
 }
 
 interface FormState {
+    title: string;
     incidentType: string;
     threatLevel: string;
     notifyTo: string;
 }
+
+type FormErrors = Partial<Record<keyof FormState | 'files', string>>;
 
 interface Props {
     companyId: number;
@@ -73,7 +77,7 @@ const FORMAT_META: Record<FormatKey, { bg: string; color: string; label: string 
 
 const PAGE_SIZES = [50, 100, 250, 500];
 
-const INITIAL_FORM: FormState = { incidentType: '', threatLevel: '', notifyTo: '' };
+const INITIAL_FORM: FormState = { title: '', incidentType: '', threatLevel: '', notifyTo: '' };
 
 const mkUid = (): string => Math.random().toString(36).slice(2);
 
@@ -295,9 +299,10 @@ const AttachmentCard = React.memo(({ af, onRemove }: { af: AttachmentFile; onRem
 ));
 AttachmentCard.displayName = 'AttachmentCard';
 
-const DropZone = React.memo(({ onFiles, fileInputRef }: {
+const DropZone = React.memo(({ onFiles, fileInputRef, hasError }: {
     onFiles: (files: File[]) => void;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
+    hasError?: boolean;
 }) => {
     const [dragOver, setDragOver] = useState(false);
     return (
@@ -312,23 +317,30 @@ const DropZone = React.memo(({ onFiles, fileInputRef }: {
                 if (files.length) onFiles(files);
             }}
             sx={{
-                border: '2px dashed', borderColor: dragOver ? 'primary.main' : 'divider',
+                border: '2px dashed',
+                borderColor: hasError ? 'error.main' : dragOver ? 'primary.main' : 'divider',
                 borderRadius: '12px', py: 3,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', gap: 1,
-                bgcolor: dragOver ? 'action.selected' : 'background.default',
+                bgcolor: hasError
+                    ? 'rgba(211,47,47,0.04)'
+                    : dragOver ? 'action.selected' : 'background.default',
                 transition: 'all 0.18s',
-                '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+                '&:hover': {
+                    borderColor: hasError ? 'error.dark' : 'primary.main',
+                    bgcolor: hasError ? 'rgba(211,47,47,0.07)' : 'action.hover',
+                },
             }}
         >
             <Box sx={{
-                width: 44, height: 44, borderRadius: '12px', bgcolor: '#E6F1FB',
+                width: 44, height: 44, borderRadius: '12px',
+                bgcolor: hasError ? '#FCEBEB' : '#E6F1FB',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-                <IconCloudUpload size={22} color="#185FA5" />
+                <IconCloudUpload size={22} color={hasError ? '#A32D2D' : '#185FA5'} />
             </Box>
             <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" fontWeight={600} color="primary.main">
+                <Typography variant="body2" fontWeight={600} color={hasError ? 'error.main' : 'primary.main'}>
                     Click to upload or drag & drop
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -463,6 +475,7 @@ const ReportIncident = ({ companyId }: Props) => {
     const [editingId, setEditingId]       = useState<number | null>(null);
     const [submitting, setSubmitting]     = useState(false);
     const [form, setForm]                 = useState<FormState>(INITIAL_FORM);
+    const [formErrors, setFormErrors]     = useState<FormErrors>({});
     const [attachmentDrawerOpen, setAttachmentDrawerOpen] = useState(false);
     const [selectedAttachments, setSelectedAttachments]   = useState<AttachmentFile[]>([]);
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -473,8 +486,11 @@ const ReportIncident = ({ companyId }: Props) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { successMessage, errorMessage, showSuccess, showError, clear: clearMessages } = useSnackbar();
-    const { attachments, removedIds, existingCount, newCount, reset: resetAttachments, addFiles, remove: removeAttachment, loadExisting } = useAttachments();
-    
+    const {
+        attachments, removedIds, existingCount, newCount,
+        reset: resetAttachments, addFiles, remove: removeAttachment, loadExisting,
+    } = useAttachments();
+
     const fetchResources = useCallback(async () => {
         if (!companyId) return;
         try {
@@ -497,6 +513,7 @@ const ReportIncident = ({ companyId }: Props) => {
                     id: item.id,
                     added_by: item.user_name || '-',
                     user_thumb_image: item.user_thumb_image || '',
+                    title: item.title || '-',
                     incident_type: item.incident_type || '-',
                     incident_type_id: item.incident_type_id ?? null,
                     threat_level: item.threat_level || '-',
@@ -517,9 +534,23 @@ const ReportIncident = ({ companyId }: Props) => {
 
     useEffect(() => { fetchResources(); }, [fetchResources]);
     useEffect(() => { fetchData(); }, [fetchData]);
-    
+
+    // ── Validation ──────────────────────────────────────────────────────────
+    const validateForm = useCallback((): boolean => {
+        const errors: FormErrors = {};
+        if (!form.title.trim())       errors.title        = 'Title is required.';
+        if (!form.incidentType)       errors.incidentType = 'Incident type is required.';
+        if (!form.threatLevel)        errors.threatLevel  = 'Threat level is required.';
+        if (!form.notifyTo)           errors.notifyTo     = 'Notify-to user is required.';
+        if (attachments.length === 0) errors.files        = 'At least one file is required.';
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    }, [form, attachments]);
+
+    // ── Drawer helpers ──────────────────────────────────────────────────────
     const resetAndClose = useCallback(() => {
         resetAttachments();
+        setFormErrors({});
         setDrawerOpen(false);
         setIsEditing(false);
         setEditingId(null);
@@ -529,6 +560,7 @@ const ReportIncident = ({ companyId }: Props) => {
 
     const openCreateDrawer = useCallback(() => {
         resetAttachments();
+        setFormErrors({});
         setIsEditing(false);
         setEditingId(null);
         setForm(INITIAL_FORM);
@@ -537,9 +569,11 @@ const ReportIncident = ({ companyId }: Props) => {
 
     const handleEdit = useCallback((row: IncidentRow) => {
         resetAttachments();
+        setFormErrors({});
         setIsEditing(true);
         setEditingId(row.id);
         setForm({
+            title:        row.title !== '-' ? row.title : '',
             incidentType: row.incident_type_id != null ? String(row.incident_type_id) : '',
             threatLevel:  row.threat_level_id  != null ? String(row.threat_level_id)  : '',
             notifyTo:     row.notify_to_id     != null ? String(row.notify_to_id)     : '',
@@ -550,9 +584,10 @@ const ReportIncident = ({ companyId }: Props) => {
 
     const handleFilesAdded = useCallback((files: File[]) => {
         addFiles(files);
+        if (files.length) setFormErrors(prev => ({ ...prev, files: undefined }));
         if (fileInputRef.current) fileInputRef.current.value = '';
     }, [addFiles]);
-    
+
     const handleViewAttachments = useCallback((row: IncidentRow) => {
         if (!row.files?.length) return;
         setSelectedAttachments(row.files.map(fromExisting));
@@ -562,20 +597,24 @@ const ReportIncident = ({ companyId }: Props) => {
     const handleDownload = useCallback((af: AttachmentFile) => {
         downloadAttachment(af, showError);
     }, [showError]);
-    
+
+    // ── Submit ──────────────────────────────────────────────────────────────
     const handleSubmit = useCallback(async () => {
+        if (!validateForm()) return;
         setSubmitting(true);
         try {
             const formData = new FormData();
-            formData.append('company_id', String(companyId));
+            formData.append('company_id',       String(companyId));
+            formData.append('title',            form.title);
             formData.append('incident_type_id', String(form.incidentType));
-            formData.append('threat_level_id', String(form.threatLevel));
-            formData.append('notify_to', String(form.notifyTo));
+            formData.append('threat_level_id',  String(form.threatLevel));
+            formData.append('notify_to',        String(form.notifyTo));
             if (isEditing && editingId) {
                 formData.append('report_incident_id', String(editingId));
                 removedIds.forEach(id => formData.append('remove_attachment_ids[]', String(id)));
             }
-            attachments.filter(a => a.source === 'new' && a.file)
+            attachments
+                .filter(a => a.source === 'new' && a.file)
                 .forEach(a => formData.append('files', a.file!));
 
             const res = await api.post('/report-incidents/store', formData, {
@@ -594,8 +633,12 @@ const ReportIncident = ({ companyId }: Props) => {
         } finally {
             setSubmitting(false);
         }
-    }, [form, companyId, isEditing, editingId, removedIds, attachments, showError, showSuccess, resetAndClose, fetchData]);
-    
+    }, [
+        form, companyId, isEditing, editingId, removedIds, attachments,
+        validateForm, showError, showSuccess, resetAndClose, fetchData,
+    ]);
+
+    // ── Delete ──────────────────────────────────────────────────────────────
     const handleDeleteClick = useCallback((id: number) => {
         setDeletingId(id);
         setDeleteDialogOpen(true);
@@ -620,24 +663,26 @@ const ReportIncident = ({ companyId }: Props) => {
             setDeletingId(null);
         }
     }, [deletingId, showSuccess, showError, fetchData]);
-    
+
+    // ── Table data ──────────────────────────────────────────────────────────
     const filteredData = useMemo(() =>
             data.filter(item => {
                 const q = searchTerm.toLowerCase();
                 return (
+                    item.title?.toLowerCase().includes(q) ||
                     item.added_by?.toLowerCase().includes(q) ||
                     item.incident_type?.toLowerCase().includes(q) ||
                     item.threat_level?.toLowerCase().includes(q)
                 );
             }),
-        [data, searchTerm]
+        [data, searchTerm],
     );
 
     const columns = useMemo(() => [
         {
             id: 'select',
             header: () => (
-                <Box sx={{ px: 1.5, py: 1.5 }}>   {/* Consistent padding with body */}
+                <Box sx={{ px: 1.5, py: 1.5 }}>
                     <CustomCheckbox
                         checked={selectedRowIds.size === filteredData.length && filteredData.length > 0}
                         indeterminate={selectedRowIds.size > 0 && selectedRowIds.size < filteredData.length}
@@ -656,9 +701,8 @@ const ReportIncident = ({ companyId }: Props) => {
                 const item = row.original as IncidentRow;
                 const isChecked = selectedRowIds.has(item.id);
                 const show = isChecked || hoveredRow === item.id;
-
                 return (
-                    <Box sx={{ px: 1.5, py: 1.5 }}>   {/* Same padding as header */}
+                    <Box sx={{ px: 1.5, py: 1.5 }}>
                         <Stack
                             direction="row"
                             alignItems="center"
@@ -673,10 +717,7 @@ const ReportIncident = ({ companyId }: Props) => {
                                     isChecked ? s.delete(item.id) : s.add(item.id);
                                     setSelectedRowIds(s);
                                 }}
-                                sx={{
-                                    opacity: show ? 1 : 0,
-                                    transition: 'opacity 0.2s'
-                                }}
+                                sx={{ opacity: show ? 1 : 0, transition: 'opacity 0.2s' }}
                             />
                         </Stack>
                     </Box>
@@ -693,6 +734,21 @@ const ReportIncident = ({ companyId }: Props) => {
                         <Avatar src={r.user_thumb_image || ''} sx={{ width: 36, height: 36 }} />
                         <Typography className="f-14" noWrap>{r.added_by}</Typography>
                     </Stack>
+                );
+            },
+        },
+        {
+            id: 'title',
+            header: 'Title',
+            accessorKey: 'title',
+            cell: ({ getValue }: any) => {
+                const val = getValue();
+                return (
+                    <Tooltip title={val && val !== '-' ? val : ''} placement="top">
+                        <Typography className="f-14" noWrap sx={{ maxWidth: 200 }}>
+                            {val || '-'}
+                        </Typography>
+                    </Tooltip>
                 );
             },
         },
@@ -717,13 +773,7 @@ const ReportIncident = ({ companyId }: Props) => {
                         label={val}
                         color={getThreatColor(val)}
                         size="small"
-                        sx={{
-                            width: 80,
-                            height: 26,
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
-                            textTransform: 'capitalize'
-                        }}
+                        sx={{ width: 80, height: 26, fontWeight: 600, fontSize: '0.75rem', textTransform: 'capitalize' }}
                     />
                 ) : (
                     <Typography color="textSecondary" className="f-14">-</Typography>
@@ -735,21 +785,11 @@ const ReportIncident = ({ companyId }: Props) => {
             header: 'Attachment',
             cell: ({ row }: any) => {
                 const item = row.original as IncidentRow;
-
                 return (
-                    <Box
-                        display="flex"
-                        justifyContent="start"
-                        alignItems="center"
-                        width="100%"
-                    >
+                    <Box display="flex" justifyContent="start" alignItems="center" width="100%">
                         {item.files?.length ? (
                             <Tooltip title="View Attachments">
-                                <IconButton
-                                    size="small"
-                                    color="primary"
-                                    onClick={() => handleViewAttachments(item)}
-                                >
+                                <IconButton size="small" color="primary" onClick={() => handleViewAttachments(item)}>
                                     <IconPaperclip size={18} />
                                 </IconButton>
                             </Tooltip>
@@ -792,11 +832,12 @@ const ReportIncident = ({ companyId }: Props) => {
         getPaginationRowModel: getPaginationRowModel(),
         initialState: { pagination: { pageSize: 50 } },
     });
-    
+
+    // ── Render ──────────────────────────────────────────────────────────────
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-            {/* ── Header ── */}
+            {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', px: 2, py: 1.5 }}>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <TextField
@@ -817,7 +858,7 @@ const ReportIncident = ({ companyId }: Props) => {
 
             <Divider />
 
-            {/* ── Table ── */}
+            {/* Table */}
             <TableContainer sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 <Table stickyHeader sx={{ minWidth: 850 }}>
                     <TableHead>
@@ -825,12 +866,14 @@ const ReportIncident = ({ companyId }: Props) => {
                             <TableRow key={hg.id}>
                                 {hg.headers.map(header => (
                                     <TableCell key={header.id} sx={{ p: 0, whiteSpace: 'nowrap' }}>
-                                        <Box onClick={header.column.getToggleSortingHandler()}
-                                             sx={{
-                                                 cursor: header.column.getCanSort() ? 'pointer' : 'default',
-                                                 py: 1.5, px: 1.5,
-                                                 fontWeight: header.column.getIsSorted() ? 600 : 500,
-                                             }}>
+                                        <Box
+                                            onClick={header.column.getToggleSortingHandler()}
+                                            sx={{
+                                                cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                                                py: 1.5, px: 1.5,
+                                                fontWeight: header.column.getIsSorted() ? 600 : 500,
+                                            }}
+                                        >
                                             {flexRender(header.column.columnDef.header, header.getContext())}
                                         </Box>
                                     </TableCell>
@@ -865,7 +908,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 </Table>
             </TableContainer>
 
-            {/* ── Pagination ── */}
+            {/* Pagination */}
             {filteredData.length > 0 && (
                 <Stack gap={1} pr={3} pt={1} pl={3} pb={1} alignItems="center"
                        direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between">
@@ -891,10 +934,12 @@ const ReportIncident = ({ companyId }: Props) => {
                 </Stack>
             )}
 
-            {/* ── Create / Edit Drawer ── */}
+            {/* Create / Edit Drawer */}
             <Drawer anchor="right" open={drawerOpen} onClose={resetAndClose}
                     PaperProps={{ sx: { width: 520, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 } }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+                    {/* Drawer header */}
                     <Box sx={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider',
@@ -909,41 +954,92 @@ const ReportIncident = ({ companyId }: Props) => {
 
                     {submitting && <LinearProgress sx={{ height: 2 }} />}
 
+                    {/* Drawer body */}
                     <Box flex={1} overflow="auto" px={3} py={3}>
                         <Stack spacing={3}>
+
+                            {/* Title */}
+                            <Box>
+                                <Typography variant="subtitle2" mb={0.75} fontWeight={600}>
+                                    Title <Box component="span" color="error.main">*</Box>
+                                </Typography>
+                                <CustomTextField
+                                    placeholder="Enter report title..."
+                                    value={form.title}
+                                    onChange={(e: any) => {
+                                        setForm(f => ({ ...f, title: e.target.value }));
+                                        if (e.target.value.trim()) setFormErrors(p => ({ ...p, title: undefined }));
+                                    }}
+                                    fullWidth
+                                    error={Boolean(formErrors.title)}
+                                    helperText={formErrors.title}
+                                />
+                            </Box>
+
                             {/* Incident Type */}
                             <Box>
-                                <Typography variant="subtitle2" mb={0.75} fontWeight={600}>Incident Type</Typography>
+                                <Typography variant="subtitle2" mb={0.75} fontWeight={600}>
+                                    Incident Type <Box component="span" color="error.main">*</Box>
+                                </Typography>
                                 <Autocomplete
                                     options={incidentTypeOptions}
                                     value={incidentTypeOptions.find(o => String(o.id) === form.incidentType) || null}
-                                    onChange={(_, v) => setForm(f => ({ ...f, incidentType: v?.id ? String(v.id) : '' }))}
+                                    onChange={(_, v) => {
+                                        setForm(f => ({ ...f, incidentType: v?.id ? String(v.id) : '' }));
+                                        if (v?.id) setFormErrors(p => ({ ...p, incidentType: undefined }));
+                                    }}
                                     getOptionLabel={o => o.title || ''}
                                     isOptionEqualToValue={(o, v) => String(o.id) === String(v?.id)}
-                                    renderInput={params => <CustomTextField {...params} placeholder="Select Incident Type" fullWidth />}
+                                    renderInput={params => (
+                                        <CustomTextField
+                                            {...params}
+                                            placeholder="Select Incident Type"
+                                            fullWidth
+                                            error={Boolean(formErrors.incidentType)}
+                                            helperText={formErrors.incidentType}
+                                        />
+                                    )}
                                 />
                             </Box>
 
                             {/* Threat Level */}
                             <Box>
-                                <Typography variant="subtitle2" mb={0.75} fontWeight={600}>Threat Level</Typography>
+                                <Typography variant="subtitle2" mb={0.75} fontWeight={600}>
+                                    Threat Level <Box component="span" color="error.main">*</Box>
+                                </Typography>
                                 <Autocomplete
                                     options={threatLevelOptions}
                                     value={threatLevelOptions.find(o => String(o.id) === form.threatLevel) || null}
-                                    onChange={(_, v) => setForm(f => ({ ...f, threatLevel: v?.id ? String(v.id) : '' }))}
+                                    onChange={(_, v) => {
+                                        setForm(f => ({ ...f, threatLevel: v?.id ? String(v.id) : '' }));
+                                        if (v?.id) setFormErrors(p => ({ ...p, threatLevel: undefined }));
+                                    }}
                                     getOptionLabel={o => o.title || ''}
                                     isOptionEqualToValue={(o, v) => String(o.id) === String(v?.id)}
-                                    renderInput={params => <CustomTextField {...params} placeholder="Select Threat Level" fullWidth />}
+                                    renderInput={params => (
+                                        <CustomTextField
+                                            {...params}
+                                            placeholder="Select Threat Level"
+                                            fullWidth
+                                            error={Boolean(formErrors.threatLevel)}
+                                            helperText={formErrors.threatLevel}
+                                        />
+                                    )}
                                 />
                             </Box>
 
                             {/* Notify To */}
                             <Box>
-                                <Typography variant="subtitle2" mb={0.75} fontWeight={600}>Notify To</Typography>
+                                <Typography variant="subtitle2" mb={0.75} fontWeight={600}>
+                                    Notify To <Box component="span" color="error.main">*</Box>
+                                </Typography>
                                 <Autocomplete
                                     options={userOptions}
                                     value={userOptions.find(u => String(u.id) === form.notifyTo) || null}
-                                    onChange={(_, v) => setForm(f => ({ ...f, notifyTo: v?.id ? String(v.id) : '' }))}
+                                    onChange={(_, v) => {
+                                        setForm(f => ({ ...f, notifyTo: v?.id ? String(v.id) : '' }));
+                                        if (v?.id) setFormErrors(p => ({ ...p, notifyTo: undefined }));
+                                    }}
                                     getOptionLabel={o => o.name || ''}
                                     isOptionEqualToValue={(o, v) => String(o.id) === String(v?.id)}
                                     renderOption={(props, option) => (
@@ -956,14 +1052,33 @@ const ReportIncident = ({ companyId }: Props) => {
                                             </Stack>
                                         </li>
                                     )}
-                                    renderInput={params => <CustomTextField {...params} placeholder="Select User" fullWidth />}
+                                    renderInput={params => (
+                                        <CustomTextField
+                                            {...params}
+                                            placeholder="Select User"
+                                            fullWidth
+                                            error={Boolean(formErrors.notifyTo)}
+                                            helperText={formErrors.notifyTo}
+                                        />
+                                    )}
                                 />
                             </Box>
 
                             {/* Attachments */}
                             <Box>
-                                <Typography variant="subtitle2" fontWeight={600} mb={1.25}>Attachments</Typography>
-                                <DropZone onFiles={handleFilesAdded} fileInputRef={fileInputRef} />
+                                <Typography variant="subtitle2" fontWeight={600} mb={1.25}>
+                                    Attachments <Box component="span" color="error.main">*</Box>
+                                </Typography>
+                                <DropZone
+                                    onFiles={handleFilesAdded}
+                                    fileInputRef={fileInputRef}
+                                    hasError={Boolean(formErrors.files)}
+                                />
+                                {formErrors.files && (
+                                    <Typography variant="caption" color="error" sx={{ mt: 0.75, display: 'block', px: 0.5 }}>
+                                        {formErrors.files}
+                                    </Typography>
+                                )}
                                 <input
                                     ref={fileInputRef} type="file" hidden multiple
                                     accept="image/*,video/*,audio/*,.pdf"
@@ -999,7 +1114,7 @@ const ReportIncident = ({ companyId }: Props) => {
                                         )}
                                     </Stack>
                                 )}
-                                {attachments.length === 0 && (
+                                {attachments.length === 0 && !formErrors.files && (
                                     <Typography variant="caption" color="text.secondary"
                                                 sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}>
                                         No attachments added yet
@@ -1009,6 +1124,7 @@ const ReportIncident = ({ companyId }: Props) => {
                         </Stack>
                     </Box>
 
+                    {/* Drawer footer */}
                     <Box px={3} py={2} borderTop="1px solid" sx={{ borderColor: 'divider' }}>
                         <Stack direction="row" gap={1.5}>
                             <Button variant="contained" color="primary" onClick={handleSubmit}
@@ -1026,7 +1142,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 </Box>
             </Drawer>
 
-            {/* ── Attachment Viewer Drawer ── */}
+            {/* Attachment Viewer Drawer */}
             <Drawer
                 anchor="right"
                 open={attachmentDrawerOpen}
@@ -1073,7 +1189,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 </Box>
             </Drawer>
 
-            {/* ── Delete Dialog ── */}
+            {/* Delete Dialog */}
             <Dialog open={deleteDialogOpen} onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
                     PaperProps={{ sx: { borderRadius: '14px' } }}>
                 <DialogTitle sx={{ fontWeight: 700 }}>Delete Incident Report?</DialogTitle>
@@ -1094,7 +1210,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 </DialogActions>
             </Dialog>
 
-            {/* ── Snackbar ── */}
+            {/* Snackbar */}
             <Snackbar
                 open={Boolean(successMessage || errorMessage)}
                 autoHideDuration={4000}

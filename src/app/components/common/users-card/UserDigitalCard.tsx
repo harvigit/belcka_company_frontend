@@ -227,7 +227,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 2,
-                    pb: { xs: 2, sm: 2 },
+                    pb: { xs: 1, sm: 1 },
                 }}
             >
                 <Box
@@ -237,8 +237,8 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                         alignItems: 'flex-start',
                         width: '100%',
                         overflow: 'hidden',
-                        py: { sm: 2 },
-                        px: { xs: 0, sm: 2 },
+                        py: { sm: 1 },
+                        px: { xs: 0, sm: 1 },
                     }}
                 >
                     <Box
@@ -262,7 +262,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                 borderRadius: '20px',
                                 backgroundColor: '#ffffff',
                                 boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                                padding: '32px',
+                                padding: '18px',
                                 boxSizing: 'border-box',
                                 display: 'flex',
                                 flexDirection: 'row',
@@ -294,7 +294,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                     <img
                                         src={cardData.user_image || '/images/users/user.png'}
                                         alt="User"
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                        style={{ width: '100%', height: '100%', display: 'block' }}
                                     />
                                 </Box>
 
@@ -340,11 +340,18 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                 }}
                             >
                                 {/* Company Logo */}
-                                <Box sx={{ display: 'inline-flex', width: 'fit-content' }}>
+                                <Box  sx={{
+                                    width: '100px',
+                                    height: '100px',
+                                    overflow: 'hidden',
+                                    flexShrink: 0,
+                                    mb: '10px',
+                                    objectFit: 'cover',
+                                }}>
                                     <img
                                         src={cardData.company_logo}
                                         alt="Company Logo"
-                                        style={{ width: '122px', height: '60px', objectFit: 'contain', display: 'block' }}
+                                        style={{ width: '100%', height: '100%', display: 'block' }}
                                     />
                                 </Box>
 
