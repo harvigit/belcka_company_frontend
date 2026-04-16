@@ -68,29 +68,28 @@ const EditUnit: React.FC<EditUnitProps> = ({
   };
 
   // Fetch data
+  const fetchTasks = async () => {
+    try {
+      const res = await api.get(`units/get?id=${id}&company_id=${companyId}`);
+      if (res.data && res.data.info) {
+        const task = res.data.info[0];
+        setFormData({
+          id: task.id,
+          name: task.name || "",
+          company_id: task.company_id || "",
+          type: task.type || "",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch unit", err);
+    }
+  };
+
   useEffect(() => {
-    if (id) {
-      const fetchTasks = async () => {
-        try {
-          const res = await api.get(
-            `units/get?id=${id}&company_id=${companyId}`,
-          );
-          if (res.data && res.data.info) {
-            const task = res.data.info[0];
-            setFormData({
-              id: task.id,
-              name: task.name || "",
-              company_id: task.company_id || "",
-              type: task.type || "",
-            });
-          }
-        } catch (err) {
-          console.error("Failed to fetch unit", err);
-        }
-      };
+    if (open && id) {
       fetchTasks();
     }
-  }, [id, setFormData]);
+  }, [id, open]);
 
   return (
     <Drawer

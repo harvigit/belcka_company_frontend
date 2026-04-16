@@ -121,6 +121,7 @@ export interface ProductFormData {
   max_stock?: number | null;
   manufacture?: number | null;
   model?: number | null;
+  qty?: number | null;
 }
 
 const ProductList = () => {
@@ -164,6 +165,7 @@ const ProductList = () => {
     description: "",
     uuid: "",
     status: true,
+    qty: 0,
   });
   const [unitDrawerOpen, setUnitDrawerOpen] = useState(false);
   const [productSetOpen, setProductSetOpen] = useState(false);
@@ -530,6 +532,7 @@ const ProductList = () => {
       description: "",
       uuid: "",
       status: true,
+      qty: 0,
     });
     setDrawerOpen(true);
   };
@@ -601,11 +604,9 @@ const ProductList = () => {
 
     if (rowCategories[item.id]) {
       initialCategories = rowCategories[item.id];
-    }
-    else if (Array.isArray(item.product_categories)) {
+    } else if (Array.isArray(item.product_categories)) {
       initialCategories = item.product_categories;
-    }
-    else if (typeof item.product_categories === "string") {
+    } else if (typeof item.product_categories === "string") {
       initialCategories = item.product_categories
         .split(",")
         .map((name: string) => ({ name: name.trim() }));
@@ -614,7 +615,9 @@ const ProductList = () => {
     const selectedIds = item.category_ids
       ? item.category_ids.split(",").map((id: string) => Number(id))
       : [];
-    initialCategories = categories.filter((cat) => selectedIds.includes(cat.id));
+    initialCategories = categories.filter((cat) =>
+      selectedIds.includes(cat.id),
+    );
 
     setDraftCategories(initialCategories);
 

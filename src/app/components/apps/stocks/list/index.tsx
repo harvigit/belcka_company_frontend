@@ -47,6 +47,7 @@ import {
   IconClock,
   IconDotsVertical,
   IconFilter,
+  IconPlus,
   IconPlusMinus,
   IconSearch,
   IconUser,
@@ -140,6 +141,7 @@ const StockList = () => {
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [editStockOpen, setEditStockOpen] = useState(false);
+  const [addStockOpen, setAddStockOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [storeAnchorEl, setStoreAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -1152,6 +1154,30 @@ const StockList = () => {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
+                    setAddStockOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconPlus width={18} />
+                  </ListItemIcon>
+                  Add Stock
+                </Link>
+              </MenuItem>
+
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
                     setHistoryDrawerOpen(true);
                   }}
                   style={{
@@ -1689,6 +1715,21 @@ const StockList = () => {
           isSaving={isSaving}
           editData={selectedProduct}
           companyId={user.company_id ?? null}
+        />
+
+        {/* Add stock */}
+        <AdjustStock
+          open={addStockOpen}
+          onClose={() => setAddStockOpen(false)}
+          formData={formData}
+          setFormData={setFormData}
+          onUpdate={fetchProducts}
+          onProductChange={() => handleEdit(selectedTaskId ?? 0)}
+          onChange={() => handleHistory(selectedTaskId ?? 0)}
+          isSaving={isSaving}
+          editData={selectedProduct}
+          companyId={user.company_id ?? null}
+          is_product={true}
         />
 
         <StoreModal

@@ -234,11 +234,11 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                             justifyContent={"space-between"}
                             sx={{ p: 1 }}
                           >
-                            <Typography color="textSecondary">
+                            <Typography color="textSecondary" className="f-14">
                               Hire: {order.from_date_formate} -{" "}
                               {order.from_date_formate}
                             </Typography>
-                            <Typography color="textSecondary">
+                            <Typography color="textSecondary" className="f-14">
                               Order Date: {order.date}
                             </Typography>
                           </Box>
@@ -414,20 +414,22 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                     <Typography fontWeight={500} textAlign={"end"}>
                       {work.user_name}
                     </Typography>
-                    <Box
-                      display={"block "}
-                      alignItems={"center"}
-                      justifyContent={"space-between"}
-                      sx={{ p: 1 }}
-                    >
-                      <Typography color="textSecondary">
-                        Hire: {work.from_date_formate} -{" "}
-                        {work.from_date_formate}
-                      </Typography>
-                      <Typography color="textSecondary">
-                        Order Date: {work.date}
-                      </Typography>
-                    </Box>
+                    {work.order_status !== hireStatus.AVAILABLE && (
+                      <Box
+                        display={"block "}
+                        alignItems={"center"}
+                        justifyContent={"space-between"}
+                        sx={{ p: 1 }}
+                      >
+                        <Typography color="textSecondary" className="f-14">
+                          Hire: {work.from_date_formate} -{" "}
+                          {work.from_date_formate}
+                        </Typography>
+                        <Typography color="textSecondary" className="f-14">
+                          Order Date: {work.date}
+                        </Typography>
+                      </Box>
+                    )}
                     <Box display="block" gap={1} alignItems="center">
                       <Box display="flex" gap={1} alignItems="center">
                         <Image
@@ -493,6 +495,18 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                                 Approved by: {work.approve_by_user_name}
                               </Typography>
                             )}
+                          {work.reject_by_user_name &&
+                            work.order_status == hireStatus.CANCELLED && (
+                              <Typography variant="body2">
+                                Cancel by: {work.reject_by_user_name}
+                              </Typography>
+                            )}
+                          {work.return_by_user_name &&
+                            work.order_status == hireStatus.IN_SERVICE && (
+                              <Typography variant="body2">
+                                In service by: {work.return_by_user_name}
+                              </Typography>
+                            )}
                           {work.approve_by_user_name &&
                             work.order_status == hireStatus.IN_SERVICE && (
                               <Typography variant="body2">
@@ -500,7 +514,11 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                               </Typography>
                             )}
                           {work.order_status === hireStatus.IN_SERVICE && (
-                            <Box display="flex" gap={1} justifyContent={"flex-end"}>
+                            <Box
+                              display="flex"
+                              gap={1}
+                              justifyContent={"flex-end"}
+                            >
                               <Button
                                 onClick={() =>
                                   handleStatusChange({
