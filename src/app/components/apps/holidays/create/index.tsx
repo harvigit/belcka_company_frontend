@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Box, Button, Stack, Typography, Grid, Popover } from '@mui/material';
 import toast from 'react-hot-toast';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
@@ -10,7 +10,7 @@ import { User } from 'next-auth';
 import { AxiosResponse } from 'axios';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import {format} from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 interface Props {
     open: boolean;
@@ -21,16 +21,20 @@ interface Props {
 const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
     const [loading, setLoading] = useState(false);
     const [title, setTitle] = useState('');
-    const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-    const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+    const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
     const [startAnchorEl, setStartAnchorEl] = useState<HTMLElement | null>(null);
     const [endAnchorEl, setEndAnchorEl] = useState<HTMLElement | null>(null);
+    
+    const today = new Date();today.setHours(0, 0, 0, 0);
 
-    const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null; id?: number };
-
-    const formatDate = (date: Date | undefined) => date ? format(date, 'dd/MM/yyyy') : '';
+    const formatDate = (date: Date | undefined) => date && isValid(date) ? format(date, 'dd/MM/yyyy') : '';
+    
+    const totalDays =
+        startDate && endDate && isValid(startDate) && isValid(endDate) && startDate <= endDate
+            ? Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+            : null;
 
     const handleAddHoliday = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,8 +47,6 @@ const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
         setLoading(true);
         try {
             const payload = {
-                company_id: user.company_id,
-                added_by: user.id,
                 title: title.trim(),
                 start_date: formatDate(startDate),
                 end_date: formatDate(endDate),
@@ -70,11 +72,6 @@ const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
         }
     };
 
-    const totalDays =
-        startDate && endDate && startDate <= endDate
-            ? Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-            : null;
-
     return (
         <Box>
             <Grid size={{ xs: 12, lg: 12 }}>
@@ -99,16 +96,15 @@ const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
                             {/* Start Date */}
                             <Box flex={1}>
                                 <Typography variant="caption">Start Date</Typography>
-                                <CustomTextField
-                                    variant="outlined"
-                                    fullWidth
-                                    placeholder="Select start date"
-                                    value={formatDate(startDate)}
-                                    readOnly
-                                    onClick={(e: React.MouseEvent<HTMLInputElement>) =>
-                                        setStartAnchorEl(e.currentTarget)
-                                    }
-                                />
+                                <Box onClick={(e) => setStartAnchorEl(e.currentTarget)}>
+                                    <CustomTextField
+                                        variant="outlined"
+                                        fullWidth
+                                        placeholder="Select start date"
+                                        value={formatDate(startDate)}
+                                        inputProps={{ readOnly: true, style: { cursor: 'pointer' } }}
+                                    />
+                                </Box>
                                 <Popover
                                     open={Boolean(startAnchorEl)}
                                     anchorEl={startAnchorEl}
@@ -124,10 +120,15 @@ const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
                                         selected={startDate}
                                         onSelect={(date) => {
                                             setStartDate(date);
+                                            // Reset end date if it's before the new start date
+                                            if (endDate && date && endDate < date) {
+                                                setEndDate(undefined);
+                                            }
                                             setStartAnchorEl(null);
                                         }}
                                         showOutsideDays
-                                        defaultMonth={startDate ?? new Date()}
+                                        defaultMonth={startDate ?? today}
+                                        disabled={{ before: today }}
                                     />
                                 </Popover>
                             </Box>
@@ -135,16 +136,15 @@ const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
                             {/* End Date */}
                             <Box flex={1}>
                                 <Typography variant="caption">End Date</Typography>
-                                <CustomTextField
-                                    variant="outlined"
-                                    fullWidth
-                                    placeholder="Select end date"
-                                    value={formatDate(endDate)}
-                                    readOnly
-                                    onClick={(e: React.MouseEvent<HTMLInputElement>) =>
-                                        setEndAnchorEl(e.currentTarget)
-                                    }
-                                />
+                                <Box onClick={(e) => setEndAnchorEl(e.currentTarget)}>
+                                    <CustomTextField
+                                        variant="outlined"
+                                        fullWidth
+                                        placeholder="Select end date"
+                                        value={formatDate(endDate)}
+                                        inputProps={{ readOnly: true, style: { cursor: 'pointer' } }}
+                                    />
+                                </Box>
                                 <Popover
                                     open={Boolean(endAnchorEl)}
                                     anchorEl={endAnchorEl}
@@ -163,8 +163,8 @@ const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
                                             setEndAnchorEl(null);
                                         }}
                                         showOutsideDays
-                                        defaultMonth={endDate ?? new Date()}
-                                        disabled={startDate ? { before: startDate } : undefined}
+                                        defaultMonth={endDate ?? startDate ?? today}
+                                        disabled={{ before: startDate ?? today }}
                                     />
                                 </Popover>
                             </Box>

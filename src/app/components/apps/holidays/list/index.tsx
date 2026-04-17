@@ -115,6 +115,8 @@ const HolidayList = () => {
             if (res.data?.info) {
                 setData(res.data.info);
             }
+
+            console.log(data, 'daata')
         } catch (err) {
             console.error('Failed to fetch holidays', err);
         } finally {
@@ -126,7 +128,18 @@ const HolidayList = () => {
         if (user.company_id) fetchHolidays();
     }, [user.company_id]);
 
-    const formatDate = (date: string) => dayjs(date).isValid() ? dayjs(date).format('DD/MM/YYYY') : '-';
+    const formatDate = (date: string) => {
+        if (!date) return '-';
+        
+        const parsed = dayjs(date, 'DD/MM/YYYY', true);
+        if (parsed.isValid()){
+            return parsed.format('DD/MM/YYYY');  
+        } 
+        const iso = dayjs(date);
+        
+        return iso.isValid() ? iso.format('DD/MM/YYYY') : '-';
+    };
+
 
     const handleEdit = useCallback((id: number) => {
         setSelectedHolidayId(id);

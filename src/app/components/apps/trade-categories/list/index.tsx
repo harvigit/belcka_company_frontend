@@ -1,791 +1,812 @@
-"use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+'use client';
+import React, {useEffect, useState, useMemo, useCallback} from 'react';
 import {
-  TableContainer,
-  Table,
-  TableRow,
-  TableCell,
-  TableBody,
-  TableHead,
-  Typography,
-  Box,
-  Grid,
-  Button,
-  Divider,
-  IconButton,
-  Stack,
-  TextField,
-  InputAdornment,
-  MenuItem,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
-  Menu,
-  ListItemIcon,
-  Tooltip,
-  Popover,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-} from "@mui/material";
+    TableContainer,
+    Table,
+    TableRow,
+    TableCell,
+    TableBody,
+    TableHead,
+    Typography,
+    Box,
+    Grid,
+    Button,
+    Divider,
+    IconButton,
+    Stack,
+    TextField,
+    InputAdornment,
+    MenuItem,
+    DialogActions,
+    DialogTitle,
+    DialogContent,
+    Dialog,
+    Menu,
+    ListItemIcon,
+    Tooltip,
+    Popover,
+    FormGroup,
+    FormControlLabel,
+    Checkbox,
+} from '@mui/material';
 import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  createColumnHelper,
-  SortingState,
-} from "@tanstack/react-table";
+    flexRender,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    useReactTable,
+    createColumnHelper,
+    SortingState,
+} from '@tanstack/react-table';
 import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconSearch,
-  IconTrash,
-} from "@tabler/icons-react";
-import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat";
-import Link from "next/link";
-import { IconDotsVertical } from "@tabler/icons-react";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { IconPlus } from "@tabler/icons-react";
-import toast from "react-hot-toast";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
-import { IconEdit } from "@tabler/icons-react";
-import { AxiosResponse } from "axios";
-import CreateTradeCategory from "../create";
-import EditTradeCategory from "../edit";
-import Image from "next/image";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
-import { IconEye } from "@tabler/icons-react";
+    IconChevronLeft,
+    IconChevronRight, IconNotes,
+    IconSearch,
+    IconTrash,
+} from '@tabler/icons-react';
+import api from '@/utils/axios';
+import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import Link from 'next/link';
+import {IconDotsVertical} from '@tabler/icons-react';
+import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
+import {IconPlus} from '@tabler/icons-react';
+import toast from 'react-hot-toast';
+import {useSession} from 'next-auth/react';
+import {User} from 'next-auth';
+import {IconEdit} from '@tabler/icons-react';
+import {AxiosResponse} from 'axios';
+import CreateTradeCategory from '../create';
+import EditTradeCategory from '../edit';
+import Image from 'next/image';
+import SkeletonLoader from '@/app/components/SkeletonLoader';
+import {IconEye} from '@tabler/icons-react';
+import ArchiveCategory from '../archive';
 
 dayjs.extend(customParseFormat);
 
 export type UserList = {
-  id: number;
-  name: string;
+    id: number;
+    name: string;
 };
 
 const TradeCategoryList = () => {
-  const [data, setData] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [fetchCategory, setFetchCategory] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
+    const [data, setData] = useState<any[]>([]);
+    const [columnFilters, setColumnFilters] = useState<any>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [fetchCategory, setFetchCategory] = useState<boolean>(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+    const [sorting, setSorting] = useState<SortingState>([]);
 
-  const session = useSession();
-  const id = session.data?.user as User & { company_id?: number | null };
+    const session = useSession();
+    const id = session.data?.user as User & { company_id?: number | null };
 
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-  const [search, setSearch] = useState("");
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+    const openMenu = Boolean(anchorEl);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+    const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+    const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+    const [search, setSearch] = useState('');
+    const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
-  const [formData, setFormData] = useState<any>({
-    id: 0,
-    name: "",
-    company_id: id.company_id,
-  });
+    const [archiveDrawerOpen, setArchiveDrawerOpen] = useState(false);
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  // Fetch data
-  const fetchTrades = async () => {
-    setFetchCategory(true);
-    try {
-      const res = await api.get(
-        `trade/trade-categories?company_id=${id.company_id}`,
-      );
-      if (res.data) {
-        setData(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch trades", err);
-    }
-    setFetchCategory(false);
-  };
-
-  useEffect(() => {
-    fetchTrades();
-  }, [api]);
-
-  const handleOpenCreateDrawer = () => {
-    setFormData({
-      name: "",
-      company_id: id.company_id,
+    const [formData, setFormData] = useState<any>({
+        id: 0,
+        name: '',
+        company_id: id.company_id,
     });
-    setDrawerOpen(true);
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-      };
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
 
-      const result: AxiosResponse<any> = await api.post(
-        "trade/create-trade-category",
-        payload,
-      );
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          name: "",
-        });
-        fetchTrades();
-        setDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const editTrade = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...formData,
-      };
-
-      const result: AxiosResponse<any> = await api.post(
-        "trade/update-trade-category",
-        payload,
-      );
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          name: "",
-        });
-        fetchTrades();
-        setEditDrawerOpen(false);
-      } else {
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.category_name?.toLowerCase().includes(search);
-
-      return matchesSearch;
-    });
-  }, [data, searchTerm]);
-
-  // UseCallback to memoize these functions
-  const handleEdit = useCallback((id: number) => {
-    setSelectedTaskId(id);
-    setEditDrawerOpen(true);
-  }, []);
-
-  const columnHelper = createColumnHelper<any>();
-  const columns = [
-    {
-      id: "select",
-      header: ({ table }: any) => (
-        <Stack direction="row" alignItems="center">
-          <CustomCheckbox
-            className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
+    // Fetch data
+    const fetchTrades = async () => {
+        setFetchCategory(true);
+        try {
+            const res = await api.get(
+                `trade/trade-categories?company_id=${id.company_id}`,
+            );
+            if (res.data) {
+                setData(res.data.info);
             }
-            indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+        } catch (err) {
+            console.error('Failed to fetch trades', err);
+        }
+        setFetchCategory(false);
+    };
+
+    useEffect(() => {
+        fetchTrades();
+    }, [api]);
+
+    const handleOpenCreateDrawer = () => {
+        setFormData({
+            name: '',
+            company_id: id.company_id,
+        });
+        setDrawerOpen(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            const payload = {
+                ...formData,
+            };
+
+            const result: AxiosResponse<any> = await api.post(
+                'trade/create-trade-category',
+                payload,
+            );
+            if (result.data.IsSuccess == true) {
+                toast.success(result.data.message);
+                setFormData({
+                    id: 0,
+                    name: '',
+                });
+                fetchTrades();
+                setDrawerOpen(false);
+            } else {
+                toast.error(result.data.message);
             }
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              const isChecked = e.target.checked;
+        } catch (error) {
+            console.log(error, 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
-              if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
-              } else {
-                setSelectedRowIds(new Set());
-              }
-            }}
-          />
-        </Stack>
-      ),
-      cell: ({ row }: any) => {
-        const item = row.original;
-        const isChecked = selectedRowIds.has(item.id);
-        const isHovered = hoveredRow === item.id;
-        const showCheckbox = isChecked || isHovered;
+    const editTrade = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            const payload = {
+                ...formData,
+            };
 
-        return (
-          <Stack
-            direction="row"
-            alignItems="center"
-            onMouseEnter={() => setHoveredRow(item.id)}
-            onMouseLeave={() => setHoveredRow(null)}
-            sx={{ pl: 1 }}
-          >
-            <CustomCheckbox
-              checked={isChecked}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const newSelected = new Set(selectedRowIds);
-                if (isChecked) {
-                  newSelected.delete(item.id);
-                } else {
-                  newSelected.add(item.id);
-                }
-                setSelectedRowIds(newSelected);
-              }}
-              sx={{
-                opacity: showCheckbox ? 1 : 0,
-                pointerEvents: showCheckbox ? "auto" : "none",
-                transition: "opacity 0.2s ease",
-              }}
-            />
-          </Stack>
-        );
-      },
-    },
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
-        </Stack>
-      ),
-      enableSorting: true,
-      cell: ({ row }) => {
-        const item = row.original;
+            const result: AxiosResponse<any> = await api.post(
+                'trade/update-trade-category',
+                payload,
+            );
+            if (result.data.IsSuccess == true) {
+                toast.success(result.data.message);
+                setFormData({
+                    id: 0,
+                    name: '',
+                });
+                fetchTrades();
+                setEditDrawerOpen(false);
+            } else {
+            }
+        } catch (error) {
+            console.log(error, 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
-        return (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography className="f-14">{item.name ?? "-"}</Typography>
-          </Stack>
-        );
-      },
-    }),
+    const filteredData = useMemo(() => {
+        return data.filter((item) => {
+            const search = searchTerm.toLowerCase();
+            const matchesSearch =
+                item.name?.toLowerCase().includes(search) ||
+                item.category_name?.toLowerCase().includes(search);
 
-    columnHelper.display({
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Edit">
-              <IconButton onClick={() => handleEdit(item.id)} color="primary">
-                <IconEdit size={18} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        );
-      },
-    }),
-  ];
+            return matchesSearch;
+        });
+    }, [data, searchTerm]);
 
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl2(event.currentTarget);
-  };
-  const handlePopoverClose = () => setAnchorEl2(null);
+    // UseCallback to memoize these functions
+    const handleEdit = useCallback((id: number) => {
+        setSelectedTaskId(id);
+        setEditDrawerOpen(true);
+    }, []);
 
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
-  });
+    const columnHelper = createColumnHelper<any>();
+    const columns = [
+        {
+            id: 'select',
+            header: ({table}: any) => (
+                <Stack direction="row" alignItems="center">
+                    <CustomCheckbox
+                        className="header-checkbox"
+                        checked={
+                            selectedRowIds.size === filteredData.length &&
+                            filteredData.length > 0
+                        }
+                        indeterminate={
+                            selectedRowIds.size > 0 &&
+                            selectedRowIds.size < filteredData.length
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const isChecked = e.target.checked;
 
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
-
-  const simpleColumns = columns.map((column) => ({
-    name: column.id ?? "Unnamed Column",
-    width: "auto",
-  }));
-
-  return (
-    <Box
-      sx={{
-        height: "calc(100vh - 100px)",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Render the search and table */}
-      <Stack
-        mr={2}
-        ml={2}
-        mb={2}
-        justifyContent="space-between"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 2, md: 4 }}
-      >
-        <Grid display="flex" gap={1} alignItems={"center"}>
-          <TextField
-            id="search"
-            type="text"
-            size="small"
-            variant="outlined"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size={"16"} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-        </Grid>
-        <Stack
-          mb={2}
-          justifyContent="end"
-          direction={{ xs: "column", sm: "row" }}
-        >
-          {selectedRowIds.size > 0 && (
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<IconTrash width={18} />}
-              sx={{ marginRight: "5px" }}
-              onClick={() => {
-                const selectedIds = Array.from(selectedRowIds);
-                setUsersToDelete(selectedIds);
-                setConfirmOpen(true);
-              }}
-            >
-              Remove
-            </Button>
-          )}
-          <IconButton
-            onClick={handlePopoverOpen}
-            sx={{ ml: 1 }}
-            color="primary"
-          >
-            <IconEye />
-          </IconButton>
-          <Popover
-            open={Boolean(anchorEl2)}
-            anchorEl={anchorEl2}
-            onClose={handlePopoverClose}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-            PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
-          >
-            <TextField
-              size="small"
-              placeholder="Search"
-              fullWidth
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              sx={{ mb: 1 }}
-            />
-            <FormGroup>
-              {table
-                .getAllLeafColumns()
-                .filter((col: any) => {
-                  const excludedColumns = ["conflicts", "select"];
-                  if (excludedColumns.includes(col.id)) return false;
-
-                  return col.id.toLowerCase().includes(search.toLowerCase());
-                })
-                .map((col: any) => (
-                  <FormControlLabel
-                    key={col.id}
-                    control={
-                      <Checkbox
-                        checked={col.getIsVisible()}
-                        onChange={col.getToggleVisibilityHandler()}
-                        disabled={col.id === "conflicts"}
-                      />
-                    }
-                    sx={{ textTransform: "none" }}
-                    label={
-                      col.columnDef.meta?.label ||
-                      (typeof col.columnDef.header === "string" &&
-                      col.columnDef.header.trim() !== ""
-                        ? col.columnDef.header
-                        : col.id
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str: string) => str.toUpperCase())
-                            .trim())
-                    }
-                  />
-                ))}
-            </FormGroup>
-          </Popover>
-          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogContent>
-              <Typography color="textSecondary">
-                Are you sure you want to delete {usersToDelete.length} category
-                {usersToDelete.length > 1 ? "s" : ""} from the trade category?
-              </Typography>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => setConfirmOpen(false)}
-                variant="outlined"
-                color="primary"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  try {
-                    const payload = {
-                      ids: usersToDelete.join(","),
-                    };
-                    const response = await api.post(
-                      "trade/remove-trade-category",
-                      payload,
-                    );
-                    toast.success(response.data.message);
-                    setSelectedRowIds(new Set());
-                    await fetchTrades();
-                  } catch (error) {
-                  } finally {
-                    setConfirmOpen(false);
-                  }
-                }}
-                variant="outlined"
-                color="error"
-              >
-                Delete
-              </Button>
-            </DialogActions>
-          </Dialog>
-          <IconButton
-            sx={{ margin: "0px" }}
-            id="basic-button"
-            aria-controls={openMenu ? "basic-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={openMenu ? "true" : undefined}
-            onClick={handleClick}
-          >
-            <IconDotsVertical width={18} />
-          </IconButton>
-          <Menu
-            id="basic-menu"
-            anchorEl={anchorEl}
-            open={openMenu}
-            onClose={handleClose}
-            slotProps={{
-              list: {
-                "aria-labelledby": "basic-button",
-              },
-            }}
-          >
-            <MenuItem onClick={handleClose}>
-              <Link
-                color="body1"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleOpenCreateDrawer();
-                }}
-                style={{
-                  width: "100%",
-                  color: "#11142D",
-                  textTransform: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyItems: "center",
-                }}
-              >
-                <ListItemIcon>
-                  <IconPlus width={18} />
-                </ListItemIcon>
-                Add Category
-              </Link>
-            </MenuItem>
-          </Menu>
-        </Stack>
-      </Stack>
-      <Divider />
-
-      <CreateTradeCategory
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        formData={formData}
-        setFormData={setFormData}
-        handleSubmit={handleSubmit}
-        companyId={id.company_id ?? null}
-        isSaving={isSaving}
-      />
-
-      <EditTradeCategory
-        open={editDrawerOpen}
-        onClose={() => setEditDrawerOpen(false)}
-        id={selectedTaskId}
-        data={data}
-        formData={formData}
-        setFormData={setFormData}
-        EditTrade={editTrade}
-        companyId={id.company_id ?? null}
-        isSaving={isSaving}
-      />
-
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "auto",
-        }}
-      >
-        <TableContainer>
-          <Table stickyHeader aria-label="sticky table">
-            <TableHead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} hover>
-                  {headerGroup.headers.map((header) => {
-                    const isActive = header.column.getIsSorted();
-                    const isAsc = header.column.getIsSorted() === "asc";
-                    const isSortable = header.column.getCanSort();
-
-                    return (
-                      <TableCell
-                        key={header.id}
-                        align="center"
-                        sx={{
-                          paddingTop: "10px",
-                          paddingBottom: "10px",
-                          width:
-                            header.column.id === "actions"
-                              ? 120
-                              : header.column.id === "select"
-                                ? 30
-                                : "auto",
+                            if (isChecked) {
+                                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                            } else {
+                                setSelectedRowIds(new Set());
+                            }
                         }}
-                      >
-                        <Box
-                          onClick={header.column.getToggleSortingHandler()}
-                          p={0}
-                          sx={{
-                            cursor: isSortable ? "pointer" : "default",
-                            border: "2px solid transparent",
-                            borderRadius: "6px",
-                            display: "flex",
-                            justifyContent: "flex-start",
-                            "&:hover": { color: "#888" },
-                            "&:hover .hoverIcon": { opacity: 1 },
-                          }}
-                        >
-                          <Typography variant="subtitle2">
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                          </Typography>
-                          {isSortable && (
-                            <Box
-                              component="span"
-                              className="hoverIcon"
-                              ml={0.5}
-                              sx={{
-                                transition: "opacity 0.2s",
-                                opacity: isActive ? 1 : 0,
-                                fontSize: "0.9rem",
-                                color: isActive ? "#000" : "#888",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHead>
-            <TableBody>
-              {fetchCategory ? (
-                <SkeletonLoader
-                  columns={simpleColumns}
-                  rowCount={simpleColumns.length}
-                />
-              ) : data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "calc(50vh - 100px)",
-                      }}
+                    />
+                </Stack>
+            ),
+            cell: ({row}: any) => {
+                const item = row.original;
+                const isChecked = selectedRowIds.has(item.id);
+                const isHovered = hoveredRow === item.id;
+                const showCheckbox = isChecked || isHovered;
+
+                return (
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        onMouseEnter={() => setHoveredRow(item.id)}
+                        onMouseLeave={() => setHoveredRow(null)}
+                        sx={{pl: 1}}
                     >
-                      <Image
-                        src="/images/no-data.png"
-                        alt="No data"
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "100%",
-                        }}
-                        width={200}
-                        height={200}
-                      />
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {data.length ? <Divider /> : <></>}
-      </Box>
-      <Divider />
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        pb={2}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
+                        <CustomCheckbox
+                            checked={isChecked}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                const newSelected = new Set(selectedRowIds);
+                                if (isChecked) {
+                                    newSelected.delete(item.id);
+                                } else {
+                                    newSelected.add(item.id);
+                                }
+                                setSelectedRowIds(newSelected);
+                            }}
+                            sx={{
+                                opacity: showCheckbox ? 1 : 0,
+                                pointerEvents: showCheckbox ? 'auto' : 'none',
+                                transition: 'opacity 0.2s ease',
+                            }}
+                        />
+                    </Stack>
+                );
             },
-          }}
-          alignItems="center"
+        },
+        columnHelper.accessor('name', {
+            id: 'name',
+            header: () => (
+                <Stack direction="row" alignItems="center" spacing={4}>
+                    <Typography variant="subtitle2" fontWeight="inherit">
+                        Name
+                    </Typography>
+                </Stack>
+            ),
+            enableSorting: true,
+            cell: ({row}) => {
+                const item = row.original;
+
+                return (
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography className="f-14">{item.name ?? '-'}</Typography>
+                    </Stack>
+                );
+            },
+        }),
+
+        columnHelper.display({
+            id: 'actions',
+            header: 'Actions',
+            cell: ({row}) => {
+                const item = row.original;
+                return (
+                    <Stack direction="row" spacing={1}>
+                        <Tooltip title="Edit">
+                            <IconButton onClick={() => handleEdit(item.id)} color="primary">
+                                <IconEdit size={18}/>
+                            </IconButton>
+                        </Tooltip>
+                    </Stack>
+                );
+            },
+        }),
+    ];
+
+    const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl2(event.currentTarget);
+    };
+    const handlePopoverClose = () => setAnchorEl2(null);
+
+    const table = useReactTable({
+        data: filteredData,
+        columns,
+        state: {columnFilters, sorting},
+        onSortingChange: setSorting,
+        onColumnFiltersChange: setColumnFilters,
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        initialState: {
+            pagination: {
+                pageSize: 50,
+            },
+        },
+    });
+
+    // Reset to first page when search term changes
+    useEffect(() => {
+        table.setPageIndex(0);
+    }, [searchTerm, table]);
+
+    const simpleColumns = columns.map((column) => ({
+        name: column.id ?? 'Unnamed Column',
+        width: 'auto',
+    }));
+
+    return (
+        <Box
+            sx={{
+                height: 'calc(100vh - 100px)',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
         >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              className="f-14"
-              fontWeight={600}
-              ml={1}
+            {/* Render the search and table */}
+            <Stack
+                mr={2}
+                ml={2}
+                mb={2}
+                justifyContent="space-between"
+                direction={{xs: 'column', sm: 'row'}}
+                spacing={{xs: 1, sm: 2, md: 4}}
             >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
+                <Grid display="flex" gap={1} alignItems={'center'}>
+                    <TextField
+                        id="search"
+                        type="text"
+                        size="small"
+                        variant="outlined"
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        slotProps={{
+                            input: {
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconSearch size={'16'}/>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
+                    />
+                </Grid>
+                <Stack
+                    mb={2}
+                    justifyContent="end"
+                    direction={{xs: 'column', sm: 'row'}}
+                >
+                    {selectedRowIds.size > 0 && (
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            startIcon={<IconTrash width={18}/>}
+                            sx={{marginRight: '5px'}}
+                            onClick={() => {
+                                const selectedIds = Array.from(selectedRowIds);
+                                setUsersToDelete(selectedIds);
+                                setConfirmOpen(true);
+                            }}
+                        >
+                            Remove
+                        </Button>
+                    )}
+                    <IconButton
+                        onClick={handlePopoverOpen}
+                        sx={{ml: 1}}
+                        color="primary"
+                    >
+                        <IconEye/>
+                    </IconButton>
+                    <Popover
+                        open={Boolean(anchorEl2)}
+                        anchorEl={anchorEl2}
+                        onClose={handlePopoverClose}
+                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                        transformOrigin={{vertical: 'top', horizontal: 'right'}}
+                        PaperProps={{sx: {width: 220, p: 1, borderRadius: 2}}}
+                    >
+                        <TextField
+                            size="small"
+                            placeholder="Search"
+                            fullWidth
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            sx={{mb: 1}}
+                        />
+                        <FormGroup>
+                            {table
+                                .getAllLeafColumns()
+                                .filter((col: any) => {
+                                    const excludedColumns = ['conflicts', 'select'];
+                                    if (excludedColumns.includes(col.id)) return false;
+
+                                    return col.id.toLowerCase().includes(search.toLowerCase());
+                                })
+                                .map((col: any) => (
+                                    <FormControlLabel
+                                        key={col.id}
+                                        control={
+                                            <Checkbox
+                                                checked={col.getIsVisible()}
+                                                onChange={col.getToggleVisibilityHandler()}
+                                                disabled={col.id === 'conflicts'}
+                                            />
+                                        }
+                                        sx={{textTransform: 'none'}}
+                                        label={
+                                            col.columnDef.meta?.label ||
+                                            (typeof col.columnDef.header === 'string' &&
+                                            col.columnDef.header.trim() !== ''
+                                                ? col.columnDef.header
+                                                : col.id
+                                                    .replace(/([A-Z])/g, ' $1')
+                                                    .replace(/^./, (str: string) => str.toUpperCase())
+                                                    .trim())
+                                        }
+                                    />
+                                ))}
+                        </FormGroup>
+                    </Popover>
+                    <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogContent>
+                            <Typography color="textSecondary">
+                                Are you sure you want to archive trade category{usersToDelete.length > 1 ? 's' : ''}?
+                            </Typography> 
+                        </DialogContent>
+                        <DialogActions>
+                            <Button
+                                onClick={() => setConfirmOpen(false)}
+                                variant="outlined"
+                                color="primary"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    try {
+                                        const payload = {
+                                            ids: usersToDelete.join(','),
+                                        };
+                                        const response = await api.post(
+                                            'trade/archive-trade-category',
+                                            payload,
+                                        );
+                                        toast.success(response.data.message);
+                                        setSelectedRowIds(new Set());
+                                        await fetchTrades();
+                                    } catch (error) {
+                                    } finally {
+                                        setConfirmOpen(false);
+                                    }
+                                }}
+                                variant="outlined"
+                                color="error"
+                            >
+                                Archive
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                    <IconButton
+                        sx={{margin: '0px'}}
+                        id="basic-button"
+                        aria-controls={openMenu ? 'basic-menu' : undefined}
+                        aria-haspopup="true"
+                        aria-expanded={openMenu ? 'true' : undefined}
+                        onClick={handleClick}
+                    >
+                        <IconDotsVertical width={18}/>
+                    </IconButton>
+                    <Menu
+                        id="basic-menu"
+                        anchorEl={anchorEl}
+                        open={openMenu}
+                        onClose={handleClose}
+                        slotProps={{
+                            list: {
+                                'aria-labelledby': 'basic-button',
+                            },
+                        }}
+                    >
+                        <MenuItem onClick={handleClose}>
+                            <Link
+                                color="body1"
+                                href="#"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleOpenCreateDrawer();
+                                }}
+                                style={{
+                                    width: '100%',
+                                    color: '#11142D',
+                                    textTransform: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyItems: 'center',
+                                }}
+                            >
+                                <ListItemIcon>
+                                    <IconPlus width={18}/>
+                                </ListItemIcon>
+                                Add Category
+                            </Link>
+                        </MenuItem>
+                        <MenuItem
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setAnchorEl(null);
+                                setArchiveDrawerOpen(true);
+                            }}
+                        >
+                            <ListItemIcon>
+                                <IconNotes width={18}/>
+                            </ListItemIcon>
+                            Archived Category List
+                        </MenuItem>
+                    </Menu>
+                </Stack>
+            </Stack>
+            <Divider/>
+
+            {/* Archive drawer */}
+            <ArchiveCategory
+                open={archiveDrawerOpen}
+                onClose={() => setArchiveDrawerOpen(false)}
+                onWorkUpdated={fetchTrades}
+            />
+
+            <CreateTradeCategory
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                formData={formData}
+                setFormData={setFormData}
+                handleSubmit={handleSubmit}
+                companyId={id.company_id ?? null}
+                isSaving={isSaving}
+            />
+
+            <EditTradeCategory
+                open={editDrawerOpen}
+                onClose={() => setEditDrawerOpen(false)}
+                id={selectedTaskId}
+                data={data}
+                formData={formData}
+                setFormData={setFormData}
+                EditTrade={editTrade}
+                companyId={id.company_id ?? null}
+                isSaving={isSaving}
+            />
+
+            <Box
+                sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: 'auto',
+                }}
             >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+                <TableContainer>
+                    <Table stickyHeader aria-label="sticky table">
+                        <TableHead>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id} hover>
+                                    {headerGroup.headers.map((header) => {
+                                        const isActive = header.column.getIsSorted();
+                                        const isAsc = header.column.getIsSorted() === 'asc';
+                                        const isSortable = header.column.getCanSort();
+
+                                        return (
+                                            <TableCell
+                                                key={header.id}
+                                                align="center"
+                                                sx={{
+                                                    paddingTop: '10px',
+                                                    paddingBottom: '10px',
+                                                    width:
+                                                        header.column.id === 'actions'
+                                                            ? 120
+                                                            : header.column.id === 'select'
+                                                                ? 30
+                                                                : 'auto',
+                                                }}
+                                            >
+                                                <Box
+                                                    onClick={header.column.getToggleSortingHandler()}
+                                                    p={0}
+                                                    sx={{
+                                                        cursor: isSortable ? 'pointer' : 'default',
+                                                        border: '2px solid transparent',
+                                                        borderRadius: '6px',
+                                                        display: 'flex',
+                                                        justifyContent: 'flex-start',
+                                                        '&:hover': {color: '#888'},
+                                                        '&:hover .hoverIcon': {opacity: 1},
+                                                    }}
+                                                >
+                                                    <Typography variant="subtitle2">
+                                                        {flexRender(
+                                                            header.column.columnDef.header,
+                                                            header.getContext(),
+                                                        )}
+                                                    </Typography>
+                                                    {isSortable && (
+                                                        <Box
+                                                            component="span"
+                                                            className="hoverIcon"
+                                                            ml={0.5}
+                                                            sx={{
+                                                                transition: 'opacity 0.2s',
+                                                                opacity: isActive ? 1 : 0,
+                                                                fontSize: '0.9rem',
+                                                                color: isActive ? '#000' : '#888',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
+                                                            }}
+                                                        >
+                                                            {isActive ? (isAsc ? '↑' : '↓') : '↑'}
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            </TableCell>
+                                        );
+                                    })}
+                                </TableRow>
+                            ))}
+                        </TableHead>
+                        <TableBody>
+                            {fetchCategory ? (
+                                <SkeletonLoader
+                                    columns={simpleColumns}
+                                    rowCount={simpleColumns.length}
+                                />
+                            ) : data.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: 'calc(50vh - 100px)',
+                                            }}
+                                        >
+                                            <Image
+                                                src="/images/no-data.png"
+                                                alt="No data"
+                                                style={{
+                                                    maxWidth: '100%',
+                                                    maxHeight: '100%',
+                                                }}
+                                                width={200}
+                                                height={200}
+                                            />
+                                        </Box>
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                table.getRowModel().rows.map((row) => (
+                                    <TableRow key={row.id} hover sx={{cursor: 'pointer'}}>
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id} sx={{padding: '10px'}}>
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext(),
+                                                )}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+                {data.length ? <Divider/> : <></>}
+            </Box>
+            <Divider/>
+            <Stack
+                gap={1}
+                pr={3}
+                pt={1}
+                pl={3}
+                pb={2}
+                alignItems="center"
+                direction={{xs: 'column', sm: 'row'}}
+                justifyContent="space-between"
             >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Typography color="textSecondary" className="f-14">
+                        {table.getPrePaginationRowModel().rows.length} Rows
+                    </Typography>
+                </Box>
+                <Box
+                    sx={{
+                        display: {
+                            xs: 'block',
+                            sm: 'flex',
+                        },
+                    }}
+                    alignItems="center"
+                >
+                    <Stack direction="row" alignItems="center">
+                        <Typography color="textSecondary" className="f-14">
+                            Page
+                        </Typography>
+                        <Typography
+                            color="textSecondary"
+                            className="f-14"
+                            fontWeight={600}
+                            ml={1}
+                        >
+                            {table.getState().pagination.pageIndex + 1} of{' '}
+                            {table.getPageCount()}
+                        </Typography>
+                        <Typography color="textSecondary" ml={'3px'} className="f-14">
+                            {' '}
+                            | Entries :{' '}
+                        </Typography>
+                    </Stack>
+                    <Stack
+                        ml={'5px'}
+                        direction="row"
+                        alignItems="center"
+                        color="textSecondary"
+                    >
+                        <CustomSelect
+                            className="custom-select"
+                            value={table.getState().pagination.pageSize}
+                            onChange={(e: { target: { value: any } }) => {
+                                table.setPageSize(Number(e.target.value));
+                            }}
+                        >
+                            {[50, 100, 250, 500].map((pageSize) => (
+                                <MenuItem key={pageSize} value={pageSize}>
+                                    {pageSize}
+                                </MenuItem>
+                            ))}
+                        </CustomSelect>
+                        <IconButton
+                            size="small"
+                            sx={{width: '30px'}}
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            <IconChevronLeft/>
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            sx={{width: '30px'}}
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <IconChevronRight/>
+                        </IconButton>
+                    </Stack>
+                </Box>
+            </Stack>
         </Box>
-      </Stack>
-    </Box>
-  );
+    );
 };
 
 export default TradeCategoryList;

@@ -126,57 +126,57 @@ const AdminSetting = () => {
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
+                                        icon={<IconCalendarOff size="20"/>}
+                                        label="Holidays"
+                                        {...a11yProps(3)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
                                         icon={<IconBell size="20"/>}
                                         label="Notification Setting"
-                                        {...a11yProps(3)}
+                                        {...a11yProps(4)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconLock size="20"/>}
                                         label="Permissions"
-                                        {...a11yProps(4)}
+                                        {...a11yProps(5)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconCategoryPlus size="20"/>}
                                         label="Expense Category"
-                                        {...a11yProps(5)}
+                                        {...a11yProps(6)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconCategory2 size="20"/>}
                                         label="Company Trades"
-                                        {...a11yProps(6)}
+                                        {...a11yProps(7)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconCategoryPlus size="20"/>}
                                         label="Trade Categories"
-                                        {...a11yProps(7)}
+                                        {...a11yProps(8)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUsers size="20"/>}
                                         label="Clients"
-                                        {...a11yProps(8)}
+                                        {...a11yProps(9)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconExclamationCircle size="20"/>}
                                         label="History"
-                                        {...a11yProps(9)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconCalendarOff size="20"/>}
-                                        label="Holidays"
                                         {...a11yProps(10)}
                                     />
                                 </Tabs>
@@ -201,28 +201,28 @@ const AdminSetting = () => {
                                 <LeaveList/>
                             </TabPanel>
                             <TabPanel value={value} index={3}>
-                                <NotificationSettings/>
+                                <HolidayList/>
                             </TabPanel>
                             <TabPanel value={value} index={4}>
-                                <PermissionSettings/>
+                                <NotificationSettings/>
                             </TabPanel>
                             <TabPanel value={value} index={5}>
-                                <CategoryList/>
+                                <PermissionSettings/>
                             </TabPanel>
                             <TabPanel value={value} index={6}>
-                                <TradeList/>
+                                <CategoryList/>
                             </TabPanel>
                             <TabPanel value={value} index={7}>
-                                <TradeCategoryList/>
+                                <TradeList/>
                             </TabPanel>
                             <TabPanel value={value} index={8}>
-                                <ClientList/>
+                                <TradeCategoryList/>
                             </TabPanel>
                             <TabPanel value={value} index={9}>
-                                <HistoryList/>
+                                <ClientList/>
                             </TabPanel>
                             <TabPanel value={value} index={10}>
-                                <HolidayList/>
+                                <HistoryList/>
                             </TabPanel>
                         </BlankCard>
                     </Grid>

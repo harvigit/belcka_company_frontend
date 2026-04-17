@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     Drawer,
     Box,
@@ -6,11 +6,11 @@ import {
     IconButton,
     Typography,
     Button,
+    CircularProgress,
 } from '@mui/material';
 import IconArrowLeft from '@mui/icons-material/ArrowBack';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import api from '@/utils/axios';
-import { ExpenseCategoryList } from '../list';
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 interface FormData {
@@ -39,6 +39,43 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
                                                                      EditExpenseCategory,
                                                                      isSaving,
                                                                  }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch category data when drawer opens with a valid id
+    const fetchCategory = useCallback(async () => {
+        if (!id || !open) return;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const res = await api.get(`expense-categories/get?category_id=${id}`);
+
+            if (res.data?.info?.[0]) {
+                const task = res.data.info[0];
+
+                setFormData({
+                    id: task.id,
+                    name: task.name || '',
+                    company_id: task.company_id || '',
+                    is_transport_category: task.is_transport_category ?? false,
+                });
+            } else {
+                setError("Category not found");
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch expense category', err);
+            setError(err?.response?.data?.message || "Failed to load category");
+        } finally {
+            setLoading(false);
+        }
+    }, [id, open, setFormData]);
+
+    useEffect(() => {
+        fetchCategory();
+    }, [fetchCategory]);
+
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
@@ -50,40 +87,22 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
     };
 
     const handleTransportToggle = () => {
-        setFormData((prev) => ({ ...prev, is_transport_category: !prev.is_transport_category }));
+        setFormData((prev) => ({
+            ...prev,
+            is_transport_category: !prev.is_transport_category,
+        }));
     };
 
-    const [data, setData] = useState<ExpenseCategoryList[]>([]);
-
-    // Fetch data
-    useEffect(() => {
-        if (id) {
-            const fetchTasks = async () => {
-                try {
-                    const res = await api.get(`expense-categories/get?category_id=${id}`);
-                    if (res.data && res.data.info) {
-                        const task = res.data.info[0];
-                        setData(task);
-                        setFormData({
-                            id: task.id,
-                            name: task.name || '',
-                            company_id: task.company_id || '',
-                            is_transport_category: task.is_transport_category ?? false,
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to fetch task', err);
-                }
-            };
-            fetchTasks();
-        }
-    }, [id]);
+    const handleClose = () => {
+        setError(null);
+        onClose();
+    };
 
     return (
         <Drawer
             anchor="right"
             open={open}
-            onClose={onClose}
+            onClose={handleClose}
             sx={{
                 width: 350,
                 flexShrink: 0,
@@ -105,7 +124,7 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
                                     alignItems={'center'}
                                     flexWrap={'wrap'}
                                 >
-                                    <IconButton onClick={onClose}>
+                                    <IconButton onClick={handleClose}>
                                         <IconArrowLeft />
                                     </IconButton>
                                     <Typography variant="h6" fontWeight={700}>
@@ -113,47 +132,63 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
                                     </Typography>
                                 </Box>
 
-                                <Typography variant="body2" mt={2}>
-                                    Name
-                                </Typography>
-                                <CustomTextField
-                                    id="name"
-                                    name="name"
-                                    className="custom_input"
-                                    placeholder="Enter name.."
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    variant="outlined"
-                                    fullWidth
-                                />
-
-                                <Box
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="space-between"
-                                    mt={2}
-                                    px={1.5}
-                                    py={1.5}
-                                    sx={{
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 2,
-                                        backgroundColor: 'background.paper',
-                                    }}
-                                >
-                                    <Box>
-                                        <Typography variant="body2" fontWeight={500}>
-                                            Transport category
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Mark this as a transport expense
-                                        </Typography>
+                                {loading && (
+                                    <Box display="flex" justifyContent="center" my={4}>
+                                        <CircularProgress />
                                     </Box>
-                                    <IOSSwitch
-                                        checked={formData.is_transport_category}
-                                        onChange={handleTransportToggle}
-                                    />
-                                </Box>
+                                )}
+
+                                {error && (
+                                    <Typography color="error" sx={{ mt: 2 }}>
+                                        {error}
+                                    </Typography>
+                                )}
+
+                                {!loading && !error && (
+                                    <>
+                                        <Typography variant="body2" mt={2}>
+                                            Name
+                                        </Typography>
+                                        <CustomTextField
+                                            id="name"
+                                            name="name"
+                                            className="custom_input"
+                                            placeholder="Enter name.."
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                            variant="outlined"
+                                            fullWidth
+                                        />
+
+                                        <Box
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="space-between"
+                                            mt={2}
+                                            px={1.5}
+                                            py={1.5}
+                                            sx={{
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 2,
+                                                backgroundColor: 'background.paper',
+                                            }}
+                                        >
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={500}>
+                                                    Transport category
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Mark this as a transport expense
+                                                </Typography>
+                                            </Box>
+                                            <IOSSwitch
+                                                checked={formData.is_transport_category}
+                                                onChange={handleTransportToggle}
+                                            />
+                                        </Box>
+                                    </>
+                                )}
                             </Grid>
                         </Grid>
 
@@ -170,7 +205,7 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
                                 variant="contained"
                                 size="large"
                                 type="submit"
-                                disabled={isSaving}
+                                disabled={isSaving || loading}
                                 sx={{ borderRadius: 3 }}
                                 className="drawer_buttons"
                             >
@@ -178,7 +213,7 @@ const EditExpenseCategory: React.FC<EditExpenseCategoryProps> = ({
                             </Button>
                             <Button
                                 color="inherit"
-                                onClick={onClose}
+                                onClick={handleClose}
                                 variant="contained"
                                 size="large"
                                 sx={{

@@ -590,140 +590,106 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                         flexDirection: "column",
                     }}
                 >
-                    {/* Toolbar */}
-                    <Stack
-                        mx={2}
-                        mb={2}
-                        direction={{ xs: "column", md: "row" }}
-                        alignItems={{ xs: "stretch", md: "center" }}
+                    <Grid
+                        container
+                        spacing={2}
+                        alignItems="center"
+                        sx={{ mx: 2, mb: 2 }}
                     >
-                        <Stack
-                            direction={{ xs: "column", sm: "row" }}
-                            spacing={1.5}
-                            alignItems={{ xs: "stretch", sm: "center" }}
-                            sx={{ flex: 1, minWidth: 0 }}
-                        >
-                            <Box className="date_range_picker">
-                                <DateRangePickerBox
-                                    from={startDate}
-                                    to={endDate}
-                                    onChange={handleDateRangeChange}
-                                />
-                            </Box>
-
-                            <TextField
-                                size="small"
-                                placeholder="Search..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                InputProps={{
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconSearch size={16} />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                        </Stack>
-
-                        <Stack
-                            direction="row"
-                            justifyContent={{ xs: "flex-start", md: "flex-end" }}
-                            alignItems="center"
-                            sx={{ flexShrink: 0 }}
-                        >
-                            <Typography 
-                                sx={{
-                                    color: "#047bff",
-                                    bgcolor: "action.hover",
-                                    borderRadius: 2,
-                                }}
+                        <Grid size={{ xs: 12, md: 7 }}>
+                            <Grid
+                                container
+                                spacing={1.5}
+                                alignItems="center"
                             >
-                                Leaves Taken ({totalLeaves})
-                            </Typography>
-                            
-                            <Button
-                                color="inherit"
-                                startIcon={<IconHistory />}
-                                variant="contained"
-                                sx={{
-                                    backgroundColor: "transparent",
-                                    borderRadius: 3,
-                                    color: "#047bff",
-                                    float: "inline-end",
-                                }}
-                                onClick={handleOpen}
+                                <Grid size={{ xs: 12, sm: 'auto' }}>
+                                    <Box className="date_range_picker">
+                                        <DateRangePickerBox
+                                            from={startDate}
+                                            to={endDate}
+                                            onChange={handleDateRangeChange}
+                                        />
+                                    </Box>
+                                </Grid>
+
+                                <Grid size={{ xs: 12, sm: 'grow' }}>
+                                    <TextField
+                                        size="small"
+                                        placeholder="Search..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        fullWidth
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconSearch size={16} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
+                                </Grid>
+                            </Grid>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, md: 12 }}>
+                            <Grid
+                                container
+                                spacing={1}
+                                alignItems="center"
+                                justifyContent={{ xs: "flex-start", md: "flex-end" }}
                             >
-                                Leave History
-                            </Button>
+                                <Grid size="auto">
+                                    <Typography
+                                        sx={{
+                                            color: "#047bff",
+                                            bgcolor: "action.hover",
+                                            borderRadius: 2,
+                                            px: 2,
+                                            py: 0.9,
+                                            whiteSpace: "nowrap",
+                                            fontSize: "0.95rem",
+                                        }}
+                                    >
+                                        Leaves Taken ({totalLeaves})
+                                    </Typography>
+                                </Grid>
 
-                            <IconButton onClick={handlePopoverOpen} color="primary">
-                                <IconEye />
-                            </IconButton>
+                                <Grid size="auto">
+                                    <Button
+                                        color="inherit"
+                                        startIcon={<IconHistory />}
+                                        variant="contained"
+                                        sx={{
+                                            backgroundColor: "transparent",
+                                            borderRadius: 3,
+                                            color: "#047bff",
+                                            textTransform: "none",
+                                            px: 2,
+                                        }}
+                                        onClick={handleOpen}
+                                    >
+                                        Leave History
+                                    </Button>
+                                </Grid>
 
-                            <Popover
-                                open={Boolean(anchorEl2)}
-                                anchorEl={anchorEl2}
-                                onClose={handlePopoverClose}
-                                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                                transformOrigin={{ vertical: "top", horizontal: "right" }}
-                                PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
-                            >
-                                <TextField
-                                    size="small"
-                                    placeholder="Search"
-                                    fullWidth
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    sx={{ mb: 1 }}
-                                />
+                                <Grid size="auto">
+                                    <IconButton onClick={handlePopoverOpen} color="primary">
+                                        <IconEye />
+                                    </IconButton>
+                                </Grid>
 
-                                <FormGroup>
-                                    {table
-                                        .getAllLeafColumns()
-                                        .filter((col: any) => {
-                                            const excludedColumns = ["conflicts", "select"];
-                                            if (excludedColumns.includes(col.id)) return false;
-                                            return col.id
-                                                .toLowerCase()
-                                                .includes(search.toLowerCase());
-                                        })
-                                        .map((col: any) => (
-                                            <FormControlLabel
-                                                key={col.id}
-                                                control={
-                                                    <Checkbox
-                                                        checked={col.getIsVisible()}
-                                                        onChange={col.getToggleVisibilityHandler()}
-                                                        disabled={col.id === "conflicts"}
-                                                    />
-                                                }
-                                                label={
-                                                    col.columnDef.meta?.label ||
-                                                    (typeof col.columnDef.header === "string"
-                                                        ? col.columnDef.header
-                                                        : col.id
-                                                            .replace(/([A-Z])/g, " $1")
-                                                            .replace(/^./, (str: string) =>
-                                                                str.toUpperCase()
-                                                            ))
-                                                }
-                                            />
-                                        ))}
-                                </FormGroup>
-                            </Popover>
-
-                            <IconButton
-                                onClick={handleSettingOpen}
-                                color="primary"
-                                size="small"
-                            >
-                                <IconSettings size={20} />
-                            </IconButton>
-
-                            <LeaveSetting open={settingOpen} onClose={handleSettingClose} />
-                        </Stack>
-                    </Stack>
+                                <Grid size="auto">
+                                    <IconButton
+                                        onClick={handleSettingOpen}
+                                        color="primary"
+                                        size="small"
+                                    >
+                                        <IconSettings size={20} />
+                                    </IconButton>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Grid>
 
                     <Divider />
 

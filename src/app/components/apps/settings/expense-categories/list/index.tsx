@@ -248,9 +248,15 @@ const TablePagination = () => {
 
     // UseCallback to memoize these functions
     const handleEdit = useCallback((id: number) => {
+        setFormData({
+            id: id,
+            name: "",
+            company_id: company?.company_id || 0,
+            is_transport_category: false,
+        });
         setSelectedCategoryId(id);
         setEditDrawerOpen(true);
-    }, []);
+    }, [company?.company_id]);
 
     const columnHelper = createColumnHelper<ExpenseCategoryList>();
     const columns = [
