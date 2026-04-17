@@ -110,7 +110,7 @@ const ArchiveHoliday: React.FC<ArchiveHolidayProps> = ({open, onClose, onWorkUpd
     };
 
     const formatDate = (date: string) =>
-        dayjs(date).isValid() ? dayjs(date).format('DD/MM/YYYY') : '-';
+        dayjs(date, 'DD/MM/YYYY').isValid() ? dayjs(date, 'DD/MM/YYYY').format('DD/MM/YYYY') : '-';
 
     return (
         <Drawer
