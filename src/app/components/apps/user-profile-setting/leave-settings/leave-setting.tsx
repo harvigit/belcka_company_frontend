@@ -47,6 +47,7 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
+    const [removedUserIds, setRemovedUserIds] = useState<number[]>([]);
 
     const [setting, setSetting] = useState<LeaveLimitSetting>({
         is_leave_limit: false,
@@ -63,6 +64,7 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
 
     const fetchSettings = async () => {
         setLoading(true);
+        setRemovedUserIds([]);
         try {
             const res = await api.get(`setting/get-leave-settings`, {
                 params: { company_id: user.company_id },
@@ -142,10 +144,16 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
     };
 
     const handleRemoveUserLimit = (index: number) => {
-        setSetting((prev) => ({
-            ...prev,
-            user_limits: prev.user_limits.filter((_, i) => i !== index),
-        }));
+        setSetting((prev) => {
+            const removedEntry = prev.user_limits[index];
+            if (removedEntry.user_id !== null) {
+                setRemovedUserIds((ids) => [...ids, removedEntry.user_id as number]);
+            }
+            return {
+                ...prev,
+                user_limits: prev.user_limits.filter((_, i) => i !== index),
+            };
+        });
     };
 
     const handleUserLimitChange = (index: number, field: 'user_id' | 'limit', value: any) => {
@@ -192,6 +200,7 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
                     user_id: u.user_id,
                     limit: Number(u.limit),
                 })),
+                removed_user_ids: removedUserIds,
             };
 
             const res = await api.post(`setting/save-leave-settings`, payload);
