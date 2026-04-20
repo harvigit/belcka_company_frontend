@@ -51,6 +51,7 @@ import {
     IconSearch,
     IconTrash,
     IconUserPlus,
+    IconActivity
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
@@ -351,6 +352,7 @@ const TablePagination = () => {
     };
 
     const handleOpenTeamHistory = () => {
+        close();
         setOpenTeamHistory(true);
         fetchTeamHistory();
     };
@@ -933,6 +935,15 @@ const TablePagination = () => {
                                         </ListItemIcon>
                                         Create Code
                                     </MenuItem>
+
+                                    <MenuItem
+                                        onClick={handleOpenTeamHistory}
+                                    >
+                                        <ListItemIcon>
+                                            <IconActivity width={18}/>
+                                        </ListItemIcon>
+                                        Team Activity
+                                    </MenuItem>
                                 </Menu>
                                 <IconButton
                                     onClick={handlePopoverOpen}
@@ -1108,21 +1119,6 @@ const TablePagination = () => {
                                         </Button>
                                     </DialogActions>
                                 </Dialog>
-
-                                <Button
-                                    color="inherit"
-                                    startIcon={<IconHistory/>}
-                                    variant="contained"
-                                    size="large"
-                                    sx={{
-                                        backgroundColor: 'transparent',
-                                        borderRadius: 3,
-                                        color: '#047bff',
-                                    }}
-                                    onClick={handleOpenTeamHistory}
-                                >
-                                    Team Activity
-                                </Button>
                             </Stack>
                         </Stack>
                         <Divider/>
