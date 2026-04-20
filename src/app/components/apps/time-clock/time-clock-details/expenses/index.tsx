@@ -17,7 +17,7 @@ import {
     Card,
     CardMedia,
 } from '@mui/material';
-import {IconArrowLeft, IconTrash, IconFileText, IconCalendar, IconUser, IconBuilding, IconTag} from '@tabler/icons-react';
+import {IconArrowLeft, IconTrash, IconFileText, IconCalendar, IconUser, IconBuilding, IconTag, IconCamper} from '@tabler/icons-react';
 import {Stack} from '@mui/system';
 import toast from 'react-hot-toast';
 
@@ -52,6 +52,7 @@ interface ExpenseDetail {
     trade_name: string;
     category_id: number;
     category_name: string;
+    car_register_number: string;
     total_amount: number;
     receipt_date: string;
     date_added: string;
@@ -245,6 +246,20 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                             </Typography>
                         </Box>
 
+                        {(expenseDetail.car_register_number) && (
+                            <Box>
+                                <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                                    <IconCamper size={18} color="#666"/>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Car Register Number
+                                    </Typography>
+                                </Stack>
+                                <Typography variant="body1" fontWeight={500}>
+                                    {expenseDetail.car_register_number}
+                                </Typography>
+                            </Box>
+                        )}
+
                         <Box>
                             <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
                                 <IconBuilding size={18} color="#666"/>
@@ -272,7 +287,7 @@ export default function Expenses({expenseId, onClose}: ExpensesPageProps) {
                                 {expenseDetail.project_name}
                             </Typography>
                         </Box>
-
+                        
                         <Box>
                             <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
                                 <IconUser size={18} color="#666"/>
