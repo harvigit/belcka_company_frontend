@@ -109,6 +109,31 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
         setSetting((prev) => ({ ...prev, leave_limit: value }));
     };
 
+    const clampLimit = (value: string): number => {
+        const num = parseInt(value, 10);
+        if (isNaN(num) || num < 0) return 0;
+        if (num > 365) return 365;
+        return num;
+    };
+
+    const handleLeaveLimitBlur = () => {
+        setSetting((prev) => ({
+            ...prev,
+            leave_limit: clampLimit(String(prev.leave_limit)),
+        }));
+    };
+
+    const handleUserLimitBlur = (index: number) => {
+        setSetting((prev) => {
+            const updated = [...prev.user_limits];
+            updated[index] = {
+                ...updated[index],
+                limit: clampLimit(String(updated[index].limit)),
+            };
+            return { ...prev, user_limits: updated };
+        });
+    };
+
     const handleAddUserLimit = () => {
         setSetting((prev) => ({
             ...prev,
@@ -140,11 +165,21 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
     };
 
     const handleSave = async () => {
-        // Basic validation
         const hasInvalidLimit =
             setting.user_limits.some((u) => u.user_id === null);
+
+        const hasOutOfRangeLimit =
+            Number(setting.leave_limit) < 0 ||
+            Number(setting.leave_limit) > 365 ||
+            setting.user_limits.some((u) => Number(u.limit) < 0 || Number(u.limit) > 365);
+
         if (hasInvalidLimit) {
             toast.error('Please select a user for every custom limit row');
+            return;
+        }
+
+        if (hasOutOfRangeLimit) {
+            toast.error('Leave limits must be between 0 and 365');
             return;
         }
 
@@ -287,12 +322,18 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
 
                                 <Box display="flex" alignItems="center">
                                     <TextField
-                                        size="small"
-                                        type="number"
+                                        type="text"
                                         value={setting.leave_limit}
                                         onChange={(e) => handleLimitChange(e.target.value)}
-                                        inputProps={{ min: 0, style: { textAlign: 'center', width: 50 } }}
+                                        onBlur={handleLeaveLimitBlur}
+                                        inputProps={{
+                                            min: 0,
+                                            max: 365,
+                                            step: 1,
+                                            inputMode: "numeric",
+                                        }}
                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                        placeholder="Enter leave limit"
                                     />
                                     <Typography pl={2} fontSize={13} color="text.secondary" whiteSpace="nowrap">
                                         Per Year
@@ -400,13 +441,13 @@ const LeaveSetting: React.FC<LeaveSettingProps> = ({ open, onClose, onSaveSucces
                                                     />
                                                     <TextField
                                                         size="small"
-                                                        type="number"
+                                                        type="text"
                                                         value={entry.limit}
-                                                        onChange={(e) =>
-                                                            handleUserLimitChange(index, 'limit', e.target.value)
-                                                        }
+                                                        onChange={(e) => handleUserLimitChange(index, 'limit', e.target.value)}
+                                                        onBlur={() => handleUserLimitBlur(index)}
                                                         inputProps={{
                                                             min: 0,
+                                                            max: 365,
                                                             style: { textAlign: 'center', width: 50 },
                                                         }}
                                                         sx={{

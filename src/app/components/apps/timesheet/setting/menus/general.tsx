@@ -423,13 +423,13 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
     );
 
     const handleLeaveLimitBlur = useCallback(() => {
-    const currentValue = Number(settings.leave_limit);
-
-    if (isNaN(currentValue) || currentValue < 0) {
-        updateSettings({ leave_limit: 0 });
-    } else if (currentValue > 365) {
-        updateSettings({ leave_limit: 365 });
-    }
+        const currentValue = Number(settings.leave_limit);
+    
+        if (isNaN(currentValue) || currentValue < 0) {
+            updateSettings({ leave_limit: 0 });
+        } else if (currentValue > 365) {
+            updateSettings({ leave_limit: 365 });
+        }
     }, [settings.leave_limit, updateSettings]);
 
 
@@ -818,18 +818,18 @@ const GeneralSetting: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
                                 </Typography>
                     
                                 <TextField
-                                type="text"
-                                value={settings.leave_limit}
-                                onChange={handleLeaveLimitChange}
-                                onBlur={handleLeaveLimitBlur}
-                                inputProps={{
-                                    min: 0,
-                                    max: 365,
-                                    step: 1,
-                                    inputMode: "numeric",
-                                }}
-                                sx={{ width: "22%" }}
-                                placeholder="Enter leave limit"
+                                    type="text"
+                                    value={settings.leave_limit}
+                                    onChange={handleLeaveLimitChange}
+                                    onBlur={handleLeaveLimitBlur}
+                                    inputProps={{
+                                        min: 0,
+                                        max: 365,
+                                        step: 1,
+                                        inputMode: "numeric",
+                                    }}
+                                    sx={{ width: "22%" }}
+                                    placeholder="Enter leave limit"
                                 />
                             </Box>
                         </Box>
