@@ -676,6 +676,58 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                     <IconButton onClick={handlePopoverOpen} color="primary">
                                         <IconEye />
                                     </IconButton>
+                                
+                                    <Popover
+                                        open={Boolean(anchorEl2)}
+                                        anchorEl={anchorEl2}
+                                        onClose={handlePopoverClose}
+                                        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                                        transformOrigin={{ vertical: "top", horizontal: "right" }}
+                                        PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+                                    >
+                                        <TextField
+                                            size="small"
+                                            placeholder="Search"
+                                            fullWidth
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            sx={{ mb: 1 }}
+                                        />
+    
+                                        <FormGroup>
+                                            {table
+                                                .getAllLeafColumns()
+                                                .filter((col: any) => {
+                                                    const excludedColumns = ["conflicts", "select"];
+                                                    if (excludedColumns.includes(col.id)) return false;
+                                                    return col.id
+                                                        .toLowerCase()
+                                                        .includes(search.toLowerCase());
+                                                })
+                                                .map((col: any) => (
+                                                    <FormControlLabel
+                                                        key={col.id}
+                                                        control={
+                                                            <Checkbox
+                                                                checked={col.getIsVisible()}
+                                                                onChange={col.getToggleVisibilityHandler()}
+                                                                disabled={col.id === "conflicts"}
+                                                            />
+                                                        }
+                                                        label={
+                                                            col.columnDef.meta?.label ||
+                                                            (typeof col.columnDef.header === "string"
+                                                                ? col.columnDef.header
+                                                                : col.id
+                                                                    .replace(/([A-Z])/g, " $1")
+                                                                    .replace(/^./, (str: string) =>
+                                                                        str.toUpperCase()
+                                                                    ))
+                                                        }
+                                                    />
+                                                ))}
+                                        </FormGroup>
+                                    </Popover>
                                 </Grid>
 
                                 <Grid size="auto">
@@ -686,6 +738,8 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                     >
                                         <IconSettings size={20} />
                                     </IconButton>
+    
+                                    <LeaveSetting open={settingOpen} onClose={handleSettingClose} />
                                 </Grid>
                             </Grid>
                         </Grid>
