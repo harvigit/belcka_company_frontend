@@ -16,7 +16,8 @@ import {
     IconCategory2,
     IconClock,
     IconUsers,
-    IconCalendarOff
+    IconCalendarOff,
+    IconSquarePercentage
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -34,6 +35,7 @@ import UnitList from '@/app/components/apps/units/list';
 import StockHistoryList from '@/app/components/apps/settings/history/stock-history';
 import ClientList from '@/app/components/apps/clients/list';
 import HolidayList from '@/app/components/apps/holidays/list';
+import AnalyticsScore from '@/app/components/apps/analytics/score-settings';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -179,6 +181,13 @@ const AdminSetting = () => {
                                         label="History"
                                         {...a11yProps(10)}
                                     />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconSquarePercentage size="20"/>}
+                                        label="Analytics Score"
+                                        {...a11yProps(11)}
+                                    />
                                 </Tabs>
                             </Stack>
                         </BlankCard>
@@ -223,6 +232,9 @@ const AdminSetting = () => {
                             </TabPanel>
                             <TabPanel value={value} index={10}>
                                 <HistoryList/>
+                            </TabPanel>
+                            <TabPanel value={value} index={11}>
+                                <AnalyticsScore/>
                             </TabPanel>
                         </BlankCard>
                     </Grid>
