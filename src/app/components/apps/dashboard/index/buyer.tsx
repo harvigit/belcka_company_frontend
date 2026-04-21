@@ -77,7 +77,6 @@ const BuyerDashboard = () => {
   );
   const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
-  const [selectedProject, setSelectedProject] = useState(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
