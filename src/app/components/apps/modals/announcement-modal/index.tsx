@@ -25,6 +25,7 @@ import { User } from "next-auth";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { useDropzone } from "react-dropzone";
 import { AxiosResponse } from "axios";
+import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 
 type Props = {
   open: boolean;
@@ -78,7 +79,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
 
     onDropRejected: () => {
       toast.error(
-        "Invalid file type. Please upload an image, video, audio, or PDF."
+        "Invalid file type. Please upload an image, video, audio, or PDF.",
       );
     },
   });
@@ -157,7 +158,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
     const getTeams = async () => {
       try {
         const res: AxiosResponse<any> = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user?.company_id}`
+          `get-company-resources?flag=teamList&company_id=${user?.company_id}`,
         );
         if (res.data?.info) setTeams(res.data.info);
       } catch (err) {
@@ -208,7 +209,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
         fd,
         {
           headers: { "Content-Type": "multipart/form-data" },
-        }
+        },
       );
 
       if (res.data.IsSuccess) {
@@ -227,149 +228,183 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
   }
 
   return (
-    <Box sx={{ flex: 1, overflowY: "auto", pr: 1 }}>
-      <Grid size={{ xs: 12, lg: 12 }}>
-        {/* Header */}
-        <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
-          <IconButton onClick={onClose}>
-            <IconArrowLeft />
-          </IconButton>
-          <Typography variant="h6" color="inherit" fontWeight={700}>
-            Announcement
-          </Typography>
-        </Box>
-
-        {/* Title */}
-        <Typography variant="h6" mt={2}>
-          Write Announcement
+    <Box display="flex" flexDirection="column" height="100%">
+      {/* Header */}
+      <Box display="flex" alignItems="center" flexWrap="wrap" mb={2}>
+        <IconButton onClick={onClose}>
+          <IconArrowLeft />
+        </IconButton>
+        <Typography variant="h6" color="inherit" fontWeight={700}>
+          Announcement
         </Typography>
-        <CustomTextField
-          multiline
-          placeholder="Enter title..."
-          fullWidth
-          value={title}
-          inputProps={{ maxLength: 500 }}
-          onChange={(e: any) => setTitle(e.target.value)}
-        />
+      </Box>
 
-        {/* Company Users */}
-        <FormControlLabel
-          sx={{ mt: 2 }}
-          control={
-            <Checkbox
-              checked={companyUsers}
-              onChange={(e) => {
-                setCompanyUsers(e.target.checked);
-                if (e.target.checked) {
-                  setSelectedTeams([]);
-                  setSelectedUsers([]);
+      <Box height={"100%"}>
+        <form onSubmit={handleSubmit} className="address-form">
+          <Grid container>
+            <Grid size={{ lg: 12, xs: 12 }}>
+              {/* Title */}
+              <Typography variant="h6">Write Announcement</Typography>
+              <CustomTextField
+                multiline
+                placeholder="Enter title..."
+                fullWidth
+                value={title}
+                inputProps={{ maxLength: 500 }}
+                onChange={(e: any) => setTitle(e.target.value)}
+              />
+
+              {/* Company Users */}
+              <FormControlLabel
+                // sx={{ mt: 2 }}
+                control={
+                  <CustomCheckbox
+                    checked={companyUsers}
+                    onChange={(e) => {
+                      setCompanyUsers(e.target.checked);
+                      if (e.target.checked) {
+                        setSelectedTeams([]);
+                        setSelectedUsers([]);
+                      }
+                    }}
+                  />
                 }
-              }}
-            />
-          }
-          label="Company Users"
-        />
+                label="Company Users"
+              />
 
-        {/* Teams */}
-        <Typography variant="h6" mt={2}>
-          Select Teams
-        </Typography>
-        <Autocomplete
-          multiple
-          disabled={companyUsers}
-          options={teams}
-          getOptionLabel={(o) => o.name}
-          value={teams.filter((t) => selectedTeams.includes(t.id!))}
-          onChange={(_, v) =>
-            setSelectedTeams(v.map((x) => x.id!).filter(Boolean))
-          }
-          renderInput={(params) => (
-            <TextField {...params} label="Teams" placeholder="Select teams" />
-          )}
-        />
+              {/* Teams */}
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Select Teams
+              </Typography>
+              <Autocomplete
+                multiple
+                disabled={companyUsers}
+                options={teams}
+                getOptionLabel={(o) => o.name}
+                value={teams.filter((t) => selectedTeams.includes(t.id!))}
+                onChange={(_, v) =>
+                  setSelectedTeams(v.map((x) => x.id!).filter(Boolean))
+                }
+                renderInput={(params) => (
+                  <TextField {...params} placeholder="Select teams" />
+                )}
+              />
 
-        {/* Users */}
-        <Typography variant="h6" mt={2}>
-          Select Users
-        </Typography>
-        <Autocomplete
-          multiple
-          disabled={companyUsers}
-          options={users}
-          getOptionLabel={(o) => o.name}
-          value={users.filter((u) => selectedUsers.includes(u.id!))}
-          onChange={(_, v) =>
-            setSelectedUsers(v.map((x) => x.id!).filter(Boolean))
-          }
-          renderInput={(params) => (
-            <TextField {...params} label="Users" placeholder="Select users" />
-          )}
-        />
+              {/* Users */}
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Select Users
+              </Typography>
+              <Autocomplete
+                multiple
+                disabled={companyUsers}
+                options={users}
+                getOptionLabel={(o) => o.name}
+                value={users.filter((u) => selectedUsers.includes(u.id!))}
+                onChange={(_, v) =>
+                  setSelectedUsers(v.map((x) => x.id!).filter(Boolean))
+                }
+                renderInput={(params) => (
+                  <TextField {...params} placeholder="Select users" />
+                )}
+              />
 
-        {/* Send As */}
-        <Box mt={2}>
-          <FormControl component="fieldset">
-            <FormLabel>Send notification as</FormLabel>
-            <RadioGroup
-              row
-              value={sendAs}
-              onChange={(e) => setSendAs(e.target.value as any)}
+              {/* Send As */}
+              <Box mt={2}>
+                <FormControl component="fieldset">
+                  <FormLabel>Send notification as</FormLabel>
+                  <RadioGroup
+                    row
+                    value={sendAs}
+                    onChange={(e) => setSendAs(e.target.value as any)}
+                  >
+                    <FormControlLabel
+                      value="company"
+                      control={<Radio />}
+                      label="Company"
+                    />
+                    <FormControlLabel
+                      value="admin"
+                      control={<Radio />}
+                      label="Admin"
+                    />
+                  </RadioGroup>
+                </FormControl>
+              </Box>
+
+              {/* File Upload */}
+              <InputLabel htmlFor="file-upload" sx={{ mt: 2 }}>
+                Choose files
+              </InputLabel>
+              <Box
+                mt={2}
+                fontSize="12px"
+                sx={{
+                  backgroundColor: "primary.light",
+                  color: "primary.main",
+                  padding: "25px",
+                  textAlign: "center",
+                  border: `1px dashed`,
+                  borderColor: "primary.main",
+                  borderRadius: 1,
+                  cursor: "pointer",
+                }}
+                {...getRootProps()}
+              >
+                <input {...getInputProps()} />
+                <Typography>
+                  Drag & drop files here, or click to select
+                </Typography>
+              </Box>
+
+              {/* File Previews */}
+              {uploadedFiles.length > 0 && (
+                <Box mt={2}>
+                  <Typography variant="h6" fontSize="15px" mb={1}>
+                    Files Preview
+                  </Typography>
+                  {fileList}
+                </Box>
+              )}
+            </Grid>
+          </Grid>
+          {/* Actions */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "start",
+              gap: 2,
+              mt: 3,
+              mb: 0,
+            }}
+          >
+            <Button
+              color="primary"
+              variant="contained"
+              size="large"
+              type="submit"
+              onClick={handleSubmit}
+              disabled={loading}
+              sx={{ borderRadius: 3 }}
+              className="drawer_buttons"
             >
-              <FormControlLabel
-                value="company"
-                control={<Radio />}
-                label="Company"
-              />
-              <FormControlLabel
-                value="admin"
-                control={<Radio />}
-                label="Admin"
-              />
-            </RadioGroup>
-          </FormControl>
-        </Box>
-
-        {/* File Upload */}
-        <InputLabel htmlFor="file-upload" sx={{ mt: 2 }}>
-          Choose files
-        </InputLabel>
-        <Box
-          mt={2}
-          fontSize="12px"
-          sx={{
-            backgroundColor: "primary.light",
-            color: "primary.main",
-            padding: "25px",
-            textAlign: "center",
-            border: `1px dashed`,
-            borderColor: "primary.main",
-            borderRadius: 1,
-            cursor: "pointer",
-          }}
-          {...getRootProps()}
-        >
-          <input {...getInputProps()} />
-          <Typography>Drag & drop files here, or click to select</Typography>
-        </Box>
-
-        {/* File Previews */}
-        {uploadedFiles.length > 0 && (
-          <Box mt={2}>
-            <Typography variant="h6" fontSize="15px" mb={1}>
-              Files Preview
-            </Typography>
-            {fileList}
+              {loading ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              color="inherit"
+              onClick={onClose}
+              variant="contained"
+              size="large"
+              sx={{
+                backgroundColor: "transparent",
+                borderRadius: 3,
+                color: "GrayText",
+              }}
+            >
+              Close
+            </Button>
           </Box>
-        )}
-
-        {/* Actions */}
-        <Box display="flex" justifyContent="space-between" mt={3}>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit} disabled={loading}>
-            Save
-          </Button>
-        </Box>
-      </Grid>
+        </form>
+      </Box>
     </Box>
   );
 }
