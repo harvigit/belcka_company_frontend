@@ -515,7 +515,7 @@ const ProductList = () => {
       });
 
       if (res.data.conflicts?.length > 0) {
-        setConflictProducts(res.data.conflicts);
+        setConflictProducts(res.data.conflicts || []);
         setConflictOpen(true);
 
         return;
@@ -537,6 +537,7 @@ const ProductList = () => {
     }
   };
 
+  console.log(conflictProducts,'conflictProducts')
   const handleDeleteConflictProduct = async (
     productId: number,
     type: "original" | "imported",
@@ -547,6 +548,10 @@ const ProductList = () => {
       const res = await api.post("products/archive", {
         product_ids: String(productId),
       });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+      }
 
       const updated: any = conflictProducts
         .map((item: any) => {
@@ -577,19 +582,17 @@ const ProductList = () => {
         setConflictOpen(false);
       }
 
-      toast.success(res.data.message);
-
       fetchProducts();
     } catch (error) {
-      toast.error("Failed to delete product");
+      console.error("Failed to delete product:", error);
     } finally {
       setIsConflictLoading(false);
     }
   };
 
   const handleKeepAll = () => {
-    setConflictOpen(false);
     setSelectedConflictIds([]);
+    setConflictOpen(false);
     handleModelClose();
   };
 
