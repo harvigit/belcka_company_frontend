@@ -37,6 +37,7 @@ export type TrainingRow = {
     users: { id: number; name: string }[];
     attachment: string;
     files?: any[];
+    date: string;
 };
 
 type FormatKey = 'image' | 'video' | 'audio' | 'pdf' | 'doc';
@@ -495,6 +496,7 @@ const InductionTraining = ({ companyId }: Props) => {
                         ? `${item.files.length} File${item.files.length > 1 ? 's' : ''}`
                         : 'No Attachment',
                     files: item.files || [],
+                    date: item.date,
                 })));
             }
         } catch {
@@ -673,6 +675,7 @@ const InductionTraining = ({ companyId }: Props) => {
                 );
             },
         },
+        
         {
             id: 'added_by',
             header: 'Added By',
@@ -686,12 +689,30 @@ const InductionTraining = ({ companyId }: Props) => {
                 );
             },
         },
+
+        {
+            id: 'date',
+            header: 'Date',
+            accessorKey: 'date',
+            cell: ({ getValue }: any) => {
+                const val = getValue();
+                return (
+                    <Tooltip title={val && val !== '-' ? val : ''} placement="top">
+                        <Typography className="f-14" noWrap sx={{ maxWidth: 200 }}>
+                            {val || '-'}
+                        </Typography>
+                    </Tooltip>
+                );
+            },
+        },
+        
         {
             id: 'title',
             header: 'Title',
             accessorKey: 'title',
             cell: ({ getValue }: any) => <Typography className="f-14">{getValue() || '-'}</Typography>,
         },
+        
         {
             id: 'description',
             header: 'Description',
@@ -985,8 +1006,13 @@ const InductionTraining = ({ companyId }: Props) => {
                                 <CustomTextField
                                     placeholder="Enter description..."
                                     value={form.description}
-                                    onChange={(e: any) => setForm(f => ({ ...f, description: e.target.value }))}
-                                    multiline rows={3} fullWidth
+                                    onChange={(e: any) =>
+                                        setForm(f => ({ ...f, description: e.target.value }))
+                                    }
+                                    multiline
+                                    rows={4}
+                                    fullWidth
+                                    inputProps={{ maxLength: 150 }}
                                 />
                             </Box>
 

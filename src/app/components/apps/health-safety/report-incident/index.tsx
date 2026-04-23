@@ -37,6 +37,7 @@ export type IncidentRow = {
     notify_to_id: number | null;
     attachment: string;
     files?: any[];
+    date: string;
 };
 
 type FormatKey = 'image' | 'video' | 'audio' | 'pdf' | 'doc';
@@ -523,6 +524,7 @@ const ReportIncident = ({ companyId }: Props) => {
                         ? `${item.files.length} File${item.files.length > 1 ? 's' : ''}`
                         : 'No Attachment',
                     files: item.files || [],
+                    date: item.date,
                 })));
             }
         } catch {
@@ -737,6 +739,23 @@ const ReportIncident = ({ companyId }: Props) => {
                 );
             },
         },
+
+        {
+            id: 'date',
+            header: 'Date',
+            accessorKey: 'date',
+            cell: ({ getValue }: any) => {
+                const val = getValue();
+                return (
+                    <Tooltip title={val && val !== '-' ? val : ''} placement="top">
+                        <Typography className="f-14" noWrap sx={{ maxWidth: 200 }}>
+                            {val || '-'}
+                        </Typography>
+                    </Tooltip>
+                );
+            },
+        },
+        
         {
             id: 'title',
             header: 'Title',
@@ -752,6 +771,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 );
             },
         },
+        
         {
             id: 'incident_type',
             header: 'Incident Type',
@@ -762,6 +782,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 </Typography>
             ),
         },
+        
         {
             id: 'threat_level',
             header: 'Threat Level',
@@ -780,6 +801,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 );
             },
         },
+        
         {
             id: 'attachment',
             header: 'Attachment',
@@ -800,6 +822,7 @@ const ReportIncident = ({ companyId }: Props) => {
                 );
             },
         },
+        
         {
             id: 'action',
             header: 'Action',
@@ -973,6 +996,7 @@ const ReportIncident = ({ companyId }: Props) => {
                                     fullWidth
                                     error={Boolean(formErrors.title)}
                                     helperText={formErrors.title}
+                                    inputProps={{ maxLength: 50 }}
                                 />
                             </Box>
 

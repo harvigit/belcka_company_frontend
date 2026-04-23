@@ -33,6 +33,7 @@ export type NearMissRow = {
     hazard_type: string;
     attachment: string;
     files?: any[];
+    date: string;
 };
 
 type FormatKey = 'image' | 'video' | 'audio' | 'pdf' | 'doc';
@@ -500,6 +501,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                     attachment: item.files?.length
                         ? `${item.files.length} File${item.files.length > 1 ? 's' : ''}`
                         : 'No Attachment',
+                    date: item.date,
                     files: item.files || [],
                 })));
             }
@@ -679,6 +681,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                 );
             },
         },
+        
         {
             id: 'added_by',
             header: 'Added By',
@@ -692,6 +695,23 @@ const NearMissReporting = ({ companyId }: Props) => {
                 );
             },
         },
+
+        {
+            id: 'date',
+            header: 'Date',
+            accessorKey: 'date',
+            cell: ({ getValue }: any) => {
+                const val = getValue();
+                return (
+                    <Tooltip title={val && val !== '-' ? val : ''} placement="top">
+                        <Typography className="f-14" noWrap sx={{ maxWidth: 200 }}>
+                            {val || '-'}
+                        </Typography>
+                    </Tooltip>
+                );
+            },
+        },
+        
         {
             id: 'description',
             header: 'Description',
@@ -703,12 +723,14 @@ const NearMissReporting = ({ companyId }: Props) => {
                 </Typography>
             ),
         },
+        
         {
             id: 'hazard_type',
             header: 'Hazard Type',
             accessorKey: 'hazard_type',
             cell: ({ getValue }: any) => <Typography className="f-14">{getValue() || '-'}</Typography>,
         },
+        
         {
             id: 'attachment',
             header: 'Attachment',
@@ -739,6 +761,7 @@ const NearMissReporting = ({ companyId }: Props) => {
                 );
             },
         },
+        
         {
             id: 'action',
             header: 'Action',
@@ -925,8 +948,13 @@ const NearMissReporting = ({ companyId }: Props) => {
                                 <CustomTextField
                                     placeholder="Enter description..."
                                     value={form.description}
-                                    onChange={(e: any) => setForm(f => ({ ...f, description: e.target.value }))}
-                                    multiline rows={4} fullWidth
+                                    onChange={(e: any) =>
+                                        setForm(f => ({ ...f, description: e.target.value }))
+                                    }
+                                    multiline
+                                    rows={4}
+                                    fullWidth
+                                    inputProps={{ maxLength: 150 }}
                                 />
                             </Box>
 

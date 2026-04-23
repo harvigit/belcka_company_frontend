@@ -18,6 +18,7 @@ import {
   IconUser,
   IconUserPlus,
   IconUsers,
+    IconArrowsShuffle
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -79,6 +80,13 @@ const MenuItems: NavGroup[] = [
     icon: IconReportMedical,
     href: "/apps/health-safety/index",
   },
+    {
+        id: uniqueId(),
+        title: "Conflicts",
+        slug: "conflicts",
+        icon: IconArrowsShuffle,
+        href: "/apps/conflicts/index",
+    },
   // {
   //   id: uniqueId(),
   //   title: "Clients",
