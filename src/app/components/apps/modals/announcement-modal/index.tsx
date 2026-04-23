@@ -350,7 +350,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                 }}
                 {...getRootProps()}
               >
-                <input {...getInputProps()} />
+                <input {...getInputProps()} multiple/>
                 <Typography>
                   Drag & drop files here, or click to select
                 </Typography>
