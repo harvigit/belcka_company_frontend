@@ -58,26 +58,13 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
     } catch (err) {}
   };
 
-  // Fetch all products/projects
-  const fetchProjects = useCallback(async () => {
-    if (!companyId) return;
-    try {
-      const res = await api.get(
-        `products/get?company_id=${companyId}&is_products=true`,
-      );
-      if (res.data?.info) {
-        setProducts(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch projects", err);
-    }
-  }, [companyId]);
   const fetchResources = async () => {
     try {
       let url = `get-inventory-resources?company_id=${companyId}`;
       const res = await api.get(url);
       if (res.data) {
         setUsers(res.data.users);
+        setProducts(res.data.tools);
       }
     } catch (err) {
       console.error("Failed to fetch inventory resources", err);
@@ -86,12 +73,11 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
 
   useEffect(() => {
     if (open) {
-      fetchProjects();
       fetchTrades();
       fetchResources();
       setUserId([]);
     }
-  }, [open, fetchProjects]);
+  }, [open]);
 
   useEffect(() => {
     if (open && !setId) {
@@ -237,30 +223,38 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
         <Typography variant="body2" mb={1}>
           Select Products
         </Typography>
-        {products.map((product) => (
-          <Box
-            key={product.id}
-            mt={1}
-            p={1}
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{
-              border: "1px solid #e7e3e3ff",
-              borderRadius: "10px",
-            }}
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              <CustomCheckbox
-                checked={selectedIds.includes(product.id)}
-                onChange={() => handleCheckboxChange(product.id)}
-              />
-              <Typography variant="body2">
-                {product.short_name ?? product.name}{" "}
-              </Typography>
+        {products?.map((item, index) => {
+          const product = item;
+
+          if (!product) return null;
+
+          const productId = product.id;
+          const productName =
+            product.short_name || product.name || "Unnamed Product";
+
+          return (
+            <Box
+              key={productId ?? index}
+              mt={1}
+              p={1}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{
+                border: "1px solid #e7e3e3ff",
+                borderRadius: "10px",
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1}>
+                <CustomCheckbox
+                  checked={selectedIds.includes(productId)}
+                  onChange={() => handleCheckboxChange(productId)}
+                />
+                <Typography variant="body2">{productName}</Typography>
+              </Box>
             </Box>
-          </Box>
-        ))}
+          );
+        })}
       </Box>
 
       {/* Buttons */}

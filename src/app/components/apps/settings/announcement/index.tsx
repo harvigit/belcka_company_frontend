@@ -494,15 +494,11 @@ export default function AnnouncementsList({
           },
         }}
       >
-        <Box sx={{ flex: 1, overflowY: "auto", paddingRight: 1 }}>
-          <Box className="task-form">
-            <AnnouncementModal
-              open={openDrawer}
-              onClose={() => setOpenDrawer(false)}
-              onCreated={() => onUpdate?.()}
-            />
-          </Box>
-        </Box>
+        <AnnouncementModal
+          open={openDrawer}
+          onClose={() => setOpenDrawer(false)}
+          onCreated={() => onUpdate?.()}
+        />
       </Drawer>
 
       {/* open emoji details */}

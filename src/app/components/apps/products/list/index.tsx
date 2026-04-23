@@ -80,6 +80,7 @@ import ProductHistory from "../history";
 import UnitList from "../../units/list";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import SetList from "../sets/list";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -193,6 +194,12 @@ const ProductList = () => {
   const [draftCategories, setDraftCategories] = useState<any[]>([]);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
+
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [conflictProducts, setConflictProducts] = useState<any[]>([]);
+  const [isConflictLoading, setIsConflictLoading] = useState(false);
+  const [selectedConflictIds, setSelectedConflictIds] = useState<number[]>([]);
+
   useEffect(() => {
     if (selectedRow) {
       setUploadedImages(selectedRow.product_images || []);
@@ -497,6 +504,7 @@ const ProductList = () => {
             const percent = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total,
             );
+
             setUploadProgress(percent);
 
             if (percent === 100) {
@@ -505,6 +513,13 @@ const ProductList = () => {
           }
         },
       });
+
+      if (res.data.conflicts?.length > 0) {
+        setConflictProducts(res.data.conflicts);
+        setConflictOpen(true);
+
+        return;
+      }
 
       toast.success(res.data.message);
 
@@ -520,6 +535,38 @@ const ProductList = () => {
     } finally {
       setIsImport(false);
     }
+  };
+
+  const handleDeleteConflictProduct = async (productId: number) => {
+    try {
+      setIsConflictLoading(true);
+
+      await api.post("products/archive", {
+        product_ids: String(productId),
+      });
+
+      const updated = conflictProducts.filter(
+        (item: any) => item.product_id !== productId,
+      );
+
+      setConflictProducts(updated);
+
+      if (updated.length === 0) {
+        setConflictOpen(false);
+      }
+
+      toast.success("Product archived successfully");
+      fetchProducts();
+    } catch (error) {
+      toast.error("Failed to archive product");
+    } finally {
+      setIsConflictLoading(false);
+    }
+  };
+  const handleKeepAll = () => {
+    setConflictOpen(false);
+    setSelectedConflictIds([]);
+    handleModelClose();
   };
 
   const handleOpenCreateDrawer = () => {
@@ -1932,6 +1979,91 @@ const ProductList = () => {
                 </Button>
               </DialogActions>
             </Dialog>
+            {/* conflict dialog */}
+            <Dialog
+              open={conflictOpen}
+              maxWidth="md"
+              fullWidth
+              onClose={(event, reason) => {
+                if (reason === "backdropClick" || reason === "escapeKeyDown")
+                  return;
+                setConflictOpen(false);
+              }}
+              disableEscapeKeyDown
+            >
+              <DialogTitle>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <WarningAmberIcon color="warning" />
+                  <Typography variant="h6" fontWeight={700}>
+                    Duplicate product found
+                  </Typography>
+                </Stack>
+              </DialogTitle>
+
+              <DialogContent dividers>
+                <Stack spacing={2}>
+                  {conflictProducts.map((item: any, index: number) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        border: "1px solid #e0e0e0",
+                        borderRadius: 2,
+                        p: 2,
+                      }}
+                    >
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Image
+                          src={item.image || "/images/products/product.svg"}
+                          alt="Product"
+                          height={60}
+                          width={60}
+                        />
+
+                        <Box flex={1}>
+                          <Typography fontWeight={700}>
+                            {item.short_name || item.name}
+                          </Typography>
+
+                          <Typography variant="body2">
+                            UUID: {item.uuid || "-"}
+                          </Typography>
+
+                          <Typography variant="body2">
+                            Product ID: {item.product_id}
+                          </Typography>
+
+                          <Typography variant="body2">
+                            Short Name: {item.short_name}
+                          </Typography>
+                        </Box>
+
+                        <IconButton
+                          color="error"
+                          disabled={isConflictLoading}
+                          onClick={() =>
+                            handleDeleteConflictProduct(item.product_id)
+                          }
+                        >
+                          <IconTrash size={20} />
+                        </IconButton>
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
+              </DialogContent>
+
+              <DialogActions sx={{ p: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={handleKeepAll}
+                  disabled={isConflictLoading}
+                >
+                  Keep All
+                </Button>
+              </DialogActions>
+            </Dialog>
+
             <IconButton
               sx={{ margin: "0px" }}
               id="basic-button"

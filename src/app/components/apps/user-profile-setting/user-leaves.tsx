@@ -224,15 +224,9 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         try {
             const startDateStr = format(start, "dd/MM/yyyy");
             const endDateStr = format(end, "dd/MM/yyyy");
-            const payload = {
-                company_id: user.company_id,
-                start_date: startDateStr,
-                end_date: endDateStr,
-                user_id: userId,
-            };
-            const res = await api.post(`user-leaves/get-list`, payload);
+            const res = await api.get(`requests/get-history?company_id=${user.company_id}&start_date=${startDateStr}&end_date=${endDateStr}&user_id=${userId}&type=110`);
             if (res.data?.IsSuccess){
-                setHistory(res.data.data || []);   
+                setHistory(res.data.info || []);   
             }
         } catch (err) {
             console.error("Failed to fetch history:", err);
@@ -1096,7 +1090,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                             key={index}
                                             sx={{
                                                 position: "relative",
-                                                mb: 3,
+                                                mb: 2,
                                                 bgcolor: "white",
                                                 transition: "0.2s",
                                                 cursor: "pointer",
@@ -1105,7 +1099,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                             {item.message && (
                                                 <>
                                                     <Box
-                                                        mb={1}
+                                                        // mb={1}
                                                         ml={2}
                                                         sx={{ top: -8, position: "absolute" }}
                                                         flexWrap="wrap"
@@ -1131,7 +1125,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                                     <Box
                                                         sx={{
                                                             border: 1,
-                                                            p: { xs: 1.5, sm: 2 },
+                                                            p: { xs: 1, sm: 2 },
                                                             borderColor: "#c5c3c3ff",
                                                             borderRadius: 2,
                                                             boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
