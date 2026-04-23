@@ -537,7 +537,6 @@ const ProductList = () => {
     }
   };
 
-  console.log(conflictProducts,'conflictProducts')
   const handleDeleteConflictProduct = async (
     productId: number,
     type: "original" | "imported",
@@ -551,38 +550,47 @@ const ProductList = () => {
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-      }
 
-      const updated: any = conflictProducts
-        .map((item: any) => {
-          if (type === "original" && item.original_product.id === productId) {
-            return {
-              ...item,
-              original_product: null,
-            };
+        setConflictProducts((prev: any[]) => {
+          const updated = prev
+            .map((item: any) => {
+              if (
+                type === "original" &&
+                item.original_product?.id === productId
+              ) {
+                return {
+                  ...item,
+                  original_product: null,
+                };
+              }
+
+              if (
+                type === "imported" &&
+                item.imported_product?.id === productId
+              ) {
+                return {
+                  ...item,
+                  imported_product: null,
+                };
+              }
+
+              return item;
+            })
+            .filter(
+              (item: any) =>
+                item.original_product !== null ||
+                item.imported_product !== null,
+            );
+
+          if (updated.length === 0) {
+            setConflictOpen(false);
           }
 
-          if (type === "imported" && item.imported_product.id === productId) {
-            return {
-              ...item,
-              imported_product: null,
-            };
-          }
+          return updated;
+        });
 
-          return item;
-        })
-        .filter(
-          (item: any) =>
-            item.original_product !== null || item.imported_product !== null,
-        );
-
-      setConflictProducts(updated);
-
-      if (updated.length === 0) {
-        setConflictOpen(false);
+        fetchProducts();
       }
-
-      fetchProducts();
     } catch (error) {
       console.error("Failed to delete product:", error);
     } finally {
@@ -591,6 +599,7 @@ const ProductList = () => {
   };
 
   const handleKeepAll = () => {
+    fetchProducts();
     setSelectedConflictIds([]);
     setConflictOpen(false);
     handleModelClose();
@@ -699,6 +708,7 @@ const ProductList = () => {
 
     setOpenCategoryModal(true);
   };
+
   const updateCategories = async (id: string, selected: any[]) => {
     try {
       const payload = {
@@ -793,6 +803,7 @@ const ProductList = () => {
     setSelectedTaskId(id);
     setViewDrawerOpen(true);
   }, []);
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -1392,7 +1403,9 @@ const ProductList = () => {
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
   };
+
   const handlePopoverClose = () => setAnchorEl2(null);
+
   const table = useReactTable({
     data: filteredData,
     columns,
