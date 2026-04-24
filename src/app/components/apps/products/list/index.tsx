@@ -515,7 +515,7 @@ const ProductList = () => {
       });
 
       if (res.data.conflicts?.length > 0) {
-        setConflictProducts(res.data.conflicts);
+        setConflictProducts(res.data.conflicts || []);
         setConflictOpen(true);
 
         return;
@@ -537,35 +537,71 @@ const ProductList = () => {
     }
   };
 
-  const handleDeleteConflictProduct = async (productId: number) => {
+  const handleDeleteConflictProduct = async (
+    productId: number,
+    type: "original" | "imported",
+  ) => {
     try {
       setIsConflictLoading(true);
 
-      await api.post("products/archive", {
+      const res = await api.post("products/archive", {
         product_ids: String(productId),
       });
 
-      const updated = conflictProducts.filter(
-        (item: any) => item.product_id !== productId,
-      );
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
 
-      setConflictProducts(updated);
+        setConflictProducts((prev: any[]) => {
+          const updated = prev
+            .map((item: any) => {
+              if (
+                type === "original" &&
+                item.original_product?.id === productId
+              ) {
+                return {
+                  ...item,
+                  original_product: null,
+                };
+              }
 
-      if (updated.length === 0) {
-        setConflictOpen(false);
+              if (
+                type === "imported" &&
+                item.imported_product?.id === productId
+              ) {
+                return {
+                  ...item,
+                  imported_product: null,
+                };
+              }
+
+              return item;
+            })
+            .filter(
+              (item: any) =>
+                item.original_product !== null ||
+                item.imported_product !== null,
+            );
+
+          if (updated.length === 0) {
+            setConflictOpen(false);
+          }
+
+          return updated;
+        });
+
+        fetchProducts();
       }
-
-      toast.success("Product archived successfully");
-      fetchProducts();
     } catch (error) {
-      toast.error("Failed to archive product");
+      console.error("Failed to delete product:", error);
     } finally {
       setIsConflictLoading(false);
     }
   };
+
   const handleKeepAll = () => {
-    setConflictOpen(false);
+    fetchProducts();
     setSelectedConflictIds([]);
+    setConflictOpen(false);
     handleModelClose();
   };
 
@@ -622,7 +658,9 @@ const ProductList = () => {
         formPayload.append("files", file);
       });
 
-      formPayload.append("barcode_text", barcodes.join(","));
+      if (barcodes.length > 0) {
+        formPayload.append("barcode_text", barcodes.join(","));
+      }
 
       const result = await api.post("products/create", formPayload, {
         headers: {
@@ -670,6 +708,7 @@ const ProductList = () => {
 
     setOpenCategoryModal(true);
   };
+
   const updateCategories = async (id: string, selected: any[]) => {
     try {
       const payload = {
@@ -764,6 +803,7 @@ const ProductList = () => {
     setSelectedTaskId(id);
     setViewDrawerOpen(true);
   }, []);
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -977,11 +1017,13 @@ const ProductList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+        const placeholder = "/images/products/product.svg";
+
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Image
-              src={item.qr_code_url}
-              alt={"QRr code"}
+              src={item.qr_code_url || placeholder}
+              alt={"QR code"}
               width={50}
               height={50}
             />
@@ -999,7 +1041,7 @@ const ProductList = () => {
 
         return (
           <Stack
-            sx={{ cursor: "pointer", minWidth: 200 }}
+            sx={{ cursor: "pointer" }}
             onClick={(e) => {
               e.stopPropagation();
               handleEditCategories(item);
@@ -1009,6 +1051,12 @@ const ProductList = () => {
               textTransform="capitalize"
               className="f-14"
               sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
                 px: 1,
                 py: 0.5,
                 borderRadius: 1,
@@ -1060,7 +1108,6 @@ const ProductList = () => {
                 type="text"
                 inputMode="decimal"
                 variant="standard"
-                sx={{ width: 80 }}
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
@@ -1363,7 +1410,9 @@ const ProductList = () => {
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
   };
+
   const handlePopoverClose = () => setAnchorEl2(null);
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -2009,43 +2058,139 @@ const ProductList = () => {
                         border: "1px solid #e0e0e0",
                         borderRadius: 2,
                         p: 2,
+                        backgroundColor: "#fff",
                       }}
                     >
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Image
-                          src={item.image || "/images/products/product.svg"}
-                          alt="Product"
-                          height={60}
-                          width={60}
-                        />
+                      <Stack spacing={2}>
+                        {/* Existing Product */}
+                        {item.original_product && (
+                          <Box
+                            sx={{
+                              border: "1px solid #f1f1f1",
+                              borderRadius: 2,
+                              p: 2,
+                              backgroundColor: "#fafafa",
+                            }}
+                          >
+                            <Typography
+                              fontWeight={700}
+                              color="primary"
+                              mb={1}
+                              fontSize="14px"
+                            >
+                              Existing Product
+                            </Typography>
 
-                        <Box flex={1}>
-                          <Typography fontWeight={700}>
-                            {item.short_name || item.name}
-                          </Typography>
+                            <Stack
+                              direction="row"
+                              spacing={2}
+                              alignItems="center"
+                            >
+                              <Image
+                                src={
+                                  item.original_product.image ||
+                                  "/images/products/product.svg"
+                                }
+                                alt="Existing Product"
+                                width={60}
+                                height={60}
+                              />
 
-                          <Typography variant="body2">
-                            UUID: {item.uuid || "-"}
-                          </Typography>
+                              <Box flex={1}>
+                                <Typography fontWeight={700}>
+                                  {item.original_product.short_name ||
+                                    item.original_product.name}
+                                </Typography>
 
-                          <Typography variant="body2">
-                            Product ID: {item.product_id}
-                          </Typography>
+                                <Typography variant="body2">
+                                  ID: {item.original_product.id}
+                                </Typography>
 
-                          <Typography variant="body2">
-                            Short Name: {item.short_name}
-                          </Typography>
-                        </Box>
+                                <Typography variant="body2">
+                                  UUID: {item.original_product.uuid || "-"}
+                                </Typography>
+                              </Box>
 
-                        <IconButton
-                          color="error"
-                          disabled={isConflictLoading}
-                          onClick={() =>
-                            handleDeleteConflictProduct(item.product_id)
-                          }
-                        >
-                          <IconTrash size={20} />
-                        </IconButton>
+                              <IconButton
+                                color="error"
+                                disabled={isConflictLoading}
+                                onClick={() =>
+                                  handleDeleteConflictProduct(
+                                    item.original_product.id,
+                                    "original",
+                                  )
+                                }
+                              >
+                                <IconTrash size={20} />
+                              </IconButton>
+                            </Stack>
+                          </Box>
+                        )}
+
+                        {/* Imported Product */}
+                        {item.imported_product && (
+                          <Box
+                            sx={{
+                              border: "1px solid #f1f1f1",
+                              borderRadius: 2,
+                              p: 2,
+                              backgroundColor: "#fff8f0",
+                            }}
+                          >
+                            <Typography
+                              fontWeight={700}
+                              color="warning.main"
+                              mb={1}
+                              fontSize="14px"
+                            >
+                              Imported Product
+                            </Typography>
+
+                            <Stack
+                              direction="row"
+                              spacing={2}
+                              alignItems="center"
+                            >
+                              <Image
+                                src={
+                                  item.imported_product.image ||
+                                  "/images/products/product.svg"
+                                }
+                                alt="Imported Product"
+                                width={60}
+                                height={60}
+                              />
+
+                              <Box flex={1}>
+                                <Typography fontWeight={700}>
+                                  {item.imported_product.short_name ||
+                                    item.imported_product.name}
+                                </Typography>
+
+                                <Typography variant="body2">
+                                  ID: {item.imported_product.id}
+                                </Typography>
+
+                                <Typography variant="body2">
+                                  UUID: {item.imported_product.uuid || "-"}
+                                </Typography>
+                              </Box>
+
+                              <IconButton
+                                color="error"
+                                disabled={isConflictLoading}
+                                onClick={() =>
+                                  handleDeleteConflictProduct(
+                                    item.imported_product.id,
+                                    "imported",
+                                  )
+                                }
+                              >
+                                <IconTrash size={20} />
+                              </IconButton>
+                            </Stack>
+                          </Box>
+                        )}
                       </Stack>
                     </Box>
                   ))}

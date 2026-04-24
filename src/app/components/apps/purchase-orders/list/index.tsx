@@ -30,6 +30,7 @@ import {
   Checkbox,
   CircularProgress,
   Paper,
+  ListItemText,
 } from "@mui/material";
 import {
   flexRender,
@@ -51,6 +52,7 @@ import {
   IconFilter,
   IconNotes,
   IconSearch,
+  IconShare,
   IconShoppingCartCancel,
   IconTrash,
   IconX,
@@ -140,11 +142,28 @@ const PurchaseOrderList = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const [selectedRow, setSelectedRow] = React.useState<TableRow | null>(null);
+  const [selectedRow2, setSelectedRow2] = useState<any>(null);
+
   const [singleDate, setSingleDate] = React.useState<Date | undefined>(
     undefined,
   );
   const [archivePurchaseList, setArchivePurchaseList] =
     useState<boolean>(false);
+
+  const [email, setEmail] = useState("");
+
+  const [menuPos, setMenuPos] = useState<{
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+
+  const menuOpen = Boolean(menuPos);
+
+  const handleCloseMenu = () => {
+    setMenuPos(null);
+    setSelectedRow2(null);
+  };
+  const [anchorEl3, setAnchorEl3] = useState<null | HTMLElement>(null);
 
   function formatDateLocal(date: Date): string {
     const year = date.getFullYear();
@@ -220,6 +239,7 @@ const PurchaseOrderList = () => {
       );
       if (res.data) {
         setData(res.data.info);
+        setEmail(res.data.info.supplier_email);
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -857,6 +877,7 @@ const PurchaseOrderList = () => {
         );
       },
     }),
+
     columnHelper.accessor((row) => row?.store_name, {
       id: "deliveryAddress",
       header: () => "Delivery address",
@@ -988,54 +1009,125 @@ const PurchaseOrderList = () => {
         const item = row.original;
         return (
           <Stack direction="row" display={"flex"}>
-            {/* <Tooltip title="Preview / Print">
-              <IconButton
-                color="primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePreview(item.id);
-                }}
-              >
-                <IconPrinter size={18} />
-              </IconButton>
-            </Tooltip> */}
-
             <IconButton
               color="primary"
-              onClick={async (e) => {
+              disabled={!item.supplier_email}
+              onClick={(e) => {
                 e.stopPropagation();
 
-                try {
-                  setLoading(true);
+                setSelectedRow2(item);
 
-                  await api.post(
-                    `purchase-orders/invoice?company_id=${user.company_id}&id=${item.id}`,
-                  );
-
-                  const res = await api.get(
-                    `purchase-orders/get?company_id=${user.company_id}&id=${item.id}`,
-                  );
-
-                  if (res.data.IsSuccess) {
-                    const invoiceUrl = res.data.info[0]?.invoice;
-
-                    if (!invoiceUrl) {
-                      return;
-                    }
-
-                    window.open(invoiceUrl, "_blank", "noopener,noreferrer");
-                  }
-                } catch (error) {
-                  console.error("Failed to open invoice:", error);
-                } finally {
-                  setLoading(false);
-                }
+                setMenuPos({
+                  mouseX: e.clientX,
+                  mouseY: e.clientY,
+                });
               }}
             >
-              <IconDownload size={18} />
+              <IconShare size={18} />
             </IconButton>
+
+            <Menu
+              id="basic-menu"
+              slotProps={{
+                list: {
+                  "aria-labelledby": "basic-button",
+                },
+              }}
+              open={menuOpen}
+              onClose={handleCloseMenu}
+              anchorReference="anchorPosition"
+              anchorPosition={
+                menuPos
+                  ? {
+                      top: menuPos.mouseY + 8,
+                      left: menuPos.mouseX - 150,
+                    }
+                  : undefined
+              }
+              PaperProps={{
+                sx: {
+                  minWidth: 180,
+                  borderRadius: 2,
+                },
+              }}
+            >
+              <MenuItem
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  handleCloseMenu();
+
+                  if (!selectedRow2) return;
+
+                  try {
+                    setLoading(true);
+
+                    await api.post(
+                      `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                    );
+
+                    const res = await api.get(
+                      `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                    );
+
+                    if (!res.data?.IsSuccess) return;
+
+                    const invoice = res.data?.info?.[0]?.invoice || "";
+                    if (!invoice) return;
+
+                    const subject = encodeURIComponent(
+                      `Invoice #${selectedRow2.order_id}`,
+                    );
+
+                    const body = encodeURIComponent(`
+Please find your invoice below.
+
+Invoice No: ${selectedRow2.order_id}
+
+Download Invoice:
+${invoice}
+
+Best regards,
+Team Belcka
+`);
+
+                    window.open(
+                      `https://mail.google.com/mail/?view=cm&fs=1&to=${selectedRow2.supplier_email}&su=${subject}&body=${body}`,
+                      "_blank",
+                    );
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                <Box display={"block"} width={"100%"}>
+                  <Typography mb={1} variant="h6" fontWeight={500}>
+                    Sharing link
+                  </Typography>
+                  <Divider sx={{ mb: 1 }} />
+                  <Box display={"flex"} width={"50%"}>
+                    <ListItemIcon>
+                      <img
+                        src="/gmail.ico"
+                        width={24}
+                        height={24}
+                        alt="gmail"
+                      />
+                    </ListItemIcon>
+
+                    <ListItemText primary="Gmail" />
+                  </Box>
+                </Box>
+              </MenuItem>
+            </Menu>
+
             <IconButton
               color="primary"
+              disabled={
+                item.purchase_orders.length <= 0 &&
+                !item.purchase_orders.some(
+                  (cancel: any) => cancel.cancel_orders,
+                )
+              }
               onClick={(e) => {
                 e.stopPropagation();
                 handleCancelOrder(item.id);
@@ -1432,6 +1524,7 @@ const PurchaseOrderList = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
         {/* Render the search and table */}
         <Stack
           mr={2}

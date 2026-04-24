@@ -220,7 +220,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                       name="units"
                       className="custom_input"
                       placeholder="Enter units.."
-                      value={formData.units}
+                      value={formData.units || ""}
                       onChange={handleChange}
                       variant="outlined"
                       fullWidth

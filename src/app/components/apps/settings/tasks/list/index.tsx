@@ -229,12 +229,20 @@ const TablePagination = () => {
   const editTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    
+    if (formData.is_pricework && !formData.rate) {
+      toast.error("Please add rate!");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
         repeatable_job: formData.is_pricework ? false : true,
         duration: Number(formData.duration),
-        rate: Number(formData.rate),
+        rate: formData.is_pricework ? Number(formData.rate) : 0,
+        units: formData.is_pricework ? formData.units : null,
       };
 
       const result = await api.put("type-works/update", payload);
