@@ -147,10 +147,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const [settingOpen, setSettingOpen] = useState(false);
     const handleSettingOpen = () => setSettingOpen(true);
     const handleSettingClose = async () => setSettingOpen(false);
-
-    // Priority 1: URL params (from Requests panel redirect)
-    // Priority 2: localStorage
-    // Priority 3: year defaults
+    
     const getInitialDates = () => {
         const urlStart = searchParams?.get("leave_start");
         const urlEnd = searchParams?.get("leave_end");
@@ -176,7 +173,6 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const [startDate, setStartDate] = useState<Date | null>(initialDates.startDate);
     const [endDate, setEndDate] = useState<Date | null>(initialDates.endDate);
 
-    // When URL params change (e.g. clicking a different leave request while already on this page),
     // update the date range state immediately
     useEffect(() => {
         const urlStart = searchParams?.get("leave_start");

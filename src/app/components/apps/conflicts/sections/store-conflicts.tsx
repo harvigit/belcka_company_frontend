@@ -139,12 +139,13 @@ const StoreDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved 
     conflict: StoreConflict; isLoading: boolean; onClose: () => void; onResolved: () => void;
 }) => {
     const router = useRouter();
-
+    
     const handleMarkResolved = useCallback(async () => {
         try {
-            const res = await api.post('/company/resolve-store-conflict', {
+            const res = await api.post('/products/resolve-store-conflict', {
                 product_id: conflict.product_id,
                 store_id: conflict.store_id,
+                conflict_type: conflict.conflict_type,
             });
             if (res.data.IsSuccess) {
                 toast.success(res.data.message ?? 'Store conflict resolved');

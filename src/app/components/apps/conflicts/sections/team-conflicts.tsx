@@ -152,7 +152,7 @@ const TeamDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved }
 
     const handleMarkResolved = useCallback(async () => {
         try {
-            const res = await api.post('/company/resolve-team-conflict', { team_id: conflict.team_id });
+            const res = await api.post('/team/resolve-team-conflict', { team_id: conflict.team_id });
             if (res.data.IsSuccess) {
                 toast.success(res.data.message ?? 'Team conflict resolved');
                 onResolved();
