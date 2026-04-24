@@ -110,6 +110,7 @@ const ProductView: React.FC<ProductViewProps> = ({
   productId,
 }) => {
   const [product, setProduct] = useState<any>([]);
+  const [attachments, setAttachments] = useState<any>([]);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [value, setValue] = React.useState(0);
   const [shouldRefresh, setShouldRefresh] = useState(false);
@@ -125,10 +126,11 @@ const ProductView: React.FC<ProductViewProps> = ({
   const fetchProducts = async () => {
     try {
       const res = await api.get(
-        `products/get?company_id=${companyId}&product_id=${productId}&is_products=true`,
+        `products/detail?company_id=${companyId}&product_id=${productId}`,
       );
       if (res.data) {
         setProduct(res.data.info);
+        setAttachments(res.data.info.attachments);
       }
     } catch (err) {
       console.error("Failed to fetch product", err);
@@ -318,6 +320,8 @@ const ProductView: React.FC<ProductViewProps> = ({
                 <ProductTechnicalInformation
                   companyId={companyId}
                   productId={productId}
+                  attachments={attachments}
+                  onWorkUpdated={fetchProducts}
                 />
               </TabPanel>
               <TabPanel value={value} index={2}>
