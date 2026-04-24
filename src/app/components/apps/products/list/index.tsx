@@ -1017,10 +1017,12 @@ const ProductList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
+        const placeholder = "/images/products/product.svg";
+
         return (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Image
-              src={item.qr_code_url || ""}
+              src={item.qr_code_url || placeholder}
               alt={"QR code"}
               width={50}
               height={50}
@@ -1039,7 +1041,7 @@ const ProductList = () => {
 
         return (
           <Stack
-            sx={{ cursor: "pointer", minWidth: 200 }}
+            sx={{ cursor: "pointer" }}
             onClick={(e) => {
               e.stopPropagation();
               handleEditCategories(item);
@@ -1049,6 +1051,12 @@ const ProductList = () => {
               textTransform="capitalize"
               className="f-14"
               sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
                 px: 1,
                 py: 0.5,
                 borderRadius: 1,
@@ -1100,7 +1108,6 @@ const ProductList = () => {
                 type="text"
                 inputMode="decimal"
                 variant="standard"
-                sx={{ width: 80 }}
                 onClick={(e) => {
                   e.stopPropagation();
                 }}

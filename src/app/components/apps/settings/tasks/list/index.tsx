@@ -229,6 +229,13 @@ const TablePagination = () => {
   const editTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    
+    if (formData.is_pricework && !formData.rate) {
+      toast.error("Please add rate!");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
