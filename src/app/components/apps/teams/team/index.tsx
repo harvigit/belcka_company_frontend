@@ -564,10 +564,10 @@ const TablePagination = () => {
                                 alt={item?.name}
                                 sx={{width: 36, height: 36, cursor: 'pointer'}}
                             />
+                        </Badge>
                             <Typography className="f-14" color="body2" sx={{px: 1.5}}>
                                 {item.name ?? '-'}
                             </Typography>
-                        </Badge>
                     </Stack>
                 );
             },
