@@ -3,21 +3,17 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
-  Checkbox,
   FormControlLabel,
   Autocomplete,
   RadioGroup,
   Radio,
-  FormControl,
-  FormLabel,
   TextField,
   Typography,
   IconButton,
-  InputLabel,
   useTheme,
 } from "@mui/material";
 import { Grid } from "@mui/system";
-import { IconArrowLeft, IconTrash } from "@tabler/icons-react";
+import { IconArrowLeft, IconCamera, IconTrash } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
@@ -243,120 +239,215 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
         <form onSubmit={handleSubmit} className="address-form">
           <Grid container>
             <Grid size={{ lg: 12, xs: 12 }}>
-              {/* Title */}
-              <Typography variant="h6">Write Announcement</Typography>
-              <CustomTextField
-                multiline
-                placeholder="Enter title..."
-                fullWidth
-                value={title}
-                inputProps={{ maxLength: 500 }}
-                onChange={(e: any) => setTitle(e.target.value)}
-              />
-
-              {/* Company Users */}
-              <FormControlLabel
-                // sx={{ mt: 2 }}
-                control={
-                  <CustomCheckbox
-                    checked={companyUsers}
-                    onChange={(e) => {
-                      setCompanyUsers(e.target.checked);
-                      if (e.target.checked) {
-                        setSelectedTeams([]);
-                        setSelectedUsers([]);
-                      }
-                    }}
-                  />
-                }
-                label="Company Users"
-              />
-
-              {/* Teams */}
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Select Teams
-              </Typography>
-              <Autocomplete
-                multiple
-                disabled={companyUsers}
-                options={teams}
-                getOptionLabel={(o) => o.name}
-                value={teams.filter((t) => selectedTeams.includes(t.id!))}
-                onChange={(_, v) =>
-                  setSelectedTeams(v.map((x) => x.id!).filter(Boolean))
-                }
-                renderInput={(params) => (
-                  <TextField {...params} placeholder="Select teams" />
-                )}
-              />
-
-              {/* Users */}
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Select Users
-              </Typography>
-              <Autocomplete
-                multiple
-                disabled={companyUsers}
-                options={users}
-                getOptionLabel={(o) => o.name}
-                value={users.filter((u) => selectedUsers.includes(u.id!))}
-                onChange={(_, v) =>
-                  setSelectedUsers(v.map((x) => x.id!).filter(Boolean))
-                }
-                renderInput={(params) => (
-                  <TextField {...params} placeholder="Select users" />
-                )}
-              />
-
-              {/* Send As */}
-              <Box mt={2}>
-                <FormControl component="fieldset">
-                  <FormLabel>Send notification as</FormLabel>
-                  <RadioGroup
-                    row
-                    value={sendAs}
-                    onChange={(e) => setSendAs(e.target.value as any)}
-                  >
-                    <FormControlLabel
-                      value="company"
-                      control={<Radio />}
-                      label="Company"
-                    />
-                    <FormControlLabel
-                      value="admin"
-                      control={<Radio />}
-                      label="Admin"
-                    />
-                  </RadioGroup>
-                </FormControl>
-              </Box>
-
-              {/* File Upload */}
-              <InputLabel htmlFor="file-upload" sx={{ mt: 2 }}>
-                Choose files
-              </InputLabel>
+              {/* Top Card */}
               <Box
-                mt={2}
-                fontSize="12px"
                 sx={{
-                  backgroundColor: "primary.light",
-                  color: "primary.main",
-                  padding: "25px",
-                  textAlign: "center",
-                  border: `1px dashed`,
-                  borderColor: "primary.main",
-                  borderRadius: 1,
-                  cursor: "pointer",
+                  p: 2.5,
+                  borderRadius: "22px",
+                  bgcolor: "#fff",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  border: "1px solid #ececec",
                 }}
-                {...getRootProps()}
               >
-                <input {...getInputProps()} multiple/>
-                <Typography>
-                  Drag & drop files here, or click to select
+                {/* Header */}
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                    fontSize: "24px",
+                  }}
+                >
+                  New Announcement
                 </Typography>
+
+                <Grid container spacing={2} alignItems="center">
+                  {/* Left Section */}
+                  <Grid size={{ xs: 12, md: 8 }}>
+                    {/* Company Users */}
+                    <FormControlLabel
+                      control={
+                        <CustomCheckbox
+                          checked={companyUsers}
+                          onChange={(e) => {
+                            setCompanyUsers(e.target.checked);
+
+                            if (e.target.checked) {
+                              setSelectedTeams([]);
+                              setSelectedUsers([]);
+                            }
+                          }}
+                        />
+                      }
+                      label="All company users"
+                      sx={{ mb: 1 }}
+                    />
+
+                    {/* Teams */}
+                    {!companyUsers && (
+                      <>
+                        <Autocomplete
+                          multiple
+                          options={teams}
+                          getOptionLabel={(o) => o.name}
+                          value={teams.filter((t) =>
+                            selectedTeams.includes(t.id!),
+                          )}
+                          onChange={(_, v) =>
+                            setSelectedTeams(
+                              v.map((x) => x.id!).filter(Boolean),
+                            )
+                          }
+                          renderInput={(params) => (
+                            <TextField {...params} placeholder="Select Team" />
+                          )}
+                          sx={{ mb: 1.5 }}
+                        />
+
+                        {/* Users */}
+                        <Autocomplete
+                          multiple
+                          options={users}
+                          getOptionLabel={(o) => o.name}
+                          value={users.filter((u) =>
+                            selectedUsers.includes(u.id!),
+                          )}
+                          onChange={(_, v) =>
+                            setSelectedUsers(
+                              v.map((x) => x.id!).filter(Boolean),
+                            )
+                          }
+                          renderInput={(params) => (
+                            <TextField {...params} placeholder="Select Users" />
+                          )}
+                        />
+                      </>
+                    )}
+
+                    {/* Send As */}
+                    <Box mt={2}>
+                      <Typography fontSize="14px" fontWeight={500} mb={1}>
+                        Send notification as:
+                      </Typography>
+
+                      <RadioGroup
+                        row
+                        value={sendAs}
+                        onChange={(e) => setSendAs(e.target.value as any)}
+                        sx={{
+                          bgcolor: "#d9d9d9",
+                          borderRadius: "30px",
+                          width: "fit-content",
+                          px: 0.5,
+                          py: 0.3,
+                          gap: 0.5,
+                        }}
+                      >
+                        <FormControlLabel
+                          value="company"
+                          control={<Radio sx={{ display: "none" }} />}
+                          label="Company"
+                          sx={{
+                            m: 0,
+                            px: 2,
+                            py: 0.4,
+                            borderRadius: "25px",
+                            bgcolor:
+                              sendAs === "company" ? "#fff" : "transparent",
+                            boxShadow:
+                              sendAs === "company"
+                                ? "0 1px 5px rgba(0,0,0,0.12)"
+                                : "none",
+                          }}
+                        />
+
+                        <FormControlLabel
+                          value="admin"
+                          control={<Radio sx={{ display: "none" }} />}
+                          label="Admin"
+                          sx={{
+                            m: 0,
+                            px: 2,
+                            py: 0.4,
+                            borderRadius: "25px",
+                            bgcolor:
+                              sendAs === "admin" ? "#fff" : "transparent",
+                            boxShadow:
+                              sendAs === "admin"
+                                ? "0 1px 5px rgba(0,0,0,0.12)"
+                                : "none",
+                          }}
+                        />
+                      </RadioGroup>
+                    </Box>
+                  </Grid>
+
+                  {/* Upload Right */}
+                  <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: "center" }}>
+                    <Box
+                      {...getRootProps()}
+                      sx={{
+                        width: 110,
+                        height: 110,
+                        mx: "auto",
+                        borderRadius: "50%",
+                        bgcolor: "#f3f3f3",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        border: "1px dashed #bbb",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <input {...getInputProps()} multiple />
+
+                      <IconCamera />
+                      <Typography fontWeight={700} fontSize="13px">
+                        UPLOAD
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Box>
 
-              {/* File Previews */}
+              {/* Announcement Box */}
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: "22px",
+                  bgcolor: "#fff",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  border: "1px solid #ececec",
+                }}
+              >
+                <Typography fontSize="16px" fontWeight={600} mb={1}>
+                  Write Announcement
+                </Typography>
+
+                <CustomTextField
+                  multiline
+                  rows={8}
+                  placeholder={
+                    companyUsers
+                      ? "What's the latest news?"
+                      : "Write announcement"
+                  }
+                  fullWidth
+                  value={title}
+                  inputProps={{ maxLength: 500 }}
+                  onChange={(e: any) => setTitle(e.target.value)}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "16px",
+                      alignItems: "start",
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* File Preview */}
               {uploadedFiles.length > 0 && (
                 <Box mt={2}>
                   <Typography variant="h6" fontSize="15px" mb={1}>
@@ -365,16 +456,16 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
                   {fileList}
                 </Box>
               )}
+
+              {/* Buttons */}
             </Grid>
           </Grid>
-          {/* Actions */}
           <Box
             sx={{
               display: "flex",
               justifyContent: "start",
               gap: 2,
               mt: 3,
-              mb: 0,
             }}
           >
             <Button
@@ -389,6 +480,7 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
             >
               {loading ? "Saving..." : "Save"}
             </Button>
+
             <Button
               color="inherit"
               onClick={onClose}
