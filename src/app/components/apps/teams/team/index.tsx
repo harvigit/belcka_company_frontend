@@ -29,6 +29,7 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox, Drawer,
+    Badge,
 } from '@mui/material';
 import {
     flexRender,
@@ -92,6 +93,7 @@ export interface TeamList {
     trade_name: string | null;
     trade_id: number | null;
     last_worked_date: string | null;
+    status_color: string;
 }
 
 export interface TradeList {
@@ -260,6 +262,7 @@ const TablePagination = () => {
                                 trade_id: null,
                                 trade_name: null,
                                 last_worked_date: null,
+                                status_color: null,
                             },
                         ];
                     }
@@ -276,6 +279,7 @@ const TablePagination = () => {
                         name: user.name,
                         image: user.image,
                         is_active: user.is_active,
+                        status_color: user.status_color,
                         trade_id: user.trade_id,
                         last_worked_date: user.last_worked_date,
                         trade_name: user.trade_name,
@@ -535,16 +539,32 @@ const TablePagination = () => {
 
                 return (
                     <Stack direction="row" alignItems="center" spacing={1}>
-                        <Avatar
-                            src={item.image || '/images/users/user.png'}
-                            alt={item.name}
-                            sx={{width: 36, height: 36}}
-                        />
-                        <Box>
-                            <Typography className="f-14" color="body2">
-                                {item.name ?? '-'}
-                            </Typography>
-                        </Box>
+                        <Badge
+                            overlap="circular"
+                            anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                            variant="dot"
+                            sx={{
+                                '& .MuiBadge-badge': {
+                                    backgroundColor: item?.status_color,
+                                    color: item?.status_color,
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 0 2px white',
+                                    cursor: 'pointer',
+                                },
+                            }}
+                        >
+                            <Avatar
+                                src={
+                                    item?.image
+                                        ? item.image
+                                        : '/images/users/user.png'
+                                }
+                                alt={item?.name}
+                                sx={{width: 36, height: 36, cursor: 'pointer'}}
+                            />
+                        </Badge>
                     </Stack>
                 );
             },
