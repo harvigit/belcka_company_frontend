@@ -2,8 +2,13 @@ import React from 'react';
 import { Box, Stack, Typography, IconButton, Popover, TextField, FormGroup, FormControlLabel, Checkbox } from '@mui/material';
 import { IconEye } from '@tabler/icons-react';
 import {TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
+import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 
 interface TimeClockStatsProps {
+    startDate: Date | null;
+    endDate: Date | null;
+    onDateRangeChange: (range: { from: Date | null; to: Date | null }) => void;
+    payrollCycle?: string;
     headerDetail: TimeClockDetailResponse | null;
     currency: string;
     formatHour: (val: string | number | null | undefined, isPricework?: boolean) => string;
@@ -18,6 +23,10 @@ interface TimeClockStatsProps {
 }
 
 const TimeClockStats: React.FC<TimeClockStatsProps> = ({
+                                                           startDate,
+                                                           endDate,
+                                                           onDateRangeChange,
+                                                           payrollCycle,
                                                            headerDetail,
                                                            currency,
                                                            formatHour,
@@ -37,15 +46,22 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
 
     return (
         <Box
+            p={2}
             sx={{
-                p: 2,
                 borderBottom: '1px solid #e0e0e0',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
+                justifyContent: 'space-between',
             }}
         >
-            <Stack direction="row" spacing={4} alignItems="center">
+            <DateRangePickerBox
+                from={startDate}
+                to={endDate}
+                onChange={onDateRangeChange}
+                payrollCycle={payrollCycle}
+            />
+            
+            <Stack direction="row" spacing={4}>
                 <Stack direction="row" spacing={6} alignItems="center">
                     {headerDetails.map((stat, index) => (
                         <Box key={index} textAlign="center">

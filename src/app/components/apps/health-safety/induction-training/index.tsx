@@ -24,8 +24,6 @@ import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
-import {NearMissRow} from '@/app/components/apps/health-safety/near-miss-reporting';
-import {IncidentRow} from '@/app/components/apps/health-safety/report-incident';
 
 export type TrainingRow = {
     id: number;
