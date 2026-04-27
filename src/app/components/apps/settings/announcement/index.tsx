@@ -483,10 +483,10 @@ export default function AnnouncementsList({
         open={openDrawer}
         onClose={() => setOpenDrawer(false)}
         sx={{
-          width: 400,
+          width: 500,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: 400,
+            width: 500,
             padding: 2,
             backgroundColor: "#f9f9f9",
             display: "flex",

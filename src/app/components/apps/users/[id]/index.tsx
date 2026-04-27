@@ -63,6 +63,7 @@ export interface TeamList {
     is_working: boolean;
     user_role_id: number;
     user_code: string | null;
+    status_color: string;
 }
 
 export interface TradeList {
@@ -537,8 +538,8 @@ const TablePagination = () => {
                                     variant="dot"
                                     sx={{
                                         '& .MuiBadge-badge': {
-                                            backgroundColor: data?.is_working ? '#22bf22' : '#df2626',
-                                            color: data?.is_working ? '#22bf22' : '#df2626',
+                                            backgroundColor: data?.status_color,
+                                            color: data?.status_color,
                                             width: 12,
                                             height: 12,
                                             borderRadius: '50%',
