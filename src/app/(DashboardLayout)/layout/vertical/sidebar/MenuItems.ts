@@ -18,8 +18,8 @@ import {
   IconUser,
   IconUserPlus,
   IconUsers,
-    IconArrowsShuffle,
-    IconReport
+  IconArrowsShuffle,
+  IconReport,
 } from "@tabler/icons-react";
 import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
@@ -60,13 +60,13 @@ const MenuItems: NavGroup[] = [
     icon: IconTicket,
     href: "/apps/timesheet/list",
   },
-    {
-        id: uniqueId(),
-        title: "Time Tracking",
-        slug: "time_tracking",
-        icon: IconReport,
-        href: "/apps/time-tracking/list",
-    },
+  {
+    id: uniqueId(),
+    title: "Time Tracking",
+    slug: "time_tracking",
+    icon: IconReport,
+    href: "/apps/time-tracking/list",
+  },
   {
     id: uniqueId(),
     title: "Payments",
@@ -88,13 +88,13 @@ const MenuItems: NavGroup[] = [
     icon: IconReportMedical,
     href: "/apps/health-safety/index",
   },
-    {
-        id: uniqueId(),
-        title: "Conflicts",
-        slug: "conflicts",
-        icon: IconArrowsShuffle,
-        href: "/apps/conflicts/index",
-    },
+  {
+    id: uniqueId(),
+    title: "Conflicts",
+    slug: "conflicts",
+    icon: IconArrowsShuffle,
+    href: "/apps/conflicts/index",
+  },
   // {
   //   id: uniqueId(),
   //   title: "Clients",

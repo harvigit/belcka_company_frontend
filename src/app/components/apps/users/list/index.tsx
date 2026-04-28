@@ -37,6 +37,7 @@ import {
     FormControlLabel,
     Checkbox,
     Tooltip,
+    Badge,
 } from '@mui/material';
 import {
     flexRender,
@@ -123,6 +124,7 @@ export interface UserList {
     nin_number: string;
     utr_number: string;
     user_code: string | null;
+    status_color: string
 }
 
 export interface TradeList {
@@ -653,11 +655,32 @@ const TablePagination = () => {
                                 spacing={4}
                                 sx={{cursor: 'pointer'}}
                             >
-                                <Avatar
-                                    src={user.user_image ? user.user_image : ''}
-                                    alt={user.name}
-                                    sx={{width: 36, height: 36}}
-                                />
+                                <Badge
+                                    overlap="circular"
+                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    variant="dot"
+                                    sx={{
+                                        '& .MuiBadge-badge': {
+                                            backgroundColor: user?.status_color,
+                                            color: user?.status_color,
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 0 2px white',
+                                            cursor: 'pointer',
+                                        },
+                                    }}
+                                >
+                                    <Avatar
+                                        src={
+                                            user?.user_image
+                                                ? user.user_image
+                                                : '/images/users/user.png'
+                                        }
+                                        alt={user?.name}
+                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                    />
+                                </Badge>
                                 <Box>
                                     <Typography
                                         className="f-14"

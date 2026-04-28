@@ -255,8 +255,8 @@ export default function ProductTechnicalInformation({
               <FileCard
                 key={item.id}
                 image={item.image_url}
-                isPdf={item.type === "application/pdf"}
-                name={item.type || "Attachment"}
+                isPdf={item.extension === "pdf"}
+                name={item.doc_type || "Attachment"}
                 onDelete={() => removeExisting(item.id)}
               />
             ))}

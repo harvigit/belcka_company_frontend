@@ -1027,12 +1027,6 @@ const PurchaseOrderList = () => {
             </IconButton>
 
             <Menu
-              id="basic-menu"
-              slotProps={{
-                list: {
-                  "aria-labelledby": "basic-button",
-                },
-              }}
               open={menuOpen}
               onClose={handleCloseMenu}
               anchorReference="anchorPosition"
@@ -1100,9 +1094,88 @@ Team Belcka
                 }}
               >
                 <Box display={"block"} width={"100%"}>
-                  <Typography mb={1} variant="h6" fontWeight={500}>
-                    Sharing link
-                  </Typography>
+                  <Box
+                    display={"flex"}
+                    alignItems={"center"}
+                    justifyContent={"space-between"}
+                  >
+                    <Typography variant="h6" fontWeight={500}>
+                      Sharing link
+                    </Typography>
+                    <IconButton
+                      color="primary"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+
+                        try {
+                          setLoading(true);
+
+                          await api.post(
+                            `purchase-orders/invoice?company_id=${user.company_id}&id=${item.id}`,
+                          );
+
+                          const res = await api.get(
+                            `purchase-orders/get?company_id=${user.company_id}&id=${item.id}`,
+                          );
+
+                          if (res.data.IsSuccess) {
+                            const invoiceUrl = res.data.info[0]?.invoice;
+
+                            if (!invoiceUrl) {
+                              return;
+                            }
+
+                            window.open(
+                              invoiceUrl,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          }
+                        } catch (error) {
+                          console.error("Failed to open invoice:", error);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                    >
+                      <IconDownload
+                        size={18}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+
+                          try {
+                            setLoading(true);
+
+                            await api.post(
+                              `purchase-orders/invoice?company_id=${user.company_id}&id=${item.id}`,
+                            );
+
+                            const res = await api.get(
+                              `purchase-orders/get?company_id=${user.company_id}&id=${item.id}`,
+                            );
+
+                            if (res.data.IsSuccess) {
+                              const invoiceUrl = res.data.info[0]?.invoice;
+
+                              if (!invoiceUrl) {
+                                return;
+                              }
+
+                              window.open(
+                                invoiceUrl,
+                                "_blank",
+                                "noopener,noreferrer",
+                              );
+                            }
+                          } catch (error) {
+                            console.error("Failed to open invoice:", error);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                      />
+                    </IconButton>
+                  </Box>
                   <Divider sx={{ mb: 1 }} />
                   <Box display={"flex"} width={"50%"}>
                     <ListItemIcon>
