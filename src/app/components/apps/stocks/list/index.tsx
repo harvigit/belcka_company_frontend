@@ -206,17 +206,16 @@ const StockList = () => {
       }));
     }
   }, [user, stores]);
-  useEffect(() => {
-    if (!searchParams || stores.length === 0) return;
 
-    const storeIdParam = searchParams.get("store_id");
+    useEffect(() => {
+        if (!searchParams || stores.length === 0) return;
+        const storeIdParam = searchParams.get("store_id");
+        if (storeIdParam) {
+            handleStoreChange(Number(storeIdParam));
+        }
+    }, [searchParams, stores]);
 
-    if (storeIdParam) {
-      handleStoreChange(Number(storeIdParam));
-    }
-  }, [searchParams, stores]);
-
-  const handleStoreConfirm = (store: { id: number; name: string }) => {
+    const handleStoreConfirm = (store: { id: number; name: string }) => {
     if (!user?.id) return;
 
     Cookies.set(

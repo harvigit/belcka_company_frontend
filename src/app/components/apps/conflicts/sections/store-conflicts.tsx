@@ -215,12 +215,7 @@ const StoreDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved 
                     {[
                         { label: 'Product', value: conflict.product_short_name },
                         { label: 'Store', value: conflict.store_name },
-                        {
-                            label: 'Conflict Type',
-                            value: conflict.conflict_type === 'stock_amount_exceeded'
-                                ? 'Amount Threshold Exceeded'
-                                : 'Quantity Exceeded',
-                        },
+                        { label: 'Conflict Type', value: conflict.conflict_type === 'stock_amount_exceeded' ? 'Amount Threshold Exceeded' : 'Quantity Exceeded' },
                     ].map(({ label, value }) => (
                         <Stack key={label} direction="row" justifyContent="space-between" sx={{ py: 0.6 }}>
                             <Typography sx={{ fontSize: '0.78rem', color: '#6B7280' }}>{label}</Typography>
@@ -240,7 +235,7 @@ const StoreDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved 
                     <Button
                         variant="outlined" fullWidth
                         startIcon={<IconExternalLink size={15} />}
-                        onClick={() => router.push(`/apps/stocks/list`)}
+                        onClick={() => router.push(`/apps/stocks/list?store_id=${conflict.store_id}`)}
                         sx={{
                             textTransform: 'none', fontWeight: 600, borderRadius: '8px',
                             justifyContent: 'flex-start', px: 2,
