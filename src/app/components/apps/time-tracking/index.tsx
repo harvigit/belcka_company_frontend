@@ -563,14 +563,16 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
         if (companyId) params.company_id = companyId;
 
         api.get('/project/get', { params })
-            .then((res) =>
-                setProjects(
-                    (res.data?.info ?? []).map((p: { id: number; name: string }) => ({
-                        id: p.id,
-                        name: p.name,
-                    })),
-                ),
-            )
+            .then((res) => {
+                const mapped = (res.data?.info ?? []).map((p: { id: number; name: string }) => ({
+                    id: p.id,
+                    name: p.name,
+                }));
+                setProjects(mapped);
+                if (mapped.length === 1) {
+                    setSelectedProject(mapped[0].id);
+                }
+            })
             .catch(() => setProjects([]))
             .finally(() => setLoadingOptions(false));
     }, [open, companyId]);
@@ -588,18 +590,20 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
         if (companyId) params.company_id = companyId;
 
         api.get('/shift/list', { params })
-            .then((res) =>
-                setShifts(
-                    (res.data?.info ?? []).map((s: any) => ({
-                        id: s.id,
-                        name: s.name,
-                        start_time: s.start_time,
-                        end_time: s.end_time,
-                        is_pricework: s.is_pricework,
-                        week_days: s.week_days ?? [],
-                    })),
-                ),
-            )
+            .then((res) => {
+                const mapped = (res.data?.info ?? []).map((s: any) => ({
+                    id: s.id,
+                    name: s.name,
+                    start_time: s.start_time,
+                    end_time: s.end_time,
+                    is_pricework: s.is_pricework,
+                    week_days: s.week_days ?? [],
+                }));
+                setShifts(mapped);
+                if (mapped.length === 1) {
+                    handleShiftChange(mapped[0].id);
+                }
+            })
             .catch(() => setShifts([]))
             .finally(() => setLoadingShifts(false));
     }, [open, selectedProject, companyId]);
@@ -705,12 +709,12 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                             </FormControl>
 
                             <FormControl fullWidth size="small" required error={!!shiftDayError}>
-                                <InputLabel>Select Shift *</InputLabel>
+                                <InputLabel>Select Shift</InputLabel>
                                 {loadingShifts ? (
                                     <Skeleton height={40} sx={{ mt: 0.5 }} />
                                 ) : (
                                     <Select
-                                        label="Select Shift *"
+                                        label="Select Shift"
                                         value={selectedShift}
                                         onChange={(e) =>
                                             handleShiftChange(e.target.value as number)
@@ -807,10 +811,6 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                         sx={{
                             textTransform: 'none',
                             fontWeight: 600,
-                            background: 'linear-gradient(135deg,#06b6d4,#3b82f6)',
-                            '&:hover': {
-                                background: 'linear-gradient(135deg,#0891b2,#2563eb)',
-                            },
                         }}
                     >
                         {locationLoading ? 'Getting location…' : loading ? 'Starting…' : 'Start Work'}
@@ -1620,9 +1620,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                             spacing={2}
                             alignItems="center"
                         >
-                            <Box
-                                sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}
-                            >
+                            <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
                                 <Box
                                     sx={{
                                         width: '100%',
@@ -1634,62 +1632,64 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                         minHeight: 130,
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
+                                        justifyContent: 'space-between',
                                         background: '#fafafa',
                                         textAlign: 'center',
                                     }}
                                 >
-                                    {todayLoading ? (
-                                        <CircularProgress size={24} />
-                                    ) : clockInfo.user_is_working ? (
-                                        <Stack alignItems="center" spacing={0.5}>
-                                            <Box
-                                                sx={{
-                                                    width: 8,
-                                                    height: 8,
-                                                    borderRadius: '50%',
-                                                    background: '#22c55e',
-                                                    animation: 'blink 1.2s ease-in-out infinite',
-                                                    '@keyframes blink': {
-                                                        '0%,100%': { opacity: 1 },
-                                                        '50%': { opacity: 0.3 },
-                                                    },
-                                                }}
-                                            />
-                                            <Typography
-                                                fontSize={13}
-                                                fontWeight={600}
-                                                color="#22c55e"
-                                            >
-                                                Currently working
+                                    <Box>
+                                        {todayLoading ? (
+                                            <CircularProgress size={24} />
+                                        ) : clockInfo.user_is_working ? (
+                                            <Stack alignItems="center" spacing={0.5}>
+                                                <Box
+                                                    sx={{
+                                                        width: 8,
+                                                        height: 8,
+                                                        borderRadius: '50%',
+                                                        background: '#22c55e',
+                                                        animation: 'blink 1.2s ease-in-out infinite',
+                                                        '@keyframes blink': {
+                                                            '0%,100%': { opacity: 1 },
+                                                            '50%': { opacity: 0.3 },
+                                                        },
+                                                    }}
+                                                />
+                                                <Typography
+                                                    fontSize={13}
+                                                    fontWeight={600}
+                                                    color="#22c55e"
+                                                >
+                                                    Currently working
+                                                </Typography>
+                                                {clockInfo.current_shift_name && (
+                                                    <Typography fontSize={12} color="text.secondary">
+                                                        Shift: {clockInfo.current_shift_name}
+                                                    </Typography>
+                                                )}
+                                                {clockInfo.current_project_name && (
+                                                    <Typography fontSize={12} color="text.secondary">
+                                                        Project: {clockInfo.current_project_name}
+                                                    </Typography>
+                                                )}
+                                            </Stack>
+                                        ) : (
+                                            <Typography color="text.secondary" fontSize={13}>
+                                                Nothing&apos;s scheduled for today
                                             </Typography>
-                                            {clockInfo.current_shift_name && (
-                                                <Typography fontSize={12} color="text.secondary">
-                                                    Shift: {clockInfo.current_shift_name}
-                                                </Typography>
-                                            )}
-                                            {clockInfo.current_project_name && (
-                                                <Typography fontSize={12} color="text.secondary">
-                                                    Project: {clockInfo.current_project_name}
-                                                </Typography>
-                                            )}
-                                        </Stack>
-                                    ) : (
-                                        <Typography color="text.secondary" fontSize={13}>
-                                            Nothing&apos;s scheduled for today
-                                        </Typography>
-                                    )}
-                                </Box>
-                            </Box>
+                                        )}
+                                    </Box>
 
-                            <Box sx={{ flexShrink: 0 }}>
-                                <ClockButton
-                                    isWorking={clockInfo.user_is_working}
-                                    elapsed={elapsed}
-                                    currentShift={clockInfo.current_shift_name}
-                                    currentProject={clockInfo.current_project_name}
-                                    onClick={handleClockButtonClick}
-                                />
+                                    <Box sx={{ flexShrink: 0 }}>
+                                        <ClockButton
+                                            isWorking={clockInfo.user_is_working}
+                                            elapsed={elapsed}
+                                            currentShift={clockInfo.current_shift_name}
+                                            currentProject={clockInfo.current_project_name}
+                                            onClick={handleClockButtonClick}
+                                        />
+                                    </Box>
+                                </Box>
                             </Box>
                         </Stack>
                     </Box>

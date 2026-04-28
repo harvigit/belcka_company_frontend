@@ -240,7 +240,7 @@ const StoreDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved 
                     <Button
                         variant="outlined" fullWidth
                         startIcon={<IconExternalLink size={15} />}
-                        onClick={() => router.push(`/apps/store?store_id=${conflict.store_id}`)}
+                        onClick={() => router.push(`/apps/stocks/list`)}
                         sx={{
                             textTransform: 'none', fontWeight: 600, borderRadius: '8px',
                             justifyContent: 'flex-start', px: 2,

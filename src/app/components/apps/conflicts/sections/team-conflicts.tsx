@@ -119,7 +119,7 @@ export const TeamConflictRow = React.memo(({ item, onClick }: {
                     <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827' }}>
                         {item.team_name}
                     </Typography>
-                    <LabelPill label={`+${overBy} over limit`} color="#7C3AED" bg="#EDE9FE" border="#DDD6FE" />
+                    <LabelPill label={`Limit exceeded: +${overBy} users`} color="#7C3AED" bg="#EDE9FE" border="#DDD6FE" />
                 </Stack>
                 <Stack direction="row" alignItems="center" spacing={1.5}>
                     <Box sx={{ flex: 1 }}>
