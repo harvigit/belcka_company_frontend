@@ -1046,33 +1046,55 @@ const PurchaseOrderList = () => {
               }}
             >
               <MenuItem
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  handleCloseMenu();
+                disableRipple
+                sx={{
+                  py: 1.5,
+                  px: 2,
+                  minWidth: 260,
+                  cursor: "default",
+                  "&:hover": {
+                    backgroundColor: "transparent",
+                  },
+                }}
+              >
+                <Box width="100%">
+                  {/* Header */}
+                  <Box mb={1}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      Sharing Link
+                    </Typography>
+                    <Divider sx={{ mt: 1 }} />
+                  </Box>
 
-                  if (!selectedRow2) return;
+                  {/* Gmail */}
+                  <Box
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      handleCloseMenu();
 
-                  try {
-                    setLoading(true);
+                      if (!selectedRow2) return;
 
-                    await api.post(
-                      `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                    );
+                      try {
+                        setLoading(true);
 
-                    const res = await api.get(
-                      `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                    );
+                        await api.post(
+                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                        );
 
-                    if (!res.data?.IsSuccess) return;
+                        const res = await api.get(
+                          `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                        );
 
-                    const invoice = res.data?.info?.[0]?.invoice || "";
-                    if (!invoice) return;
+                        if (!res.data?.IsSuccess) return;
 
-                    const subject = encodeURIComponent(
-                      `Invoice #${selectedRow2.order_id}`,
-                    );
+                        const invoice = res.data?.info?.[0]?.invoice || "";
+                        if (!invoice) return;
 
-                    const body = encodeURIComponent(`
+                        const subject = encodeURIComponent(
+                          `Invoice #${selectedRow2.order_id}`,
+                        );
+
+                        const body = encodeURIComponent(`
 Please find your invoice below.
 
 Invoice No: ${selectedRow2.order_id}
@@ -1084,110 +1106,87 @@ Best regards,
 Team Belcka
 `);
 
-                    window.open(
-                      `https://mail.google.com/mail/?view=cm&fs=1&to=${selectedRow2.supplier_email}&su=${subject}&body=${body}`,
-                      "_blank",
-                    );
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                <Box display={"block"} width={"100%"}>
-                  <Box
-                    display={"flex"}
-                    alignItems={"center"}
-                    justifyContent={"space-between"}
+                        window.open(
+                          `https://mail.google.com/mail/?view=cm&fs=1&to=${selectedRow2.supplier_email}&su=${subject}&body=${body}`,
+                          "_blank",
+                        );
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      px: 1,
+                      py: 1,
+                      borderRadius: 2,
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor: "#f5f5f5",
+                      },
+                    }}
                   >
-                    <Typography variant="h6" fontWeight={500}>
-                      Sharing link
+                    <img src="/gmail.ico" width={22} height={22} alt="gmail" />
+                    <Typography variant="body2" fontWeight={500}>
+                      Gmail
                     </Typography>
-                    <IconButton
-                      color="primary"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-
-                        try {
-                          setLoading(true);
-
-                          await api.post(
-                            `purchase-orders/invoice?company_id=${user.company_id}&id=${item.id}`,
-                          );
-
-                          const res = await api.get(
-                            `purchase-orders/get?company_id=${user.company_id}&id=${item.id}`,
-                          );
-
-                          if (res.data.IsSuccess) {
-                            const invoiceUrl = res.data.info[0]?.invoice;
-
-                            if (!invoiceUrl) {
-                              return;
-                            }
-
-                            window.open(
-                              invoiceUrl,
-                              "_blank",
-                              "noopener,noreferrer",
-                            );
-                          }
-                        } catch (error) {
-                          console.error("Failed to open invoice:", error);
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                    >
-                      <IconDownload
-                        size={18}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-
-                          try {
-                            setLoading(true);
-
-                            await api.post(
-                              `purchase-orders/invoice?company_id=${user.company_id}&id=${item.id}`,
-                            );
-
-                            const res = await api.get(
-                              `purchase-orders/get?company_id=${user.company_id}&id=${item.id}`,
-                            );
-
-                            if (res.data.IsSuccess) {
-                              const invoiceUrl = res.data.info[0]?.invoice;
-
-                              if (!invoiceUrl) {
-                                return;
-                              }
-
-                              window.open(
-                                invoiceUrl,
-                                "_blank",
-                                "noopener,noreferrer",
-                              );
-                            }
-                          } catch (error) {
-                            console.error("Failed to open invoice:", error);
-                          } finally {
-                            setLoading(false);
-                          }
-                        }}
-                      />
-                    </IconButton>
                   </Box>
-                  <Divider sx={{ mb: 1 }} />
-                  <Box display={"flex"} width={"50%"}>
-                    <ListItemIcon>
-                      <img
-                        src="/gmail.ico"
-                        width={24}
-                        height={24}
-                        alt="gmail"
-                      />
-                    </ListItemIcon>
 
-                    <ListItemText primary="Gmail" />
+                  {/* Download */}
+                  <Box
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      handleCloseMenu();
+
+                      if (!selectedRow2) return;
+
+                      try {
+                        setLoading(true);
+
+                        await api.post(
+                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                        );
+
+                        const res = await api.get(
+                          `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                        );
+
+                        if (!res.data?.IsSuccess) return;
+
+                        const invoiceUrl = res.data.info[0]?.invoice;
+
+                        if (!invoiceUrl) return;
+
+                        window.open(
+                          invoiceUrl,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      } catch (error) {
+                        console.error(error);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      px: 1,
+                      py: 1,
+                      mt: 0.5,
+                      borderRadius: 2,
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor: "#f5f5f5",
+                      },
+                    }}
+                  >
+                    <IconDownload size={20} color="#1976d2" />
+                    <Typography variant="body2" fontWeight={500}>
+                      Download
+                    </Typography>
                   </Box>
                 </Box>
               </MenuItem>
