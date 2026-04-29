@@ -17,7 +17,8 @@ import {
     IconClock,
     IconUsers,
     IconCalendarOff,
-    IconSquarePercentage
+    IconSquarePercentage,
+    IconUsersMinus
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -36,6 +37,7 @@ import StockHistoryList from '@/app/components/apps/settings/history/stock-histo
 import ClientList from '@/app/components/apps/clients/list';
 import HolidayList from '@/app/components/apps/holidays/list';
 import AnalyticsScore from '@/app/components/apps/analytics/score-settings';
+import RemoveUsers from '@/app/components/apps/settings/remove-users/list';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -177,16 +179,23 @@ const AdminSetting = () => {
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
+                                        icon={<IconUsersMinus size="20"/>}
+                                        label="Remove Users"
+                                        {...a11yProps(10)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
                                         icon={<IconExclamationCircle size="20"/>}
                                         label="History"
-                                        {...a11yProps(10)}
+                                        {...a11yProps(11)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconSquarePercentage size="20"/>}
                                         label="Analytics Score"
-                                        {...a11yProps(11)}
+                                        {...a11yProps(12)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -231,9 +240,12 @@ const AdminSetting = () => {
                                 <ClientList/>
                             </TabPanel>
                             <TabPanel value={value} index={10}>
-                                <HistoryList/>
+                                <RemoveUsers/>
                             </TabPanel>
                             <TabPanel value={value} index={11}>
+                                <HistoryList/>
+                            </TabPanel>
+                            <TabPanel value={value} index={12}>
                                 <AnalyticsScore/>
                             </TabPanel>
                         </BlankCard>

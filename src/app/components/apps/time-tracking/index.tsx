@@ -207,10 +207,10 @@ const CHROME_STEPS = [
 ];
 
 const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({
-                                                                               open,
-                                                                               onClose,
-                                                                               onRetry,
-                                                                               errorType
+    open,
+    onClose,
+    onRetry,
+    errorType
 }) => {
     const isDenied = errorType === 'denied';
 
@@ -365,11 +365,11 @@ interface ClockButtonProps {
 }
 
 const ClockButton: React.FC<ClockButtonProps> = ({
-                                                     isWorking,
-                                                     elapsed,
-                                                     currentShift,
-                                                     currentProject,
-                                                     onClick
+    isWorking,
+    elapsed,
+    currentShift,
+    currentProject,
+    onClick
 }) => {
     const gradient = isWorking
         ? 'linear-gradient(135deg,#f97316,#fb923c)'
@@ -530,11 +530,11 @@ interface StartWorkDialogProps {
 }
 
 const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
-                                                             open,
-                                                             onClose,
-                                                             onConfirm,
-                                                             loading,
-                                                             companyId
+    open,
+    onClose,
+    onConfirm,
+    loading,
+    companyId
 }) => {
     const { getLocation } = useGeolocation();
 

@@ -78,8 +78,25 @@ const TablePagination = () => {
     const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
     const [isPhoneUpdate, setIsPhoneUpdate] = useState<boolean>(false);
     const router = useRouter();
+    
     const searchParams = useSearchParams();
+    const isRemovedUser = searchParams?.get('is_removed_user') === 'true';
 
+    const allTabs = [
+        'Health Info',
+        'Activity',
+        'Billing Info',
+        'Rate',
+        'Leaves',
+        'Notification Settings',
+        'Payments',
+        'Geofence & Penalty',
+    ];
+
+    const visibleTabs = isRemovedUser
+        ? allTabs.filter((label) => label === 'Activity' || label === 'Payments')
+        : allTabs;
+    
     const {data: session, update} = useSession();
     const user = session?.user as User & {
         company_id?: number | null;
@@ -165,8 +182,10 @@ const TablePagination = () => {
         if (!userId) return;
         setLoading(true);
         try {
-            const res = await api.get(`user/get-user-lists?user_id=${userId}`);
+            const url = isRemovedUser ? `user/get-user-lists?user_id=${userId}&is_removed_user=true` : `user/get-user-lists?user_id=${userId}`;
 
+            const res = await api.get(url);
+            
             if (!res.data?.IsSuccess) {
                 router.replace('/apps/users/list');
                 return;
@@ -590,7 +609,7 @@ const TablePagination = () => {
                                 </Box>
                             </Box>
                             <Box display={'flex'} gap={2}>
-                                {data?.is_working && user.user_role_id == 1 && (
+                                {!isRemovedUser && data?.is_working && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="success"
@@ -600,7 +619,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {data?.user_role_id == 2 && user.user_role_id == 1 && (
+                                {!isRemovedUser && data?.user_role_id == 2 && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="primary"
@@ -746,35 +765,39 @@ const TablePagination = () => {
                                         }}
                                     />
                                 </form>
-                                <Box mt={2}>
-                                    <Button
-                                        variant="contained"
-                                        color="primary"
-                                        disabled={isPhoneUpdate}
-                                        onClick={handleUpdatePersonalDetails}
-                                    >
-                                        {isPhoneUpdate ? 'Sending otp in your phone..' : 'Update'}
-                                    </Button>
-                                </Box>
+                                {!isRemovedUser && (
+                                    <Box mt={2}>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            disabled={isPhoneUpdate}
+                                            onClick={handleUpdatePersonalDetails}
+                                        >
+                                            {isPhoneUpdate ? 'Sending otp in your phone..' : 'Update'}
+                                        </Button>
+                                    </Box>
+                                )}
                             </Box>
                         </BlankCard>
 
-                        <Card sx={{mt: 3}}>
-                            <Box
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="space-between"
-                                sx={{p: 3}}
-                            >
-                                <Typography fontSize="16px !important" color="#487bb3ff">
-                                    Check-In
-                                </Typography>
+                        {!isRemovedUser && (
+                            <Card sx={{mt: 3}}>
+                                <Box
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="space-between"
+                                    sx={{p: 3}}
+                                >
+                                    <Typography fontSize="16px !important" color="#487bb3ff">
+                                        Check-In
+                                    </Typography>
 
-                                <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle}/>
-                            </Box>
-                        </Card>
+                                    <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle}/>
+                                </Box>
+                            </Card>
+                        )}
 
-                        {(userRole === 1 || Number(user?.id) === Number(userId)) && (
+                        {!isRemovedUser && (userRole === 1 || Number(user?.id) === Number(userId)) && (
                             <Card sx={{mt: 3}}>
                                 <Box sx={{m: 3}}>
                                     <Button
@@ -814,16 +837,7 @@ const TablePagination = () => {
                                         justifyContent: 'space-between',
                                     }}
                                 >
-                                    {[
-                                        'Health Info',
-                                        'Activity',
-                                        'Billing Info',
-                                        'Rate',
-                                        'Leaves',
-                                        'Notification Settings',
-                                        'Payments',
-                                        'Geofence & Penalty',
-                                    ].map((label, index) => (
+                                    {visibleTabs.map((label, index) => (
                                         <Tab
                                             key={label}
                                             label={label}
@@ -841,62 +855,85 @@ const TablePagination = () => {
                                 </Tabs>
                             </Box>
                             <Box>
-                                <Box hidden={value !== 0}>
-                                    <HealthInfo userId={Number(userId)} active={value === 0}/>
-                                </Box>
-                                <Box hidden={value !== 1}>
-                                    <UserActivity
-                                        companyId={Number(user.company_id)}
-                                        userId={Number(userId)}
-                                        active={value === 1}
-                                    />
-                                </Box>
-                                <Box hidden={value !== 2}>
-                                    <BillingInfo
-                                        companyId={Number(user.company_id)}
-                                        onUpdate={fetchData}
-                                        userId={Number(userId)}
-                                        active={value === 2}
-                                    />
-                                </Box>
-                                <Box hidden={value !== 3}>
-                                    <ComapnyRate
-                                        active={value === 3}
-                                        name={formData.first_name}
-                                        userId={Number(userId)}
-                                    />
-                                </Box>
-                                <Box hidden={value !== 4}>
-                                    <UserLeaves
-                                        active={value === 4}
-                                        name={formData.first_name}
-                                        userId={Number(userId)}
-                                        companyId={Number(user.company_id)}
-                                    />
-                                </Box>
-                                <Box hidden={value !== 5}>
-                                    <Notifications
-                                        companyId={Number(user.company_id)}
-                                        active={value === 5}
-                                        userId={Number(userId)}
-                                    />
-                                </Box>
-                                <Box hidden={value !== 6}>
-                                    <Payments
-                                        companyId={Number(user.company_id)}
-                                        active={value === 6}
-                                        userId={Number(userId)}
-                                        isShow={false}
-                                        disableDateFilter={true}
-                                    />
-                                </Box>
-                                <Box hidden={value !== 7}>
-                                    <GeofencePenalty
-                                        companyId={Number(user.company_id)}
-                                        active={value === 7}
-                                        userId={Number(userId)}
-                                    />
-                                </Box>
+                                {isRemovedUser ? (
+                                    <>
+                                        <Box hidden={value !== 0}>
+                                            <UserActivity
+                                                companyId={Number(user.company_id)}
+                                                userId={Number(userId)}
+                                                active={value === 0}
+                                            />
+                                        </Box>
+                                        <Box hidden={value !== 1}>
+                                            <Payments
+                                                companyId={Number(user.company_id)}
+                                                active={value === 1}
+                                                userId={Number(userId)}
+                                                isShow={false}
+                                                disableDateFilter={true}
+                                            />
+                                        </Box>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Box hidden={value !== 0}>
+                                            <HealthInfo userId={Number(userId)} active={value === 0}/>
+                                        </Box>
+                                        <Box hidden={value !== 1}>
+                                            <UserActivity
+                                                companyId={Number(user.company_id)}
+                                                userId={Number(userId)}
+                                                active={value === 1}
+                                            />
+                                        </Box>
+                                        <Box hidden={value !== 2}>
+                                            <BillingInfo
+                                                companyId={Number(user.company_id)}
+                                                onUpdate={fetchData}
+                                                userId={Number(userId)}
+                                                active={value === 2}
+                                            />
+                                        </Box>
+                                        <Box hidden={value !== 3}>
+                                            <ComapnyRate
+                                                active={value === 3}
+                                                name={formData.first_name}
+                                                userId={Number(userId)}
+                                            />
+                                        </Box>
+                                        <Box hidden={value !== 4}>
+                                            <UserLeaves
+                                                active={value === 4}
+                                                name={formData.first_name}
+                                                userId={Number(userId)}
+                                                companyId={Number(user.company_id)}
+                                            />
+                                        </Box>
+                                        <Box hidden={value !== 5}>
+                                            <Notifications
+                                                companyId={Number(user.company_id)}
+                                                active={value === 5}
+                                                userId={Number(userId)}
+                                            />
+                                        </Box>
+                                        <Box hidden={value !== 6}>
+                                            <Payments
+                                                companyId={Number(user.company_id)}
+                                                active={value === 6}
+                                                userId={Number(userId)}
+                                                isShow={false}
+                                                disableDateFilter={true}
+                                            />
+                                        </Box>
+                                        <Box hidden={value !== 7}>
+                                            <GeofencePenalty
+                                                companyId={Number(user.company_id)}
+                                                active={value === 7}
+                                                userId={Number(userId)}
+                                            />
+                                        </Box>
+                                    </>
+                                )}
                             </Box>
                         </BlankCard>
                     </Grid>
