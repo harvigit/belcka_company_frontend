@@ -28,6 +28,7 @@ import {
     Chip,
     Menu,
     ListItemIcon, Tooltip,
+    Badge,
 } from '@mui/material';
 import {
     IconSearch,
@@ -190,6 +191,8 @@ export type TimeClock = {
     has_leave_request?: boolean;
     has_expense_request?: boolean;
     has_worklog_request?: boolean;
+
+    user_status_color: string;
 };
 
 type TimeClockResponse = {
@@ -750,11 +753,32 @@ const TimeClock = ({queryParams}: Props) => {
                 const row = info.row.original;
                 return (
                     <Stack direction="row" alignItems="center" spacing={2}>
-                        <Avatar
-                            src={row.user_thumb_image ? row.user_thumb_image : ''}
-                            alt={row.user_name}
-                            sx={{width: 36, height: 36}}
-                        />
+                        <Badge
+                            overlap="circular"
+                            anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                            variant="dot"
+                            sx={{
+                                '& .MuiBadge-badge': {
+                                    backgroundColor: row?.user_status_color,
+                                    color: row?.user_status_color,
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 0 2px white',
+                                    cursor: 'pointer',
+                                },
+                            }}
+                        >
+                            <Avatar
+                                src={
+                                    row?.user_thumb_image
+                                        ? row.user_thumb_image
+                                        : '/images/users/user.png'
+                                }
+                                alt={row?.user_name}
+                                sx={{width: 36, height: 36, cursor: 'pointer'}}
+                            />
+                        </Badge>
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
                             <Typography className="f-14" noWrap>
                                 {row.user_name}

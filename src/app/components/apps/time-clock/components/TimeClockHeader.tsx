@@ -14,6 +14,7 @@ import {
     DialogContent,
     DialogContentText,
     IconButton,
+    Badge,
 } from '@mui/material';
 import { IconChevronLeft, IconChevronRight, IconHandStop, IconX, IconChevronUp, IconChevronDown } from '@tabler/icons-react';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
@@ -22,6 +23,7 @@ interface TimeClock {
     user_name: string;
     user_thumb_image?: string;
     trade_name?: string;
+    user_status_color: string;
 }
 
 interface TimeClockHeaderProps {
@@ -205,7 +207,32 @@ const TimeClockHeader: React.FC<TimeClockHeaderProps> = ({
             {/* Main Header Content */}
             <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap">
                 <Stack direction="row" alignItems="center" spacing={2}>
-                    <Avatar src={timeClock.user_thumb_image} alt={timeClock.user_name} sx={{ width: 40, height: 40 }} />
+                    <Badge
+                        overlap="circular"
+                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                        variant="dot"
+                        sx={{
+                            '& .MuiBadge-badge': {
+                                backgroundColor: timeClock?.user_status_color,
+                                color: timeClock?.user_status_color,
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                boxShadow: '0 0 0 2px white',
+                                cursor: 'pointer',
+                            },
+                        }}
+                    >
+                        <Avatar
+                            src={
+                               timeClock?.user_thumb_image
+                                    ? timeClock.user_thumb_image
+                                    : '/images/users/user.png'
+                            }
+                            alt={timeClock.user_name}
+                            sx={{width: 40, height: 40, cursor: 'pointer'}}
+                        />
+                    </Badge>
                     <Box>
                         <Typography variant="h6" fontWeight={600}>
                             {timeClock.user_name}

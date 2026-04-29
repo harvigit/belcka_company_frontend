@@ -31,6 +31,7 @@ export type TimeClock = {
     total_payable_amount: number;
     status_text: string;
     status_color?: string;
+    user_status_color: string;
 
     timesheet_light_ids: string;
     weekly_payable_amount: number;

@@ -102,24 +102,26 @@ export default function ChecklogDetailPage({
 
   useEffect(() => {
     if (checklogTasks.length > 0) {
-      const initialProgress: Record<number, number> = {};
+      const initial: Record<number, number> = {};
       const original: Record<number, number> = {};
 
       checklogTasks.forEach((task: any) => {
-        initialProgress[task.id] = task.progress ?? 0;
-        original[task.id] = task.progress ?? 0;
+        initial[task.id] = Number(data.progress ?? 0);
+        original[task.id] = Number(data.progress ?? 0);
       });
 
-      setEditableProgress(initialProgress);
+      setEditableProgress(initial);
       setOriginalProgress(original);
     }
-  }, [checklogTasks]);
+  }, [checklogTasks, data.progress]);
 
   const handleUpdateProgress = async (taskId: number) => {
+    const progress = editableProgress[taskId] ?? 0;
+
     try {
-      const res = await api.put("company-tasks/update", {
-        id: taskId,
-        progress: String(editableProgress[taskId]),
+      const res = await api.put("user-checklog/update", {
+        id: checklogId,
+        progress: String(progress),
         company_id: user.company_id,
       });
 
@@ -131,7 +133,7 @@ export default function ChecklogDetailPage({
 
       setOriginalProgress((prev) => ({
         ...prev,
-        [taskId]: editableProgress[taskId],
+        [taskId]: progress,
       }));
     } catch (err) {
       console.error(err);
@@ -334,7 +336,7 @@ export default function ChecklogDetailPage({
                           </IconButton>
                         )}
                       </Stack>
-                      {checklog.status_int !== 4 ? (
+                      {data.status !== 4 ? (
                         <>
                           <input
                             type="range"
@@ -352,10 +354,11 @@ export default function ChecklogDetailPage({
                               height: "10px",
                               appearance: "none",
                               background: `linear-gradient(
-                                                    to right,
-                                                    ${getProgressColor(editableProgress[checklog.id] ?? 0)} ${editableProgress[checklog.id] ?? 0}%,
-                                                    #eee ${editableProgress[checklog.id] ?? 0}%
-                                                    )`,
+      to right,
+      ${getProgressColor(editableProgress[checklog.id] ?? 0)}
+      ${editableProgress[checklog.id] ?? 0}%,
+      #eee ${editableProgress[checklog.id] ?? 0}%
+    )`,
                               borderRadius: "5px",
                               outline: "none",
                               cursor: "pointer",
@@ -365,14 +368,12 @@ export default function ChecklogDetailPage({
                       ) : (
                         <LinearProgress
                           variant="determinate"
-                          value={checklog.progress}
+                          value={data.progress}
                           sx={{
                             height: 10,
                             borderRadius: 5,
                             "& .MuiLinearProgress-bar": {
-                              backgroundColor: getProgressColor(
-                                checklog.progress,
-                              ),
+                              backgroundColor: getProgressColor(data.progress),
                             },
                             backgroundColor: "#eee",
                           }}
@@ -430,9 +431,7 @@ export default function ChecklogDetailPage({
                                 )}
                               </>
                             )}
-                            <span>
-                              = {formatSeconds(item.payable_seconds)}
-                            </span>
+                            <span>= {formatSeconds(item.payable_seconds)}</span>
                           </Typography>
                         </Box>
                       ),
