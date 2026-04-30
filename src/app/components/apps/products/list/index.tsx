@@ -82,7 +82,7 @@ import UnitList from "../../units/list";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import SetList from "../sets/list";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import ManagePriceDrawer from "../manage-price";
+// import ManagePriceDrawer from "../manage-price";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -2582,11 +2582,11 @@ const ProductList = () => {
           onClose={() => setProductSetOpen(false)}
         />
 
-        <ManagePriceDrawer
+        {/* <ManagePriceDrawer
           open={priceDrawerOpen}
           onClose={handlePriceClose}
           product={selectedProduct}
-        />
+        /> */}
 
         <Box
           sx={{
