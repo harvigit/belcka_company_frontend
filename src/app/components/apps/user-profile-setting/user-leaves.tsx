@@ -257,9 +257,10 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         setFetchLeave(false);
     };
 
-    useEffect(() => {
-        if (startDate && endDate) fetchLeaves(startDate, endDate);
-    }, [api, startDate, endDate, active]);
+      useEffect(() => {
+        if (!userId || !active ) return;
+       if (startDate && endDate) fetchLeaves(startDate, endDate);
+      }, [userId, active]);
 
     const handleSubmitAction = async () => {
         if (!selectedId || !actionType) return;

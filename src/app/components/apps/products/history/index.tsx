@@ -107,7 +107,7 @@ const ProductHistory: React.FC<ProductProps> = ({ open, onClose }) => {
                 <IconArrowLeft />
               </IconButton>
               <Typography variant="h6" fontWeight={700}>
-                Project Activities
+                Product Activities
               </Typography>
             </Box>
 
@@ -183,7 +183,6 @@ const ProductHistory: React.FC<ProductProps> = ({ open, onClose }) => {
                             display="initial"
                             width="100%"
                             textAlign="start"
-                            mt={1}
                           >
                             <Typography
                               fontSize="14px"

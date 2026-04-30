@@ -44,6 +44,7 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import {
+  IconArrowsShuffle,
   IconBasket,
   IconChevronLeft,
   IconChevronRight,
@@ -81,6 +82,7 @@ import UnitList from "../../units/list";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import SetList from "../sets/list";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import ManagePriceDrawer from "../manage-price";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -199,7 +201,18 @@ const ProductList = () => {
   const [conflictProducts, setConflictProducts] = useState<any[]>([]);
   const [isConflictLoading, setIsConflictLoading] = useState(false);
   const [selectedConflictIds, setSelectedConflictIds] = useState<number[]>([]);
+  const [priceDrawerOpen, setPriceDrawerOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
+  const handlePriceOpen = (item: any) => {
+    setSelectedProduct(item);
+    setPriceDrawerOpen(true);
+  };
+
+  const handlePriceClose = () => {
+    setPriceDrawerOpen(false);
+    setSelectedProduct(null);
+  };
   useEffect(() => {
     if (selectedRow) {
       setUploadedImages(selectedRow.product_images || []);
@@ -804,6 +817,29 @@ const ProductList = () => {
     setViewDrawerOpen(true);
   }, []);
 
+  const fallbackCopy = (text: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+
+      textArea.focus();
+      textArea.select();
+      textArea.setSelectionRange(0, textArea.value.length);
+
+      const successful = (document as any).execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) toast.success("Copied!");
+      else toast.error("Copy failed!");
+    } catch (err) {
+      console.error("Fallback copy failed:", err);
+      toast.error("Failed to copy!");
+    }
+  };
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -884,7 +920,7 @@ const ProductList = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-
+        const uuid = item.uuid ? item.uuid : "-";
         return (
           <Stack
             direction="row"
@@ -892,7 +928,28 @@ const ProductList = () => {
             spacing={4}
             sx={{ pl: 0.3 }}
           >
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              onClick={() => {
+                if (!uuid) {
+                  toast.error("No uuid to copy!");
+                  return;
+                }
+
+                if (navigator?.clipboard?.writeText) {
+                  navigator.clipboard
+                    .writeText(uuid)
+                    .then(() => toast.success("Copied!"))
+                    .catch((err) => {
+                      console.error("Clipboard API failed:", err);
+                      fallbackCopy(uuid);
+                    });
+                } else {
+                  fallbackCopy(uuid);
+                }
+              }}
+            >
               {item.uuid ? item.uuid : "-"}
             </Typography>
           </Stack>
@@ -946,7 +1003,12 @@ const ProductList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            onClick={() => handleView(item.id)}
+          >
             <Tooltip
               title={item.short_name ? item.short_name : (item.name ?? "")}
               placement="top"
@@ -995,9 +1057,31 @@ const ProductList = () => {
       header: () => "Code",
       cell: ({ row }) => {
         const item = row.original;
+        const code = item.supplier_code ? item.supplier_code : "-";
         return (
           <Stack direction="row" alignItems="center">
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              onClick={() => {
+                if (!code) {
+                  toast.error("No code to copy!");
+                  return;
+                }
+
+                if (navigator?.clipboard?.writeText) {
+                  navigator.clipboard
+                    .writeText(code)
+                    .then(() => toast.success("Code copied!"))
+                    .catch((err) => {
+                      console.error("Clipboard API failed:", err);
+                      fallbackCopy(code);
+                    });
+                } else {
+                  fallbackCopy(code);
+                }
+              }}
+            >
               {item.supplier_code ? item.supplier_code : "-"}
             </Typography>
           </Stack>
@@ -1405,6 +1489,28 @@ const ProductList = () => {
         );
       },
     }),
+
+    // columnHelper.display({
+    //   id: "actions",
+    //   header: "Actions",
+    //   cell: ({ row }) => {
+    //     const item = row.original;
+
+    //     return (
+    //       <Stack direction="row" spacing={1}>
+    //         <IconButton
+    //           onClick={(e) => {
+    //             e.stopPropagation();
+    //             handlePriceOpen(item);
+    //           }}
+    //           color="primary"
+    //         >
+    //           <IconArrowsShuffle size={18} />
+    //         </IconButton>
+    //       </Stack>
+    //     );
+    //   },
+    // }),
   ];
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -2476,6 +2582,12 @@ const ProductList = () => {
           onClose={() => setProductSetOpen(false)}
         />
 
+        <ManagePriceDrawer
+          open={priceDrawerOpen}
+          onClose={handlePriceClose}
+          product={selectedProduct}
+        />
+
         <Box
           sx={{
             flex: 1,
@@ -2601,10 +2713,7 @@ const ProductList = () => {
                       >
                         {row.getVisibleCells().map((cell) => {
                           return (
-                            <TableCell
-                              key={cell.id}
-                              onClick={() => handleView(item.id)}
-                            >
+                            <TableCell key={cell.id}>
                               {flexRender(
                                 cell.column.columnDef.cell,
                                 cell.getContext(),

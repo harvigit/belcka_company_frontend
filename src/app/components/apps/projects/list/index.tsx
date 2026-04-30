@@ -1900,7 +1900,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
               </Box>
 
               {history.length > 0 ? (
-                <Box mt={3}>
+                <Box mt={1}>
                   <Box
                     sx={{
                       maxHeight: history.length > 3 ? "auto" : "auto",
@@ -1962,7 +1962,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             display="initial"
                             width="100%"
                             textAlign="start"
-                            mt={1}
                           >
                             <Typography
                               fontSize="14px"

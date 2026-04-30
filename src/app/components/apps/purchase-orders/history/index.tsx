@@ -165,7 +165,6 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
                             display="initial"
                             width="100%"
                             textAlign="start"
-                            mt={1}
                           >
                             <Typography
                               fontSize="14px"

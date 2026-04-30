@@ -106,7 +106,7 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
             </Box>
 
             {history.length > 0 ? (
-              <Box mt={3}>
+              <Box mt={1}>
                 <Box
                   sx={{
                     maxHeight: history.length > 3 ? "auto" : "auto",
@@ -178,7 +178,6 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                           display="initial"
                           width="100%"
                           textAlign="start"
-                          mt={1}
                         >
                           <Typography
                             fontSize="14px"
