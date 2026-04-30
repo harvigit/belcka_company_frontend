@@ -96,6 +96,8 @@ export interface Permission {
 }
 
 export interface UserList {
+    is_working: boolean;
+    is_on_break: boolean;
     last_worked_date: string;
     cis: string;
     permissions: Permission[];
@@ -994,58 +996,46 @@ const TablePagination = () => {
             },
         }),
 
-        columnHelper.accessor((row) => row.status, {
+        columnHelper.accessor((row) => row?.is_working, {
             id: 'status',
-            header: () => (
-                <Typography variant="subtitle2" noWrap>
-                    Status
-                </Typography>
-            ),
+            header: () => 'Status',
             cell: (info) => {
-                const row = info.row.original;
-                const lastWorkedDate = info.row.original.last_worked_date;
+                const item = info.row.original;
+                const lastWorkedDate = item.last_worked_date;
 
-                if (row.is_invited) {
+                if (item.is_on_break) {
                     return (
                         <Chip
                             size="small"
-                            label={`Invited on ${formatDate(row.created_at)}`}
+                            label="On Break"
                             sx={{
-                                backgroundColor: (theme) => theme.palette.primary.light,
-                                color: (theme) => theme.palette.primary.main,
+                                backgroundColor: (theme) => theme.palette.warning.light,
+                                color: (theme) => theme.palette.warning.dark,
                                 fontWeight: 500,
-                                borderRadius: '10px',
+                                borderRadius: '6px',
                                 px: 1.5,
                             }}
                         />
                     );
                 }
 
-                return info.getValue() ? (
-                    <Chip
-                        size="small"
-                        label="Working"
-                        sx={{
-                            backgroundColor: (theme) => theme.palette.success.light,
-                            color: (theme) => theme.palette.success.main,
-                            fontWeight: 500,
-                            borderRadius: '6px',
-                            px: 1.5,
-                        }}
-                    />
-                ) : (
-                    // <Chip
-                    //     size="small"
-                    //     label="Not Working"
-                    //     sx={{
-                    //         backgroundColor: (theme) => theme.palette.error.light,
-                    //         color: (theme) => theme.palette.error.main,
-                    //         fontWeight: 500,
-                    //         borderRadius: '6px',
-                    //         px: 1.5,
-                    //     }}
-                    // />
+                if (item.is_working) {
+                    return (
+                        <Chip
+                            size="small"
+                            label="Working"
+                            sx={{
+                                backgroundColor: (theme) => theme.palette.success.light,
+                                color: (theme) => theme.palette.success.main,
+                                fontWeight: 500,
+                                borderRadius: '6px',
+                                px: 1.5,
+                            }}
+                        />
+                    );
+                }
 
+                return (
                     <Box>
                         {lastWorkedDate && (
                             <Typography
@@ -1055,7 +1045,7 @@ const TablePagination = () => {
                                 fontSize={14}
                                 mt={0.5}
                             >
-                                {dayjs(lastWorkedDate).format("DD/MM/YYYY")}
+                                {dayjs(lastWorkedDate).format('DD/MM/YYYY')}
                             </Typography>
                         )}
                     </Box>

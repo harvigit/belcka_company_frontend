@@ -29,7 +29,7 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox, Drawer,
-    Badge,
+    Badge, Tooltip,
 } from '@mui/material';
 import {
     flexRender,
@@ -72,6 +72,7 @@ import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import PermissionGuard from '@/app/auth/PermissionGuard';
+import Link from 'next/link';
 
 dayjs.extend(customParseFormat);
 
@@ -89,7 +90,8 @@ export interface TeamList {
     team_name: string;
     name: string;
     image: string | null;
-    is_active: boolean;
+    is_working: boolean;
+    is_on_break: boolean;
     trade_name: string | null;
     trade_id: number | null;
     last_worked_date: string | null;
@@ -258,7 +260,8 @@ const TablePagination = () => {
                                 team_name: team.team_name,
                                 name: null,
                                 image: null,
-                                is_active: null,
+                                is_working: null,
+                                is_on_break: null,
                                 trade_id: null,
                                 trade_name: null,
                                 last_worked_date: null,
@@ -278,7 +281,8 @@ const TablePagination = () => {
                         id: user.id,
                         name: user.name,
                         image: user.image,
-                        is_active: user.is_active,
+                        is_working: user.is_working,
+                        is_on_break: user.is_on_break,
                         status_color: user.status_color,
                         trade_id: user.trade_id,
                         last_worked_date: user.last_worked_date,
@@ -539,35 +543,54 @@ const TablePagination = () => {
 
                 return (
                     <Stack direction="row" alignItems="center" spacing={1}>
-                        <Badge
-                            overlap="circular"
-                            anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                            variant="dot"
-                            sx={{
-                                '& .MuiBadge-badge': {
-                                    backgroundColor: item?.status_color,
-                                    color: item?.status_color,
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 0 2px white',
-                                    cursor: 'pointer',
-                                },
-                            }}
-                        >
-                            <Avatar
-                                src={
-                                    item?.image
-                                        ? item.image
-                                        : '/images/users/user.png'
-                                }
-                                alt={item?.name}
-                                sx={{width: 36, height: 36, cursor: 'pointer'}}
-                            />
-                        </Badge>
-                            <Typography className="f-14" color="body2" sx={{px: 1.5}}>
-                                {item.name ?? '-'}
-                            </Typography>
+                        <Link href={`/apps/users/${item.id}`} passHref>
+                            <Stack
+                                direction="row"
+                                alignItems="center"
+                                spacing={4}
+                                sx={{cursor: 'pointer'}}
+                            >
+                                <Badge
+                                    overlap="circular"
+                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    variant="dot"
+                                    sx={{
+                                        '& .MuiBadge-badge': {
+                                            backgroundColor: item?.status_color,
+                                            color: item?.status_color,
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 0 2px white',
+                                            cursor: 'pointer',
+                                        },
+                                    }}
+                                >
+                                    <Avatar
+                                        src={
+                                            item?.image
+                                                ? item.image
+                                                : '/images/users/user.png'
+                                        }
+                                        alt={item?.name}
+                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                    />
+                                </Badge>
+                                <Box>
+                                    <Typography
+                                        className="f-14"
+                                        color="textPrimary"
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {color: '#173f98'},
+                                            width: 190,
+                                        }}
+                                    >
+                                        {item.name ?? '-'}
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        </Link>
                     </Stack>
                 );
             },
@@ -582,26 +605,46 @@ const TablePagination = () => {
                 </Typography>
             ),
         }),
-        columnHelper.accessor((row) => row?.is_active, {
+        columnHelper.accessor((row) => row?.is_working, {
             id: 'status',
             header: () => 'Status',
             cell: (info) => {
-                const value = info.getValue();
-                const lastWorkedDate = info.row.original.last_worked_date;
+                const item = info.row.original;
+                const lastWorkedDate = item.last_worked_date;
 
-                return value ? (
-                    <Chip
-                        size="small"
-                        label="Working"
-                        sx={{
-                            backgroundColor: (theme) => theme.palette.success.light,
-                            color: (theme) => theme.palette.success.main,
-                            fontWeight: 500,
-                            borderRadius: '6px',
-                            px: 1.5,
-                        }}
-                    />
-                ) : (
+                if (item.is_on_break) {
+                    return (
+                        <Chip
+                            size="small"
+                            label="On Break"
+                            sx={{
+                                backgroundColor: (theme) => theme.palette.warning.light,
+                                color: (theme) => theme.palette.warning.dark,
+                                fontWeight: 500,
+                                borderRadius: '6px',
+                                px: 1.5,
+                            }}
+                        />
+                    );
+                }
+
+                if (item.is_working) {
+                    return (
+                        <Chip
+                            size="small"
+                            label="Working"
+                            sx={{
+                                backgroundColor: (theme) => theme.palette.success.light,
+                                color: (theme) => theme.palette.success.main,
+                                fontWeight: 500,
+                                borderRadius: '6px',
+                                px: 1.5,
+                            }}
+                        />
+                    );
+                }
+
+                return (
                     <Box>
                         {lastWorkedDate && (
                             <Typography

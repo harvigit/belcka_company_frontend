@@ -27,6 +27,7 @@ import {
     IconTrash,
     IconSun,
     IconPointFilled,
+    IconMapPin,
 } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import EditableTimeCell from './EditableTimeCell';
@@ -740,6 +741,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
+                                                                
+                                                                {log.start_location && (
+                                                                    <Tooltip
+                                                                        title={log.start_location}
+                                                                        arrow
+                                                                        placement="top"
+                                                                    >
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                                            <IconMapPin size={14} style={{ color: '#1976d2' }} />
+                                                                        </Box>
+                                                                    </Tooltip>
+                                                                )}
                                                             </Box>
                                                         )}
                                                     </TableCell>
@@ -783,6 +796,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
+                                                                
+                                                                {log.end_location && (
+                                                                    <Tooltip
+                                                                        title={log.end_location}
+                                                                        arrow
+                                                                        placement="top"
+                                                                    >
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                                            <IconMapPin size={14} style={{ color: '#1976d2' }} />
+                                                                        </Box>
+                                                                    </Tooltip>
+                                                                )}
                                                             </Box>
                                                         )}
                                                     </TableCell>

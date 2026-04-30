@@ -752,41 +752,69 @@ const TimeClock = ({queryParams}: Props) => {
             cell: (info: any) => {
                 const row = info.row.original;
                 return (
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Badge
-                            overlap="circular"
-                            anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                            variant="dot"
-                            sx={{
-                                '& .MuiBadge-badge': {
-                                    backgroundColor: row?.user_status_color,
-                                    color: row?.user_status_color,
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 0 2px white',
-                                    cursor: 'pointer',
-                                },
-                            }}
+                    <Stack direction="row" alignItems="center" spacing={4}>
+                        <Link
+                            href={`/apps/users/${row?.user_id}`}
+                            passHref
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <Avatar
-                                src={
-                                    row?.user_thumb_image
-                                        ? row.user_thumb_image
-                                        : '/images/users/user.png'
-                                }
-                                alt={row?.user_name}
-                                sx={{width: 36, height: 36, cursor: 'pointer'}}
-                            />
-                        </Badge>
-                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
-                            <Typography className="f-14" noWrap>
-                                {row.user_name}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary" noWrap>
-                                {row.trade_name}
-                            </Typography>
-                        </Box>
+                            <Stack
+                                direction="row"
+                                alignItems="center"
+                                spacing={4}
+                                sx={{cursor: 'pointer'}}
+                            >
+                                <Badge
+                                    overlap="circular"
+                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    variant="dot"
+                                    sx={{
+                                        '& .MuiBadge-badge': {
+                                            backgroundColor: row?.user_status_color,
+                                            color: row?.user_status_color,
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 0 2px white',
+                                            cursor: 'pointer',
+                                        },
+                                    }}
+                                >
+                                    <Avatar
+                                        src={
+                                            row?.user_thumb_image
+                                                ? row.user_thumb_image
+                                                : '/images/users/user.png'
+                                        }
+                                        alt={row?.user_name}
+                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                    />
+                                </Badge>
+                                <Box>
+                                    <Typography
+                                        className="f-14"
+                                        color="textPrimary"
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {color: '#173f98'},
+                                            width: 190,
+                                        }}
+                                    >
+                                        {row.user_name}
+                                    </Typography>
+                                    <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
+                                        <Typography
+                                            color="textSecondary"
+                                            variant="subtitle1"
+                                            width={190}
+                                            noWrap
+                                        >
+                                            {row.trade_name}
+                                        </Typography>
+                                    </Tooltip>
+                                </Box>
+                            </Stack>
+                        </Link>
                     </Stack>
                 );
             },
