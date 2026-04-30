@@ -127,7 +127,19 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
               }}
             />
           )}
-          <Typography variant="body1" fontWeight={500} noWrap>
+          <Typography
+            variant="body1"
+            fontWeight={500}
+            sx={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              lineHeight: 1.25,
+              wordBreak: "break-word",
+            }}
+          >
             {file.name}
           </Typography>
         </Box>
@@ -177,7 +189,8 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
     if (user?.company_id) fetchUsers();
   }, [user?.company_id]);
 
-  async function handleSubmit() {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!title.trim()) {
       toast.error("Title is required");
       return;
@@ -214,14 +227,13 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
         onClose();
         setLoading(false);
       } else {
-        toast.error(res.data.message || "Failed to create announcement");
       }
       setLoading(false);
     } catch (err) {
       console.error("Error uploading files:", err);
     }
     setLoading(false);
-  }
+  };
 
   return (
     <Box display="flex" flexDirection="column" height="100%">
@@ -473,7 +485,6 @@ export default function AnnouncementModal({ open, onClose, onCreated }: Props) {
               variant="contained"
               size="large"
               type="submit"
-              onClick={handleSubmit}
               disabled={loading}
               sx={{ borderRadius: 3 }}
               className="drawer_buttons"

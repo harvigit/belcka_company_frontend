@@ -143,7 +143,6 @@ export default function ProductTechnicalInformation({
       setDeletedIds([]);
       setUploadedFiles([]);
     } catch (error) {
-      toast.error("Failed to update");
     } finally {
       setLoading(false);
     }
