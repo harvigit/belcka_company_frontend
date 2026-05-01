@@ -734,16 +734,16 @@ const TablePagination = () => {
                                         User Code
                                     </Typography>
                                     <CustomTextField
-                                        id="user_code"
-                                        name="user_code"
-                                        className="custom_color"
-                                        placeholder="Enter user code.."
-                                        value={formData.user_code}
-                                        onChange={(e: any) =>
-                                            handleFieldChange('user_code', e.target.value)
-                                        }
-                                        inputProps={{maxLength: 10}}
-                                        fullWidth
+                                    id="user_code"
+                                    name="user_code"
+                                    className="custom_color"
+                                    placeholder="Enter user code.."
+                                    value={formData.user_code}
+                                    onChange={(e: any) =>
+                                        handleFieldChange('user_code', e.target.value.toUpperCase())
+                                    }
+                                    inputProps={{ maxLength: 10 }}
+                                    fullWidth
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>

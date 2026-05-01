@@ -360,7 +360,9 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 }
 
                 if (key === "post_code") {
-                  value = value.replace(/[^0-9]/g, "");
+                  value = value
+                    .replace(/[^a-zA-Z0-9]/g, "")
+                    .slice(0, 10);
                 }
 
                 handleFieldChange(key as keyof BillingFormData, value);
