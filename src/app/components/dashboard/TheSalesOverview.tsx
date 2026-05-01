@@ -219,8 +219,11 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
           {getWeekChart(week.days)}
         </Card>
       ))} */}
-
-      <Box sx={{ p: 2 }}>{getYearChart()}</Box>
+      {yearData.length > 0 ? (
+        <Box sx={{ p: 2 }}>{getYearChart()}</Box>
+      ) : (
+        <Typography align="center">No inventory data founds!</Typography>
+      )}
     </Card>
   );
 };
