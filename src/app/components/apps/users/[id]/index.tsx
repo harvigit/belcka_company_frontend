@@ -1064,7 +1064,7 @@ const TablePagination = () => {
                             <br/>
                             <br/>
                             To remove the user without losing their information, please select
-                            the Archive option instead.
+                            the Remove option instead.
                         </Typography>
                     </DialogContent>
 
@@ -1079,7 +1079,7 @@ const TablePagination = () => {
                                         company_id: user.company_id,
                                     };
                                     const response = await api.post(
-                                        'user/archive-user-account',
+                                        'user/archive-user',
                                         payload,
                                     );
                                     toast.success(response.data.message);
@@ -1096,31 +1096,31 @@ const TablePagination = () => {
                         >
                             Archive
                         </Button>
-                        <Button
-                            disabled={deleteLoading}
-                            onClick={async () => {
-                                setDeleteLoading(true);
-                                try {
-                                    const payload = {
-                                        user_id: userToDelete,
-                                        company_id: user.company_id,
-                                    };
-                                    const response = await api.post('user/delete-account', payload);
-                                    toast.success(response.data.message);
-                                    router.push('/apps/users/list');
-                                } catch (error) {
-                                    console.error('Failed to remove users', error);
-                                    // toast.error('Failed to remove users');
-                                } finally {
-                                    setConfirmOpen(false);
-                                }
-                                setDeleteLoading(false);
-                            }}
-                            variant="outlined"
-                            color="error"
-                        >
-                            Delete
-                        </Button>
+                        {/*<Button*/}
+                        {/*    disabled={deleteLoading}*/}
+                        {/*    onClick={async () => {*/}
+                        {/*        setDeleteLoading(true);*/}
+                        {/*        try {*/}
+                        {/*            const payload = {*/}
+                        {/*                user_id: userToDelete,*/}
+                        {/*                company_id: user.company_id,*/}
+                        {/*            };*/}
+                        {/*            const response = await api.post('user/delete-account', payload);*/}
+                        {/*            toast.success(response.data.message);*/}
+                        {/*            router.push('/apps/users/list');*/}
+                        {/*        } catch (error) {*/}
+                        {/*            console.error('Failed to remove users', error);*/}
+                        {/*            // toast.error('Failed to remove users');*/}
+                        {/*        } finally {*/}
+                        {/*            setConfirmOpen(false);*/}
+                        {/*        }*/}
+                        {/*        setDeleteLoading(false);*/}
+                        {/*    }}*/}
+                        {/*    variant="outlined"*/}
+                        {/*    color="error"*/}
+                        {/*>*/}
+                        {/*    Delete*/}
+                        {/*</Button>*/}
                     </DialogActions>
                 </Dialog>
 

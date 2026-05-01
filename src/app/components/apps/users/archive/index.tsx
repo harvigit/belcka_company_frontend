@@ -1,53 +1,51 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import {
-  TableContainer,
-  Table,
-  TableRow,
-  TableCell,
-  TableBody,
-  TableHead,
-  Typography,
-  Box,
-  Grid,
-  Button,
-  Divider,
-  IconButton,
-  Stack,
-  TextField,
-  InputAdornment,
-  MenuItem,
-  Chip,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
+    TableContainer,
+    Table,
+    TableRow,
+    TableCell,
+    TableBody,
+    TableHead,
+    Typography,
+    Box,
+    Grid,
+    Button,
+    Divider,
+    IconButton,
+    Stack,
+    TextField,
+    InputAdornment,
+    MenuItem,
+    DialogActions,
+    DialogTitle,
+    DialogContent,
+    Dialog,
 } from "@mui/material";
 import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  createColumnHelper,
-  SortingState,
+    flexRender,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    useReactTable,
+    createColumnHelper,
+    SortingState,
 } from "@tanstack/react-table";
 import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconFilter,
-  IconRestore,
-  IconSearch,
-  IconUsersPlus,
-  IconX,
+    IconChevronLeft,
+    IconChevronRight,
+    IconFilter,
+    IconSearch,
+    IconUsersPlus,
+    IconX,
+    IconTrash,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
-import Link from "next/link";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -62,697 +60,730 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 dayjs.extend(customParseFormat);
 
 export interface Permission {
-  id: number;
-  name: string;
-  status: boolean;
+    id: number;
+    name: string;
+    status: boolean;
 }
 
 export interface UserList {
-  permissions: Permission[];
-  id: number;
-  name: string;
-  supervisor_name: string;
-  user_image: string;
-  trade_name: string;
-  team_name: string;
-  shifts: string;
-  status: number;
-  is_invited: boolean;
-  archived_at: any;
-  created_at: any;
-  company_id: number | null;
-  permission_count: number;
-  action_by: string | null;
+    permissions: Permission[];
+    id: number;
+    name: string;
+    supervisor_name: string;
+    user_image: string;
+    trade_name: string;
+    team_name: string;
+    shifts: string;
+    status: number;
+    is_invited: boolean;
+    archived_at: any;
+    created_at: any;
+    company_id: number | null;
+    permission_count: number;
+    action_by: string | null;
 }
 
 export interface TradeList {
-  id: number;
-  name: string;
+    id: number;
+    name: string;
 }
 
+type DialogAction = "unarchive" | "remove" | null;
+
 const ArchiveUserList = () => {
-  const [data, setData] = useState<UserList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [filters, setFilters] = useState({ team: "", supervisor: "" });
-  const [tempFilters, setTempFilters] = useState(filters);
-  const [open, setOpen] = useState(false);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const searchParams = useSearchParams();
-  const projectId = searchParams ? searchParams.get("project_id") : "";
-  const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const session = useSession();
-  const user = session.data?.user as User & { company_id?: string | null };
-  const [inviteUser, setInviteUser] = useState(false);
-  const [trade, setTrade] = useState<TradeList[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [fetchUser, setFetchUser] = useState<boolean>(false);
+    const [data, setData] = useState<UserList[]>([]);
+    const [columnFilters, setColumnFilters] = useState<any>([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+    const [filters, setFilters] = useState({ team: "", supervisor: "" });
+    const [tempFilters, setTempFilters] = useState(filters);
+    const [open, setOpen] = useState(false);
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const searchParams = useSearchParams();
+    const projectId = searchParams ? searchParams.get("project_id") : "";
+    const [usersToAction, setUsersToAction] = useState<number[]>([]);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [dialogAction, setDialogAction] = useState<DialogAction>(null);
+    const session = useSession();
+    const user = session.data?.user as User & { company_id?: string | null };
+    const [trade, setTrade] = useState<TradeList[]>([]);
+    const [teams, setTeams] = useState<any[]>([]);
+    const [fetchUser, setFetchUser] = useState<boolean>(false);
 
-  const fetchUsers = async () => {
-    setFetchUser(true);
-    try {
-      const res = await api.get(
-        `user/archive-users-list?company_id=${user.company_id}`,
-      );
-      if (res.data) {
-        setData(res.data.info);
-      }
-    } catch (err) {
-      console.error("Failed to fetch archive users", err);
-    }
-    setFetchUser(false);
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, [projectId]);
-
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
-        );
-        if (res.data) setTrade(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch trades", err);
-      }
-    };
-    fetchTrades();
-  }, [user?.company_id]);
-
-  useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const res = await api.get(
-          `get-company-resources?flag=teamList&company_id=${user.company_id}`,
-        );
-        if (res.data) setTeams(res.data.info);
-      } catch (err) {
-        console.error("Failed to fetch teams", err);
-      }
-    };
-    fetchTeams();
-  }, [user?.company_id]);
-
-  const uniqueTeams = useMemo(
-    () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
-    [data, teams],
-  );
-
-  const uniqueSupervisors = useMemo(
-    () => [
-      ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
-    ],
-    [data],
-  );
-
-  const formatDate = (date?: Date | string | null) => {
-    if (!date) return "-";
-    try {
-      return format(new Date(date), "dd/MM/yyyy");
-    } catch {
-      return "-";
-    }
-  };
-
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      if (filters.team == "All" || filters.supervisor == "All") return data;
-      const matchesTeam = filters.team ? item.team_name === filters.team : true;
-      const matchesSupervisor = filters.supervisor
-        ? item.supervisor_name === filters.supervisor
-        : true;
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.trade_name?.toLowerCase().includes(search) ||
-        item.supervisor_name?.toLowerCase().includes(search) ||
-        item.action_by?.toLowerCase().includes(search) ||
-        item.team_name?.toLowerCase().includes(search);
-      return matchesTeam && matchesSupervisor && matchesSearch;
-    });
-  }, [data, filters, searchTerm]);
-
-  const columnHelper = createColumnHelper<UserList>();
-  const columns = [
-    columnHelper.accessor("name", {
-      id: "name",
-      header: () => (
-        <Stack direction="row" alignItems="center" spacing={4}>
-          <CustomCheckbox
-            className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
+    const fetchUsers = async () => {
+        setFetchUser(true);
+        try {
+            const res = await api.get(
+                `user/archive-users-list?company_id=${user.company_id}`,
+            );
+            if (res.data) {
+                setData(res.data.info);
             }
-            onChange={(e) => {
-              if (e.target.checked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
-              } else {
-                setSelectedRowIds(new Set());
-              }
-            }}
-          />
-          <Typography variant="subtitle2" fontWeight="inherit">
-            Name
-          </Typography>
-        </Stack>
-      ),
-      enableSorting: true,
-      cell: ({ row }) => {
-        const user = row.original;
-        const defaultImage = "/default-avatar.png";
-        const isChecked = selectedRowIds.has(user.id);
+        } catch (err) {
+            console.error("Failed to fetch archive users", err);
+        }
+        setFetchUser(false);
+    };
 
-        return (
-          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
-            <CustomCheckbox
-              checked={isChecked}
-              onChange={() => {
-                const newSelected = new Set(selectedRowIds);
-                if (newSelected.has(user.id)) {
-                  newSelected.delete(user.id);
-                } else {
-                  newSelected.add(user.id);
-                }
-                setSelectedRowIds(newSelected);
-              }}
-            />
-            {/* <Link href={`/apps/users/${user.id}`} passHref> */}
-            <Stack direction="row" alignItems="center" spacing={4}>
-              <Avatar
-                src={user.user_image || defaultImage}
-                alt={user.name}
-                sx={{ width: 36, height: 36 }}
-              />
-              <Box>
-                <Typography
-                  className="f-14"
-                  color="textPrimary"
-                  // sx={{ cursor: "pointer", "&:hover": { color: "#173f98" } }}
-                >
-                  {user.name ?? "-"}
-                </Typography>
-                <Typography color="textSecondary" variant="subtitle1">
-                  {user.trade_name}
-                </Typography>
-              </Box>
-            </Stack>
-            {/* </Link> */}
-          </Stack>
-        );
-      },
-    }),
-    columnHelper.accessor((row) => row.team_name, {
-      id: "team_name",
-      header: () => "Team Name",
-      cell: (info) => (
-        <Typography className="f-14" color="textPrimary">
-          {info.getValue() ?? "-"}
-        </Typography>
-      ),
-    }),
+    useEffect(() => {
+        fetchUsers();
+    }, [projectId]);
 
-    columnHelper.accessor((row) => row.action_by, {
-      id: "action_by",
-      header: () => "Archive By",
-      cell: (info) => (
-        <Typography className="f-14" color="textPrimary">
-          {info.getValue()?.length ? info.getValue() : "-"}
-        </Typography>
-      ),
-    }),
+    useEffect(() => {
+        const fetchTrades = async () => {
+            try {
+                const res = await api.get(
+                    `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
+                );
+                if (res.data) setTrade(res.data.info);
+            } catch (err) {
+                console.error("Failed to fetch trades", err);
+            }
+        };
+        fetchTrades();
+    }, [user?.company_id]);
 
-    columnHelper.accessor((row) => row.archived_at, {
-      id: "archived_at",
-      header: () => "Archive at",
-      cell: (info) => {
-        const row = info.row.original;
-        const notLoggedIn = row.archived_at;
+    useEffect(() => {
+        const fetchTeams = async () => {
+            try {
+                const res = await api.get(
+                    `get-company-resources?flag=teamList&company_id=${user.company_id}`,
+                );
+                if (res.data) setTeams(res.data.info);
+            } catch (err) {
+                console.error("Failed to fetch teams", err);
+            }
+        };
+        fetchTeams();
+    }, [user?.company_id]);
 
-        return (
-          <Typography
-            className="f-14"
-            color="textPrimary"
-            fontWeight={notLoggedIn ? 500 : 400}
-          >
-            {row.archived_at ? formatDate(row.archived_at) : "-"}
-          </Typography>
-        );
-      },
-    }),
-  ];
+    const uniqueTeams = useMemo(
+        () => [...new Set(teams.map((item) => item.name).filter(Boolean))],
+        [data, teams],
+    );
 
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
-  });
+    const uniqueSupervisors = useMemo(
+        () => [
+            ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
+        ],
+        [data],
+    );
 
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
+    const formatDate = (date?: Date | string | null) => {
+        if (!date) return "-";
+        try {
+            return format(new Date(date), "dd/MM/yyyy");
+        } catch {
+            return "-";
+        }
+    };
 
-  const simpleColumns = columns.map((column) => ({
-    name: column.id ?? "Unnamed Column",
-    width: "auto",
-  }));
+    const filteredData = useMemo(() => {
+        return data.filter((item) => {
+            if (filters.team == "All" || filters.supervisor == "All") return data;
+            const matchesTeam = filters.team ? item.team_name === filters.team : true;
+            const matchesSupervisor = filters.supervisor
+                ? item.supervisor_name === filters.supervisor
+                : true;
+            const search = searchTerm.toLowerCase();
+            const matchesSearch =
+                item.name?.toLowerCase().includes(search) ||
+                item.trade_name?.toLowerCase().includes(search) ||
+                item.supervisor_name?.toLowerCase().includes(search) ||
+                item.action_by?.toLowerCase().includes(search) ||
+                item.team_name?.toLowerCase().includes(search);
+            return matchesTeam && matchesSupervisor && matchesSearch;
+        });
+    }, [data, filters, searchTerm]);
 
-  return (
-    <PermissionGuard permission="Users">
-      <Box
-        sx={{
-          height: "calc(100vh - 100px)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Stack
-          mr={2}
-          ml={2}
-          mb={2}
-          justifyContent="space-between"
-          direction={{ xs: "column", sm: "row" }}
-          spacing={{ xs: 1, sm: 2, md: 4 }}
-        >
-          <Grid display="flex" gap={1} alignItems={"center"}>
-            {/* <Button variant="contained" color="primary">
-              ARCHIVE USERS ({filteredData.length})
-            </Button> */}
-            <TextField
-              id="search"
-              type="text"
-              size="small"
-              variant="outlined"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconSearch size={"16"} />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-            <Button variant="contained" onClick={() => setOpen(true)}>
-              <IconFilter width={18} />
-            </Button>
-          </Grid>
-          <Dialog
-            open={open}
-            onClose={() => setOpen(false)}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle
-              sx={{ m: 0, position: "relative", overflow: "visible" }}
-            >
-              Filters
-              <IconButton
-                aria-label="close"
-                onClick={() => setOpen(false)}
-                size="large"
-                sx={{
-                  position: "absolute",
-                  right: 12,
-                  top: 8,
-                  color: (theme) => theme.palette.grey[900],
-                  backgroundColor: "transparent",
-                  zIndex: 10,
-                  width: 50,
-                  height: 50,
-                }}
-              >
-                <IconX size={40} style={{ width: 40, height: 40 }} />
-              </IconButton>
-            </DialogTitle>
+    const handleOpenConfirm = (action: DialogAction) => {
+        const selectedIds = Array.from(selectedRowIds).filter(Boolean);
+        setUsersToAction(selectedIds);
+        setDialogAction(action);
+        setConfirmOpen(true);
+    };
 
-            <DialogContent>
-              <Stack spacing={2} mt={1}>
-                <TextField
-                  select
-                  label="Team"
-                  value={tempFilters.team}
-                  onChange={(e) =>
-                    setTempFilters({ ...tempFilters, team: e.target.value })
-                  }
-                >
-                  <MenuItem value="All">All</MenuItem>
-                  {uniqueTeams.map((team) => (
-                    <MenuItem key={team} value={team}>
-                      {team}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                {uniqueSupervisors.length > 0 ? (
-                  <TextField
-                    select
-                    label="Supervisor"
-                    value={tempFilters.supervisor}
-                    onChange={(e) =>
-                      setTempFilters({
-                        ...tempFilters,
-                        supervisor: e.target.value,
-                      })
-                    }
-                    fullWidth
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    {uniqueSupervisors.map((supervisor, i) => (
-                      <MenuItem key={i} value={supervisor}>
-                        {supervisor}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                ) : (
-                  <></>
-                )}
-              </Stack>
-            </DialogContent>
+    const handleCloseConfirm = () => {
+        setConfirmOpen(false);
+        setDialogAction(null);
+    };
 
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setTempFilters({ team: "", supervisor: "" });
-                  setFilters({ team: "", supervisor: "" });
-                  setOpen(false);
-                }}
-                color="inherit"
-              >
-                Clear
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => {
-                  setFilters(tempFilters);
-                  setOpen(false);
-                }}
-              >
-                Apply
-              </Button>
-            </DialogActions>
-          </Dialog>
-          <Stack direction={"row-reverse"} mb={1} mr={1}>
-            {selectedRowIds.size > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                sx={{ ml: 2 }}
-                startIcon={<IconUsersPlus width={18} />}
-                onClick={() => {
-                  const selectedIds = Array.from(selectedRowIds);
-                  setUsersToDelete(selectedIds.filter(Boolean));
-                  setConfirmOpen(true);
-                }}
-              >
-                Unarchive User
-              </Button>
-            )}
-          </Stack>
-        </Stack>
-        <Divider />
+    const handleUnarchive = async () => {
+        try {
+            const payload = {
+                user_ids: usersToAction.join(","),
+                company_id: user.company_id,
+            };
+            const response = await api.post("user/unarchive-user", payload);
+            toast.success(response.data.message);
+            setSelectedRowIds(new Set());
+            await fetchUsers();
+        } catch (error) {
+            toast.error("Failed to restore users. Please try again.");
+        } finally {
+            handleCloseConfirm();
+        }
+    };
 
-        {/* Remove user dialog */}
-        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-          <DialogTitle>
-            Confirm Restore
-            <IconButton
-              aria-label="close"
-              onClick={() => setConfirmOpen(false)}
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: 8,
-                color: (theme) => theme.palette.grey[500],
-              }}
-            >
-              <IconX />
-            </IconButton>
-          </DialogTitle>
+    const handleRemove = async () => {
+        try {
+            const payload = {
+                user_ids: usersToAction.join(","),
+                company_id: user.company_id,
+            };
 
-          <DialogContent>
-            <Typography color="textSecondary" fontWeight={500}>
-              Are you sure to want restore {usersToDelete.length} user
-              {usersToDelete.length > 1 ? "'s" : ""} from the archive account ?
-            </Typography>
-          </DialogContent>
+            const response = await api.post("user/remove-users", payload);
+            toast.success(response.data.message);
+            setSelectedRowIds(new Set());
+            await fetchUsers();
+        } catch (error) {
+            console.error("Failed to remove users", error);
+            toast.error("Failed to remove users. Please try again.");
+        } finally {
+            handleCloseConfirm();
+        }
+    };
 
-          <DialogActions>
-            <Button
-              onClick={async () => {
-                try {
-                  const payload = {
-                    user_ids: usersToDelete.join(","),
-                    company_id: user.company_id,
-                  };
-                  const response = await api.post(
-                    "user/unarchive-account",
-                    payload,
-                  );
-                  toast.success(response.data.message);
-                  setSelectedRowIds(new Set());
-                  await fetchUsers();
-                } catch (error) {
-                  console.error("Failed to restore users", error);
-                } finally {
-                  setConfirmOpen(false);
-                }
-              }}
-              variant="outlined"
-              color="primary"
-            >
-              Restore
-            </Button>
-            <Button
-              onClick={async () => setConfirmOpen(false)}
-              variant="outlined"
-              color="error"
-            >
-              Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            overflow: "auto",
-          }}
-        >
-          <TableContainer>
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const isActive = header.column.getIsSorted();
-                      const isAsc = header.column.getIsSorted() === "asc";
-                      const isSortable = header.column.getCanSort();
-
-                      return (
-                        <TableCell
-                          key={header.id}
-                          align="center"
-                          sx={{
-                            paddingTop: "5px",
-                            paddingBottom: "5px",
-                            width:
-                              header.column.id === "actions" ? 120 : "auto",
-                          }}
-                        >
-                          <Box
-                            onClick={header.column.getToggleSortingHandler()}
-                            p={0}
-                            sx={{
-                              cursor: isSortable ? "pointer" : "default",
-                              border: "2px solid transparent",
-                              borderRadius: "6px",
-                              display: "flex",
-                              justifyContent: "flex-start",
-                              "&:hover": { color: "#888" },
-                              "&:hover .hoverIcon": { opacity: 1 },
-                            }}
-                          >
-                            <Typography variant="subtitle2">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                            </Typography>
-                            {isSortable && (
-                              <Box
-                                component="span"
-                                className="hoverIcon"
-                                ml={0.5}
-                                sx={{
-                                  transition: "opacity 0.2s",
-                                  opacity: isActive ? 1 : 0,
-                                  fontSize: "0.9rem",
-                                  color: isActive ? "#000" : "#888",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
-                              </Box>
-                            )}
-                          </Box>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <TableBody>
-                {fetchUser ? (
-                  <SkeletonLoader
-                    columns={simpleColumns}
-                    rowCount={simpleColumns.length}
-                  />
-                ) : data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "calc(50vh - 100px)",
+    const columnHelper = createColumnHelper<UserList>();
+    const columns = [
+        columnHelper.accessor("name", {
+            id: "name",
+            header: () => (
+                <Stack direction="row" alignItems="center" spacing={4}>
+                    <CustomCheckbox
+                        className="header-checkbox"
+                        checked={
+                            selectedRowIds.size === filteredData.length &&
+                            filteredData.length > 0
+                        }
+                        onChange={(e) => {
+                            if (e.target.checked) {
+                                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                            } else {
+                                setSelectedRowIds(new Set());
+                            }
                         }}
-                      >
-                        <Image
-                          src="/images/no-data.png"
-                          alt="No data"
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                          }}
-                          width={200}
-                          height={200}
-                        />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} sx={{ padding: "10px" }}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {data.length ? <Divider /> : <></>}
-        </Box>
+                    />
+                    <Typography variant="subtitle2" fontWeight="inherit">
+                        Name
+                    </Typography>
+                </Stack>
+            ),
+            enableSorting: true,
+            cell: ({ row }) => {
+                const rowUser = row.original;
+                const defaultImage = "/default-avatar.png";
+                const isChecked = selectedRowIds.has(rowUser.id);
 
-        <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={1}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: { xs: "block", sm: "flex" },
-              alignItems: "center",
-            }}
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
+                return (
+                    <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+                        <CustomCheckbox
+                            checked={isChecked}
+                            onChange={() => {
+                                const newSelected = new Set(selectedRowIds);
+                                if (newSelected.has(rowUser.id)) {
+                                    newSelected.delete(rowUser.id);
+                                } else {
+                                    newSelected.add(rowUser.id);
+                                }
+                                setSelectedRowIds(newSelected);
+                            }}
+                        />
+                        <Stack direction="row" alignItems="center" spacing={4}>
+                            <Avatar
+                                src={rowUser.user_image || defaultImage}
+                                alt={rowUser.name}
+                                sx={{ width: 36, height: 36 }}
+                            />
+                            <Box>
+                                <Typography className="f-14" color="textPrimary">
+                                    {rowUser.name ?? "-"}
+                                </Typography>
+                                <Typography color="textSecondary" variant="subtitle1">
+                                    {rowUser.trade_name}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </Stack>
+                );
+            },
+        }),
+        columnHelper.accessor((row) => row.team_name, {
+            id: "team_name",
+            header: () => "Team Name",
+            cell: (info) => (
+                <Typography className="f-14" color="textPrimary">
+                    {info.getValue() ?? "-"}
+                </Typography>
+            ),
+        }),
+        columnHelper.accessor((row) => row.action_by, {
+            id: "action_by",
+            header: () => "Archive By",
+            cell: (info) => (
+                <Typography className="f-14" color="textPrimary">
+                    {info.getValue()?.length ? info.getValue() : "-"}
+                </Typography>
+            ),
+        }),
+        columnHelper.accessor((row) => row.archived_at, {
+            id: "archived_at",
+            header: () => "Archive at",
+            cell: (info) => {
+                const row = info.row.original;
+                const notLoggedIn = row.archived_at;
+                return (
+                    <Typography
+                        className="f-14"
+                        color="textPrimary"
+                        fontWeight={notLoggedIn ? 500 : 400}
+                    >
+                        {row.archived_at ? formatDate(row.archived_at) : "-"}
+                    </Typography>
+                );
+            },
+        }),
+    ];
+
+    const table = useReactTable({
+        data: filteredData,
+        columns,
+        state: { columnFilters, sorting },
+        onSortingChange: setSorting,
+        onColumnFiltersChange: setColumnFilters,
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        initialState: {
+            pagination: {
+                pageSize: 50,
+            },
+        },
+    });
+
+    useEffect(() => {
+        table.setPageIndex(0);
+    }, [searchTerm, table]);
+
+    const simpleColumns = columns.map((column) => ({
+        name: column.id ?? "Unnamed Column",
+        width: "auto",
+    }));
+
+    const dialogConfig = {
+        unarchive: {
+            title: "Confirm Unarchive",
+            message: `Are you sure you want to unarchive ${usersToAction.length} user${usersToAction.length > 1 ? "s" : ""} from the archived list?`,
+            confirmLabel: "Unarchive",
+            confirmColor: "primary" as const,
+            onConfirm: handleUnarchive,
+        },
+        remove: {
+            title: "Confirm Remove",
+            message: `Are you sure you want to permanently remove ${usersToAction.length} user${usersToAction.length > 1 ? "s" : ""}?`,
+            confirmLabel: "Remove",
+            confirmColor: "error" as const,
+            onConfirm: handleRemove,
+        },
+    };
+
+    const activeDialog = dialogAction ? dialogConfig[dialogAction] : null;
+
+    return (
+        <PermissionGuard permission="Users">
+            <Box
+                sx={{
+                    height: "calc(100vh - 100px)",
+                    display: "flex",
+                    flexDirection: "column",
                 }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
-      </Box>
-    </PermissionGuard>
-  );
+            >
+                {/* ── Toolbar ── */}
+                <Stack
+                    mr={2}
+                    ml={2}
+                    mb={2}
+                    justifyContent="space-between"
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={{ xs: 1, sm: 2, md: 4 }}
+                >
+                    {/* Left: search + filter */}
+                    <Grid display="flex" gap={1} alignItems={"center"}>
+                        <TextField
+                            id="search"
+                            type="text"
+                            size="small"
+                            variant="outlined"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            slotProps={{
+                                input: {
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconSearch size={"16"} />
+                                        </InputAdornment>
+                                    ),
+                                },
+                            }}
+                        />
+                        <Button variant="contained" onClick={() => setOpen(true)}>
+                            <IconFilter width={18} />
+                        </Button>
+                    </Grid>
+
+                    {/* Right: action buttons — only visible when rows are selected */}
+                    {selectedRowIds.size > 0 && (
+                        <Stack direction="row" alignItems="center" spacing={1} mb={1} mr={1}>
+                            {/* Unarchive */}
+                            <Button
+                                variant="outlined"
+                                color="primary"
+                                startIcon={<IconUsersPlus width={18} />}
+                                onClick={() => handleOpenConfirm("unarchive")}
+                            >
+                                Unarchive User{selectedRowIds.size > 1 ? "s" : ""} (
+                                {selectedRowIds.size})
+                            </Button>
+
+                            {/* Remove */}
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                startIcon={<IconTrash width={18} />}
+                                onClick={() => handleOpenConfirm("remove")}
+                            >
+                                Remove User{selectedRowIds.size > 1 ? "s" : ""} (
+                                {selectedRowIds.size})
+                            </Button>
+                        </Stack>
+                    )}
+                </Stack>
+
+                {/* ── Filter Dialog ── */}
+                <Dialog
+                    open={open}
+                    onClose={() => setOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                >
+                    <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
+                        Filters
+                        <IconButton
+                            aria-label="close"
+                            onClick={() => setOpen(false)}
+                            size="large"
+                            sx={{
+                                position: "absolute",
+                                right: 12,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[900],
+                                backgroundColor: "transparent",
+                                zIndex: 10,
+                                width: 50,
+                                height: 50,
+                            }}
+                        >
+                            <IconX size={40} style={{ width: 40, height: 40 }} />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Stack spacing={2} mt={1}>
+                            <TextField
+                                select
+                                label="Team"
+                                value={tempFilters.team}
+                                onChange={(e) =>
+                                    setTempFilters({ ...tempFilters, team: e.target.value })
+                                }
+                            >
+                                <MenuItem value="All">All</MenuItem>
+                                {uniqueTeams.map((team) => (
+                                    <MenuItem key={team} value={team}>
+                                        {team}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                            {uniqueSupervisors.length > 0 && (
+                                <TextField
+                                    select
+                                    label="Supervisor"
+                                    value={tempFilters.supervisor}
+                                    onChange={(e) =>
+                                        setTempFilters({
+                                            ...tempFilters,
+                                            supervisor: e.target.value,
+                                        })
+                                    }
+                                    fullWidth
+                                >
+                                    <MenuItem value="All">All</MenuItem>
+                                    {uniqueSupervisors.map((supervisor, i) => (
+                                        <MenuItem key={i} value={supervisor}>
+                                            {supervisor}
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                            )}
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => {
+                                setTempFilters({ team: "", supervisor: "" });
+                                setFilters({ team: "", supervisor: "" });
+                                setOpen(false);
+                            }}
+                            color="inherit"
+                        >
+                            Clear
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                setFilters(tempFilters);
+                                setOpen(false);
+                            }}
+                        >
+                            Apply
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* ── Confirm Dialog (shared for both actions) ── */}
+                <Dialog open={confirmOpen} onClose={handleCloseConfirm}>
+                    <DialogTitle>
+                        {activeDialog?.title ?? "Confirm"}
+                        <IconButton
+                            aria-label="close"
+                            onClick={handleCloseConfirm}
+                            sx={{
+                                position: "absolute",
+                                right: 8,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <IconX />
+                        </IconButton>
+                    </DialogTitle>
+
+                    <DialogContent>
+                        <Typography color="textSecondary" fontWeight={500}>
+                            {activeDialog?.message}
+                        </Typography>
+                    </DialogContent>
+
+                    <DialogActions>
+                        <Button onClick={handleCloseConfirm} variant="outlined" color="inherit">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={activeDialog?.onConfirm}
+                            variant="contained"
+                            color={activeDialog?.confirmColor ?? "primary"}
+                        >
+                            {activeDialog?.confirmLabel}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Divider />
+
+                {/* ── Table ── */}
+                <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                    <TableContainer>
+                        <Table stickyHeader aria-label="sticky table">
+                            <TableHead>
+                                {table.getHeaderGroups().map((headerGroup) => (
+                                    <TableRow key={headerGroup.id}>
+                                        {headerGroup.headers.map((header) => {
+                                            const isActive = header.column.getIsSorted();
+                                            const isAsc = header.column.getIsSorted() === "asc";
+                                            const isSortable = header.column.getCanSort();
+
+                                            return (
+                                                <TableCell
+                                                    key={header.id}
+                                                    align="center"
+                                                    sx={{
+                                                        paddingTop: "5px",
+                                                        paddingBottom: "5px",
+                                                        width:
+                                                            header.column.id === "actions" ? 120 : "auto",
+                                                    }}
+                                                >
+                                                    <Box
+                                                        onClick={header.column.getToggleSortingHandler()}
+                                                        p={0}
+                                                        sx={{
+                                                            cursor: isSortable ? "pointer" : "default",
+                                                            border: "2px solid transparent",
+                                                            borderRadius: "6px",
+                                                            display: "flex",
+                                                            justifyContent: "flex-start",
+                                                            "&:hover": { color: "#888" },
+                                                            "&:hover .hoverIcon": { opacity: 1 },
+                                                        }}
+                                                    >
+                                                        <Typography variant="subtitle2">
+                                                            {flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext(),
+                                                            )}
+                                                        </Typography>
+                                                        {isSortable && (
+                                                            <Box
+                                                                component="span"
+                                                                className="hoverIcon"
+                                                                ml={0.5}
+                                                                sx={{
+                                                                    transition: "opacity 0.2s",
+                                                                    opacity: isActive ? 1 : 0,
+                                                                    fontSize: "0.9rem",
+                                                                    color: isActive ? "#000" : "#888",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "space-between",
+                                                                }}
+                                                            >
+                                                                {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                            );
+                                        })}
+                                    </TableRow>
+                                ))}
+                            </TableHead>
+                            <TableBody>
+                                {fetchUser ? (
+                                    <SkeletonLoader
+                                        columns={simpleColumns}
+                                        rowCount={simpleColumns.length}
+                                    />
+                                ) : data.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={columns.length}>
+                                            <Box
+                                                sx={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    height: "calc(50vh - 100px)",
+                                                }}
+                                            >
+                                                <Image
+                                                    src="/images/no-data.png"
+                                                    alt="No data"
+                                                    style={{ maxWidth: "100%", maxHeight: "100%" }}
+                                                    width={200}
+                                                    height={200}
+                                                />
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    table.getRowModel().rows.map((row) => (
+                                        <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                                            {row.getVisibleCells().map((cell) => (
+                                                <TableCell key={cell.id} sx={{ padding: "10px" }}>
+                                                    {flexRender(
+                                                        cell.column.columnDef.cell,
+                                                        cell.getContext(),
+                                                    )}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                    {data.length ? <Divider /> : <></>}
+                </Box>
+
+                {/* ── Pagination ── */}
+                <Divider />
+                <Stack
+                    gap={1}
+                    pr={3}
+                    pt={1}
+                    pl={3}
+                    pb={1}
+                    alignItems="center"
+                    direction={{ xs: "column", sm: "row" }}
+                    justifyContent="space-between"
+                >
+                    <Box display="flex" alignItems="center" gap={1}>
+                        <Typography color="textSecondary" className="f-14">
+                            {table.getPrePaginationRowModel().rows.length} Rows
+                        </Typography>
+                    </Box>
+                    <Box
+                        sx={{ display: { xs: "block", sm: "flex" }, alignItems: "center" }}
+                    >
+                        <Stack direction="row" alignItems="center">
+                            <Typography color="textSecondary" className="f-14">
+                                Page
+                            </Typography>
+                            <Typography
+                                color="textSecondary"
+                                className="f-14"
+                                fontWeight={600}
+                                ml={1}
+                            >
+                                {table.getState().pagination.pageIndex + 1} of{" "}
+                                {table.getPageCount()}
+                            </Typography>
+                            <Typography color="textSecondary" ml={"3px"} className="f-14">
+                                {" "}
+                                | Entries :{" "}
+                            </Typography>
+                        </Stack>
+                        <Stack
+                            ml={"5px"}
+                            direction="row"
+                            alignItems="center"
+                            color="textSecondary"
+                        >
+                            <CustomSelect
+                                className="custom-select"
+                                value={table.getState().pagination.pageSize}
+                                onChange={(e: { target: { value: any } }) => {
+                                    table.setPageSize(Number(e.target.value));
+                                }}
+                            >
+                                {[50, 100, 250, 500].map((pageSize) => (
+                                    <MenuItem key={pageSize} value={pageSize}>
+                                        {pageSize}
+                                    </MenuItem>
+                                ))}
+                            </CustomSelect>
+                            <IconButton
+                                size="small"
+                                sx={{ width: "30px" }}
+                                onClick={() => table.previousPage()}
+                                disabled={!table.getCanPreviousPage()}
+                            >
+                                <IconChevronLeft />
+                            </IconButton>
+                            <IconButton
+                                size="small"
+                                sx={{ width: "30px" }}
+                                onClick={() => table.nextPage()}
+                                disabled={!table.getCanNextPage()}
+                            >
+                                <IconChevronRight />
+                            </IconButton>
+                        </Stack>
+                    </Box>
+                </Stack>
+            </Box>
+        </PermissionGuard>
+    );
 };
 
 export default ArchiveUserList;

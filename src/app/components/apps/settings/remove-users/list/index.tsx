@@ -44,6 +44,7 @@ import {
     IconChevronRight,
     IconEye,
     IconSearch,
+    IconTrash,
     IconUserPlus,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
@@ -61,6 +62,7 @@ import { AxiosResponse } from 'axios';
 import Cookies from 'js-cookie';
 import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
+import toast from 'react-hot-toast';
 
 dayjs.extend(customParseFormat);
 
@@ -85,7 +87,6 @@ const RemoveUsersList = () => {
     const [data, setData] = useState<UserList[]>([]);
     const [columnFilters, setColumnFilters] = useState<any>([]);
     const [fetchUser, setFetchUser] = useState<boolean>(false);
-    const [visibleColumnsCount, setVisibleColumnsCount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [sorting, setSorting] = useState<SortingState>([]);
@@ -93,6 +94,9 @@ const RemoveUsersList = () => {
     // Rejoin state
     const [rejoinDialogOpen, setRejoinDialogOpen] = useState(false);
     const [rejoinLoading, setRejoinLoading] = useState(false);
+
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const session = useSession();
     const user = session.data?.user as User & { id: number } & { company_id?: string | null } & { user_role_id: number };
@@ -129,16 +133,42 @@ const RemoveUsersList = () => {
                 user_ids: selectedIds,
             });
             if (res.data?.IsSuccess) {
+                toast.success(res.data?.message || 'Users rejoined successfully!');
                 setData((prev) => prev.filter((u) => !selectedRowIds.has(u.id)));
                 setSelectedRowIds(new Set());
             } else {
-                console.error('Rejoin failed:', res.data?.message);
+                toast.error(res.data?.message || 'Rejoin failed!');
             }
         } catch (err) {
             console.error('Failed to rejoin users', err);
+            toast.error('Something went wrong. Please try again.');
         }
         setRejoinLoading(false);
         setRejoinDialogOpen(false);
+    };
+
+
+    const handleDeleteConfirm = async () => {
+        setDeleteLoading(true);
+        try {
+            const selectedIds = Array.from(selectedRowIds);
+            const res: AxiosResponse<any> = await api.post('user/permanent-delete-users', {
+                user_ids: selectedIds,
+                company_id: user.company_id,
+            });
+            if (res.data?.IsSuccess) {
+                toast.success(res.data?.message || 'Users permanently deleted!');
+                setData((prev) => prev.filter((u) => !selectedRowIds.has(u.id)));
+                setSelectedRowIds(new Set());
+            } else {
+                toast.error(res.data?.message || 'Delete failed!');
+            }
+        } catch (err) {
+            console.error('Failed to permanently delete users', err);
+            toast.error('Something went wrong. Please try again.');
+        }
+        setDeleteLoading(false);
+        setDeleteDialogOpen(false);
     };
 
     const formatDate = (date?: Date | string | null) => {
@@ -255,23 +285,32 @@ const RemoveUsersList = () => {
             ),
             enableSorting: true,
             cell: ({ row }) => {
-                const u = row.original;
+                const user = row.original;
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
-                        <Link href={`/apps/users/${u.id}?is_removed_user=true`} passHref>
+                        <Link href={`/apps/users/${user.id}?is_removed_user=true`} passHref>
                             <Stack direction="row" alignItems="center" spacing={4} sx={{ cursor: 'pointer' }}>
-                                <Avatar src={u.user_image ?? ''} alt={u.name} sx={{ width: 36, height: 36 }} />
+                                <Avatar src={user.user_image ?? ''} alt={user.name} sx={{ width: 36, height: 36 }} />
                                 <Box>
                                     <Typography
                                         className="f-14"
                                         color="textPrimary"
-                                        sx={{ cursor: 'pointer', '&:hover': { color: '#173f98' }, width: 190 }}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {color: '#173f98'},
+                                            width: 190,
+                                        }}
                                     >
-                                        {u.name ?? '-'}
+                                        {user.name ?? '-'}
                                     </Typography>
-                                    <Tooltip title={u.trade_name ?? '-'} placement="top" arrow>
-                                        <Typography color="textSecondary" variant="subtitle1" width={190} noWrap>
-                                            {u.trade_name}
+                                    <Tooltip title={user.trade_name ?? '-'} placement="top" arrow>
+                                        <Typography
+                                            color="textSecondary"
+                                            variant="subtitle1"
+                                            width={190}
+                                            noWrap
+                                        >
+                                            {user.trade_name}
                                         </Typography>
                                     </Tooltip>
                                 </Box>
@@ -376,7 +415,6 @@ const RemoveUsersList = () => {
         const allSelected = eligibleColumns.every((col) => col.getIsVisible());
         const visibleCount = eligibleColumns.filter((col) => col.getIsVisible()).length;
         setSelectAll(allSelected);
-        setVisibleColumnsCount(visibleCount);
     }, [table.getState().columnVisibility]);
 
     const handleSelectAllChange = (e: any) => {
@@ -445,6 +483,7 @@ const RemoveUsersList = () => {
                             }}
                         />
                     </Grid>
+
                     <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={1} mr={1} gap={1}>
                         {selectedRowIds.size > 0 && (
                             <Button
@@ -457,6 +496,19 @@ const RemoveUsersList = () => {
                                 Rejoin Company ({selectedRowIds.size})
                             </Button>
                         )}
+
+                        {/*{selectedRowIds.size > 0 && (*/}
+                        {/*    <Button*/}
+                        {/*        variant="outlined"*/}
+                        {/*        color="error"*/}
+                        {/*        size="small"*/}
+                        {/*        startIcon={<IconTrash width={16} />}*/}
+                        {/*        onClick={() => setDeleteDialogOpen(true)}*/}
+                        {/*    >*/}
+                        {/*        Delete Permanently ({selectedRowIds.size})*/}
+                        {/*    </Button>*/}
+                        {/*)}*/}
+
                         <IconButton onClick={handlePopoverOpen} color="primary">
                             <IconEye />
                         </IconButton>
@@ -519,7 +571,9 @@ const RemoveUsersList = () => {
                         </Popover>
                     </Stack>
                 </Stack>
+
                 <Divider />
+
                 <TableContainer
                     ref={tableContainerRef}
                     sx={{ flex: 1, minHeight: 0, overflowX: 'auto', overflowY: 'auto' }}
@@ -629,6 +683,7 @@ const RemoveUsersList = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+
                 <Divider />
                 <Box
                     sx={{
@@ -691,9 +746,10 @@ const RemoveUsersList = () => {
                         </Box>
                     </Stack>
                 </Box>
+
                 <Divider />
 
-                {/* Rejoin Confirmation Dialog */}
+                {/* ── Rejoin Confirmation Dialog ── */}
                 <Dialog
                     open={rejoinDialogOpen}
                     onClose={() => !rejoinLoading && setRejoinDialogOpen(false)}
@@ -705,7 +761,7 @@ const RemoveUsersList = () => {
                         <DialogContentText>
                             Are you sure you want to rejoin{' '}
                             <strong>{selectedRowIds.size} user{selectedRowIds.size > 1 ? 's' : ''}</strong>{' '}
-                            back to the company? Their removal date will be cleared.
+                            back to the company?
                         </DialogContentText>
                     </DialogContent>
                     <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -723,6 +779,59 @@ const RemoveUsersList = () => {
                             color="primary"
                         >
                             {rejoinLoading ? 'Processing...' : 'Confirm Rejoin'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* ── Permanent Delete Confirmation Dialog ── */}
+                <Dialog
+                    open={deleteDialogOpen}
+                    onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
+                    maxWidth="xs"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ color: 'error.main' }}>
+                        Delete Permanently
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Are you sure you want to permanently delete{' '}
+                            <strong>{selectedRowIds.size} user{selectedRowIds.size > 1 ? 's' : ''}</strong>?
+                        </DialogContentText>
+                        {/* ── Warning box ── */}
+                        <Box
+                            mt={2}
+                            p={1.5}
+                            sx={{
+                                backgroundColor: 'error.lighter',
+                                border: '1px solid',
+                                borderColor: 'error.light',
+                                borderRadius: 1,
+                            }}
+                        >
+                            <Typography variant="body2" color="error.main" fontWeight={600}>
+                                ⚠ This action cannot be undone.
+                            </Typography>
+                            <Typography variant="body2" color="error.main" mt={0.5}>
+                                Once deleted, the user data will be permanently removed and cannot be recovered again.
+                            </Typography>
+                        </Box>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2 }}>
+                        <Button
+                            onClick={() => setDeleteDialogOpen(false)}
+                            disabled={deleteLoading}
+                            color="inherit"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDeleteConfirm}
+                            disabled={deleteLoading}
+                            variant="contained"
+                            color="error"
+                        >
+                            {deleteLoading ? 'Deleting...' : 'Delete Permanently'}
                         </Button>
                     </DialogActions>
                 </Dialog>

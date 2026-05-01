@@ -1759,7 +1759,7 @@ const TablePagination = () => {
                                         company_id: user.company_id,
                                     };
                                     const response = await api.post(
-                                        'user/archive-user-account',
+                                        'user/archive-user',
                                         payload,
                                     );
                                     toast.success(response.data.message);
@@ -1776,31 +1776,31 @@ const TablePagination = () => {
                         >
                             Archive
                         </Button>
-                        <Button
-                            onClick={async () => {
-                                try {
-                                    const payload = {
-                                        user_ids: usersToDelete.join(','),
-                                        company_id: user.company_id,
-                                    };
-                                    const response = await api.post(
-                                        'user/remove-account',
-                                        payload,
-                                    );
-                                    toast.success(response.data.message);
-                                    setSelectedRowIds(new Set());
-                                    await fetchUsers();
-                                } catch (error) {
-                                    console.error('Failed to remove users', error);
-                                } finally {
-                                    setConfirmOpen(false);
-                                }
-                            }}
-                            variant="outlined"
-                            color="error"
-                        >
-                            Delete
-                        </Button>
+                        {/*<Button*/}
+                        {/*    onClick={async () => {*/}
+                        {/*        try {*/}
+                        {/*            const payload = {*/}
+                        {/*                user_ids: usersToDelete.join(','),*/}
+                        {/*                company_id: user.company_id,*/}
+                        {/*            };*/}
+                        {/*            const response = await api.post(*/}
+                        {/*                'user/remove-account',*/}
+                        {/*                payload,*/}
+                        {/*            );*/}
+                        {/*            toast.success(response.data.message);*/}
+                        {/*            setSelectedRowIds(new Set());*/}
+                        {/*            await fetchUsers();*/}
+                        {/*        } catch (error) {*/}
+                        {/*            console.error('Failed to remove users', error);*/}
+                        {/*        } finally {*/}
+                        {/*            setConfirmOpen(false);*/}
+                        {/*        }*/}
+                        {/*    }}*/}
+                        {/*    variant="outlined"*/}
+                        {/*    color="error"*/}
+                        {/*>*/}
+                        {/*    Delete*/}
+                        {/*</Button>*/}
                     </DialogActions>
                 </Dialog>
 
