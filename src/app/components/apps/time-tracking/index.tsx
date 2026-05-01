@@ -52,6 +52,7 @@ import { useEditingState } from './hooks/useEditingState';
 import { DailyBreakdown } from './types/timeClock';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import TimeClockStats from './components/TimeClockStats';
+import PermissionGuard from '@/app/auth/PermissionGuard';
 
 const TIME_TRACKING_PAGE = 'time-tracking-page';
 
@@ -1592,6 +1593,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
     const handlePopoverClose = useCallback(() => setAnchorEl(null), []);
     
     return (
+        <PermissionGuard permission="Time Tracking">
         <Box sx={{ width: '100%' }}>
                 <Stack spacing={2}>
                     <Box
@@ -1766,7 +1768,8 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                         {toast.message}
                     </Alert>
                 </Snackbar>
-            </Box>
+        </Box>
+        </PermissionGuard>
     );
 };
 

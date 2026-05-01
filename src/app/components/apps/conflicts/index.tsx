@@ -40,6 +40,7 @@
     import type { TeamConflict } from './sections/team-conflicts';
     import type { StoreConflict } from './sections/store-conflicts';
     import type { HealthSafetyConflict } from './sections/health-safety-conflicts';
+import PermissionGuard from '@/app/auth/PermissionGuard';
     
     export interface ConflictsApiResponse {
         total_conflicts: number;
@@ -179,6 +180,7 @@
         const showSection = (idx: number) => activeTab === 0 || activeTab === idx;
     
         return (
+            <PermissionGuard permission="Conflicts">
             <Box sx={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', bgcolor: '#fff' }}>
     
                 {/* Toolbar */}
@@ -333,5 +335,6 @@
                     )}
                 </Box>
             </Box>
+            </PermissionGuard>
         );
     }
