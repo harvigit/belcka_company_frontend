@@ -169,10 +169,17 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
   };
 
   return (
-    <Card sx={{ p: 2, mb: 2, borderRadius: 3 }}>
+    <Card
+      sx={{
+        p: 2,
+        mb: 2,
+        borderRadius: 3,
+        display: yearData.length > 0 ? "block" : "none",
+      }}
+    >
       {/* HEADER */}
-      <Box mb={2} display="flex" justifyContent="space-between">
-        <Typography variant="h1" fontSize={21} pl={4}>
+      <Box display="flex" justifyContent="space-between">
+        <Typography variant="h1" fontSize={21} pl={2}>
           Inventory
         </Typography>
         <Box display={"flex"} gap={2} textAlign={"center"} mr={3}>
@@ -219,11 +226,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
           {getWeekChart(week.days)}
         </Card>
       ))} */}
-      {yearData.length > 0 ? (
-        <Box sx={{ p: 2 }}>{getYearChart()}</Box>
-      ) : (
-        <Typography align="center">No inventory data founds!</Typography>
-      )}
+      <Box sx={{ p: 2 }}>{getYearChart()}</Box>
     </Card>
   );
 };
