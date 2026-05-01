@@ -82,7 +82,7 @@ import UnitList from "../../units/list";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import SetList from "../sets/list";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-// import ManagePriceDrawer from "../manage-price";
+import ManagePriceDrawer from "../manage-price";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -1490,27 +1490,27 @@ const ProductList = () => {
       },
     }),
 
-    // columnHelper.display({
-    //   id: "actions",
-    //   header: "Actions",
-    //   cell: ({ row }) => {
-    //     const item = row.original;
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const item = row.original;
 
-    //     return (
-    //       <Stack direction="row" spacing={1}>
-    //         <IconButton
-    //           onClick={(e) => {
-    //             e.stopPropagation();
-    //             handlePriceOpen(item);
-    //           }}
-    //           color="primary"
-    //         >
-    //           <IconArrowsShuffle size={18} />
-    //         </IconButton>
-    //       </Stack>
-    //     );
-    //   },
-    // }),
+        return (
+          <Stack direction="row" spacing={1}>
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePriceOpen(item);
+              }}
+              color="primary"
+            >
+              <IconArrowsShuffle size={18} />
+            </IconButton>
+          </Stack>
+        );
+      },
+    }),
   ];
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -2582,11 +2582,11 @@ const ProductList = () => {
           onClose={() => setProductSetOpen(false)}
         />
 
-        {/* <ManagePriceDrawer
+        <ManagePriceDrawer
           open={priceDrawerOpen}
           onClose={handlePriceClose}
           product={selectedProduct}
-        /> */}
+        />
 
         <Box
           sx={{
