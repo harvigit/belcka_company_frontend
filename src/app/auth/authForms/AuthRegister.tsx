@@ -448,18 +448,22 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
             <TextField
               fullWidth
               value={registerData.first_name}
-              onChange={(e: any) =>
-                setRegisterData({ ...registerData, first_name: e.target.value })
-              }
+              onChange={(e: any) => {
+                let value = e.target.value;
+                value = value.replace(/[^A-Za-z\s]/g, "").slice(0, 50);
+                setRegisterData({ ...registerData, first_name: value });
+              }}
               label="First name"
             />
 
             <TextField
               fullWidth
               value={registerData.last_name}
-              onChange={(e: any) =>
-                setRegisterData({ ...registerData, last_name: e.target.value })
-              }
+              onChange={(e: any) => {
+                let value = e.target.value;
+                value = value.replace(/[^A-Za-z\s]/g, "").slice(0, 50);
+                setRegisterData({ ...registerData, last_name: value });
+              }}
               label="Last name"
             />
           </Box>
@@ -574,7 +578,12 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
         maxWidth="sm"
       >
         <DialogContent>
-          <Box display="flex" justifyContent="space-between" alignItems={"center"} mb={2}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems={"center"}
+            mb={2}
+          >
             <Tabs
               value={tabValue}
               onChange={(e, newVal) => setTabValue(newVal)}
@@ -584,7 +593,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
               <Tab label="Create Company" />
             </Tabs>
 
-            <Button onClick={userLogout} color="primary" sx={{ height: "10%"}}>
+            <Button onClick={userLogout} color="primary" sx={{ height: "10%" }}>
               Exit
             </Button>
           </Box>

@@ -842,6 +842,9 @@ const TablePagination = () => {
                         <BlankCard>
                             <Box>
                                 <Tabs
+                                    variant="scrollable"
+                                    scrollButtons="auto"
+                                    allowScrollButtonsMobile 
                                     className="user-tabs"
                                     value={value}
                                     onChange={handleTabChange}

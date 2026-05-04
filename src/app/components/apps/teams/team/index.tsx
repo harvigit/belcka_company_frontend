@@ -454,71 +454,73 @@ const TablePagination = () => {
     const columnHelper = createColumnHelper<TeamList>();
     const columns = [
         {
-            id: 'select',
-            header: ({table}: any) => (
+            id: "select",
+            header: ({ table }: any) => (
                 <Stack direction="row" alignItems="center">
-                    <CustomCheckbox
-                        className="header-checkbox"
-                        checked={
-                            selectedRowIds.size === filteredData.length &&
-                            filteredData.length > 0
-                        }
-                        indeterminate={
-                            selectedRowIds.size > 0 &&
-                            selectedRowIds.size < filteredData.length
-                        }
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            const isChecked = e.target.checked;
+                <CustomCheckbox
+                    className="header-checkbox"
+                    checked={
+                        selectedRowIds.size === filteredData.length &&
+                        filteredData.length > 0
+                    }
+                    indeterminate={
+                        selectedRowIds.size > 0 &&
+                        selectedRowIds.size < filteredData.length
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const isChecked = e.target.checked;
 
-                            if (isChecked) {
-                                setSelectedRowIds(new Set(filteredData.map((row, i) => i)));
-                            } else {
-                                setSelectedRowIds(new Set());
-                            }
-                        }}
-                    />
+                        if (isChecked) {
+                            setSelectedRowIds(
+                            new Set(filteredData.map((row) => row.id)),
+                            );
+                        } else {
+                            setSelectedRowIds(new Set());
+                        }
+                    }}
+                />
                 </Stack>
             ),
-            cell: ({row}: any) => {
+            cell: ({ row }: any) => {
                 const item = row.original;
-                const isChecked = selectedRowIds.has(row.index);
-                const showCheckbox = isChecked || hoveredRow === row.index;
-                const shouldHighlight =
-                    item.is_subcontractor === true &&
-                    item.company_id !== item.subcontractor_company_id;
+                const isChecked = selectedRowIds.has(item.id);
+                const isHovered = hoveredRow === item.id;
+                const showCheckbox = isChecked || isHovered;
+                const subcontractor = item.is_subcontractor === true && item.company_id !== item.subcontractor_company_id;
+                
                 return (
-                    <Stack
-                        direction="row"
-                        alignItems="center"
-                        onMouseEnter={() => setHoveredRow(row.index)}
-                        onMouseLeave={() => setHoveredRow(null)}
-                        sx={{pl: 1}}
-                    >
-                        <CustomCheckbox
-                            checked={isChecked}
-                            disabled={shouldHighlight}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                const newSelected = new Set(selectedRowIds);
-                                if (isChecked) {
-                                    newSelected.delete(row.id);
-                                } else {
-                                    newSelected.add(row.id);
-                                }
-                                setSelectedRowIds(newSelected);
-                            }}
-                            sx={{
-                                opacity: showCheckbox ? 1 : 0,
-                                pointerEvents: showCheckbox ? 'auto' : 'none',
-                                transition: 'opacity 0.2s ease',
-                            }}
-                        />
-                    </Stack>
+                <Stack
+                    direction="row"
+                    alignItems="center"
+                    onMouseEnter={() => setHoveredRow(item.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    sx={{ pl: 1 }}
+                >
+                    <CustomCheckbox
+                    checked={isChecked}
+                    onClick={(e) => e.stopPropagation()}
+                    disabled={subcontractor}
+                    onChange={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const newSelected = new Set(selectedRowIds);
+                        if (isChecked) {
+                            newSelected.delete(item.id);
+                        } else {
+                            newSelected.add(item.id);
+                        }
+                        setSelectedRowIds(newSelected);
+                    }}
+                    sx={{
+                        opacity: showCheckbox ? 1 : 0,
+                        pointerEvents: showCheckbox ? "auto" : "none",
+                        transition: "opacity 0.2s ease",
+                    }}
+                    />
+                </Stack>
                 );
             },
         },
