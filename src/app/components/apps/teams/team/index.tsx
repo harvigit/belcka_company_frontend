@@ -473,10 +473,8 @@ const TablePagination = () => {
                         e.preventDefault();
                         const isChecked = e.target.checked;
 
-                        if (isChecked) {
-                            setSelectedRowIds(
-                            new Set(filteredData.map((row) => row.id)),
-                            );
+                       if (isChecked) {
+                            setSelectedRowIds(new Set(filteredData.map((row, i) => row.id)));
                         } else {
                             setSelectedRowIds(new Set());
                         }
@@ -486,16 +484,16 @@ const TablePagination = () => {
             ),
             cell: ({ row }: any) => {
                 const item = row.original;
-                const isChecked = selectedRowIds.has(item.id);
-                const isHovered = hoveredRow === item.id;
+                const isChecked = selectedRowIds.has(row.id);
+                const isHovered = hoveredRow === row.id;
                 const showCheckbox = isChecked || isHovered;
                 const subcontractor = item.is_subcontractor === true && item.company_id !== item.subcontractor_company_id;
-                
+
                 return (
                 <Stack
                     direction="row"
                     alignItems="center"
-                    onMouseEnter={() => setHoveredRow(item.id)}
+                    onMouseEnter={() => setHoveredRow(row.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                     sx={{ pl: 1 }}
                 >
@@ -508,9 +506,9 @@ const TablePagination = () => {
                         e.preventDefault();
                         const newSelected = new Set(selectedRowIds);
                         if (isChecked) {
-                            newSelected.delete(item.id);
+                            newSelected.delete(row.id);
                         } else {
-                            newSelected.add(item.id);
+                            newSelected.add(row.id);
                         }
                         setSelectedRowIds(newSelected);
                     }}
