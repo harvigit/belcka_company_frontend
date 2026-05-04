@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {
     Table,
     TableBody,
@@ -26,6 +26,12 @@ import {
     EditingWorklog,
     RecordType
 } from '../types/timeClock';
+import LocationMapDrawer from '@/app/components/apps/time-clock/components/LocationMapDrawer';
+
+interface LocationDrawerState {
+    open: boolean;
+    worklogId: number | undefined;
+}
 
 interface TimeClockTableProps {
     table: any,
@@ -66,6 +72,25 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            saveFieldChanges,
                                                            onDeleteClick,
                                                        }) => {
+    const [locationDrawer, setLocationDrawer] = useState<LocationDrawerState>({
+        open: false,
+        worklogId: undefined,
+    });
+
+    const handleLocationPinClick = async (worklogId: number) => {
+        setLocationDrawer(prev => ({
+            open: true,
+            worklogId,
+        }));
+    };
+
+    const closeLocationDrawer = () => {
+        setLocationDrawer({
+            open: false,
+            worklogId: undefined,
+        });
+    };
+    
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
         const configs: { [key: string]: { width: number; visible: boolean } } = {};
@@ -334,19 +359,40 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                {log.start_location && ( 
-                                                                    <Tooltip
-                                                                        title={log.start_location}
-                                                                        arrow
-                                                                        placement="top"
-                                                                    >
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                                {log.start_location && (
+                                                                    <Tooltip title="View clock-in location" arrow placement="top">
+                                                                        <Box
+                                                                            sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                cursor: 'pointer',
+                                                                                '&:hover': {
+                                                                                    opacity: 0.7,
+                                                                                }
+                                                                            }}
+                                                                            onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                                                                        >
                                                                             <IconMapPin size={14} style={{ color: '#1976d2' }} />
                                                                         </Box>
                                                                     </Tooltip>
                                                                 )}
                                                             </Box>
                                                         )}
+                                                    </TableCell>
+                                                )}
+
+                                                {/* Break Time Column */}
+                                                {visibleColumnConfigs.break?.visible && (
+                                                    <TableCell
+                                                        align="center"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                        }}
+                                                    >
+                                                        {log.is_leave || log.is_expense ? '--' : (log.total_break_hours ? formatHour(log.total_break_hours) : '--')}
                                                     </TableCell>
                                                 )}
 
@@ -389,12 +435,18 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
                                                                 {log.end_location && (
-                                                                    <Tooltip
-                                                                        title={log.end_location}
-                                                                        arrow
-                                                                        placement="top"
-                                                                    >
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                                    <Tooltip title="View clock-in location" arrow placement="top">
+                                                                        <Box
+                                                                            sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                cursor: 'pointer',
+                                                                                '&:hover': {
+                                                                                    opacity: 0.7,
+                                                                                }
+                                                                            }}
+                                                                            onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                                                                        >
                                                                             <IconMapPin size={14} style={{ color: '#1976d2' }} />
                                                                         </Box>
                                                                     </Tooltip>
@@ -930,6 +982,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            <LocationMapDrawer
+                open={locationDrawer.open}
+                onClose={closeLocationDrawer}
+                worklogId={locationDrawer.worklogId}
+            />
         </Box>
     );
 };

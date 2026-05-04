@@ -57,7 +57,7 @@ export default function Penalties({ worklogId, onClose }: ChecklogsPageProps) {
     const fetchPenalties = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`get-worklog-penalties?worklog_id=${worklogId}`);
+            const res = await api.get(`user-worklog/get-worklog-penalties?worklog_id=${worklogId}`);
             if (res.data?.IsSuccess) {
                 setPenalties(res.data.info || []);
                 setDay(res.data.worklog_day || "");

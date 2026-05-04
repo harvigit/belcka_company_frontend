@@ -103,7 +103,7 @@ const RecoverWorklogs = ({ open, onClose, startDate, endDate }: RecoverWorklogsP
             const end   = dayjs(endDate).format('DD/MM/YYYY');
 
             const res = await api.get(
-                `get-deleted-worklogs?company_id=${authUser.company_id}&start_date=${start}&end_date=${end}`,
+                `user-worklog/get-deleted-worklogs?company_id=${authUser.company_id}&start_date=${start}&end_date=${end}`,
             );
             if (res.data?.IsSuccess) {
                 setData(res.data.info ?? []);
@@ -121,7 +121,7 @@ const RecoverWorklogs = ({ open, onClose, startDate, endDate }: RecoverWorklogsP
     const handleRestore = async (id: number) => {
         setRestoringId(id);
         try {
-            const res = await api.post('restore-worklogs', {
+            const res = await api.post('user-worklog/restore-worklogs', {
                 ids:        [id],
                 company_id: authUser?.company_id,
             });

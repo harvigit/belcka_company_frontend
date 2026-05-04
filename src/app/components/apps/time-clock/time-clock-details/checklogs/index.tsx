@@ -66,7 +66,7 @@ export default function Checklogs({worklogId, onClose}: ChecklogsPageProps) {
         setLoading(true);
         try {
             const res = await api.get(
-                `get-worklog-checklogs?worklog_id=${worklogId}`
+                `user-worklog/get-worklog-checklogs?worklog_id=${worklogId}`
             );
             if (res.data?.IsSuccess) {
                 setChecklogs(res.data.info || []);

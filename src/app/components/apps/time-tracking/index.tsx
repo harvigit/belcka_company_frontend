@@ -944,7 +944,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         setTodayLoading(true);
         try {
             const res: AxiosResponse<ActiveWorklogResponse> =
-                await api.get('/get-active-worklog');
+                await api.get('user-worklog/get-active-worklog');
             const d = res.data;
 
             if (d.IsSuccess) {
@@ -1245,6 +1245,13 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                 size: 80,
             },
             {
+                id: 'break',
+                accessorKey: 'break',
+                header: () => <span style={{display: 'block', textAlign: 'center', color: '#203040' }}>Break</span>,
+                cell: ({row}) => row.original.rowType === 'day' ? row.original.total_break_hours : null,
+                size: 80,
+            },
+            {
                 id: 'end',
                 accessorKey: 'end',
                 header: () => <span style={headerStyle}>End</span>,
@@ -1497,7 +1504,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                 if (projectId) payload.project_id = projectId;
 
                 const res: AxiosResponse<ApiResponse> = await api.post(
-                    '/user-start-work',
+                    'user-worklog/user-start-work',
                     payload,
                 );
 
@@ -1543,7 +1550,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
             }
 
             const res: AxiosResponse<ApiResponse> = await api.post(
-                '/user-stop-work',
+                'user-worklog/user-stop-work',
                 payload,
             );
 

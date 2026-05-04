@@ -16,8 +16,9 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Tooltip,
 } from '@mui/material';
-import {IconArrowLeft, IconMedal, IconX} from '@tabler/icons-react';
+import {IconArrowLeft, IconMedal, IconCalendarTime, IconX} from '@tabler/icons-react';
 import api from '@/utils/axios';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -94,7 +95,7 @@ const TablePagination = () => {
     ];
 
     const visibleTabs = isRemovedUser
-        ? allTabs.filter((label) => label === 'Activity' || label === 'Payments')
+        ? allTabs.filter((label) => label === 'Activity' || label === 'Payments' || label === 'Billing Info')
         : allTabs;
     
     const {data: session, update} = useSession();
@@ -418,7 +419,7 @@ const TablePagination = () => {
                 user_id: data?.id,
             };
 
-            const res = await api.post('stop-work', payload);
+            const res = await api.post('user-worklog/stop-work', payload);
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
                 setOpenModel(false);
@@ -630,6 +631,21 @@ const TablePagination = () => {
                                         Make an admin
                                     </Button>
                                 )}
+
+                                {isRemovedUser && user.user_role_id == 1 && (
+                                    <Tooltip title="Bookkeeper" arrow>
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            onClick={() => {
+                                                setOpenModel(true);
+                                            }}
+                                        >
+                                            <IconCalendarTime size={30} style={{cursor: 'pointer'}}/>
+                                        </Button>
+                                    </Tooltip>
+                                )}
+                                
                                 <Button
                                     variant="outlined"
                                     color="primary"
@@ -862,9 +878,19 @@ const TablePagination = () => {
                                                 companyId={Number(user.company_id)}
                                                 userId={Number(userId)}
                                                 active={value === 0}
+                                                isRemoveUser={true}
                                             />
                                         </Box>
                                         <Box hidden={value !== 1}>
+                                            <BillingInfo
+                                                companyId={Number(user.company_id)}
+                                                onUpdate={fetchData}
+                                                userId={Number(userId)}
+                                                active={value === 2}
+                                            />
+                                        </Box>
+
+                                        <Box hidden={value !== 2}>
                                             <Payments
                                                 companyId={Number(user.company_id)}
                                                 active={value === 1}

@@ -93,7 +93,7 @@ const ShiftEditPopover: React.FC<ShiftEditPopoverProps> = ({
         });
 
         try {
-            const response: AxiosResponse<ShiftEdit> = await api.post('/request-worklog-change', worklogData);
+            const response: AxiosResponse<ShiftEdit> = await api.post('user-worklog/request-worklog-change', worklogData);
             
             if (response.data.IsSuccess) {
                 toast.success(response.data.message || 'Operation successful');

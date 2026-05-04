@@ -8,10 +8,10 @@ import {
     Typography,
     CircularProgress,
     Button,
+    IconButton,
 } from '@mui/material';
 import axios from 'axios';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
+import CloseIcon from '@mui/icons-material/Close';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -39,10 +39,16 @@ interface DigitalIDCardProps {
     isPublicView?: boolean;
 }
 
-const CARD_WIDTH  = 450;
-const CARD_HEIGHT = 350;
+const CARD_WIDTH  = 480;
+const CARD_HEIGHT = 300;
 
-const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, token, isPublicView = false }) => {
+const DigitalIDCard: React.FC<DigitalIDCardProps> = ({
+    open,
+    onClose,
+    userId,
+    token,
+    isPublicView = false
+}) => {
     const [cardData, setCardData] = useState<ApiDigitalCardInfo | null>(null);
     const [loading,  setLoading]  = useState(true);
     const [error,    setError]    = useState<string | null>(null);
@@ -52,7 +58,7 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
 
     useEffect(() => {
         const computeScale = () => {
-            const padding = window.innerWidth < 600 ? 0 : 64;
+            const padding   = window.innerWidth < 600 ? 0 : 96;
             const available = window.innerWidth - padding;
             setScale(Math.min(1, available / CARD_WIDTH));
         };
@@ -91,7 +97,9 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                     setError(res.data?.message || 'Failed to load card');
                 }
             } catch (err: any) {
-                setError(err.response?.data?.message || err.message || 'Failed to load card');
+                setError(
+                    err.response?.data?.message || err.message || 'Failed to load card',
+                );
             } finally {
                 setLoading(false);
             }
@@ -118,23 +126,23 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
     const handleDownloadPdf = async () => {
         if (!cardRef.current || !cardData) return;
         try {
-            const [logoImg, userImg, qrImg] = await Promise.all([
-                convertImageToBase64('/belcka.svg'),
+            const [userImg, logoImg, qrImg] = await Promise.all([
                 convertImageToBase64(cardData.user_image || '/images/users/user.png'),
+                convertImageToBase64(cardData.company_logo),
                 convertImageToBase64(cardData.qr_code_url),
             ]);
 
             const el       = cardRef.current;
-            const logoEl   = el.querySelector('img[alt="Belcka Logo"]') as HTMLImageElement;
-            const avatarEl = el.querySelector('img[alt="User"]')        as HTMLImageElement;
-            const qrEl     = el.querySelector('img[alt="QR Code"]')     as HTMLImageElement;
+            const avatarEl = el.querySelector('img[alt="User"]')         as HTMLImageElement;
+            const logoEl   = el.querySelector('img[alt="Company Logo"]') as HTMLImageElement;
+            const qrEl     = el.querySelector('img[alt="QR Code"]')      as HTMLImageElement;
 
-            const origLogo   = logoEl?.src;
             const origAvatar = avatarEl?.src;
+            const origLogo   = logoEl?.src;
             const origQr     = qrEl?.src;
 
-            if (logoEl)   logoEl.src   = logoImg;
             if (avatarEl) avatarEl.src = userImg;
+            if (logoEl)   logoEl.src   = logoImg;
             if (qrEl)     qrEl.src     = qrImg;
 
             await new Promise((r) => setTimeout(r, 300));
@@ -152,14 +160,18 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                 windowHeight: CARD_HEIGHT,
             });
 
-            if (logoEl   && origLogo)   logoEl.src   = origLogo;
             if (avatarEl && origAvatar) avatarEl.src = origAvatar;
+            if (logoEl   && origLogo)   logoEl.src   = origLogo;
             if (qrEl     && origQr)     qrEl.src     = origQr;
 
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [CARD_HEIGHT, CARD_WIDTH] });
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [CARD_HEIGHT, CARD_WIDTH],
+            });
             pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, CARD_WIDTH, CARD_HEIGHT);
             pdf.save(`${cardData.first_name}_${cardData.last_name}_ID_Card.pdf`);
-        } catch (err) {
+        } catch {
             alert('Failed to generate PDF. Please try again.');
         }
     };
@@ -171,8 +183,9 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
             <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
                 <DialogContent>
                     <Box textAlign="center" py={4}>
-                        <CancelIcon sx={{ fontSize: 60, color: 'error.main', mb: 2 }} />
-                        <Typography color="error" variant="h6" fontWeight={600}>{error}</Typography>
+                        <Typography color="error" variant="h6" fontWeight={600}>
+                            {error}
+                        </Typography>
                         <Typography color="text.secondary" variant="body2" mt={1}>
                             The ID card link may be invalid or expired.
                         </Typography>
@@ -195,12 +208,6 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
         );
     }
 
-    const validUntilDisplay = cardData.valid_until
-        ? new Date(cardData.valid_until).toLocaleDateString('en-GB', {
-            day: '2-digit', month: 'short', year: 'numeric',
-        })
-        : null;
-
     const scaledWidth  = CARD_WIDTH  * scale;
     const scaledHeight = CARD_HEIGHT * scale;
 
@@ -214,31 +221,45 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                 sx: {
                     margin: { xs: '16px', sm: '32px' },
                     width: { xs: 'calc(100% - 32px)', sm: 'auto' },
-                    maxWidth: { xs: '100%', sm: '960px' },
-                    maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
-                    borderRadius: '16px',
+                    maxWidth: { xs: '100%', sm: '680px' },
+                    borderRadius: '12px',
                     alignSelf: 'center',
                 },
             }}
         >
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 3,
+                    py: 1.5,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                }}
+            >
+                <Typography fontWeight={600} fontSize={15} color="text.primary">
+                    {cardData.first_name} {cardData.last_name}&apos;s Digital ID Card
+                </Typography>
+                <IconButton onClick={onClose} size="small" aria-label="Close">
+                    <CloseIcon fontSize="small" />
+                </IconButton>
+            </Box>
+
             <DialogContent
                 sx={{
-                    p: 0,
+                    p: 3,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 2,
-                    pb: { xs: 1, sm: 1 },
                 }}
             >
                 <Box
                     sx={{
                         display: 'flex',
                         justifyContent: 'center',
-                        alignItems: 'flex-start',
                         width: '100%',
                         overflow: 'hidden',
-                        py: { sm: 1 },
-                        px: { xs: 0, sm: 1 },
                     }}
                 >
                     <Box
@@ -259,76 +280,95 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                 transform: `scale(${scale})`,
                                 width: `${CARD_WIDTH}px`,
                                 height: `${CARD_HEIGHT}px`,
-                                borderRadius: '20px',
+                                borderRadius: '12px',
                                 backgroundColor: '#ffffff',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                                padding: '18px',
+                                border: '1px solid #e5e7eb',
+                                padding: '24px',
                                 boxSizing: 'border-box',
                                 display: 'flex',
                                 flexDirection: 'row',
-                                gap: '32px',
+                                gap: '24px',
                                 fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif',
+                                overflow: 'hidden',
                             }}
                         >
                             <Box
                                 sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
                                     flex: 1,
                                     minWidth: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'flex-start',
                                 }}
                             >
-                                {/* Avatar */}
                                 <Box
                                     sx={{
-                                        width: '100px',
-                                        height: '100px',
-                                        borderRadius: '50%',
+                                        width: '80px',
+                                        height: '80px',
                                         overflow: 'hidden',
                                         flexShrink: 0,
-                                        border: '3px solid #f0f0f0',
                                         backgroundColor: '#e5e7eb',
-                                        mb: '10px',
+                                        mb: '12px',
                                     }}
                                 >
                                     <img
                                         src={cardData.user_image || '/images/users/user.png'}
                                         alt="User"
-                                        style={{ width: '100%', height: '100%', display: 'block' }}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            display: 'block',
+                                        }}
                                     />
                                 </Box>
 
-                                {/* USER ID */}
                                 <Typography
-                                    sx={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em', mb: '6px' }}
+                                    sx={{
+                                        fontSize: '13px',
+                                        fontWeight: 400,
+                                        color: '#6b7280',
+                                        mb: '10px',
+                                    }}
                                 >
-                                    USER ID: {cardData.user_code}
+                                    ID : {cardData.user_code}
                                 </Typography>
 
-                                {/* Full Name */}
                                 <Typography
-                                    sx={{ fontSize: '30px', fontWeight: 700, color: '#111827', lineHeight: 1.2, mb: '10px', wordBreak: 'break-word' }}
+                                    sx={{
+                                        fontSize: '22px',
+                                        fontWeight: 700,
+                                        color: '#111827',
+                                        lineHeight: 1.2,
+                                        mb: '6px',
+                                        wordBreak: 'break-word',
+                                    }}
                                 >
                                     {cardData.first_name} {cardData.last_name}
                                 </Typography>
 
-                                {/* Role / Trade */}
                                 <Typography
-                                    sx={{ fontSize: '16px', fontWeight: 600, color: '#374151', mb: '4px' }}
+                                    sx={{
+                                        fontSize: '14px',
+                                        fontWeight: 400,
+                                        color: '#6b7280',
+                                        mb: '6px',
+                                    }}
                                 >
                                     {cardData.trade_name}
                                 </Typography>
 
-                                {/* Valid Until */}
-                                {validUntilDisplay && (
-                                    <Typography
-                                        sx={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.02em' }}
-                                    >
-                                        VALID UNTIL {validUntilDisplay}
-                                    </Typography>
-                                )}
+                                <Typography
+                                    sx={{
+                                        fontSize: '26px',
+                                        fontWeight: 600,
+                                        color: '#374151',
+                                    }}
+                                >
+                                    {cardData.company_name}
+                                </Typography>
                             </Box>
-
+                            
                             <Box
                                 sx={{
                                     display: 'flex',
@@ -339,15 +379,16 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                     width: '140px',
                                 }}
                             >
-                                {/* Company Logo */}
-                                <Box  sx={{
-                                    width: '100px',
-                                    height: '100px',
-                                    overflow: 'hidden',
-                                    flexShrink: 0,
-                                    mb: '10px',
-                                    objectFit: 'cover',
-                                }}>
+                                <Box
+                                    sx={{
+                                        width: '100px',
+                                        height: '100px',
+                                        overflow: 'hidden',
+                                        flexShrink: 0,
+                                        mb: '10px',
+                                        objectFit: 'cover',
+                                    }}
+                                >
                                     <img
                                         src={cardData.company_logo}
                                         alt="Company Logo"
@@ -355,53 +396,39 @@ const DigitalIDCard: React.FC<DigitalIDCardProps> = ({ open, onClose, userId, to
                                     />
                                 </Box>
 
-                                {/* QR Code */}
-                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                                    <Box
-                                        sx={{
-                                            background: '#fff',
-                                            padding: '5px',
-                                            borderRadius: '6px',
-                                            border: '1px solid #e5e7eb',
-                                            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                                <Box
+                                    sx={{
+                                        background: '#fff',
+                                        padding: '4px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #e5e7eb',
+                                    }}
+                                >
+                                    <img
+                                        src={cardData.qr_code_url}
+                                        alt="QR Code"
+                                        style={{
+                                            width: '110px',
+                                            height: '110px',
+                                            display: 'block',
                                         }}
-                                    >
-                                        <img
-                                            src={cardData.qr_code_url}
-                                            alt="QR Code"
-                                            style={{ width: '110px', height: '110px', display: 'block' }}
-                                        />
-                                    </Box>
-
-                                    {/* Active / Inactive */}
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        {!cardData.is_expired ? (
-                                            <>
-                                                <CheckCircleIcon sx={{ fontSize: '22px', color: '#22c55e' }} />
-                                                <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
-                                                    Active
-                                                </Typography>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CancelIcon sx={{ fontSize: '22px', color: '#ef4444' }} />
-                                                <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#ef4444' }}>
-                                                    Inactive
-                                                </Typography>
-                                            </>
-                                        )}
-                                    </Box>
+                                    />
                                 </Box>
                             </Box>
                         </Box>
                     </Box>
                 </Box>
 
-                {/* ── Save PDF button ── */}
                 {!isPublicView && (
-                    <Box display="flex" justifyContent="flex-end" px={2}>
-                        <Button onClick={handleDownloadPdf} variant="contained" color="primary" size="medium">
-                            Save PDF
+                    <Box display="flex" justifyContent="flex-end">
+                        <Button
+                            onClick={handleDownloadPdf}
+                            variant="contained"
+                            color="primary"
+                            size="medium"
+                            sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}
+                        >
+                            Save as PDF
                         </Button>
                     </Box>
                 )}

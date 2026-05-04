@@ -16,8 +16,9 @@ import {
     FormControl,
     Select,
     Tooltip,
-    Popover, 
-    Chip
+    Popover,
+    Chip,
+    CircularProgress
 } from '@mui/material';
 import { flexRender } from '@tanstack/react-table';
 import {
@@ -43,7 +44,12 @@ import {
     Project,
     RecordType
 } from '@/app/components/apps/time-clock/types/timeClock';
-import TimeClock from '@/app/components/apps/time-clock/time-clock';
+import LocationMapDrawer from './LocationMapDrawer';
+
+interface LocationDrawerState {
+    open: boolean;
+    worklogId: number | undefined;
+}
 
 interface TimeClockTableProps {
     table: any;
@@ -115,6 +121,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            isRecordLocked,
                                                            handleRowSelect,
                                                            handlePendingRequest,
+                                                           handleWorklogToggle,
                                                            startAddingNewRecord,
                                                            startEditingField,
                                                            startEditingShift,
@@ -140,14 +147,17 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            openExpensesSidebar,
                                                            openPenaltiesSidebar,
                                                            leaveRequestCount,
-                                                           penaltyAppealCount,
-                                                           penaltyAppealByDate,
                                                            openLeaveRequestsSideBar,
                                                            onAdjustmentSave
                                                        }) => {
     const [conflictAnchorEl, setConflictAnchorEl] = useState<HTMLElement | null>(null);
     const [exclamationAnchorEl, setExclamationAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedWorklog, setSelectedWorklog] = useState<any>(null);
+
+    const [locationDrawer, setLocationDrawer] = useState<LocationDrawerState>({
+        open: false,
+        worklogId: undefined,
+    });
     
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
@@ -185,7 +195,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             return (row as any).is_requested;
         });
     }, [dailyData]);
-    
+
     const handleConflicts = () => {
         setConflictAnchorEl(null);
         openConflictsSideBar?.();
@@ -195,7 +205,21 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         setConflictAnchorEl(null);
         openLeaveRequestsSideBar?.();
     };
-    
+
+    const handleLocationPinClick = async (worklogId: number) => {
+        setLocationDrawer(prev => ({
+            open: true,
+            worklogId,
+        }));
+    };
+
+    const closeLocationDrawer = () => {
+        setLocationDrawer({
+            open: false,
+            worklogId: undefined,
+        });
+    };
+
     const isNewRecordValid = (newRecord: NewRecord) => {
         return (
             !!newRecord.shift_id &&
@@ -282,7 +306,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                         ) : (
                                             <Typography sx={{ color: '#203040' }}>
                                                 {flexRender(header.column.columnDef.header, header.getContext())}
-                                            </Typography>                                        
+                                            </Typography>
                                         )}
                                     </TableCell>
                                 ))}
@@ -328,7 +352,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         left: '50%',
                                                         transform: 'translateX(-50%)',
                                                     }}
-                                                        >
+                                                >
                                                     {rowData.weekLabel}
                                                 </Typography>
                                                 <Typography
@@ -351,7 +375,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                             const hasConflicts = conflictsByDate && conflictsByDate[rowData.date] > 0;
                             const hasLeaveRequests = rowData.has_pending_leave_request === true;
-                            
+
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
                                 const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
@@ -642,7 +666,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     {getTruncatedName(log.leave_name)}
                                                                 </Box>
                                                             </Box>
-                                                        ) : log.is_expense ? ( 
+                                                        ) : log.is_expense ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
@@ -711,7 +735,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
-                                                        {log.is_leave || log.is_pricework || log.is_expense ? ( 
+                                                        {log.is_leave || log.is_pricework || log.is_expense ? (
                                                             <Box sx={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
@@ -741,14 +765,20 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                
+
                                                                 {log.start_location && (
-                                                                    <Tooltip
-                                                                        title={log.start_location}
-                                                                        arrow
-                                                                        placement="top"
-                                                                    >
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                                    <Tooltip title="View clock-in location" arrow placement="top">
+                                                                        <Box
+                                                                            sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                cursor: 'pointer',
+                                                                                '&:hover': {
+                                                                                    opacity: 0.7,
+                                                                                }
+                                                                            }}
+                                                                            onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                                                                        >
                                                                             <IconMapPin size={14} style={{ color: '#1976d2' }} />
                                                                         </Box>
                                                                     </Tooltip>
@@ -756,6 +786,21 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             </Box>
                                                         )}
                                                     </TableCell>
+                                                )}
+                                                
+                                                {/* Break Time Column */}
+                                                {visibleColumnConfigs.break?.visible && (
+                                                <TableCell
+                                                    align="center"
+                                                    sx={{
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        height: '45px',
+                                                        verticalAlign: 'middle',
+                                                    }}
+                                                >
+                                                    {log.is_leave || log.is_expense ? '--' : (log.total_break_hours ? formatHour(log.total_break_hours) : '--')}
+                                                </TableCell>
                                                 )}
 
                                                 {/* End Time Column */}
@@ -796,15 +841,20 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                
                                                                 {log.end_location && (
-                                                                    <Tooltip
-                                                                        title={log.end_location}
-                                                                        arrow
-                                                                        placement="top"
-                                                                    >
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                                                            <IconMapPin size={14} style={{ color: '#1976d2' }} />
+                                                                    <Tooltip title="View clock-out location" arrow placement="top">
+                                                                        <Box
+                                                                            sx={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                cursor: 'pointer',
+                                                                                '&:hover': {
+                                                                                    opacity: 0.7,
+                                                                                }
+                                                                            }}
+                                                                            onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                                                                        >
+                                                                            <IconMapPin size={14} style={{ color: '#fc4b6c' }} />
                                                                         </Box>
                                                                     </Tooltip>
                                                                 )}
@@ -1082,7 +1132,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     >
                                                         <EditableAdjustmentCell
                                                             date={row.original.rowsData.find((l: any) => l.type === 'worklog')?.date_added
-                                                            ?? row.original.rowsData[0].date_added}
+                                                                ?? row.original.rowsData[0].date_added}
                                                             currentAmount={rowData.daily_adjustment_amount}
                                                             addedBy={rowData.adjustment_added_by_name}
                                                             currency={currency}
@@ -1091,7 +1141,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         />
                                                     </TableCell>
                                                 )}
-                                                
+
                                                 {/* Payable Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.payableAmount?.visible && (
                                                     <TableCell rowSpan={rowSpan} align="center" className="rowspan-cell" sx={{
@@ -1361,8 +1411,8 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 if (column.id === 'project') {
                                                     return (
-                                                        <TableCell 
-                                                        key={cell.id}
+                                                        <TableCell
+                                                            key={cell.id}
 
                                                             align="center"
                                                             sx={{
@@ -1409,7 +1459,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 if (column.id === 'shift') {
                                                     return (
                                                         <TableCell
-                                                        key={cell.id}
+                                                            key={cell.id}
                                                             align="center"
                                                             sx={{
                                                                 py: 0.5,
@@ -1550,6 +1600,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                 </Table>
             </TableContainer>
 
+            <LocationMapDrawer
+                open={locationDrawer.open}
+                onClose={closeLocationDrawer}
+                worklogId={locationDrawer.worklogId}
+            />
+            
             <Popover
                 open={Boolean(conflictAnchorEl)}
                 anchorEl={conflictAnchorEl}
@@ -1626,6 +1682,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                 </Box>
             </Popover>
 
+            {/* Exclamation Popover */}
             <Popover
                 open={Boolean(exclamationAnchorEl)}
                 anchorEl={exclamationAnchorEl}

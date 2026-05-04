@@ -64,6 +64,7 @@ interface UserActivityProps {
     companyId: number;
     userId: number;
     active: boolean;
+    isRemoveUser?: boolean;
 }
 
 // ─── Module config ────────────────────────────────────────────────────────────
@@ -389,8 +390,7 @@ const EmptyState: React.FC<{ dateRange?: { start: string; end: string }; onReset
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-
-const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active }) => {
+const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active, isRemoveUser = false }) => {
     const [loading, setLoading] = useState(false);
     const [info, setInfo] = useState<ActivityInfo | null>(null);
 
@@ -409,6 +409,7 @@ const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active }
                         company_id: Number(companyId),
                         start_date: toApiDate(start),
                         end_date: toApiDate(end),
+                        ...(!isRemoveUser ? {} : { is_remove_user: 1 }),
                     },
                 });
                 if (res.data?.IsSuccess) {
@@ -422,7 +423,7 @@ const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active }
                 setLoading(false);
             }
         },
-        [userId, companyId]
+        [userId, companyId, isRemoveUser] // ← FIX: Added isRemoveUser to dependency array
     );
 
     useEffect(() => {
@@ -431,7 +432,7 @@ const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active }
         setStartDate(w.start);
         setEndDate(w.end);
         fetchActivity(w.start, w.end);
-    }, [active, userId]);
+    }, [active, userId, fetchActivity]); // ← FIX: Added fetchActivity to dependency array
 
     const handleDateRangeChange = (range: { from: Date | null; to: Date | null }) => {
         if (range.from && range.to) {
