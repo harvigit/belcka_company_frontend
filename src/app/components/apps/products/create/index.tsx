@@ -690,20 +690,23 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
 
                     {mainPreview ? (
                       <>
-                        <Avatar
+                        <Image
                           src={mainPreview}
+                          alt="product"
                           onClick={(e) => {
                             e.stopPropagation();
                             setPreviewImage(mainPreview);
                             setOpenPreview(true);
                           }}
-                          sx={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            cursor: "zoom-in",
-                          }}
-                          variant="square"
+                          height={150}
+                          width={150}
+                          // sx={{
+                          //   width: "100%",
+                          //   height: "100%",
+                          //   objectFit: "cover",
+                          //   cursor: "zoom-in",
+                          // }}
+                          // variant="square"
                         />
 
                         <IconButton

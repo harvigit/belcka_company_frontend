@@ -52,6 +52,7 @@ interface BillingFormData {
   diff_data: Record<string, { old: any; new: any }>;
   request_log_id?: number;
   cis: string;
+  account_id: string;
 }
 
 const emptyBillingInfo: BillingFormData = {
@@ -73,6 +74,7 @@ const emptyBillingInfo: BillingFormData = {
   short_code: "",
   status: 0,
   cis: "",
+  account_id:"",
   is_pending_request: false,
   old_data: {},
   new_data: {},
@@ -338,6 +340,7 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
           "email",
           "post_code",
           "address",
+          "account_id",
         ].map((key) => (
           <Grid size={{ xs: 12, sm: 6 }} key={key}>
             <TextField
@@ -360,9 +363,11 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
                 }
 
                 if (key === "post_code") {
-                  value = value
-                    .replace(/[^a-zA-Z0-9]/g, "")
-                    .slice(0, 10);
+                  value = value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+                }
+
+                if (key === "account_id") {
+                  value = value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 5);
                 }
 
                 handleFieldChange(key as keyof BillingFormData, value);

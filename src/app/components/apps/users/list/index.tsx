@@ -1760,6 +1760,7 @@ const TablePagination = () => {
                                     };
                                     const response = await api.post(
                                         'user/archive-user',
+                                        // 'user/archive-user-account',
                                         payload,
                                     );
                                     toast.success(response.data.message);
