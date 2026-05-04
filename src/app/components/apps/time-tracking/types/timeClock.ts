@@ -42,6 +42,7 @@ export type TimeClock = {
 };
 
 export type DailyBreakdown = {
+    total_break_hours?: null | string;
     adjustment_id?: number;
     adjustment: string;
     cis_amount: number;
