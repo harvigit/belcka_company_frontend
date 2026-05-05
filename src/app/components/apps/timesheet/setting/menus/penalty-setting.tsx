@@ -61,7 +61,6 @@ export default function PenaltySettings() {
 
   const fetchCompanySetting = async () => {
     try {
-      setLoading(true);
       const res = await api.get("/setting/get-company-settings");
       if (res.data?.data) {
         setEnabled(
@@ -86,7 +85,6 @@ export default function PenaltySettings() {
     } catch (err) {
       console.error("Failed to fetch general setting", err);
     }
-    setLoading(false);
   };
 
   const fetchTeams = async () => {
@@ -408,19 +406,6 @@ export default function PenaltySettings() {
 
     return formatted;
   };
-
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="300px"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Box display="flex" overflow="auto">
