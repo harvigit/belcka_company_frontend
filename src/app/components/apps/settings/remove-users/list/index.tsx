@@ -342,7 +342,7 @@ const RemoveUsersList = () => {
         }),
         columnHelper.accessor((row) => row.user_code, {
             id: 'userCode',
-            header: () => <Typography variant="subtitle2" noWrap>User Code</Typography>,
+            header: () => <Typography variant="subtitle2" noWrap>Company Code</Typography>,
             cell: (info) => (
                 <Tooltip title={info.getValue() ?? ''} placement="top" arrow>
                     <Typography className="f-14" color="textPrimary" sx={{ width: 100, ml: 2 }} noWrap>

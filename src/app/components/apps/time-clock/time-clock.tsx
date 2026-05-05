@@ -821,8 +821,8 @@ const TimeClock = ({queryParams}: Props) => {
         }),
 
         columnHelper.accessor('user_code', {
-            id: 'user_code',
-            header: 'User Code',
+            id: 'company_code',
+            header: 'Company Code',
             cell: (info: any) => {
                 const row = info.row.original;
                 return (

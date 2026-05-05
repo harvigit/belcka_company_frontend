@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Drawer,
   Box,
@@ -9,12 +9,14 @@ import {
   TextField,
   Chip,
   Stack,
+  InputAdornment,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { IconSearch } from "@tabler/icons-react";
 
 interface AddEditSetProps {
   open: boolean;
@@ -36,12 +38,15 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
   const [setName, setSetName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch all products/projects
   const fetchProjects = useCallback(async () => {
     if (!companyId) return;
     try {
-      const res = await api.get(`products/get?company_id=${companyId}&is_products=true`);
+      const res = await api.get(
+        `products/get?company_id=${companyId}&is_products=true`,
+      );
       if (res.data?.info) {
         setProducts(res.data.info);
       }
@@ -144,6 +149,20 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     }
   };
 
+  const filteredData = useMemo(() => {
+    return products.filter((item) => {
+      const search = searchTerm.toLowerCase();
+
+      const matchesSearch =
+        item.name?.toLowerCase().includes(search) ||
+        item.short_name?.toLowerCase().includes(search) ||
+        item.supplier_code?.toLowerCase().includes(search) ||
+        item.uuid?.toLowerCase().includes(search);
+
+      return matchesSearch;
+    });
+  }, [products, searchTerm]);
+
   return (
     <Drawer
       anchor="right"
@@ -181,17 +200,41 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
           />
         </Box>
 
-        {/* Select/Deselect All */}
-        {products.length > 0 && (
-          <Box mb={1} textAlign={"end"}>
-            <Button variant="outlined" size="small" onClick={handleSelectAll}>
+        <Box
+          display={"flex"}
+          alignContent={"space-between"}
+          alignItems={"center"}
+          gap={2}
+        >
+          <TextField
+            id="search"
+            type="text"
+            size="small"
+            variant="outlined"
+            placeholder="Search..."
+            value={searchTerm}
+            fullWidth
+            onChange={(e) => setSearchTerm(e.target.value)}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconSearch size={"16"} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          {/* Select/Deselect All */}
+          {products.length > 0 && (
+            <Button variant="outlined" size="small" onClick={handleSelectAll} sx={{ width:"20%"}}>
               {selectAll ? "Deselect All" : "Select All"}
             </Button>
-          </Box>
-        )}
+          )}
+        </Box>
 
         {/* Projects List */}
-        {products.map((product) => (
+        {filteredData.map((product) => (
           <Box
             key={product.id}
             mt={1}

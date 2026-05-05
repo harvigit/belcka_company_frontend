@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Drawer,
   Box,
@@ -11,12 +11,17 @@ import {
   DialogContent,
   DialogActions,
   FormControlLabel,
+  Stack,
+  Chip,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
-import { IconArrowBackUp, IconTrash } from "@tabler/icons-react";
+import { IconArrowBackUp, IconSearch, IconTrash } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import Image from "next/image";
 
 interface ArchiveProductProps {
   open: boolean;
@@ -39,6 +44,7 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const isAllSelected = data.length > 0 && selectedIds.length === data.length;
+  const [searchTerm, setSearchTerm] = useState("");
 
   const isIndeterminate =
     selectedIds.length > 0 && selectedIds.length < data.length;
@@ -113,6 +119,18 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
     setIsSaving(false);
   };
 
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const search = searchTerm.toLowerCase();
+
+      const matchesSearch =
+        item.name?.toLowerCase().includes(search) ||
+        item.sort_name?.toLowerCase().includes(search) ||
+        item.uuid?.toLowerCase().includes(search);
+
+      return matchesSearch;
+    });
+  }, [data, searchTerm]);
   return (
     <Drawer
       anchor="right"
@@ -161,48 +179,78 @@ const ArchiveProduct: React.FC<ArchiveProductProps> = ({
           )}
         </Box>
 
-        {data.map((item) => (
+        <TextField
+          id="search"
+          type="text"
+          size="small"
+          variant="outlined"
+          placeholder="Search..."
+          value={searchTerm}
+          fullWidth
+          onChange={(e) => setSearchTerm(e.target.value)}
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconSearch size={"16"} />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+
+        {filteredData.map((product) => (
           <Box
-            key={item.id}
-            mt={2}
-            p={2}
+            key={product.id}
+            mt={1}
+            p={1}
             display="flex"
             alignItems="center"
             justifyContent="space-between"
             sx={{
-              border: "1px solid #999999",
-              borderRadius: "15px",
+              border: "1px solid #e7e3e3ff",
+              borderRadius: "10px",
             }}
           >
             <Box display="flex" alignItems="center" gap={1}>
-              <FormControlLabel
-                label={
-                  <Typography
-                    color="textSecondary"
-                    variant="body1"
-                    fontWeight={600}
-                    className="f-14"
-                    sx={{
-                      display: "-webkit-box",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: 3,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      lineHeight: 1.25,
-                      maxWidth: 350,
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {item.name ? item.name : item.sort_name}
-                  </Typography>
-                }
-                control={
-                  <CustomCheckbox
-                    checked={selectedIds.includes(item.id)}
-                    onChange={() => handleCheckboxChange(item.id)}
-                  />
-                }
+              <CustomCheckbox
+                checked={selectedIds.includes(product.id)}
+                onChange={() => handleCheckboxChange(product.id)}
               />
+              <Box
+                sx={{
+                  border: "1px dashed #d1d5db",
+                  borderRadius: 2,
+                  p: 1,
+                  textAlign: "center",
+                }}
+              >
+                <Image
+                  src={product.image_url || "/images/products/product.svg"}
+                  alt={"product"}
+                  width={50}
+                  height={50}
+                  style={{ objectFit: "contain" }}
+                />
+              </Box>
+              <Stack mt={2} spacing={1}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 3,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    lineHeight: 1.25,
+                    maxWidth: 350,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {product.sort_name ?? product.name}{" "}
+                  <Chip label={product.uuid} size="small" sx={{ ml: 1 }} />
+                </Typography>
+              </Stack>
             </Box>
           </Box>
         ))}

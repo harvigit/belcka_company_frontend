@@ -753,10 +753,10 @@ const TablePagination = () => {
         }),
 
         columnHelper.accessor((row) => row.user_code, {
-            id: 'userCode',
+            id: 'companyCode',
             header: () => (
                 <Typography variant="subtitle2" noWrap>
-                    User Code
+                    Company Code
                 </Typography>
             ),
             cell: (info) => (
