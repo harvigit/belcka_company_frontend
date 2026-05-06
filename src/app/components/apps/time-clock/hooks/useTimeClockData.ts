@@ -4,7 +4,7 @@ import api from '@/utils/axios';
 import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
 import { TimeClock } from '@/app/components/apps/time-clock/time-clock';
 
-export const useTimeClockData = (user_id: any, currency: string) => {
+export const useTimeClockData = (user_id: any, currency: string, isRemovedUser?: boolean) => {
     const [data, setData] = useState<TimeClock[]>([]);
     const [headerDetail, setHeaderDetail] = useState<TimeClockDetailResponse | null>(null);
     const [pendingRequestCount, setPendingRequestCount] = useState<number>(0);
@@ -39,6 +39,12 @@ export const useTimeClockData = (user_id: any, currency: string) => {
                 start_date: format(start, 'dd/MM/yyyy'),
                 end_date: format(end, 'dd/MM/yyyy'),
             };
+
+            if (isRemovedUser) {
+                params.is_removed_user = '1';
+            }
+
+            
             const response = await api.get('/time-clock/details', {params});
 
             if (response.data.IsSuccess) {

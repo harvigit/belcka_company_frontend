@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     Avatar,
     Box,
@@ -145,6 +145,7 @@ const getRangeForCycle = (cycle: string): { from: Date; to: Date } => {
         const from = startOfMonth(today);
         return { from, to: endOfMonth(addDays(from, 89)) };
     }
+    
     return {
         from: startOfWeek(today, { weekStartsOn: 1 }),
         to:   endOfWeek(today,   { weekStartsOn: 1 }),
@@ -204,9 +205,15 @@ type TimeClockResponse = {
     currency: string;
 };
 
+type TimeClockStatus = {
+    status_text: string;
+    status_color: string;
+};
+
 interface Props {
     queryParams?: {
         user_id?: string | null;
+        is_removed_user: boolean;
         start_date?: string | null;
         end_date?: string | null;
         open?: string | null;
@@ -228,7 +235,14 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
     }
 };
 
-const TimeClock = ({queryParams}: Props) => {
+const getTimesheetIdList = (timesheetIds: string | number | null | undefined) => {
+    return String(timesheetIds ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean);
+};
+
+const TimeClock = ({ queryParams }: Props) => {
     // Initialize default date range (current week)
     const today = new Date();
     const defaultStart = new Date(today);
@@ -304,6 +318,17 @@ const TimeClock = ({queryParams}: Props) => {
         total_payable_amount: false,
     });
 
+    const queryParamsRef = useRef(queryParams);
+    useEffect(() => {
+        queryParamsRef.current = queryParams;
+    }, [queryParams]);
+    
+    const [isFilteredView, setIsFilteredView] = useState(false);
+    useEffect(() => {
+        const hasUserFilter = Boolean(queryParamsRef.current?.user_id);
+        setIsFilteredView(hasUserFilter);
+    }, [queryParamsRef.current?.user_id]);
+
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
@@ -316,7 +341,7 @@ const TimeClock = ({queryParams}: Props) => {
         actionType: 'lock' | 'unlock' | 'paid';
         conflictCount: number;
     } | null>(null);
-    
+
     const fetchData = async (start: Date, end: Date): Promise<TimeClock[]> => {
         try {
             setFetchTimesheet(true);
@@ -324,6 +349,18 @@ const TimeClock = ({queryParams}: Props) => {
                 start_date: format(start, 'dd/MM/yyyy'),
                 end_date: format(end, 'dd/MM/yyyy'),
             };
+
+            const currentParams = queryParamsRef.current;
+
+            if (currentParams?.user_id) {
+                const userId = String(currentParams.user_id).trim();
+                if (userId && !isNaN(Number(userId))) {
+                    params.user_id = userId;
+                    if (currentParams.is_removed_user === true) {
+                        params.is_removed_user = '1';
+                    }
+                }
+            }
 
             const response: AxiosResponse<TimeClockResponse> = await api.get('/time-clock/get', {params});
             if (response.data.IsSuccess) {
@@ -362,7 +399,33 @@ const TimeClock = ({queryParams}: Props) => {
             setConflictDetails([]);
         }
     };
-    
+
+    const refreshTimeClockData = useCallback(async () => {
+        try {
+            const s = startDate || defaultStart;
+            const e = endDate || defaultEnd;
+            await fetchData(s, e);
+            await fetchConflictsData(s, e);
+        } catch (error) {
+            setErrorMessage('Failed to refresh data.');
+        }
+    }, [startDate, endDate]);
+
+    const handleClearSessionFilter = () => {
+        sessionStorage.removeItem('timesheet_sensitive_params');
+
+        queryParamsRef.current = {
+            ...queryParamsRef.current,
+            user_id: null,
+            is_removed_user: false,
+        };
+
+        const s = startDate || defaultStart;
+        const e = endDate || defaultEnd;
+        fetchData(s, e);
+    };
+
+
     const [payrollCycle, setPayrollCycle] = useState<string>('');
 
     useEffect(() => {
@@ -406,21 +469,11 @@ const TimeClock = ({queryParams}: Props) => {
         })();
     }, []);
 
-    const refreshTimeClockData = useCallback(async () => {
-        if (!startDate || !endDate) return;
-
-        try {
-            await fetchData(startDate, endDate);
-            await fetchConflictsData(startDate, endDate);
-        } catch (err) {
-            setErrorMessage("Failed to refresh data.");
-        }
-    }, [startDate, endDate, fetchData, fetchConflictsData]);
-    
     useEffect(() => {
         if (!cycleReady || !startDate || !endDate) return;
+
         fetchData(startDate, endDate);
-    }, [cycleReady, startDate, endDate]);
+    }, [cycleReady, startDate, endDate, queryParams?.user_id]);
 
     useEffect(() => {
         if (!queryParams?.user_id || !queryParams?.start_date || !queryParams?.end_date) return;
@@ -612,6 +665,35 @@ const TimeClock = ({queryParams}: Props) => {
         setHasDataChanged(true);
     };
 
+    const updateSelectedRowsStatus = useCallback((timesheetIds: (number | string)[], status: TimeClockStatus) => {
+        const selectedTimesheetIds = new Set(
+            timesheetIds
+                .flatMap((id) => getTimesheetIdList(id))
+        );
+
+        const shouldUpdateRow = (row: TimeClock) => {
+            if (selectedRowIds.has(row.user_id)) {
+                return true;
+            }
+
+            return getTimesheetIdList(row.timesheet_light_ids).some((id) => selectedTimesheetIds.has(id));
+        };
+
+        setData((prevData) =>
+            prevData.map((row) =>
+                shouldUpdateRow(row)
+                    ? {...row, ...status}
+                    : row
+            )
+        );
+
+        setSelectedTimeClock((prevSelected) =>
+            prevSelected && shouldUpdateRow(prevSelected)
+                ? {...prevSelected, ...status}
+                : prevSelected
+        );
+    }, [selectedRowIds]);
+
     const filteredData = useMemo(() => {
         return data.filter((item) => {
             const matchesSearch = item.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.user_code?.toLowerCase().includes(searchTerm.toLowerCase()) || item.trade_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -797,7 +879,7 @@ const TimeClock = ({queryParams}: Props) => {
                                         sx={{
                                             cursor: 'pointer',
                                             '&:hover': {color: '#173f98'},
-                                            width: 190,
+                                            width: 150,
                                         }}
                                     >
                                         {row.user_name}
@@ -806,7 +888,7 @@ const TimeClock = ({queryParams}: Props) => {
                                         <Typography
                                             color="textSecondary"
                                             variant="subtitle1"
-                                            width={190}
+                                            width={150}
                                             noWrap
                                         >
                                             {row.trade_name}
@@ -965,7 +1047,7 @@ const TimeClock = ({queryParams}: Props) => {
             cell: (info: any) => {
                 const value = info.getValue();
                 if (value === 0 || value === null || value === undefined) return value === 0 ? '0' : '-';
-                
+
                 return value > 0 ? `${currency}${Math.abs(value)}` : `-${currency}${Math.abs(value)}`;
             },
         }),
@@ -1364,9 +1446,10 @@ const TimeClock = ({queryParams}: Props) => {
             const response = await api.post('/timesheet/paid', {ids});
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-                if (startDate && endDate) {
-                    await fetchData(startDate, endDate);
-                }
+                updateSelectedRowsStatus(timesheetIds, {
+                    status_text: response.data.status_text || 'Paid',
+                    status_color: response.data.status_color || 'primary',
+                });
                 setSelectedRowIds(new Set());
                 setHasDataChanged(true);
             }
@@ -1385,10 +1468,10 @@ const TimeClock = ({queryParams}: Props) => {
             const response = await api.post(endpoint, {ids});
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-
-                if (startDate && endDate) {
-                    await fetchData(startDate, endDate);
-                }
+                updateSelectedRowsStatus(timesheetIds, {
+                    status_text: response.data.status_text || (action === 'approve' ? 'Locked' : 'Unlocked'),
+                    status_color: response.data.status_color || (action === 'approve' ? 'success' : 'error'),
+                });
                 setSelectedRowIds(new Set());
                 setHasDataChanged(true);
             } else {
@@ -1465,6 +1548,17 @@ const TimeClock = ({queryParams}: Props) => {
                                     ),
                                 }}
                             />
+
+                            {isFilteredView && (
+                                <Button
+                                    color="error"
+                                    variant="outlined"
+                                    onClick={handleClearSessionFilter}
+                                >
+                                    <IconX size={24} />
+                                </Button>
+                            )}
+
                             <Button
                                 color="primary"
                                 variant="outlined"
@@ -1477,27 +1571,31 @@ const TimeClock = ({queryParams}: Props) => {
                         </Box>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                color="primary"
-                                sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
-                                onClick={handleAddClick}
-                                endIcon={openAddleave ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
-                            >
-                                Add
-                            </Button>
-                            <Menu
-                                anchorEl={addDropDown}
-                                open={openAddleave}
-                                onClose={handleAddClose}
-                                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                            >
-                                <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
-                                <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
-                                <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
-                            </Menu>
+                            {!queryParams?.is_removed_user && (
+                                <>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="primary"
+                                        sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                        onClick={handleAddClick}
+                                        endIcon={openAddleave ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+                                    >
+                                        Add
+                                    </Button>
+                                    <Menu
+                                        anchorEl={addDropDown}
+                                        open={openAddleave}
+                                        onClose={handleAddClose}
+                                        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                                        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                                    >
+                                        <MenuItem onClick={handleAddLeaveClick}>Add Leave</MenuItem>
+                                        <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
+                                        <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
+                                    </Menu>
+                                </>
+                            )}
 
                             {hasAnyConflicts && (
                                 <Button
@@ -1993,6 +2091,7 @@ const TimeClock = ({queryParams}: Props) => {
                     onClose={closeDetails}
                     onUserChange={handleUserChange}
                     onDataChange={handleDataChange}
+                    isRemovedUser={queryParams?.is_removed_user === true}
                     queryParams={queryParams}
                 />
             </Drawer>
@@ -2056,6 +2155,7 @@ const TimeClock = ({queryParams}: Props) => {
                     onClose={closeAddLeaveSidebar}
                     userId={selectedTimeClock?.user_id}
                     companyId={user.company_id}
+                    onDataRefresh={refreshTimeClockData}
                 />
             </Drawer>
 
@@ -2080,6 +2180,7 @@ const TimeClock = ({queryParams}: Props) => {
                     userId={selectedTimeClock?.user_id}
                     selecteUser={true}
                     companyId={user.company_id}
+                    onDataRefresh={refreshTimeClockData}
                 />
             </Drawer>
 
@@ -2103,6 +2204,7 @@ const TimeClock = ({queryParams}: Props) => {
                     onClose={closeAddWorklogSidebar}
                     userId={selectedTimeClock?.user_id}
                     companyId={user.company_id}
+                    onDataRefresh={refreshTimeClockData}
                 />
             </Drawer>
 
@@ -2113,10 +2215,10 @@ const TimeClock = ({queryParams}: Props) => {
             <RecoverWorklogs
                 open={openRecoverWorklogs}
                 onClose={() => setOpenRecoverWorklogs(false)}
-                startDate={startDate} 
-                endDate={endDate}     
+                startDate={startDate}
+                endDate={endDate}
             />
-            
+
             {/* Conflicts */}
             <Drawer
                 anchor="right"

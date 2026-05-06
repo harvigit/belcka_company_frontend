@@ -79,7 +79,7 @@ const TablePagination = () => {
     const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
     const [isPhoneUpdate, setIsPhoneUpdate] = useState<boolean>(false);
     const router = useRouter();
-    
+
     const searchParams = useSearchParams();
     const isRemovedUser = searchParams?.get('is_removed_user') === 'true';
 
@@ -97,7 +97,7 @@ const TablePagination = () => {
     const visibleTabs = isRemovedUser
         ? allTabs.filter((label) => label === 'Activity' || label === 'Payments' || label === 'Billing Info')
         : allTabs;
-    
+
     const {data: session, update} = useSession();
     const user = session?.user as User & {
         company_id?: number | null;
@@ -186,7 +186,7 @@ const TablePagination = () => {
             const url = isRemovedUser ? `user/get-user-lists?user_id=${userId}&is_removed_user=true` : `user/get-user-lists?user_id=${userId}`;
 
             const res = await api.get(url);
-            
+
             if (!res.data?.IsSuccess) {
                 router.replace('/apps/users/list');
                 return;
@@ -638,14 +638,21 @@ const TablePagination = () => {
                                             variant="outlined"
                                             color="primary"
                                             onClick={() => {
-                                                setOpenModel(true);
+                                                sessionStorage.setItem(
+                                                    'timesheet_sensitive_params',
+                                                    JSON.stringify({
+                                                        user_id: userId,
+                                                        is_removed_user: isRemovedUser,
+                                                    })
+                                                );
+                                                router.push('/apps/timesheet/list');
                                             }}
                                         >
                                             <IconCalendarTime size={30} style={{cursor: 'pointer'}}/>
                                         </Button>
                                     </Tooltip>
                                 )}
-                                
+
                                 <Button
                                     variant="outlined"
                                     color="primary"
@@ -1125,31 +1132,6 @@ const TablePagination = () => {
                         >
                             Archive
                         </Button>
-                        {/*<Button*/}
-                        {/*    disabled={deleteLoading}*/}
-                        {/*    onClick={async () => {*/}
-                        {/*        setDeleteLoading(true);*/}
-                        {/*        try {*/}
-                        {/*            const payload = {*/}
-                        {/*                user_id: userToDelete,*/}
-                        {/*                company_id: user.company_id,*/}
-                        {/*            };*/}
-                        {/*            const response = await api.post('user/delete-account', payload);*/}
-                        {/*            toast.success(response.data.message);*/}
-                        {/*            router.push('/apps/users/list');*/}
-                        {/*        } catch (error) {*/}
-                        {/*            console.error('Failed to remove users', error);*/}
-                        {/*            // toast.error('Failed to remove users');*/}
-                        {/*        } finally {*/}
-                        {/*            setConfirmOpen(false);*/}
-                        {/*        }*/}
-                        {/*        setDeleteLoading(false);*/}
-                        {/*    }}*/}
-                        {/*    variant="outlined"*/}
-                        {/*    color="error"*/}
-                        {/*>*/}
-                        {/*    Delete*/}
-                        {/*</Button>*/}
                     </DialogActions>
                 </Dialog>
 

@@ -36,7 +36,8 @@ interface UploadedFile {
     preview?: string;
 }
 
-const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number; selecteUser: boolean }> = ({ onClose, userId, companyId, selecteUser }) => {
+const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number; selecteUser: boolean, onDataRefresh?: () => void;
+}> = ({ onClose, userId, companyId, selecteUser , onDataRefresh}) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -256,6 +257,9 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
             if (response.data.IsSuccess) {
                 toast.success(response.data.message);
                 onClose();
+                if (onDataRefresh) {
+                    await onDataRefresh();
+                }
             } else {
                 setError(response.data.message || 'Failed to add expense.');
             }

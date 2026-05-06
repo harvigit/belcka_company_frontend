@@ -95,6 +95,7 @@ const loadDateRangeFromStorage = () => {
 
 interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
     onDataChange?: () => void;
+    isRemovedUser?: boolean;
     queryParams?: {
         user_id?: string | null;
         start_date?: string | null;
@@ -115,6 +116,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                                                                        onClose,
                                                                        onUserChange,
                                                                        onDataChange,
+                                                                       isRemovedUser,
                                                                        queryParams
                                                                    }) => {
     const today = new Date();
@@ -197,7 +199,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         fetchTimeClockData,
         payrollCycle,
         fetchPayrollCycle,
-    } = useTimeClockData(user_id, currency);
+    } = useTimeClockData(user_id, currency, isRemovedUser);
 
     const amountColumns = [
         'priceWork',
@@ -708,12 +710,16 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
         setSavingWorklogs((prev) => new Set(prev).add(worklogId));
         try {
-            await api.post('/time-clock/edit-worklog', {
+            const response = await api.post('/time-clock/edit-worklog', {
                 user_worklog_id: originalLog.worklog_id,
                 date: originalLog.date_added,
                 start_time: newStart,
                 end_time: newEnd,
             });
+
+            if (response.data.IsSuccess) {
+                toast.success(response.data.message)
+            }
 
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
@@ -1792,6 +1798,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onAddLeave={handleAddLeave}
                 onAddExpense={handleAddExpense}
                 payrollCycle={payrollCycle}
+                isRemovedUser={isRemovedUser}
             />
 
             <TimeClockStats

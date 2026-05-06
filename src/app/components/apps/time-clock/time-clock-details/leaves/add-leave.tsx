@@ -72,6 +72,7 @@ interface AddLeaveProps {
     userId: number;
     companyId: number;
     leaveData?: LeaveData;
+    onDataRefresh?: () => void;
 }
 
 const today = new Date();
@@ -160,7 +161,7 @@ const StyledDayPicker = styled(Box)(({ theme }) => ({
     },
 }));
 
-const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveData = null }) => {
+const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveData = null , onDataRefresh}) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [users, setUsers] = useState<User[]>([]);
@@ -440,6 +441,9 @@ const AddLeave: React.FC<AddLeaveProps> = ({ onClose, userId, companyId, leaveDa
             if (response.data.IsSuccess) {
                 toast.success(response.data.message)
                 onClose();
+                if (onDataRefresh) {
+                    await onDataRefresh();
+                }
             } else {
                 setError(response.data.message || `Failed to ${isEditMode ? 'update' : 'add'} leave. Please try again.`);
             }
