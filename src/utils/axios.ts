@@ -1,11 +1,18 @@
 import { getAccessToken } from "@/lib/authToken";
 import axios from "axios";
-import { signOut } from "next-auth/react";
+import { User } from "next-auth";
+import { signOut, getSession } from "next-auth/react";
 import toast from "react-hot-toast";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
 });
+
+const userLogout = async (response: any) => {
+  toast.success("You are not part of this company!");
+  await signOut({ callbackUrl: "/auth" });
+  return response;
+};
 
 api.interceptors.request.use(
   (config) => {
@@ -28,7 +35,42 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    try {
+      const companyId =
+        response?.data?.context?.active_company_id ??
+        response?.data?.active_company_id ??
+        null;
+
+      if (companyId === 0) {
+        userLogout(response);
+        return response;
+      }
+
+      const session = await getSession();
+      const user = session?.user as User & {
+        company_id?: number | null;
+      };
+      const sessionCompanyId = user?.company_id;
+
+      if (companyId && sessionCompanyId && companyId !== sessionCompanyId) {
+        console.log("Company mismatch:", sessionCompanyId, "→", companyId);
+
+        await fetch("/api/auth/session", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            company_id: companyId,
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Company check error:", err);
+    }
+
+    return response;
+  },
+
   (error) => {
     if (error.response?.status === 401) {
       signOut({ callbackUrl: "/auth" });

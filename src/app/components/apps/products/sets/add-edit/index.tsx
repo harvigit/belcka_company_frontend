@@ -227,7 +227,7 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
           />
           {/* Select/Deselect All */}
           {products.length > 0 && (
-            <Button variant="outlined" size="small" onClick={handleSelectAll} sx={{ width:"20%"}}>
+            <Button variant="outlined" size="small" onClick={handleSelectAll} sx={{ width:"30%"}}>
               {selectAll ? "Deselect All" : "Select All"}
             </Button>
           )}

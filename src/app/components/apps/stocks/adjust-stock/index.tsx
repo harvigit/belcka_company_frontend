@@ -120,7 +120,7 @@ const AdjustStock: React.FC<Props> = ({
     if (productId) {
       fetchProducts();
     }
-  },[productId]);
+  }, [productId]);
   const fetchResources = async () => {
     try {
       const res = await api.get(
@@ -252,13 +252,17 @@ const AdjustStock: React.FC<Props> = ({
         </Box>
 
         <Box display="flex" gap={1}>
-          <IconButton onClick={() => callHistory(editData.id)}>
-            <IconClock size={18} />
-          </IconButton>
+          {editData && (
+            <Box>
+              <IconButton onClick={() => callHistory(editData.id)}>
+                <IconClock size={18} />
+              </IconButton>
 
-          <IconButton onClick={() => handleProductEdit(editData.id)}>
-            <IconEdit size={18} />
-          </IconButton>
+              <IconButton onClick={() => handleProductEdit(editData.id)}>
+                <IconEdit size={18} />
+              </IconButton>
+            </Box>
+          )}
 
           <IconButton onClick={onClose}>
             <IconX />
@@ -312,7 +316,7 @@ const AdjustStock: React.FC<Props> = ({
             <Autocomplete
               fullWidth
               size="small"
-              options={products.filter((item) => item.status !== 4)}
+              options={products}
               value={
                 products.find((t: any) => t.id === Number(productId)) ?? null
               }

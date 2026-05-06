@@ -1726,7 +1726,7 @@ const StockList = () => {
           onProductChange={() => handleEdit(selectedTaskId ?? 0)}
           onChange={() => handleHistory(selectedTaskId ?? 0)}
           isSaving={isSaving}
-          editData={selectedProduct}
+          // editData={selectedProduct}
           companyId={user.company_id ?? null}
           is_product={true}
         />
