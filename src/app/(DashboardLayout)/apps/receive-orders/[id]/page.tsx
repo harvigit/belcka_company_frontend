@@ -6,7 +6,7 @@ import ReceivePurchaseOrder from "@/app/components/apps/receive-orders/index";
 const receivePurchaseOrder = () => {
   return (
     <PageContainer
-      title="receive purchase order"
+      title="Receive purchase order"
       description="this is receive purchase order"
     >
       <BlankCard>

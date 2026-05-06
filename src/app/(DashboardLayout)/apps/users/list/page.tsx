@@ -5,7 +5,7 @@ import BlankCard from '@/app/components/shared/BlankCard';
 
 const UserListing = () => {
     return (
-        <PageContainer description="this is User List">
+        <PageContainer title="User list" description="this is User List">
             <BlankCard>
                 <UserList/>
             </BlankCard>

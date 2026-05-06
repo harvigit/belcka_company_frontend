@@ -5,7 +5,7 @@ import BuyerDashboard from "@/app/components/apps/dashboard/index/buyer";
 
 export default function Dashboard() {
   return (
-    <PageContainer title="Dashboard" description="this is Dashboard">
+    <PageContainer title="Buyer Dashboard" description="this is Dashboard">
       <Box>
         <BuyerDashboard />
       </Box>
