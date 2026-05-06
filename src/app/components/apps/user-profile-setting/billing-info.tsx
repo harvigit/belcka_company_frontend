@@ -340,7 +340,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
           "email",
           "post_code",
           "address",
-          "account_id",
         ].map((key) => (
           <Grid size={{ xs: 12, sm: 6 }} key={key}>
             <TextField
@@ -364,10 +363,6 @@ const BillingInfo: React.FC<ProjectListingProps> = ({
 
                 if (key === "post_code") {
                   value = value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
-                }
-
-                if (key === "account_id") {
-                  value = value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 5);
                 }
 
                 handleFieldChange(key as keyof BillingFormData, value);

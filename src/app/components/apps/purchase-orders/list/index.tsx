@@ -1133,6 +1133,77 @@ Team Belcka
                     </Typography>
                   </Box>
 
+                  {/* Outlook */}
+                  <Box
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      handleCloseMenu();
+
+                      if (!selectedRow2) return;
+
+                      try {
+                        setLoading(true);
+
+                        await api.post(
+                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                        );
+
+                        const res = await api.get(
+                          `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                        );
+
+                        if (!res.data?.IsSuccess) return;
+
+                        const invoice = res.data?.info?.[0]?.invoice || "";
+                        if (!invoice) return;
+
+                        const subject = encodeURIComponent(
+                          `Invoice #${selectedRow2.order_id}`,
+                        );
+
+                        const body = encodeURIComponent(`
+Please find your invoice below.
+
+Invoice No: ${selectedRow2.order_id}
+
+Download Invoice:
+${invoice}
+
+Best regards,
+Team Belcka
+`);
+
+                        // ✅ Outlook link
+                        const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${selectedRow2.supplier_email}&subject=${subject}&body=${body}`;
+
+                        window.open(outlookUrl, "_blank");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      px: 1,
+                      py: 1,
+                      borderRadius: 2,
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor: "#f5f5f5",
+                      },
+                    }}
+                  >
+                    <img
+                      src="/outlook.ico"
+                      width={22}
+                      height={22}
+                      alt="outlook"
+                    />
+                    <Typography variant="body2" fontWeight={500}>
+                      Outlook
+                    </Typography>
+                  </Box>
                   {/* Download */}
                   <Box
                     onClick={async (e) => {

@@ -142,6 +142,7 @@ const TablePagination = () => {
         phone: '',
         user_code: '',
         expired_at: '',
+        account_id: 0,
     });
 
     const [enabled, setEnabled] = useState<boolean>(false);
@@ -213,6 +214,7 @@ const TablePagination = () => {
                     phone: number,
                     user_code: userInfo.user_code,
                     expired_at: userInfo.expired_at ? userInfo.expired_at.split('T')[0] : '',
+                    account_id: userInfo.account_id || 0,
                 });
                 if (ext && number) {
                     const combined = ext.replace('+', '') + number;
@@ -765,6 +767,24 @@ const TablePagination = () => {
                                     onChange={(e: any) =>
                                         handleFieldChange('user_code', e.target.value.toUpperCase())
                                     }
+                                    inputProps={{ maxLength: 10 }}
+                                    fullWidth
+                                    />
+
+                                     <Typography color="textSecondary" variant="h5" mt={2}>
+                                        Account Id
+                                    </Typography>
+                                    <CustomTextField
+                                    id="account_id"
+                                    name="account_id"
+                                    className="custom_color"
+                                    placeholder="Enter account id.."
+                                    value={formData.account_id}
+                                    onChange={(e: any) => {
+                                        let value = e.target.value;
+                                        value = value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 5);
+                                        handleFieldChange('account_id', value)
+                                    }}
                                     inputProps={{ maxLength: 10 }}
                                     fullWidth
                                     />
