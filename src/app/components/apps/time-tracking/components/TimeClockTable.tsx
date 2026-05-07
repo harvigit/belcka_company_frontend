@@ -119,7 +119,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             flex: 1,
             overflow: 'auto',
             paddingBottom: selectedRows.size > 0 ? '80px' : '0px',
-            maxHeight: 'calc(100vh - 250px)',
+            maxHeight: '400px',
             position: 'relative'
         }}>
             <TableContainer sx={{
@@ -359,7 +359,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                {log.start_location && (
+                                                                {(log.start_latitude || log.start_longitude) && (
                                                                     <Tooltip title="View clock-in location" arrow placement="top">
                                                                         <Box
                                                                             sx={{
@@ -434,7 +434,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                {log.end_location && (
+                                                                {(log.end_latitude || log.end_longitude) && (
                                                                     <Tooltip title="View clock-in location" arrow placement="top">
                                                                         <Box
                                                                             sx={{

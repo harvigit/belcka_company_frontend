@@ -145,7 +145,7 @@ const getRangeForCycle = (cycle: string): { from: Date; to: Date } => {
         const from = startOfMonth(today);
         return { from, to: endOfMonth(addDays(from, 89)) };
     }
-    
+
     return {
         from: startOfWeek(today, { weekStartsOn: 1 }),
         to:   endOfWeek(today,   { weekStartsOn: 1 }),
@@ -322,7 +322,7 @@ const TimeClock = ({ queryParams }: Props) => {
     useEffect(() => {
         queryParamsRef.current = queryParams;
     }, [queryParams]);
-    
+
     const [isFilteredView, setIsFilteredView] = useState(false);
     useEffect(() => {
         const hasUserFilter = Boolean(queryParamsRef.current?.user_id);
@@ -400,16 +400,36 @@ const TimeClock = ({ queryParams }: Props) => {
         }
     };
 
-    const refreshTimeClockData = useCallback(async () => {
+    const refreshTimeClockData = useCallback(async (fullRefresh: boolean = true) => {
         try {
             const s = startDate || defaultStart;
             const e = endDate || defaultEnd;
-            await fetchData(s, e);
-            await fetchConflictsData(s, e);
+            if (fullRefresh) {
+                await fetchData(s, e);
+                await fetchConflictsData(s, e);
+            } else {
+                await fetchConflictsData(s, e);
+            }
         } catch (error) {
             setErrorMessage('Failed to refresh data.');
         }
     }, [startDate, endDate]);
+
+    useEffect(() => {
+        if (!hasDataChanged) return;
+
+        const timer = setTimeout(async () => {
+            try {
+                const s = startDate || defaultStart;
+                const e = endDate || defaultEnd;
+                await fetchData(s, e);
+            } catch (error) {
+                console.error('Background refresh failed:', error);
+            }
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [hasDataChanged, startDate, endDate]);
 
     const handleClearSessionFilter = () => {
         sessionStorage.removeItem('timesheet_sensitive_params');
@@ -531,7 +551,7 @@ const TimeClock = ({ queryParams }: Props) => {
         try {
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
-            await fetchData(defaultStartDate, defaultEndDate);
+            await fetchConflictsData(defaultStartDate, defaultEndDate);
         } catch (error) {
             console.error('Error fetching time clock data after closing conflict sidebar:', error);
         }
@@ -654,7 +674,8 @@ const TimeClock = ({ queryParams }: Props) => {
         const e = endDate   || defaultEnd;
         try {
             handleDateRangeChange({ from: s, to: e });
-            await fetchData(s, e);
+            
+            await fetchConflictsData(s, e);
             setHasDataChanged(false);
         } catch (error) {
             setErrorMessage('Failed to refresh data. Please try again.');
@@ -664,35 +685,6 @@ const TimeClock = ({ queryParams }: Props) => {
     const handleDataChange = () => {
         setHasDataChanged(true);
     };
-
-    const updateSelectedRowsStatus = useCallback((timesheetIds: (number | string)[], status: TimeClockStatus) => {
-        const selectedTimesheetIds = new Set(
-            timesheetIds
-                .flatMap((id) => getTimesheetIdList(id))
-        );
-
-        const shouldUpdateRow = (row: TimeClock) => {
-            if (selectedRowIds.has(row.user_id)) {
-                return true;
-            }
-
-            return getTimesheetIdList(row.timesheet_light_ids).some((id) => selectedTimesheetIds.has(id));
-        };
-
-        setData((prevData) =>
-            prevData.map((row) =>
-                shouldUpdateRow(row)
-                    ? {...row, ...status}
-                    : row
-            )
-        );
-
-        setSelectedTimeClock((prevSelected) =>
-            prevSelected && shouldUpdateRow(prevSelected)
-                ? {...prevSelected, ...status}
-                : prevSelected
-        );
-    }, [selectedRowIds]);
 
     const filteredData = useMemo(() => {
         return data.filter((item) => {
@@ -1446,12 +1438,13 @@ const TimeClock = ({ queryParams }: Props) => {
             const response = await api.post('/timesheet/paid', {ids});
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-                updateSelectedRowsStatus(timesheetIds, {
-                    status_text: response.data.status_text || 'Paid',
-                    status_color: response.data.status_color || 'primary',
-                });
                 setSelectedRowIds(new Set());
                 setHasDataChanged(true);
+
+                const s = startDate || defaultStart;
+                const e = endDate || defaultEnd;
+                await fetchData(s, e);
+                await fetchConflictsData(s, e);
             }
         } catch (error) {
             setErrorMessage('Failed to mark timesheets as paid.');
@@ -1468,12 +1461,13 @@ const TimeClock = ({ queryParams }: Props) => {
             const response = await api.post(endpoint, {ids});
             if (response.data.IsSuccess) {
                 setSuccessMessage(response.data.message);
-                updateSelectedRowsStatus(timesheetIds, {
-                    status_text: response.data.status_text || (action === 'approve' ? 'Locked' : 'Unlocked'),
-                    status_color: response.data.status_color || (action === 'approve' ? 'success' : 'error'),
-                });
                 setSelectedRowIds(new Set());
                 setHasDataChanged(true);
+
+                const s = startDate || defaultStart;
+                const e = endDate || defaultEnd;
+                await fetchData(s, e);
+                await fetchConflictsData(s, e);
             } else {
                 setErrorMessage(`Failed to ${action} timesheet(s).`);
             }

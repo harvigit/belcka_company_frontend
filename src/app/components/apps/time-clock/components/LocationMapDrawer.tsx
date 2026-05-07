@@ -44,7 +44,6 @@ export interface LocationMapDrawerProps {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const GOOGLE_MAP_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
 const DEFAULT_ZOOM = 16;
@@ -129,15 +128,15 @@ interface PinOverlayProps {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const PinOverlay = ({
-                        position,
-                        label,
-                        color,
-                        time,
-                        userName,
-                        userImage,
-                        userInitials,
-                        isWorking = false,
-                    }: PinOverlayProps) => {
+    position,
+    label,
+    color,
+    time,
+    userName,
+    userImage,
+    userInitials,
+    isWorking = false
+}: PinOverlayProps) => {
     const [hovered, setHovered] = useState(false);
 
     const pinColor = color;
@@ -210,18 +209,17 @@ const PinOverlay = ({
     );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
+// Main Component
 const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
-                                                                 open,
-                                                                 onClose,
-                                                                 worklogId,
-                                                                 userName,
-                                                                 userImage,
-                                                                 initials = 'AP',
-                                                                 date,
-                                                                 shiftName,
-                                                             }) => {
+    open,
+    onClose,
+    worklogId,
+    userName,
+    userImage,
+    initials = 'AP',
+    date,
+    shiftName
+}) => {
     const [locations, setLocations] = useState<LocationPoint[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [headerUserName, setHeaderUserName] = useState(userName);
@@ -242,17 +240,13 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
             const res: AxiosResponse<ApiResponse> = await api.get('user-worklog/get-worklog-locations', {
                 params: { worklog_id: id },
             });
-
-            // BUG FIX: API returns info as an object (not array).
-            // Extract locations array from info object.
+            
             if (res.data?.IsSuccess && res.data.info) {
                 const { info } = res.data;
 
-                // BUG FIX: Transform the nested locations array, not info itself
                 const transformed = transformApiLocations(info.locations ?? []);
                 setLocations(transformed);
 
-                // BUG FIX: Extract user data from info root object
                 if (!userName) {
                     const firstName = info.user_first_name ?? '';
                     const lastName = info.user_last_name ?? '';
@@ -260,11 +254,9 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
                     setHeaderUserInitials(
                         `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase() || initials
                     );
-                    // Use thumbnail if available, fallback to full image
                     setHeaderUserImage(info.user_thumbnail || info.user_image || undefined);
                 }
 
-                // BUG FIX: Set working status from API response
                 setIsWorking(info.user_is_working ?? false);
             } else {
                 setLocations([]);
@@ -284,7 +276,6 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
 
         if (!open) {
             setLocations([]);
-            // Reset derived state when drawer closes
             setHeaderUserName(userName);
             setHeaderUserImage(userImage);
             setHeaderUserInitials(initials);
