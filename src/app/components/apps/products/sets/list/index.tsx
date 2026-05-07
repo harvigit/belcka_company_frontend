@@ -122,7 +122,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
   useEffect(() => {
     setUsersToDelete([]);
     fetchSets();
-  }, [api]);
+  }, [api,openDrawer]);
 
   useEffect(() => {
     setUsersToDelete([]);

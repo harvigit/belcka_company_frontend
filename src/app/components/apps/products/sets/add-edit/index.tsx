@@ -53,9 +53,9 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     } catch (err) {
       console.error("Failed to fetch projects", err);
     }
-  }, [companyId]);
+  }, [companyId, open]);
 
-  const fetchSetData = useCallback(async () => {
+  const fetchSetData = async () => {
     if (!companyId || !setId) return;
     try {
       const res = await api.get(
@@ -71,16 +71,16 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
     } catch (err) {
       console.error("Failed to fetch set data", err);
     }
-  }, [companyId, setId, products.length]);
+  };
 
   useEffect(() => {
-    if (open) {
+    if (open == true) {
       fetchProjects();
     }
-  }, [open, fetchProjects]);
+  }, [open]);
 
   useEffect(() => {
-    if (open && setId) {
+    if (open == true && setId) {
       fetchSetData();
     }
   }, [open, setId]);
@@ -227,7 +227,12 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
           />
           {/* Select/Deselect All */}
           {products.length > 0 && (
-            <Button variant="outlined" size="small" onClick={handleSelectAll} sx={{ width:"30%"}}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleSelectAll}
+              sx={{ width: "30%" }}
+            >
               {selectAll ? "Deselect All" : "Select All"}
             </Button>
           )}

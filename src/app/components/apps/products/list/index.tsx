@@ -83,6 +83,7 @@ import { IconLayersIntersect } from "@tabler/icons-react";
 import SetList from "../sets/list";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ManagePriceDrawer from "../manage-price";
+import IOSSwitch from "@/app/components/common/IOSSwitch";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -752,6 +753,25 @@ const ProductList = () => {
         toast.success(res.data.message);
         fetchProducts();
         setOpenCategoryModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const updateSubQty = async (id: string, is_sub_qty: boolean) => {
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        is_sub_qty,
+      };
+
+      const res = await api.post("products/update", payload);
+
+      if (res.data?.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
       }
     } catch (err) {
       console.error(err);
@@ -1485,6 +1505,43 @@ const ProductList = () => {
             >
               {item.stock_status ? item.stock_status : "-"}
             </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.is_sub_qty, {
+      id: "pack_off",
+      header: () => "Pack Off",
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack
+            direction="row"
+            alignItems="center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <IOSSwitch
+              checked={Boolean(item.is_sub_qty)}
+              onChange={async (e) => {
+                const checked = e.target.checked;
+
+                // optimistic UI update
+                setData((prev: any[]) =>
+                  prev.map((p) =>
+                    p.id === item.id
+                      ? {
+                          ...p,
+                          is_sub_qty: checked,
+                        }
+                      : p,
+                  ),
+                );
+
+                await updateSubQty(item.id, checked);
+              }}
+            />
           </Stack>
         );
       },

@@ -454,13 +454,13 @@ const TablePagination = () => {
         if (tabParam) {
             switch (tabParam) {
                 case 'billing':
-                    setValue(1);
-                    break;
-                case 'rate':
                     setValue(2);
                     break;
-                case 'leave':
+                case 'rate':
                     setValue(3);
+                    break;
+                case 'leave':
+                    setValue(4);
                     break;
                 default:
                     setValue(0);
