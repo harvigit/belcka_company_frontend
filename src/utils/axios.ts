@@ -47,23 +47,23 @@ api.interceptors.response.use(
         return response;
       }
 
-      const session = await getSession();
-      const user = session?.user as User & {
-        company_id?: number | null;
-      };
-      const sessionCompanyId = user?.company_id;
+      // const session = await getSession();
+      // const user = session?.user as User & {
+      //   company_id?: number | null;
+      // };
+      // const sessionCompanyId = user?.company_id;
 
-      if (companyId && sessionCompanyId && companyId !== sessionCompanyId) {
-        console.log("Company mismatch:", sessionCompanyId, "→", companyId);
+      // if (companyId && sessionCompanyId && companyId !== sessionCompanyId) {
+      //   console.log("Company mismatch:", sessionCompanyId, "→", companyId);
 
-        await fetch("/api/auth/session", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            company_id: companyId,
-          }),
-        });
-      }
+      //   await fetch("/api/auth/session", {
+      //     method: "PATCH",
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify({
+      //       company_id: companyId,
+      //     }),
+      //   });
+      // }
     } catch (err) {
       console.error("Company check error:", err);
     }
