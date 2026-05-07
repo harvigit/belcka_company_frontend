@@ -52,7 +52,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
     const editedByName = field === 'start' ? log?.start_time_edited_by_name : log?.end_time_edited_by_name;
     const editedAt = field === 'start' ? log?.start_time_edited_at : log?.end_time_edited_at;
 
-    const dotTooltipTitle = isRequested ? `Worklog request by ${requestedBy}` : '';
+    const dotTooltipTitle = isRequested ? `Worklog requested by ${requestedBy}` : '';
 
     const isConflictResolved = log?.is_conflict_resolved;
     const conflictResolvedBy = log?.conflict_resolved_by_name ?? null;

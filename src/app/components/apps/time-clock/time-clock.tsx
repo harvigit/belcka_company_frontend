@@ -445,6 +445,9 @@ const TimeClock = ({ queryParams }: Props) => {
         fetchData(s, e);
     };
 
+    const isRemovedUser = useMemo(() => {
+        return Boolean(queryParams?.is_removed_user === true || queryParamsRef.current?.is_removed_user === true);
+    }, [queryParams?.is_removed_user]);
 
     const [payrollCycle, setPayrollCycle] = useState<string>('');
 
@@ -825,10 +828,14 @@ const TimeClock = ({ queryParams }: Props) => {
             header: 'Name',
             cell: (info: any) => {
                 const row = info.row.original;
+                
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
                         <Link
-                            href={`/apps/users/${row?.user_id}`}
+                            href={{
+                                pathname: `/apps/users/${row?.user_id}`,
+                                query: isRemovedUser ? { is_removed_user: 'true' } : {}
+                            }}
                             passHref
                             onClick={(e) => e.stopPropagation()}
                         >

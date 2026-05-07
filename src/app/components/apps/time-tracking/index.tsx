@@ -92,7 +92,7 @@ const AMOUNT_COLUMNS = [
 
 const GOOGLE_MAP_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
-const DEFAULT_ZOOM = 16;
+const DEFAULT_ZOOM = 13;
 
 const PIN_COLORS: Record<string, string> = {
     start: '#1976d2',

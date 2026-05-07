@@ -916,14 +916,14 @@ const TablePagination = () => {
                                                 companyId={Number(user.company_id)}
                                                 onUpdate={fetchData}
                                                 userId={Number(userId)}
-                                                active={value === 2}
+                                                active={value === 1}
                                             />
                                         </Box>
 
                                         <Box hidden={value !== 2}>
                                             <Payments
                                                 companyId={Number(user.company_id)}
-                                                active={value === 1}
+                                                active={value === 2}
                                                 userId={Number(userId)}
                                                 isShow={false}
                                                 disableDateFilter={true}

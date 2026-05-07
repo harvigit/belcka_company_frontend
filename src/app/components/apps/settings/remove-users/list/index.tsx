@@ -286,6 +286,7 @@ const RemoveUsersList = () => {
             enableSorting: true,
             cell: ({ row }) => {
                 const user = row.original;
+                
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
                         <Link href={`/apps/users/${user.id}?is_removed_user=true`} passHref>
