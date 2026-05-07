@@ -1,19 +1,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import {
-  Drawer,
-  Box,
-  IconButton,
-  Typography,
-  Button,
-  Tabs,
-  Tab,
-} from "@mui/material";
+import { Drawer, Box, IconButton, Typography, Tabs, Tab } from "@mui/material";
 import { Grid, Stack } from "@mui/system";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
-import toast from "react-hot-toast";
-import ProductAddEdit from "../create";
 import BlankCard from "@/app/components/shared/BlankCard";
 import ProductInformation from "../information";
 import ProductSets from "../product-sets";
@@ -111,7 +101,6 @@ const ProductView: React.FC<ProductViewProps> = ({
 }) => {
   const [product, setProduct] = useState<any>([]);
   const [attachments, setAttachments] = useState<any>([]);
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [value, setValue] = React.useState(0);
   const [shouldRefresh, setShouldRefresh] = useState(false);
 
@@ -137,82 +126,12 @@ const ProductView: React.FC<ProductViewProps> = ({
     }
   };
 
-  const editSupplier = async (
-    e: React.FormEvent,
-    galleryFiles: File[],
-    barcodes: string[],
-    removedImageIds: number[],
-  ) => {
-    e.preventDefault();
-
-    try {
-      const formPayload = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value === undefined || value === null) return;
-
-        if (key === "image") return;
-
-        if (Array.isArray(value)) {
-          value.forEach((v) => {
-            formPayload.append(`${key}[]`, String(v));
-          });
-          return;
-        }
-
-        if (typeof value === "boolean") {
-          formPayload.append(key, value ? "1" : "0");
-          return;
-        }
-
-        formPayload.append(key, String(value));
-      });
-
-      if (formData.image instanceof File) {
-        formPayload.append("image", formData.image);
-      }
-
-      removedImageIds.forEach((id) =>
-        formPayload.append("removed_image_ids[]", String(id)),
-      );
-
-      galleryFiles.forEach((file) => {
-        formPayload.append("files", file);
-      });
-
-      formPayload.append("barcode_text", barcodes.join(","));
-
-      const result = await api.post("products/update", formPayload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (result.data.IsSuccess == true) {
-        toast.success(result.data.message);
-        setFormData({
-          id: 0,
-          company_id: companyId,
-          name: "",
-          sort_id: 0,
-          short_name: "",
-          description: "",
-          uuid: "",
-          status: true,
-          qty: 0,
-        });
-        setEditDrawerOpen(false);
-        triggerRefresh();
-      } else {
-        toast.error(result.data.message);
-      }
-    } catch (error) {
-      console.log(error, "error");
-    } finally {
-    }
-  };
   useEffect(() => {
     if (productId) {
       fetchProducts();
     }
     setValue(0);
-  }, [open, productId]);
+  }, [open, productId,shouldRefresh]);
 
   return (
     <Drawer
@@ -241,11 +160,6 @@ const ProductView: React.FC<ProductViewProps> = ({
           <Typography variant="h6" fontWeight={700}>
             {product?.short_name || "-"}
           </Typography>
-        </Box>
-        <Box display="flex" gap={2}>
-          <Button variant="contained" onClick={() => setEditDrawerOpen(true)}>
-            Edit
-          </Button>
         </Box>
       </Box>
       <Grid container spacing={2} mt={2} height={"100%"}>
@@ -311,9 +225,12 @@ const ProductView: React.FC<ProductViewProps> = ({
             <BlankCard>
               <TabPanel value={value} index={0}>
                 <ProductInformation
-                  shouldRefresh={shouldRefresh}
+                  shouldRefresh={triggerRefresh}
                   companyId={companyId}
                   productId={productId}
+                  formData={formData}
+                  setFormData={setFormData}
+                  isSaving={isSaving}
                 />
               </TabPanel>
               <TabPanel value={value} index={1}>
@@ -334,18 +251,6 @@ const ProductView: React.FC<ProductViewProps> = ({
           </Grid>
         </Grid>
       </Grid>
-      {/* Edit product */}
-      <ProductAddEdit
-        open={editDrawerOpen}
-        onClose={() => setEditDrawerOpen(false)}
-        isEdit={true}
-        formData={formData}
-        productId={productId}
-        setFormData={setFormData}
-        handleSubmit={editSupplier}
-        isSaving={isSaving}
-        companyId={companyId ?? null}
-      />
     </Drawer>
   );
 };

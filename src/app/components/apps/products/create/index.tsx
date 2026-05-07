@@ -205,7 +205,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   };
 
   useEffect(() => {
-    if (productId) {
+    if (productId && open == true) {
       fetchProducts();
     }
   }, [open, productId]);

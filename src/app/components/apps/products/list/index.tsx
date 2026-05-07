@@ -1511,7 +1511,7 @@ const ProductList = () => {
     }),
 
     columnHelper.accessor((row) => row?.is_sub_qty, {
-      id: "pack_off",
+      id: "packOff",
       header: () => "Pack Off",
       cell: ({ row }) => {
         const item = row.original;

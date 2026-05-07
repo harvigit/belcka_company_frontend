@@ -1,15 +1,27 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Box, IconButton, Typography, Chip, Dialog } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Typography,
+  Chip,
+  Dialog,
+  Button,
+} from "@mui/material";
 import { Grid, Stack } from "@mui/system";
 import api from "@/utils/axios";
 import Image from "next/image";
 import { IconX } from "@tabler/icons-react";
+import ProductAddEdit from "../create";
+import toast from "react-hot-toast";
 
 interface ProductInformationProps {
   companyId: number | null;
   productId?: number | null;
-  shouldRefresh: boolean;
+  shouldRefresh: () => void;
+  formData: any;
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isSaving: boolean;
 }
 
 type GalleryImage = {
@@ -23,12 +35,92 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
   companyId,
   productId,
   shouldRefresh,
+  formData,
+  setFormData,
+  isSaving,
 }) => {
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
   const [product, setProduct] = useState<any>([]);
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+
+  const editSupplier = async (
+    e: React.FormEvent,
+    galleryFiles: File[],
+    barcodes: string[],
+    removedImageIds: number[],
+  ) => {
+    e.preventDefault();
+
+    try {
+      const formPayload = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+
+        if (key === "image") return;
+
+        if (Array.isArray(value)) {
+          value.forEach((v) => {
+            formPayload.append(`${key}[]`, String(v));
+          });
+          return;
+        }
+
+        if (typeof value === "boolean") {
+          formPayload.append(key, value ? "1" : "0");
+          return;
+        }
+
+        formPayload.append(key, String(value));
+      });
+
+      if (formData.image instanceof File) {
+        formPayload.append("image", formData.image);
+      }
+
+      removedImageIds.forEach((id) =>
+        formPayload.append("removed_image_ids[]", String(id)),
+      );
+
+      galleryFiles.forEach((file) => {
+        formPayload.append("files", file);
+      });
+
+      formPayload.append("barcode_text", barcodes.join(","));
+
+      const result = await api.post("products/update", formPayload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (result.data.IsSuccess == true) {
+        toast.success(result.data.message);
+        setFormData({
+          id: 0,
+          company_id: companyId,
+          name: "",
+          sort_id: 0,
+          short_name: "",
+          description: "",
+          uuid: "",
+          status: true,
+          qty: 0,
+        });
+        setEditDrawerOpen(false);
+      } else {
+        toast.error(result.data.message);
+      }
+    } catch (error) {
+      console.log(error, "error");
+    } finally {
+    }
+  };
+  useEffect(() => {
+    if (productId) {
+      fetchProducts();
+      shouldRefresh?.();
+    }
+  }, [open, productId]);
 
   const fetchProducts = async () => {
     try {
@@ -58,7 +150,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
     if (productId) {
       fetchProducts();
     }
-  }, [productId,shouldRefresh]);
+  }, [productId, shouldRefresh]);
 
   const colorMap: Record<number, string> = {
     1: "success.main",
@@ -202,11 +294,52 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
               </Grid>
             </Grid>
           </Box>
+
+          <Box mt={2}>
+            <Typography fontWeight={600} mb={2}>
+              Other Info
+            </Typography>
+
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Height
+                </Typography>
+                <Typography>{product?.height || "-"}</Typography>
+              </Grid>
+
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Weight
+                </Typography>
+                <Typography>{product?.weight || "-"}</Typography>
+              </Grid>
+
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Model
+                </Typography>
+                <Typography>{product?.model_name || "-"}</Typography>
+              </Grid>
+
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Manufacture
+                </Typography>
+                <Typography>{product?.manufacturer_name || "-"}</Typography>
+              </Grid>
+            </Grid>
+          </Box>
         </Grid>
 
         {/* RIGHT SIDE */}
         <Grid size={{ xs: 12, md: 4 }}>
           {/* PRODUCT IMAGE */}
+          <Box display="flex" justifyContent={"flex-end"} mb={1}>
+            <Button variant="contained" onClick={() => setEditDrawerOpen(true)}>
+              Edit
+            </Button>
+          </Box>
           <Box
             sx={{
               border: "1px dashed #d1d5db",
@@ -331,6 +464,19 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
           />
         </Box>
       </Dialog>
+
+      {/* Edit product */}
+      <ProductAddEdit
+        open={editDrawerOpen}
+        onClose={() => setEditDrawerOpen(false)}
+        isEdit={true}
+        formData={formData}
+        productId={productId}
+        setFormData={setFormData}
+        handleSubmit={editSupplier}
+        isSaving={isSaving}
+        companyId={companyId ?? null}
+      />
     </Stack>
   );
 };

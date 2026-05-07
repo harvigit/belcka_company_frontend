@@ -1,8 +1,18 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Box, Typography, TextField, Grid, Stack, Chip } from "@mui/material";
+import {
+  Box,
+  Typography,
+  TextField,
+  Grid,
+  Stack,
+  Chip,
+  IconButton,
+} from "@mui/material";
 import api from "@/utils/axios";
 import Image from "next/image";
+import AddEditSet from "../sets/add-edit";
+import { IconEdit } from "@tabler/icons-react";
 
 interface ProductSetsProps {
   companyId: number | null;
@@ -12,6 +22,14 @@ interface ProductSetsProps {
 const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId }) => {
   const [sets, setSets] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+
+  const handleModelClose = () => {
+    setDrawerOpen(false);
+    setSelectedTaskId(null);
+    fetchProductSets();
+  };
 
   const fetchProductSets = async (searchValue = "") => {
     try {
@@ -36,7 +54,7 @@ const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId }) => {
   useEffect(() => {
     const delay = setTimeout(() => {
       fetchProductSets(search);
-    }, 400);
+    }, 10);
 
     return () => clearTimeout(delay);
   }, [search]);
@@ -59,10 +77,26 @@ const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId }) => {
             backgroundColor: "#fff",
           }}
         >
-          <Typography variant="h4" mb={2} fontWeight={600}>
-            {set.name}
-          </Typography>
+          <Box
+            display={"flex"}
+            justifyContent={"space-between"}
+            alignItems={"center"}
+          >
+            <Typography variant="h4" mb={2} fontWeight={600}>
+              {set.name}
+            </Typography>
 
+            <IconButton
+              color="primary"
+              onClick={(e) => {
+                e.preventDefault();
+                setDrawerOpen(true);
+                setSelectedTaskId(set.id);
+              }}
+            >
+              <IconEdit width={18} />
+            </IconButton>
+          </Box>
           <Grid container spacing={2}>
             {set.products?.map((p: any) => (
               <Grid key={p.id} size={{ xs: 4, sm: 3, md: 2 }}>
@@ -99,6 +133,14 @@ const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId }) => {
           No sets are found..
         </Typography>
       )}
+      {/* Edit set */}
+      <AddEditSet
+        open={drawerOpen}
+        companyId={Number(companyId)}
+        onClose={() => handleModelClose()}
+        onWorkUpdated={fetchProductSets}
+        setId={selectedTaskId}
+      />
     </Stack>
   );
 };
