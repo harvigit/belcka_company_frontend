@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import api from '@/utils/axios';
 import {TimeClockDetailResponse, TimeClock} from '../types/timeClock';
 
-export const useTimeClockData = (user_id: any, currency: string) => {
+export const useTimeClockData = (user_id: any) => {
     const [data, setData] = useState<TimeClock[]>([]);
     const [headerDetail, setHeaderDetail] = useState<TimeClockDetailResponse | null>(null);
     

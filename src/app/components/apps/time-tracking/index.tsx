@@ -992,7 +992,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         payrollCycle,
         fetchPayrollCycle,
         headerDetail,
-    } = useTimeClockData(userId, currency);
+    } = useTimeClockData(userId);
 
     const {
         editingWorklogs,
@@ -1096,7 +1096,9 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                     weekly_payable_amount: data.weekly_payable_amount ?? '0.00',
                 });
 
-                setCurrency(data.currency);
+                if (data.currency !== null) {
+                    setCurrency(data.currency);
+                }
                 if (data.locations) {
                     setLocations(data.locations);
                 }
@@ -2158,7 +2160,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 </Box>
                             ) : (
                                 <GoogleMap
-                                    mapContainerStyle={{ width: '100%', height: '100%' }}
+                                    mapContainerStyle={{ width: '100%', height: '450px' }}
                                     zoom={DEFAULT_ZOOM}
                                     center={
                                         locations.length > 0 && locations[0].latitude && locations[0].longitude
