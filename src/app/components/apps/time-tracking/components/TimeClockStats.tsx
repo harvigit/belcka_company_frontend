@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Stack, Typography, IconButton, Popover, TextField, FormGroup, FormControlLabel, Checkbox } from '@mui/material';
 import { IconEye } from '@tabler/icons-react';
-import {TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
+import {TimeClockDetailResponse} from '../types/timeClock';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 
 interface TimeClockStatsProps {
