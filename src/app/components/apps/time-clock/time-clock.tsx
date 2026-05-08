@@ -159,6 +159,7 @@ export type TimeClock = {
     conflicts: string;
     user_name: string;
     user_code: string;
+    account_id: string;
     name_on_account: string;
     sort_code: string;
     account_number: string;
@@ -911,6 +912,23 @@ const TimeClock = ({ queryParams }: Props) => {
                         <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
                             <Typography className="f-14" noWrap>
                                 {row.user_code}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                );
+            },
+        }),
+        
+        columnHelper.accessor('account_id', {
+            id: 'account_id',
+            header: 'Account ID',
+            cell: (info: any) => {
+                const row = info.row.original;
+                return (
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box textAlign="left" sx={{flex: 1, minWidth: 0}}>
+                            <Typography className="f-14" noWrap>
+                                {row.account_id}
                             </Typography>
                         </Box>
                     </Stack>
