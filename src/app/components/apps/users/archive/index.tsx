@@ -81,6 +81,8 @@ export interface UserList {
     company_id: number | null;
     permission_count: number;
     action_by: string | null;
+    supervisor_team_id: number | null;
+    supervisor_team_name: string | null;
 }
 
 export interface TradeList {
@@ -109,6 +111,25 @@ const ArchiveUserList = () => {
     const [trade, setTrade] = useState<TradeList[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
     const [fetchUser, setFetchUser] = useState<boolean>(false);
+    const [supervisorReplacementOpen, setSupervisorReplacementOpen] = useState(false);
+    const [newSupervisorId, setNewSupervisorId] = useState<number | ''>('');
+    const [supervisorDetails, setSupervisorDetails] = useState<{ team_id: number | null, team_name: string | null } | null>(null);
+    const [activeUsers, setActiveUsers] = useState<any[]>([]);
+
+    const fetchActiveUsers = async () => {
+        try {
+            const res = await api.get("user/get-user-lists");
+            if (res.data) {
+                setActiveUsers(res.data.info);
+            }
+        } catch (err) {
+            console.error("Failed to fetch active users", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchActiveUsers();
+    }, []);
 
     const fetchUsers = async () => {
         setFetchUser(true);
@@ -226,6 +247,17 @@ const ArchiveUserList = () => {
     };
 
     const handleRemove = async () => {
+        const supervisorsToReplace = data.filter((u: any) => usersToAction.includes(u.id) && u.supervisor_team_id);
+        if (supervisorsToReplace.length > 0) {
+            setSupervisorDetails({
+                team_id: supervisorsToReplace[0].supervisor_team_id,
+                team_name: supervisorsToReplace[0].supervisor_team_name || 'the team'
+            });
+            setSupervisorReplacementOpen(true);
+            setConfirmOpen(false);
+            return;
+        }
+
         try {
             const payload = {
                 user_ids: usersToAction.join(","),
@@ -585,6 +617,90 @@ const ArchiveUserList = () => {
                             color={activeDialog?.confirmColor ?? "primary"}
                         >
                             {activeDialog?.confirmLabel}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Supervisor Replacement Dialog */}
+                <Dialog
+                    open={supervisorReplacementOpen}
+                    onClose={() => setSupervisorReplacementOpen(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ m: 0, position: 'relative', overflow: 'visible' }}>
+                        Assign New Supervisor
+                        <IconButton
+                            aria-label="close"
+                            onClick={() => setSupervisorReplacementOpen(false)}
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <IconX />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Typography color="textSecondary" fontWeight={500} mb={2}>
+                            The user you are removing is currently the supervisor of <strong>{supervisorDetails?.team_name || 'a team'}</strong>. Please assign a new supervisor for this team before removing.
+                        </Typography>
+                        <CustomSelect
+                            labelId="new-supervisor-label"
+                            id="new-supervisor"
+                            value={newSupervisorId}
+                            onChange={(e: any) => setNewSupervisorId(e.target.value)}
+                            fullWidth
+                            displayEmpty
+                        >
+                            <MenuItem value="" disabled>Select new supervisor</MenuItem>
+                            {activeUsers.map((u: any) => (
+                                <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
+                            ))}
+                        </CustomSelect>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => {
+                                setSupervisorReplacementOpen(false);
+                                setNewSupervisorId('');
+                            }}
+                            color="inherit"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (!newSupervisorId) {
+                                    toast.error('Please select a new supervisor');
+                                    return;
+                                }
+                                try {
+                                    const payload = {
+                                        user_ids: usersToAction.join(','),
+                                        company_id: user.company_id,
+                                        supervisor_id: newSupervisorId,
+                                        supervisor_team_id: supervisorDetails?.team_id,
+                                    };
+                                    const response = await api.post(
+                                        'user/remove-users',
+                                        payload,
+                                    );
+                                    toast.success(response.data.message);
+                                    setSelectedRowIds(new Set());
+                                    setSupervisorReplacementOpen(false);
+                                    setNewSupervisorId('');
+                                    await fetchUsers();
+                                } catch (error) {
+                                    console.error('Failed to remove users with new supervisor', error);
+                                }
+                            }}
+                            variant="contained"
+                            color="primary"
+                        >
+                            Confirm & Remove
                         </Button>
                     </DialogActions>
                 </Dialog>

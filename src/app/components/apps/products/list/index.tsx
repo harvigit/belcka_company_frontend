@@ -2061,6 +2061,7 @@ const ProductList = () => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
+
             <Button
               color="primary"
               variant="outlined"
@@ -2090,6 +2091,11 @@ const ProductList = () => {
                 Archive
               </Button>
             )}
+            <Tooltip title="Hire History">
+              <IconButton color="primary" onClick={() => setHireHistoryDrawer(true)} sx={{ ml: 1 }}>
+                <IconHistory width={18} />
+              </IconButton>
+            </Tooltip>
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -2487,29 +2493,6 @@ const ProductList = () => {
                     <IconBasket width={18} />
                   </ListItemIcon>
                   Units
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setHireHistoryDrawer(true);
-                  }}
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconHistory width={18} />
-                  </ListItemIcon>
-                  Hire History
                 </Link>
               </MenuItem>
             </Menu>

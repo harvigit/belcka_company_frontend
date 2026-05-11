@@ -183,9 +183,16 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
 
     if (!user_image)
       return toast.error("Please select your profile picture !!");
-    if (!first_name.trim() || !last_name.trim())
-      return toast.error("Please enter your full name.");
+    const nameValidate = /^[A-Za-z\s]{1,50}$/;
 
+    if (
+      !nameValidate.test(first_name.trim()) ||
+      !nameValidate.test(last_name.trim())
+    ) {
+      return toast.error(
+        "Name must contain only alphabets and be between 1-50 characters."
+      );
+    }
     if (!nationalPhone) return toast.error("Please enter your phone number.");
 
     const payload = {
@@ -354,7 +361,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
         `get-company-resources?flag=tradeList&company_id=${companyId}`,
       );
       if (res.data?.info) setTrade(res.data.info);
-    } catch (err) {}
+    } catch (err) { }
   };
 
   const sendLoginOtp = async () => {

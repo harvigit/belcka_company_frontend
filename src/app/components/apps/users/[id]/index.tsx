@@ -1,5 +1,5 @@
 'use client';
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Typography,
     Box,
@@ -17,20 +17,21 @@ import {
     DialogContent,
     DialogActions,
     Tooltip,
+    MenuItem,
 } from '@mui/material';
-import {IconArrowLeft, IconMedal, IconCalendarTime, IconX} from '@tabler/icons-react';
+import { IconArrowLeft, IconMedal, IconCalendarTime, IconX } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import {Avatar} from '@mui/material';
-import {useParams, useRouter, useSearchParams} from 'next/navigation';
+import { Avatar } from '@mui/material';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import BlankCard from '@/app/components/shared/BlankCard';
 import DigitalIDCard from '@/app/components/common/users-card/UserDigitalCard';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import HealthInfo from '../../user-profile-setting/health-info';
 import BillingInfo from '../../user-profile-setting/billing-info';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import Notifications from '../../user-profile-setting/notifications';
@@ -43,6 +44,7 @@ import IOSSwitch from '@/app/components/common/IOSSwitch';
 import PermissionGuard from '@/app/auth/PermissionGuard';
 
 import UserActivity from '../../user-profile-setting/activity';
+import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 
 dayjs.extend(customParseFormat);
 
@@ -65,6 +67,8 @@ export interface TeamList {
     user_role_id: number;
     user_code: string | null;
     status_color: string;
+    supervisor_team_id: number | null;
+    supervisor_team_name: string | null;
 }
 
 export interface TradeList {
@@ -79,9 +83,12 @@ const TablePagination = () => {
     const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
     const [isPhoneUpdate, setIsPhoneUpdate] = useState<boolean>(false);
     const router = useRouter();
-
+    const [supervisorReplacementOpen, setSupervisorReplacementOpen] = useState(false);
+    const [newSupervisorId, setNewSupervisorId] = useState<number | ''>('');
+    const [supervisorDetails, setSupervisorDetails] = useState<{ team_id: number | null, team_name: string | null } | null>(null);
     const searchParams = useSearchParams();
     const isRemovedUser = searchParams?.get('is_removed_user') === 'true';
+    const [companyUsers, setCompanyUsers] = useState<any[]>([]);
 
     const allTabs = [
         'Health Info',
@@ -98,7 +105,7 @@ const TablePagination = () => {
         ? allTabs.filter((label) => label === 'Activity' || label === 'Payments' || label === 'Billing Info')
         : allTabs;
 
-    const {data: session, update} = useSession();
+    const { data: session, update } = useSession();
     const user = session?.user as User & {
         company_id?: number | null;
         company_name?: string | null;
@@ -177,8 +184,23 @@ const TablePagination = () => {
         }
     };
     const handleFieldChange = (key: keyof typeof formData, value: string) => {
-        setFormData((prev) => ({...prev, [key]: value}));
+        setFormData((prev) => ({ ...prev, [key]: value }));
     };
+    const fetchCompanyUsers = async () => {
+        try {
+            const res = await api.get('user/get-user-lists');
+            setCompanyUsers(res.data.info);
+        } catch (error) {
+            console.error('Failed to fetch company users:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (user?.company_id) {
+            fetchCompanyUsers();
+        }
+    }, [user?.company_id]);
+
 
     const fetchData = async () => {
         if (!userId) return;
@@ -237,7 +259,7 @@ const TablePagination = () => {
     }, [userId]);
 
     const updateProfile = async () => {
-        const payload = {user_id: userId, ...formData};
+        const payload = { user_id: userId, ...formData };
         const res = await api.post('user/update-profile', payload);
 
         if (res.data.IsSuccess) {
@@ -289,7 +311,7 @@ const TablePagination = () => {
                         extension: formData.extension,
                     },
                     {
-                        headers: {'x-skip-auth': 'true'},
+                        headers: { 'x-skip-auth': 'true' },
                         skipToast: true,
                     } as any,
                 );
@@ -315,7 +337,7 @@ const TablePagination = () => {
                         extension: formData.extension,
                     },
                     {
-                        headers: {'x-skip-auth': 'true'},
+                        headers: { 'x-skip-auth': 'true' },
                     },
                 );
 
@@ -346,7 +368,7 @@ const TablePagination = () => {
                         otp,
                     },
                     {
-                        headers: {'x-skip-auth': 'true'},
+                        headers: { 'x-skip-auth': 'true' },
                     },
                 );
                 otpVerified = verifyRes.data.IsSuccess === true;
@@ -477,7 +499,7 @@ const TablePagination = () => {
                 alignItems="center"
                 minHeight="300px"
             >
-                <CircularProgress/>
+                <CircularProgress />
             </Box>
         );
     }
@@ -510,7 +532,7 @@ const TablePagination = () => {
                                     backgroundColor: 'transparent',
                                 }}
                             >
-                                <IconX size={40}/>
+                                <IconX size={40} />
                             </IconButton>
                         </DialogTitle>
                         <DialogContent>
@@ -543,20 +565,20 @@ const TablePagination = () => {
                         </DialogActions>
                     </Dialog>
 
-                    <CardContent sx={{pt: 1}}>
+                    <CardContent sx={{ pt: 1 }}>
                         <Box
                             display="flex"
                             alignItems={'center'}
                             justifyContent={'space-between'}
                         >
                             <Box display={'flex'} alignItems={'center'}>
-                                <IconButton onClick={() => router.back()} sx={{mr: 1}}>
-                                    <IconArrowLeft/>
+                                <IconButton onClick={() => router.back()} sx={{ mr: 1 }}>
+                                    <IconArrowLeft />
                                 </IconButton>
 
                                 <Badge
                                     overlap="circular"
-                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                                     variant="dot"
                                     sx={{
                                         '& .MuiBadge-badge': {
@@ -577,7 +599,7 @@ const TablePagination = () => {
                                                 : '/images/users/user.png'
                                         }
                                         alt={data?.first_name}
-                                        sx={{width: 60, height: 60, cursor: 'pointer'}}
+                                        sx={{ width: 60, height: 60, cursor: 'pointer' }}
                                         onClick={() => setOpenImageDialog(true)}
                                     />
                                 </Badge>
@@ -650,7 +672,7 @@ const TablePagination = () => {
                                                 router.push('/apps/timesheet/list');
                                             }}
                                         >
-                                            <IconCalendarTime size={30} style={{cursor: 'pointer'}}/>
+                                            <IconCalendarTime size={30} style={{ cursor: 'pointer' }} />
                                         </Button>
                                     </Tooltip>
                                 )}
@@ -663,7 +685,7 @@ const TablePagination = () => {
                                         setOpenIdCard(true);
                                     }}
                                 >
-                                    <IconMedal size={30} style={{cursor: 'pointer'}}/>
+                                    <IconMedal size={30} style={{ cursor: 'pointer' }} />
                                 </Button>
                             </Box>
                         </Box>
@@ -681,7 +703,7 @@ const TablePagination = () => {
                         }}
                     >
                         <BlankCard>
-                            <Box sx={{m: 3}} className="person_info_wrapper">
+                            <Box sx={{ m: 3 }} className="person_info_wrapper">
                                 <Box
                                     display={'flex'}
                                     justifyContent={'space-between'}
@@ -704,7 +726,7 @@ const TablePagination = () => {
                                         onChange={(e: any) =>
                                             handleFieldChange('first_name', e.target.value)
                                         }
-                                        inputProps={{maxLength: 25}}
+                                        inputProps={{ maxLength: 25 }}
                                         fullWidth
                                     />
 
@@ -720,7 +742,7 @@ const TablePagination = () => {
                                         onChange={(e: any) =>
                                             handleFieldChange('last_name', e.target.value)
                                         }
-                                        inputProps={{maxLength: 25}}
+                                        inputProps={{ maxLength: 25 }}
                                         fullWidth
                                     />
 
@@ -759,34 +781,34 @@ const TablePagination = () => {
                                         Company Code
                                     </Typography>
                                     <CustomTextField
-                                    id="user_code"
-                                    name="user_code"
-                                    className="custom_color"
-                                    placeholder="Enter company code.."
-                                    value={formData.user_code}
-                                    onChange={(e: any) =>
-                                        handleFieldChange('user_code', e.target.value.toUpperCase())
-                                    }
-                                    inputProps={{ maxLength: 10 }}
-                                    fullWidth
+                                        id="user_code"
+                                        name="user_code"
+                                        className="custom_color"
+                                        placeholder="Enter company code.."
+                                        value={formData.user_code}
+                                        onChange={(e: any) =>
+                                            handleFieldChange('user_code', e.target.value.toUpperCase())
+                                        }
+                                        inputProps={{ maxLength: 10 }}
+                                        fullWidth
                                     />
 
-                                     <Typography color="textSecondary" variant="h5" mt={2}>
+                                    <Typography color="textSecondary" variant="h5" mt={2}>
                                         Account Id
                                     </Typography>
                                     <CustomTextField
-                                    id="account_id"
-                                    name="account_id"
-                                    className="custom_color"
-                                    placeholder="Enter account id.."
-                                    value={formData.account_id}
-                                    onChange={(e: any) => {
-                                        let value = e.target.value;
-                                        value = value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 5);
-                                        handleFieldChange('account_id', value)
-                                    }}
-                                    inputProps={{ maxLength: 10 }}
-                                    fullWidth
+                                        id="account_id"
+                                        name="account_id"
+                                        className="custom_color"
+                                        placeholder="Enter account id.."
+                                        value={formData.account_id}
+                                        onChange={(e: any) => {
+                                            let value = e.target.value;
+                                            value = value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 5);
+                                            handleFieldChange('account_id', value)
+                                        }}
+                                        inputProps={{ maxLength: 10 }}
+                                        fullWidth
                                     />
 
                                     <Typography color="textSecondary" variant="h5" mt={2}>
@@ -824,25 +846,25 @@ const TablePagination = () => {
                         </BlankCard>
 
                         {!isRemovedUser && (
-                            <Card sx={{mt: 3}}>
+                            <Card sx={{ mt: 3 }}>
                                 <Box
                                     display="flex"
                                     alignItems="center"
                                     justifyContent="space-between"
-                                    sx={{p: 3}}
+                                    sx={{ p: 3 }}
                                 >
                                     <Typography fontSize="16px !important" color="#487bb3ff">
                                         Check-In
                                     </Typography>
 
-                                    <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle}/>
+                                    <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
                                 </Box>
                             </Card>
                         )}
 
                         {!isRemovedUser && (userRole === 1 || Number(user?.id) === Number(userId)) && (
-                            <Card sx={{mt: 3}}>
-                                <Box sx={{m: 3}}>
+                            <Card sx={{ mt: 3 }}>
+                                <Box sx={{ m: 3 }}>
                                     <Button
                                         variant="outlined"
                                         color="error"
@@ -864,14 +886,14 @@ const TablePagination = () => {
                             xs: 9,
                             lg: 9,
                         }}
-                        sx={{boxShadow: (theme) => theme.shadows[8]}}
+                        sx={{ boxShadow: (theme) => theme.shadows[8] }}
                     >
                         <BlankCard>
                             <Box>
                                 <Tabs
                                     variant="scrollable"
                                     scrollButtons="auto"
-                                    allowScrollButtonsMobile 
+                                    allowScrollButtonsMobile
                                     className="user-tabs"
                                     value={value}
                                     onChange={handleTabChange}
@@ -933,7 +955,7 @@ const TablePagination = () => {
                                 ) : (
                                     <>
                                         <Box hidden={value !== 0}>
-                                            <HealthInfo userId={Number(userId)} active={value === 0}/>
+                                            <HealthInfo userId={Number(userId)} active={value === 0} />
                                         </Box>
                                         <Box hidden={value !== 1}>
                                             <UserActivity
@@ -1015,7 +1037,7 @@ const TablePagination = () => {
                     >
                         <Typography>Change Profile Picture</Typography>
                         <IconButton onClick={() => setOpenImageDialog(false)}>
-                            <IconX/>
+                            <IconX />
                         </IconButton>
                     </Box>
                     <DialogContent>
@@ -1028,7 +1050,7 @@ const TablePagination = () => {
                             <Avatar
                                 src={previewImage || data?.user_image || '/images/users/user.jpg'}
                                 alt="Preview"
-                                sx={{width: 150, height: 150, mb: 2}}
+                                sx={{ width: 150, height: 150, mb: 2 }}
                             />
                             <Button variant="contained" component="label">
                                 Upload profile picture
@@ -1060,7 +1082,7 @@ const TablePagination = () => {
                                     formData.append('user_id', String(userId));
                                     try {
                                         const res = await api.post('user/update-profile', formData, {
-                                            headers: {'Content-Type': 'multipart/form-data'},
+                                            headers: { 'Content-Type': 'multipart/form-data' },
                                         });
                                         if (res.data.IsSuccess) {
                                             toast.success(res.data.message);
@@ -1108,7 +1130,7 @@ const TablePagination = () => {
                                 color: (theme) => theme.palette.grey[500],
                             }}
                         >
-                            <IconX/>
+                            <IconX />
                         </IconButton>
                     </DialogTitle>
 
@@ -1117,8 +1139,8 @@ const TablePagination = () => {
                             This will permanently erase all actions, history, and activity
                             associated with the user. Once deleted, the data cannot be
                             recovered.
-                            <br/>
-                            <br/>
+                            <br />
+                            <br />
                             To remove the user without losing their information, please select
                             the Remove option instead.
                         </Typography>
@@ -1128,6 +1150,19 @@ const TablePagination = () => {
                         <Button
                             disabled={archiveLoading}
                             onClick={async () => {
+                                const supervisorTeamId = data?.supervisor_team_id;
+
+                                if (supervisorTeamId) {
+                                    setSupervisorDetails({
+                                        team_id: supervisorTeamId,
+                                        team_name: data?.supervisor_team_name || 'the team',
+                                    });
+
+                                    setSupervisorReplacementOpen(true);
+                                    setConfirmOpen(false);
+                                    return;
+                                }
+
                                 setArchiveLoading(true);
                                 try {
                                     const payload = {
@@ -1155,6 +1190,96 @@ const TablePagination = () => {
                     </DialogActions>
                 </Dialog>
 
+                {/* Supervisor Replacement Dialog */}
+                <Dialog
+                    open={supervisorReplacementOpen}
+                    onClose={() => setSupervisorReplacementOpen(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ m: 0, position: 'relative', overflow: 'visible' }}>
+                        Assign New Supervisor
+                        <IconButton
+                            aria-label="close"
+                            onClick={() => setSupervisorReplacementOpen(false)}
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <IconX />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Typography color="textSecondary" fontWeight={500} mb={2}>
+                            The user you are archiving is currently the supervisor of <strong>{supervisorDetails?.team_name || 'a team'}</strong>. Please assign a new supervisor for this team before archiving.
+                        </Typography>
+                        <CustomSelect
+                            labelId="new-supervisor-label"
+                            id="new-supervisor"
+                            value={newSupervisorId}
+                            onChange={(e: any) => setNewSupervisorId(e.target.value)}
+                            fullWidth
+                            displayEmpty
+                        >
+                            <MenuItem value="" disabled>Select new supervisor</MenuItem>
+                            {companyUsers
+                                .filter(
+                                    (u: any) =>
+                                        Number(u.id) !== Number(userToDelete)
+                                )
+                                .map((u: any) => (
+                                    <MenuItem key={u.id} value={u.id}>
+                                        {u.name}
+                                    </MenuItem>
+                                ))}
+                        </CustomSelect>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => {
+                                setSupervisorReplacementOpen(false);
+                                setNewSupervisorId('');
+                            }}
+                            color="inherit"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (!newSupervisorId) {
+                                    toast.error('Please select a new supervisor');
+                                    return;
+                                }
+                                try {
+                                    const payload = {
+                                        user_ids: userToDelete,
+                                        company_id: user.company_id,
+                                        supervisor_id: newSupervisorId,
+                                        supervisor_team_id: supervisorDetails?.team_id,
+                                    };
+                                    const response = await api.post(
+                                        'user/archive-user',
+                                        payload,
+                                    );
+                                    toast.success(response.data.message);
+                                    setSupervisorReplacementOpen(false);
+                                    setNewSupervisorId('');
+                                    router.push('/apps/users/list');
+                                } catch (error) {
+                                    console.error('Failed to archive users with new supervisor', error);
+                                }
+                            }}
+                            variant="contained"
+                            color="primary"
+                        >
+                            Confirm & Archive
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
                 <Dialog open={openModel} onClose={() => setOpenModel(false)}>
                     <DialogTitle>
                         Confirmation
@@ -1168,7 +1293,7 @@ const TablePagination = () => {
                                 color: (theme) => theme.palette.grey[500],
                             }}
                         >
-                            <IconX/>
+                            <IconX />
                         </IconButton>
                     </DialogTitle>
                     <DialogContent>

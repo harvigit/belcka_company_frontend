@@ -32,7 +32,7 @@ const HireOrderHistory: React.FC<ProductProps> = ({ open, onClose }) => {
     setLoading(true);
     try {
       const res = await api.get(
-        `requests/get-history?company_id=${user.company_id}`,
+        `requests/get-history?company_id=${user.company_id}&type=131`,
       );
       if (res.data?.info) {
         setHistory(res.data.info);

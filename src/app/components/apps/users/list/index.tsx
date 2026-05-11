@@ -68,19 +68,19 @@ import api from '@/utils/axios';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import {Avatar} from '@mui/material';
+import { Avatar } from '@mui/material';
 import Link from 'next/link';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import toast from 'react-hot-toast';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
-import {format} from 'date-fns';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
+import { format } from 'date-fns';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import PermissionGuard from '@/app/auth/PermissionGuard';
-import {AxiosResponse} from 'axios';
+import { AxiosResponse } from 'axios';
 import Cookies from 'js-cookie';
 import Image from 'next/image';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
@@ -128,6 +128,8 @@ export interface UserList {
     user_code: string | null;
     status_color: string;
     account_id: string;
+    supervisor_team_id: number | null;
+    supervisor_team_name: string | null;
 }
 
 export interface TradeList {
@@ -155,6 +157,9 @@ const TablePagination = () => {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [supervisorReplacementOpen, setSupervisorReplacementOpen] = useState(false);
+    const [newSupervisorId, setNewSupervisorId] = useState<number | ''>('');
+    const [supervisorDetails, setSupervisorDetails] = useState<{ team_id: number | null, team_name: string | null } | null>(null);
     const session = useSession();
     const user = session.data?.user as User & { id: number } & { company_id?: string | null; } & { user_role_id: number; };
     const [inviteUser, setInviteUser] = useState(false);
@@ -258,7 +263,7 @@ const TablePagination = () => {
             );
 
             if (response.data.IsSuccess) {
-                const {file, filename, contentType} = response.data.data;
+                const { file, filename, contentType } = response.data.data;
 
                 const binaryString = atob(file);
                 const binaryLen = binaryString.length;
@@ -267,7 +272,7 @@ const TablePagination = () => {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                const blob = new Blob([bytes], {type: contentType});
+                const blob = new Blob([bytes], { type: contentType });
 
                 const url = window.URL.createObjectURL(blob);
 
@@ -401,7 +406,7 @@ const TablePagination = () => {
             if (p.status === 1 || p.status === 3) app.add(p.id);
         });
 
-        setTempPermissions({web, app});
+        setTempPermissions({ web, app });
         const permission = user.user_role_id == 1 ? true : false || userPermission.id == user.id ? true : false;
         setIsPermission(permission);
         setPermissionSearch('');
@@ -413,7 +418,7 @@ const TablePagination = () => {
             const updated = new Set(prev[type]);
             updated.has(permissionId) ? updated.delete(permissionId) : updated.add(permissionId);
 
-            return {...prev, [type]: updated};
+            return { ...prev, [type]: updated };
         });
     };
 
@@ -431,7 +436,7 @@ const TablePagination = () => {
                 filteredPermissions.forEach((p) => updated.add(p.id));
             }
 
-            return {...prev, [type]: updated};
+            return { ...prev, [type]: updated };
         });
     };
 
@@ -531,11 +536,11 @@ const TablePagination = () => {
 
     const filteredData = useMemo(() => {
         return data.filter((item) => {
-            if(filters.team == "All" || filters.trade == "All" || filters.supervisor == "All") return data;
+            if (filters.team == "All" || filters.trade == "All" || filters.supervisor == "All") return data;
             const matchesTeam = filters.team ? item.team_name === filters.team : true;
             const matchesTrade = filters.trade ? item.trade_name === filters.trade : true;
             const matchesSupervisor = filters.supervisor ? item.supervisor_name === filters.supervisor : true;
-            
+
             const search = searchTerm.toLowerCase();
             const matchesSearch =
                 item.name?.toLowerCase().includes(search) ||
@@ -572,7 +577,7 @@ const TablePagination = () => {
     const columns = [
         {
             id: 'select',
-            header: ({table}: any) => (
+            header: ({ table }: any) => (
                 <Stack direction="row" alignItems="center">
                     <CustomCheckbox
                         className="header-checkbox"
@@ -599,7 +604,7 @@ const TablePagination = () => {
                     />
                 </Stack>
             ),
-            cell: ({row}: any) => {
+            cell: ({ row }: any) => {
                 const item = row.original;
                 const isChecked = selectedRowIds.has(item.id);
                 const isHovered = hoveredRow === item.id;
@@ -611,7 +616,7 @@ const TablePagination = () => {
                         alignItems="center"
                         onMouseEnter={() => setHoveredRow(item.id)}
                         onMouseLeave={() => setHoveredRow(null)}
-                        sx={{pl: 1}}
+                        sx={{ pl: 1 }}
                     >
                         <CustomCheckbox
                             checked={isChecked}
@@ -646,7 +651,7 @@ const TablePagination = () => {
             ),
             enableSorting: true,
 
-            cell: ({row}) => {
+            cell: ({ row }) => {
                 const user = row.original;
 
                 return (
@@ -656,11 +661,11 @@ const TablePagination = () => {
                                 direction="row"
                                 alignItems="center"
                                 spacing={4}
-                                sx={{cursor: 'pointer'}}
+                                sx={{ cursor: 'pointer' }}
                             >
                                 <Badge
                                     overlap="circular"
-                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                                     variant="dot"
                                     sx={{
                                         '& .MuiBadge-badge': {
@@ -681,7 +686,7 @@ const TablePagination = () => {
                                                 : '/images/users/user.png'
                                         }
                                         alt={user?.name}
-                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                        sx={{ width: 36, height: 36, cursor: 'pointer' }}
                                     />
                                 </Badge>
                                 <Box>
@@ -690,7 +695,7 @@ const TablePagination = () => {
                                         color="textPrimary"
                                         sx={{
                                             cursor: 'pointer',
-                                            '&:hover': {color: '#173f98'},
+                                            '&:hover': { color: '#173f98' },
                                             width: 190,
                                         }}
                                     >
@@ -725,7 +730,7 @@ const TablePagination = () => {
                 <Typography
                     className="f-14"
                     color="textPrimary"
-                    sx={{width: 100, ml: 2}}
+                    sx={{ width: 100, ml: 2 }}
                 >
                     {info.getValue() ?? '-'}
                 </Typography>
@@ -744,7 +749,7 @@ const TablePagination = () => {
                     <Typography
                         className="f-14"
                         color="textPrimary"
-                        sx={{width: 100, ml: 2}}
+                        sx={{ width: 100, ml: 2 }}
                         noWrap
                     >
                         {info.getValue() ?? '-'}
@@ -765,7 +770,7 @@ const TablePagination = () => {
                     <Typography
                         className="f-14"
                         color="textPrimary"
-                        sx={{width: 100, ml: 2}}
+                        sx={{ width: 100, ml: 2 }}
                         noWrap
                     >
                         {info.getValue() ? info.getValue() : '-'}
@@ -786,7 +791,7 @@ const TablePagination = () => {
                     <Typography
                         className="f-14"
                         color="textPrimary"
-                        sx={{width: 100, ml: 2}}
+                        sx={{ width: 100, ml: 2 }}
                         noWrap
                     >
                         {info.getValue() ? info.getValue() : '-'}
@@ -822,7 +827,7 @@ const TablePagination = () => {
             ),
             cell: (info) => {
                 const user = info.row.original;
-                
+
                 return (
                     <Chip
                         size="small"
@@ -897,7 +902,7 @@ const TablePagination = () => {
             cell: (info) => {
                 const row = info.row.original;
                 return (
-                    <Typography className="f-14" color="textPrimary" sx={{ml: 2}}>
+                    <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
                         {row.cis ? row.cis : '-'}
                     </Typography>
                 );
@@ -914,13 +919,13 @@ const TablePagination = () => {
             cell: (info) => {
                 const row = info.row.original;
                 return (
-                    <Typography className="f-14" color="textPrimary" sx={{ml: 2}}>
+                    <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
                         {row.bank_name ? row.bank_name : '-'}
                     </Typography>
                 );
             },
         }),
-        
+
         columnHelper.accessor((row) => row.account_no, {
             id: 'accountNo',
             header: () => (
@@ -934,7 +939,7 @@ const TablePagination = () => {
                     <Typography
                         className="f-14"
                         color="textPrimary"
-                        sx={{width: 100, ml: 2}}
+                        sx={{ width: 100, ml: 2 }}
                         noWrap
                     >
                         {row.account_no ? row.account_no : '-'}
@@ -953,7 +958,7 @@ const TablePagination = () => {
             cell: (info) => {
                 const row = info.row.original;
                 return (
-                    <Typography className="f-14" color="textPrimary" sx={{ml: 2}}>
+                    <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
                         {row.short_code ? row.short_code : '-'}
                     </Typography>
                 );
@@ -974,7 +979,7 @@ const TablePagination = () => {
                         <Typography
                             className="f-14"
                             color="textPrimary"
-                            sx={{width: 150, ml: 2}}
+                            sx={{ width: 150, ml: 2 }}
                             noWrap
                         >
                             {info.getValue() ?? '-'}
@@ -994,7 +999,7 @@ const TablePagination = () => {
             cell: (info) => {
                 const row = info.row.original;
                 return (
-                    <Typography className="f-14" color="textPrimary" sx={{ml: 2}}>
+                    <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
                         {row.nin_number ? row.nin_number : '-'}
                     </Typography>
                 );
@@ -1011,7 +1016,7 @@ const TablePagination = () => {
             cell: (info) => {
                 const row = info.row.original;
                 return (
-                    <Typography className="f-14" color="textPrimary" sx={{ml: 2}}>
+                    <Typography className="f-14" color="textPrimary" sx={{ ml: 2 }}>
                         {row.utr_number ? row.utr_number : '-'}
                     </Typography>
                 );
@@ -1079,7 +1084,7 @@ const TablePagination = () => {
     const table = useReactTable({
         data: filteredData,
         columns,
-        state: {columnFilters, sorting},
+        state: { columnFilters, sorting },
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
@@ -1213,8 +1218,8 @@ const TablePagination = () => {
                     ml={2}
                     mb={2}
                     justifyContent="space-between"
-                    direction={{xs: 'column', sm: 'row'}}
-                    spacing={{xs: 1, sm: 2, md: 4}}
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={{ xs: 1, sm: 2, md: 4 }}
                 >
                     <Grid display="flex" gap={1} alignItems={'center'}>
                         <TextField
@@ -1229,14 +1234,14 @@ const TablePagination = () => {
                                 input: {
                                     endAdornment: (
                                         <InputAdornment position="end">
-                                            <IconSearch size={'16'}/>
+                                            <IconSearch size={'16'} />
                                         </InputAdornment>
                                     ),
                                 },
                             }}
                         />
                         <Button variant="contained" onClick={() => setOpen(true)}>
-                            <IconFilter width={18}/>
+                            <IconFilter width={18} />
                         </Button>
                     </Grid>
                     <Dialog
@@ -1246,7 +1251,7 @@ const TablePagination = () => {
                         maxWidth="sm"
                     >
                         <DialogTitle
-                            sx={{m: 0, position: 'relative', overflow: 'visible'}}
+                            sx={{ m: 0, position: 'relative', overflow: 'visible' }}
                         >
                             Filters
                             <IconButton
@@ -1264,7 +1269,7 @@ const TablePagination = () => {
                                     height: 50,
                                 }}
                             >
-                                <IconX size={40} style={{width: 40, height: 40}}/>
+                                <IconX size={40} style={{ width: 40, height: 40 }} />
                             </IconButton>
                         </DialogTitle>
 
@@ -1275,7 +1280,7 @@ const TablePagination = () => {
                                     label="Team"
                                     value={tempFilters.team}
                                     onChange={(e) =>
-                                        setTempFilters({...tempFilters, team: e.target.value})
+                                        setTempFilters({ ...tempFilters, team: e.target.value })
                                     }
                                 >
                                     <MenuItem value="All">All</MenuItem>
@@ -1290,7 +1295,7 @@ const TablePagination = () => {
                                     label="Trade"
                                     value={tempFilters.trade}
                                     onChange={(e) =>
-                                        setTempFilters({...tempFilters, trade: e.target.value})
+                                        setTempFilters({ ...tempFilters, trade: e.target.value })
                                     }
                                 >
                                     <MenuItem value="All">All</MenuItem>
@@ -1329,8 +1334,8 @@ const TablePagination = () => {
                         <DialogActions>
                             <Button
                                 onClick={() => {
-                                    setTempFilters({team: '', supervisor: '', trade: ''});
-                                    setFilters({team: '', supervisor: '', trade: ''});
+                                    setTempFilters({ team: '', supervisor: '', trade: '' });
+                                    setFilters({ team: '', supervisor: '', trade: '' });
                                     setOpen(false);
                                 }}
                                 color="inherit"
@@ -1350,30 +1355,30 @@ const TablePagination = () => {
                     </Dialog>
                     <Stack direction={'row-reverse'} mb={1} mr={1}>
                         <IconButton
-                            sx={{margin: '0px'}}
+                            sx={{ margin: '0px' }}
                             id="basic-button"
                             aria-controls={openMenu ? 'basic-menu' : undefined}
                             aria-haspopup="true"
                             aria-expanded={openMenu ? 'true' : undefined}
                             onClick={handleClick}
                         >
-                            <IconDotsVertical width={18}/>
+                            <IconDotsVertical width={18} />
                         </IconButton>
 
                         <IconButton
                             onClick={handlePopoverOpen}
-                            sx={{ml: 1}}
+                            sx={{ ml: 1 }}
                             color="primary"
                         >
-                            <IconEye/>
+                            <IconEye />
                         </IconButton>
                         <Popover
                             open={Boolean(anchorEl2)}
                             anchorEl={anchorEl2}
                             onClose={handlePopoverClose}
-                            anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                            transformOrigin={{vertical: 'top', horizontal: 'right'}}
-                            PaperProps={{sx: {width: 220, p: 1, borderRadius: 2}}}
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                            PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
                         >
                             <TextField
                                 size="small"
@@ -1381,7 +1386,7 @@ const TablePagination = () => {
                                 fullWidth
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                sx={{mb: 1}}
+                                sx={{ mb: 1 }}
                             />
                             <FormGroup>
                                 <FormControlLabel
@@ -1390,7 +1395,7 @@ const TablePagination = () => {
                                             id="select all"
                                             checked={selectAll}
                                             onChange={handleSelectAllChange}
-                                            sx={{textTransform: 'none'}}
+                                            sx={{ textTransform: 'none' }}
                                         />
                                     }
                                     label="Select All"
@@ -1416,10 +1421,10 @@ const TablePagination = () => {
                                                     }
                                                 />
                                             }
-                                            sx={{textTransform: 'none'}}
+                                            sx={{ textTransform: 'none' }}
                                             label={
                                                 typeof col.columnDef.header === 'string' &&
-                                                col.columnDef.header.trim() !== ''
+                                                    col.columnDef.header.trim() !== ''
                                                     ? col.columnDef.header
                                                     : col.id
                                                         .replace(/([A-Z])/g, ' $1')
@@ -1434,8 +1439,8 @@ const TablePagination = () => {
                             <Button
                                 variant="outlined"
                                 color="error"
-                                sx={{ml: 2}}
-                                startIcon={<IconTrash width={18}/>}
+                                sx={{ ml: 2 }}
+                                startIcon={<IconTrash width={18} />}
                                 onClick={() => {
                                     const selectedIds = Array.from(selectedRowIds);
                                     setUsersToDelete(selectedIds.filter(Boolean));
@@ -1465,13 +1470,13 @@ const TablePagination = () => {
                                     onClick={handleExportClick}
                                     endIcon={
                                         openModel ? (
-                                            <IconChevronUp size={20}/>
+                                            <IconChevronUp size={20} />
                                         ) : (
-                                            <IconChevronDown size={20}/>
+                                            <IconChevronDown size={20} />
                                         )
                                     }
                                 >
-                                    <Typography sx={{fontWeight: 600}}>Export</Typography>
+                                    <Typography sx={{ fontWeight: 600 }}>Export</Typography>
                                 </Button>
                                 <Menu
                                     anchorEl={anchorEl3}
@@ -1500,7 +1505,7 @@ const TablePagination = () => {
                             variant="outlined"
                             color="primary"
                             onClick={() => setInviteUser(true)}
-                            startIcon={<IconUserCheck size={18}/>}
+                            startIcon={<IconUserCheck size={18} />}
                         >
                             Invite User
                         </Button>
@@ -1530,7 +1535,7 @@ const TablePagination = () => {
                                     }}
                                 >
                                     <ListItemIcon>
-                                        <IconUsersMinus width={18}/>
+                                        <IconUsersMinus width={18} />
                                     </ListItemIcon>
                                     Archived Users
                                 </Link>
@@ -1538,7 +1543,7 @@ const TablePagination = () => {
                         </Menu>
                     </Stack>
                 </Stack>
-                <Divider/>
+                <Divider />
 
                 {/* Permissions Drawer */}
                 <Drawer
@@ -1562,13 +1567,13 @@ const TablePagination = () => {
                             alignContent="center"
                             alignItems="center"
                             flexWrap="wrap"
-                            sx={{mb: 2}}
+                            sx={{ mb: 2 }}
                         >
                             <IconButton
                                 onClick={() => setPermissionsDrawerOpen(false)}
-                                sx={{p: 0, mr: 1}}
+                                sx={{ p: 0, mr: 1 }}
                             >
-                                <IconArrowLeft size={24}/>
+                                <IconArrowLeft size={24} />
                             </IconButton>
                             <Typography variant="h5" fontWeight={700}>
                                 Manage Permissions - {selectedUserPermissions?.name}
@@ -1588,7 +1593,7 @@ const TablePagination = () => {
                                     height: 50,
                                 }}
                             >
-                                <IconX size={18}/>
+                                <IconX size={18} />
                             </IconButton>
                         </Box>
 
@@ -1596,7 +1601,7 @@ const TablePagination = () => {
                         <Box height="100%" display="flex" flexDirection="column">
 
                             {/* Search */}
-                            <Box sx={{mb: 2}}>
+                            <Box sx={{ mb: 2 }}>
                                 <TextField
                                     size="small"
                                     placeholder="Search permissions..."
@@ -1605,14 +1610,14 @@ const TablePagination = () => {
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <IconSearch size={16}/>
+                                                <IconSearch size={16} />
                                             </InputAdornment>
                                         ),
                                     }}
                                     fullWidth
                                 />
                             </Box>
-                            
+
                             <Box
                                 sx={{
                                     flexGrow: 1,
@@ -1628,91 +1633,91 @@ const TablePagination = () => {
                                     }}
                                 >
                                     <colgroup>
-                                        <col style={{width: 'auto'}}/>     
-                                        <col style={{width: '120px'}}/>     
-                                        <col style={{width: '120px'}}/>     
+                                        <col style={{ width: 'auto' }} />
+                                        <col style={{ width: '120px' }} />
+                                        <col style={{ width: '120px' }} />
                                     </colgroup>
 
                                     <thead>
-                                    {/* ── Header row ── */}
-                                    <tr>
-                                        <th style={{padding: '6px 8px', textAlign: 'left'}}/>
-                                        <th style={{padding: '6px 8px', textAlign: 'center'}}>
-                                            <Typography variant="subtitle2" fontWeight={600}>
-                                                Web
-                                            </Typography>
-                                        </th>
-                                        <th style={{padding: '6px 8px', textAlign: 'center'}}>
-                                            <Typography variant="subtitle2" fontWeight={600}>
-                                                App
-                                            </Typography>
-                                        </th>
-                                    </tr>
+                                        {/* ── Header row ── */}
+                                        <tr>
+                                            <th style={{ padding: '6px 8px', textAlign: 'left' }} />
+                                            <th style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                                <Typography variant="subtitle2" fontWeight={600}>
+                                                    Web
+                                                </Typography>
+                                            </th>
+                                            <th style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                                <Typography variant="subtitle2" fontWeight={600}>
+                                                    App
+                                                </Typography>
+                                            </th>
+                                        </tr>
 
-                                    {/* ── Select All row ── */}
-                                    <tr
-                                        style={{borderRadius: 4}}
-                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
-                                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                    >
-                                        <td style={{padding: '8px 8px'}}>
-                                            <Typography fontWeight={500}>Select All</Typography>
-                                        </td>
-                                        <td style={{padding: '8px 8px', textAlign: 'center'}}>
-                                            <IOSSwitch
-                                                checked={allWebSelected}
-                                                onChange={() => handleSelectAll('web')}
-                                                disabled={loading || !isPermission}
-                                            />
-                                        </td>
-                                        <td style={{padding: '8px 8px', textAlign: 'center'}}>
-                                            <IOSSwitch
-                                                checked={allAppSelected}
-                                                onChange={() => handleSelectAll('app')}
-                                                disabled={loading || !isPermission}
-                                            />
-                                        </td>
-                                    </tr>
+                                        {/* ── Select All row ── */}
+                                        <tr
+                                            style={{ borderRadius: 4 }}
+                                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
+                                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                        >
+                                            <td style={{ padding: '8px 8px' }}>
+                                                <Typography fontWeight={500}>Select All</Typography>
+                                            </td>
+                                            <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                                <IOSSwitch
+                                                    checked={allWebSelected}
+                                                    onChange={() => handleSelectAll('web')}
+                                                    disabled={loading || !isPermission}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                                <IOSSwitch
+                                                    checked={allAppSelected}
+                                                    onChange={() => handleSelectAll('app')}
+                                                    disabled={loading || !isPermission}
+                                                />
+                                            </td>
+                                        </tr>
                                     </thead>
 
                                     {/* ── Permission rows ── */}
                                     <tbody>
-                                    {filteredPermissions.map((permission) => (
-                                        <tr
-                                            key={permission.id}
-                                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
-                                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                        >
-                                            {/* Name cell */}
-                                            <td style={{padding: '8px 8px'}}>
-                                                <Typography>{permission.name}</Typography>
-                                            </td>
-                                            
-                                            <td style={{padding: '8px 8px', textAlign: 'center'}}>
-                                                {permission.is_web !== false && (
-                                                    <IOSSwitch
-                                                        checked={tempPermissions.web.has(permission.id)}
-                                                        onChange={() =>
-                                                            handlePermissionToggle(permission.id, 'web')
-                                                        }
-                                                        disabled={loading || !isPermission}
-                                                    />
-                                                )}
-                                            </td>
-                                            
-                                            <td style={{padding: '8px 8px', textAlign: 'center'}}>
-                                                {permission.is_app !== false && (
-                                                    <IOSSwitch
-                                                        checked={tempPermissions.app.has(permission.id)}
-                                                        onChange={() =>
-                                                            handlePermissionToggle(permission.id, 'app')
-                                                        }
-                                                        disabled={loading || !isPermission}
-                                                    />
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                        {filteredPermissions.map((permission) => (
+                                            <tr
+                                                key={permission.id}
+                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
+                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                            >
+                                                {/* Name cell */}
+                                                <td style={{ padding: '8px 8px' }}>
+                                                    <Typography>{permission.name}</Typography>
+                                                </td>
+
+                                                <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                                    {permission.is_web !== false && (
+                                                        <IOSSwitch
+                                                            checked={tempPermissions.web.has(permission.id)}
+                                                            onChange={() =>
+                                                                handlePermissionToggle(permission.id, 'web')
+                                                            }
+                                                            disabled={loading || !isPermission}
+                                                        />
+                                                    )}
+                                                </td>
+
+                                                <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                                    {permission.is_app !== false && (
+                                                        <IOSSwitch
+                                                            checked={tempPermissions.app.has(permission.id)}
+                                                            onChange={() =>
+                                                                handlePermissionToggle(permission.id, 'app')
+                                                            }
+                                                            disabled={loading || !isPermission}
+                                                        />
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </Box>
@@ -1756,7 +1761,7 @@ const TablePagination = () => {
                                 color: (theme) => theme.palette.grey[500],
                             }}
                         >
-                            <IconX/>
+                            <IconX />
                         </IconButton>
                     </DialogTitle>
 
@@ -1765,8 +1770,8 @@ const TablePagination = () => {
                             This will permanently erase all actions, history, and activity
                             associated with the user. Once deleted, the data cannot be
                             recovered.
-                            <br/>
-                            <br/>
+                            <br />
+                            <br />
                             To remove the user without losing their information, please select
                             the Archive option instead.
                         </Typography>
@@ -1775,6 +1780,17 @@ const TablePagination = () => {
                     <DialogActions>
                         <Button
                             onClick={async () => {
+                                const supervisorsToReplace = data.filter((u: any) => usersToDelete.includes(u.id) && u.supervisor_team_id);
+                                if (supervisorsToReplace.length > 0) {
+                                    setSupervisorDetails({
+                                        team_id: supervisorsToReplace[0].supervisor_team_id,
+                                        team_name: supervisorsToReplace[0].supervisor_team_name || 'the team'
+                                    });
+                                    setSupervisorReplacementOpen(true);
+                                    setConfirmOpen(false);
+                                    return;
+                                }
+
                                 try {
                                     const payload = {
                                         user_ids: usersToDelete.join(','),
@@ -1782,7 +1798,6 @@ const TablePagination = () => {
                                     };
                                     const response = await api.post(
                                         'user/archive-user',
-                                        // 'user/archive-user-account',
                                         payload,
                                     );
                                     toast.success(response.data.message);
@@ -1822,8 +1837,92 @@ const TablePagination = () => {
                         {/*    variant="outlined"*/}
                         {/*    color="error"*/}
                         {/*>*/}
-                        {/*    Delete*/}
+                        {/*    Delete User*/}
                         {/*</Button>*/}
+                    </DialogActions>
+                </Dialog>
+
+                {/* Supervisor Replacement Dialog */}
+                <Dialog
+                    open={supervisorReplacementOpen}
+                    onClose={() => setSupervisorReplacementOpen(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ m: 0, position: 'relative', overflow: 'visible' }}>
+                        Assign New Supervisor
+                        <IconButton
+                            aria-label="close"
+                            onClick={() => setSupervisorReplacementOpen(false)}
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <IconX />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Typography color="textSecondary" fontWeight={500} mb={2}>
+                            The user you are archiving is currently the supervisor of <strong>{supervisorDetails?.team_name || 'a team'}</strong>. Please assign a new supervisor for this team before archiving.
+                        </Typography>
+                        <CustomSelect
+                            labelId="new-supervisor-label"
+                            id="new-supervisor"
+                            value={newSupervisorId}
+                            onChange={(e: any) => setNewSupervisorId(e.target.value)}
+                            fullWidth
+                            displayEmpty
+                        >
+                            <MenuItem value="" disabled>Select new supervisor</MenuItem>
+                            {data.filter((u: any) => !usersToDelete.includes(u.id) && u.is_archive !== 1).map((u: any) => (
+                                <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
+                            ))}
+                        </CustomSelect>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => {
+                                setSupervisorReplacementOpen(false);
+                                setNewSupervisorId('');
+                            }}
+                            color="inherit"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (!newSupervisorId) {
+                                    toast.error('Please select a new supervisor');
+                                    return;
+                                }
+                                try {
+                                    const payload = {
+                                        user_ids: usersToDelete.join(','),
+                                        company_id: user.company_id,
+                                        supervisor_id: newSupervisorId,
+                                        supervisor_team_id: supervisorDetails?.team_id,
+                                    };
+                                    const response = await api.post(
+                                        'user/archive-user',
+                                        payload,
+                                    );
+                                    toast.success(response.data.message);
+                                    setSelectedRowIds(new Set());
+                                    setSupervisorReplacementOpen(false);
+                                    setNewSupervisorId('');
+                                    await fetchUsers();
+                                } catch (error) {
+                                    console.error('Failed to archive users with new supervisor', error);
+                                }
+                            }}
+                            variant="contained"
+                            color="primary"
+                        >
+                            Confirm & Archive
+                        </Button>
                     </DialogActions>
                 </Dialog>
 
@@ -1869,8 +1968,8 @@ const TablePagination = () => {
                                                         borderRadius: '6px',
                                                         display: 'flex',
                                                         justifyContent: 'flex-start',
-                                                        '&:hover': {color: '#888'},
-                                                        '&:hover .hoverIcon': {opacity: 1},
+                                                        '&:hover': { color: '#888' },
+                                                        '&:hover .hoverIcon': { opacity: 1 },
                                                     }}
                                                 >
                                                     {flexRender(
@@ -1944,7 +2043,7 @@ const TablePagination = () => {
                                         onMouseLeave={() => setHoveredRow(null)}
                                     >
                                         {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id} sx={{padding: '10px'}}>
+                                            <TableCell key={cell.id} sx={{ padding: '10px' }}>
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext(),
@@ -1954,12 +2053,12 @@ const TablePagination = () => {
                                     </TableRow>
                                 ))
                             )}
-                            {data.length ? <><Divider/></> : <></>}
+                            {data.length ? <><Divider /></> : <></>}
                         </TableBody>
                     </Table>
                 </TableContainer>
 
-                <Divider/>
+                <Divider />
                 <Box
                     sx={{
                         position: hasHorizontalScrollbar ? 'sticky' : 'static',
@@ -1973,7 +2072,7 @@ const TablePagination = () => {
                         pr={3}
                         pl={3}
                         alignItems="center"
-                        direction={{xs: 'column', sm: 'row'}}
+                        direction={{ xs: 'column', sm: 'row' }}
                         justifyContent="space-between"
                     >
                         <Box display="flex" alignItems="center" gap={1}>
@@ -1983,7 +2082,7 @@ const TablePagination = () => {
                         </Box>
                         <Box
                             sx={{
-                                display: {xs: 'block', sm: 'flex'},
+                                display: { xs: 'block', sm: 'flex' },
                                 alignItems: 'center',
                             }}
                         >
@@ -2026,25 +2125,25 @@ const TablePagination = () => {
                                 </CustomSelect>
                                 <IconButton
                                     size="small"
-                                    sx={{width: '30px'}}
+                                    sx={{ width: '30px' }}
                                     onClick={() => table.previousPage()}
                                     disabled={!table.getCanPreviousPage()}
                                 >
-                                    <IconChevronLeft/>
+                                    <IconChevronLeft />
                                 </IconButton>
                                 <IconButton
                                     size="small"
-                                    sx={{width: '30px'}}
+                                    sx={{ width: '30px' }}
                                     onClick={() => table.nextPage()}
                                     disabled={!table.getCanNextPage()}
                                 >
-                                    <IconChevronRight/>
+                                    <IconChevronRight />
                                 </IconButton>
                             </Stack>
                         </Box>
                     </Stack>
                 </Box>
-                <Divider/>
+                <Divider />
 
                 <Drawer
                     anchor="right"
@@ -2067,8 +2166,8 @@ const TablePagination = () => {
                             alignItems={'center'}
                             flexWrap={'wrap'}
                         >
-                            <IconButton onClick={closeInviteDrawer} sx={{p: 0}}>
-                                <IconArrowLeft/>
+                            <IconButton onClick={closeInviteDrawer} sx={{ p: 0 }}>
+                                <IconArrowLeft />
                             </IconButton>
                             <Typography variant="h6" fontWeight={700}>
                                 Invite User
@@ -2088,13 +2187,13 @@ const TablePagination = () => {
                                     height: 50,
                                 }}
                             >
-                                <IconX size={18}/>
+                                <IconX size={18} />
                             </IconButton>
                         </Box>
                         <Box height={'100%'}>
                             <form onSubmit={handleRegister} className="address-form">
                                 <Grid container spacing={2} mt={1}>
-                                    <Grid size={{lg: 12, xs: 12}}>
+                                    <Grid size={{ lg: 12, xs: 12 }}>
                                         <Typography variant="body2" mt={2}>
                                             First Name
                                         </Typography>
@@ -2130,7 +2229,7 @@ const TablePagination = () => {
                                             className="custom_input"
                                             fullWidth
                                             value={email}
-                                            sx={{mb: 2}}
+                                            sx={{ mb: 2 }}
                                             onChange={(e: {
                                                 target: { value: SetStateAction<string> };
                                             }) => setEmail(e.target.value)}
@@ -2145,9 +2244,9 @@ const TablePagination = () => {
                                                 const numberOnly = value.replace(country.dialCode, '');
                                                 setNationalPhone(numberOnly);
                                             }}
-                                            inputStyle={{width: '100%', height: '47px',backgroundColor: 'transparent',borderColor: "#c0d1dc9c",}}
+                                            inputStyle={{ width: '100%', height: '47px', backgroundColor: 'transparent', borderColor: "#c0d1dc9c", }}
                                             enableSearch
-                                            inputProps={{required: true}}
+                                            inputProps={{ required: true }}
                                         />
                                         <Typography variant="body2" mt={2}>
                                             Select Teams
@@ -2209,7 +2308,7 @@ const TablePagination = () => {
                                             variant="contained"
                                             size="large"
                                             type="submit"
-                                            sx={{borderRadius: 3}}
+                                            sx={{ borderRadius: 3 }}
                                             className="drawer_buttons"
                                             disabled={loading}
                                         >
