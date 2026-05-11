@@ -390,8 +390,8 @@ const StockHistoryList: React.FC<Props> = ({
           >
             {info.getValue() ?? "-"}{" "}
             {item.is_sub_qty
-              ? `(${item.pack_off_qty} ${item.pack_off_name})`
-              : ""}
+              ? item.pack_off_qty && item.pack_off_name ? `(${item.pack_off_qty} ${item.pack_off_name})`
+                : "" : ""}
           </Typography>
         );
       },
@@ -660,12 +660,12 @@ const StockHistoryList: React.FC<Props> = ({
                       label={
                         col.columnDef.meta?.label ||
                         (typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
+                          col.columnDef.header.trim() !== ""
                           ? col.columnDef.header
                           : col.id
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str: string) => str.toUpperCase())
-                              .trim())
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str: string) => str.toUpperCase())
+                            .trim())
                       }
                     />
                   ))}
