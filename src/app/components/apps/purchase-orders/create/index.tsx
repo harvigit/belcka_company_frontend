@@ -96,10 +96,10 @@ const PurchaseOrder: React.FC<Props> = ({
       ids && ids.length > 0
         ? ids
         : editData?.purchase_orders?.map((po: any) => ({
-            id: po.product_id,
-            qty: Number(po.qty) || 0,
-            supplier_id: po.supplier_id,
-          })) || [];
+          id: po.product_id,
+          qty: Number(po.qty) || 0,
+          supplier_id: po.supplier_id,
+        })) || [];
 
     if (!source || source.length === 0) return;
 
@@ -235,10 +235,10 @@ const PurchaseOrder: React.FC<Props> = ({
       prev.map((item) =>
         item.id === id
           ? {
-              ...item,
-              qty: value,
-              line_total: (Number(item.price) || 0) * (Number(value) || 0),
-            }
+            ...item,
+            qty: value,
+            line_total: (Number(item.price) || 0) * (Number(value) || 0),
+          }
           : item,
       ),
     );
@@ -354,11 +354,11 @@ const PurchaseOrder: React.FC<Props> = ({
                 prev.map((item) =>
                   item.id === row.original.id
                     ? {
-                        ...item,
-                        price: value,
-                        line_total:
-                          (Number(value) || 0) * (Number(item.qty) || 0),
-                      }
+                      ...item,
+                      price: value,
+                      line_total:
+                        (Number(value) || 0) * (Number(item.qty) || 0),
+                    }
                     : item,
                 ),
               );
@@ -535,7 +535,7 @@ const PurchaseOrder: React.FC<Props> = ({
                   renderInput={(params) => (
                     <CustomTextField
                       {...params}
-                      // placeholder="Select Supplier"
+                    // placeholder="Select Supplier"
                     />
                   )}
                 />

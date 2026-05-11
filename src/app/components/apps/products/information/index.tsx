@@ -115,12 +115,6 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
     } finally {
     }
   };
-  useEffect(() => {
-    if (productId) {
-      fetchProducts();
-      shouldRefresh?.();
-    }
-  }, [open, productId]);
 
   const fetchProducts = async () => {
     try {

@@ -150,9 +150,9 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
   };
 
   const filteredData = useMemo(() => {
-    return products.filter((item) => {
-      const search = searchTerm.toLowerCase();
+    const search = searchTerm.toLowerCase();
 
+    const filtered = products.filter((item) => {
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
         item.short_name?.toLowerCase().includes(search) ||
@@ -161,7 +161,15 @@ const AddEditSet: React.FC<AddEditSetProps> = ({
 
       return matchesSearch;
     });
-  }, [products, searchTerm]);
+
+    // Selected products first
+    return filtered.sort((a, b) => {
+      const aSelected = selectedIds.includes(a.id) ? 1 : 0;
+      const bSelected = selectedIds.includes(b.id) ? 1 : 0;
+
+      return bSelected - aSelected;
+    });
+  }, [products, searchTerm, selectedIds]);
 
   return (
     <Drawer

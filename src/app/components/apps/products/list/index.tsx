@@ -51,6 +51,7 @@ import {
   IconFileExport,
   IconFileImport,
   IconFilter,
+  IconHistory,
   IconNotes,
   IconSearch,
   IconTrash,
@@ -84,6 +85,7 @@ import SetList from "../sets/list";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ManagePriceDrawer from "../manage-price";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import HireOrderHistory from "../hire-history";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -173,6 +175,7 @@ const ProductList = () => {
   });
   const [unitDrawerOpen, setUnitDrawerOpen] = useState(false);
   const [productSetOpen, setProductSetOpen] = useState(false);
+  const [hireHistoryDrawer, setHireHistoryDrawer] = useState(false);
   const [openModel, setOpenModel] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<any | null>(null);
@@ -812,10 +815,10 @@ const ProductList = () => {
 
       const matchesCategory = filters.category
         ? item.product_categories
-            ?.toLowerCase()
-            .split(",")
-            .map((c: any) => c.trim())
-            .includes(filters.category.toLowerCase())
+          ?.toLowerCase()
+          .split(",")
+          .map((c: any) => c.trim())
+          .includes(filters.category.toLowerCase())
         : true;
 
       const matchesSearch =
@@ -1040,11 +1043,12 @@ const ProductList = () => {
                 sx={{
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 3,
+                  WebkitLineClamp: 2,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
                   maxWidth: 300,
+                  width: 250,
                   wordBreak: "break-word",
                 }}
               >
@@ -1532,9 +1536,9 @@ const ProductList = () => {
                   prev.map((p) =>
                     p.id === item.id
                       ? {
-                          ...p,
-                          is_sub_qty: checked,
-                        }
+                        ...p,
+                        is_sub_qty: checked,
+                      }
                       : p,
                   ),
                 );
@@ -1547,27 +1551,27 @@ const ProductList = () => {
       },
     }),
 
-    columnHelper.display({
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const item = row.original;
+    // columnHelper.display({
+    //   id: "actions",
+    //   header: "Actions",
+    //   cell: ({ row }) => {
+    //     const item = row.original;
 
-        return (
-          <Stack direction="row" spacing={1}>
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePriceOpen(item);
-              }}
-              color="primary"
-            >
-              <IconArrowsShuffle size={18} />
-            </IconButton>
-          </Stack>
-        );
-      },
-    }),
+    //     return (
+    //       <Stack direction="row" spacing={1}>
+    //         <IconButton
+    //           onClick={(e) => {
+    //             e.stopPropagation();
+    //             handlePriceOpen(item);
+    //           }}
+    //           color="primary"
+    //         >
+    //           <IconArrowsShuffle size={18} />
+    //         </IconButton>
+    //       </Stack>
+    //     );
+    //   },
+    // }),
   ];
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -2135,14 +2139,14 @@ const ProductList = () => {
                           : col.columnDef.meta?.label
                             ? col.columnDef.meta.label
                             : typeof col.columnDef.header === "string" &&
-                                col.columnDef.header.trim() !== ""
+                              col.columnDef.header.trim() !== ""
                               ? col.columnDef.header
                               : col.id
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (str: string) =>
-                                    str.toUpperCase(),
-                                  )
-                                  .trim()
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (str: string) =>
+                                  str.toUpperCase(),
+                                )
+                                .trim()
                       }
                     />
                   ))}
@@ -2485,6 +2489,29 @@ const ProductList = () => {
                   Units
                 </Link>
               </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setHireHistoryDrawer(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconHistory width={18} />
+                  </ListItemIcon>
+                  Hire History
+                </Link>
+              </MenuItem>
             </Menu>
 
             {/* Filter Dialog */}
@@ -2624,6 +2651,11 @@ const ProductList = () => {
           onWorkUpdated={fetchProducts}
         />
 
+        <HireOrderHistory
+          open={hireHistoryDrawer}
+          onClose={() => setHireHistoryDrawer(false)}
+        />
+
         <ProductHistory
           open={openDrawer}
           onClose={() => setOpenDrawer(false)}
@@ -2670,8 +2702,8 @@ const ProductList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ||
-                              header.column.id === "price" ||
-                              header.column.id === "barcode"
+                                header.column.id === "price" ||
+                                header.column.id === "barcode"
                                 ? 80
                                 : header.column.id === "QrCode"
                                   ? 120
