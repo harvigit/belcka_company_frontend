@@ -1,7 +1,6 @@
 import { getAccessToken } from "@/lib/authToken";
 import axios from "axios";
-import { User } from "next-auth";
-import { signOut, getSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
 
 const api = axios.create({
@@ -37,13 +36,22 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   async (response) => {
     try {
+      const activeCompany =
+        response?.data?.active_company ?? null;
+
+      if (activeCompany) {
+        window.dispatchEvent(
+          new CustomEvent("company-changed", {
+            detail: activeCompany,
+          }),
+        );
+      }
+
       const companyId =
-        response?.data?.context?.active_company_id ??
-        response?.data?.active_company_id ??
-        null;
+        response?.data?.active_company_id;
 
       if (companyId === 0) {
-        userLogout(response);
+        await userLogout(response);
         return response;
       }
 
