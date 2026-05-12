@@ -1,5 +1,5 @@
 'use client';
-import React, {useEffect, useState, useMemo} from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     TableContainer,
     Table,
@@ -58,13 +58,13 @@ import api from '@/utils/axios';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import {Avatar} from '@mui/material';
-import {useRouter, useSearchParams} from 'next/navigation';
+import { Avatar } from '@mui/material';
+import { useRouter, useSearchParams } from 'next/navigation';
 import BlankCard from '@/app/components/shared/BlankCard';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
-import {IconX} from '@tabler/icons-react';
+import { IconX } from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import JoinCompanyDialog from '../../modals/join-company';
 import GenerateCodeDialog from '../../modals/generate-code';
@@ -126,7 +126,7 @@ const TablePagination = () => {
     const searchParams = useSearchParams();
     const teamId = searchParams ? searchParams.get('team_id') : '';
 
-    const [filters, setFilters] = useState({team: '', trade: ''});
+    const [filters, setFilters] = useState({ team: '', trade: '' });
     const [tempFilters, setTempFilters] = useState(filters);
 
     const [open, setOpen] = useState(false);
@@ -150,7 +150,7 @@ const TablePagination = () => {
     const router = useRouter();
     const [enabled, setEnabled] = useState<boolean>(false);
 
-    const [geoSettings, setGeoSettings] = useState({start: false, stop: false});
+    const [geoSettings, setGeoSettings] = useState({ start: false, stop: false });
 
     const [openTeamHistory, setOpenTeamHistory] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
@@ -423,7 +423,7 @@ const TablePagination = () => {
     };
     const handleGenerateCode = async (): Promise<string | null> => {
         try {
-            const payload = {team_id: teamId, company_id: id.company_id};
+            const payload = { team_id: teamId, company_id: id.company_id };
             const response = await api.post('team/generate-otp', payload);
 
             if (!response.data.IsSuccess || !response.data.info?.company_otp) {
@@ -457,80 +457,78 @@ const TablePagination = () => {
             id: "select",
             header: ({ table }: any) => (
                 <Stack direction="row" alignItems="center">
-                <CustomCheckbox
-                    className="header-checkbox"
-                    checked={
-                        selectedRowIds.size === filteredData.length &&
-                        filteredData.length > 0
-                    }
-                    indeterminate={
-                        selectedRowIds.size > 0 &&
-                        selectedRowIds.size < filteredData.length
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        const isChecked = e.target.checked;
-
-                       if (isChecked) {
-                            setSelectedRowIds(new Set(filteredData.map((row, i) => row.id)));
-                        } else {
-                            setSelectedRowIds(new Set());
+                    <CustomCheckbox
+                        className="header-checkbox"
+                        checked={
+                            selectedRowIds.size === filteredData.length &&
+                            filteredData.length > 0
                         }
-                    }}
-                />
+                        indeterminate={
+                            selectedRowIds.size > 0 &&
+                            selectedRowIds.size < filteredData.length
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const isChecked = e.target.checked;
+
+                            if (isChecked) {
+                                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                            } else {
+                                setSelectedRowIds(new Set());
+                            }
+                        }}
+                    />
                 </Stack>
             ),
             cell: ({ row }: any) => {
                 const item = row.original;
-                const isChecked = selectedRowIds.has(row.id);
-                const isHovered = hoveredRow === row.id;
+                const isChecked = selectedRowIds.has(item.id);
+                const isHovered = hoveredRow === item.id;
                 const showCheckbox = isChecked || isHovered;
-                const subcontractor = item.is_subcontractor === true && item.company_id !== item.subcontractor_company_id;
 
                 return (
-                <Stack
-                    direction="row"
-                    alignItems="center"
-                    onMouseEnter={() => setHoveredRow(row.id)}
-                    onMouseLeave={() => setHoveredRow(null)}
-                    sx={{ pl: 1 }}
-                >
-                    <CustomCheckbox
-                    checked={isChecked}
-                    onClick={(e) => e.stopPropagation()}
-                    disabled={subcontractor}
-                    onChange={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        const newSelected = new Set(selectedRowIds);
-                        if (isChecked) {
-                            newSelected.delete(row.id);
-                        } else {
-                            newSelected.add(row.id);
-                        }
-                        setSelectedRowIds(newSelected);
-                    }}
-                    sx={{
-                        opacity: showCheckbox ? 1 : 0,
-                        pointerEvents: showCheckbox ? "auto" : "none",
-                        transition: "opacity 0.2s ease",
-                    }}
-                    />
-                </Stack>
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        onMouseEnter={() => setHoveredRow(item.id)}
+                        onMouseLeave={() => setHoveredRow(null)}
+                        sx={{ pl: 1 }}
+                    >
+                        <CustomCheckbox
+                            checked={isChecked}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                const newSelected = new Set(selectedRowIds);
+                                if (isChecked) {
+                                    newSelected.delete(item.id);
+                                } else {
+                                    newSelected.add(item.id);
+                                }
+                                setSelectedRowIds(newSelected);
+                            }}
+                            sx={{
+                                opacity: showCheckbox ? 1 : 0,
+                                pointerEvents: showCheckbox ? 'auto' : 'none',
+                                transition: 'opacity 0.2s ease',
+                            }}
+                        />
+                    </Stack>
                 );
             },
         },
         columnHelper.accessor('name', {
             id: 'name',
             enableSorting: true, // allow sorting
-            header: ({column}) => (
+            header: ({ column }) => (
                 <Stack
                     direction="row"
                     alignItems="center"
                     spacing={4}
-                    sx={{cursor: 'pointer'}}
+                    sx={{ cursor: 'pointer' }}
                     onClick={column.getToggleSortingHandler()}
                 >
                     <Typography variant="subtitle2" fontWeight="inherit">
@@ -538,7 +536,7 @@ const TablePagination = () => {
                     </Typography>
                 </Stack>
             ),
-            cell: ({row}) => {
+            cell: ({ row }) => {
                 const item = row.original;
 
                 return (
@@ -548,11 +546,11 @@ const TablePagination = () => {
                                 direction="row"
                                 alignItems="center"
                                 spacing={4}
-                                sx={{cursor: 'pointer'}}
+                                sx={{ cursor: 'pointer' }}
                             >
                                 <Badge
                                     overlap="circular"
-                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                                     variant="dot"
                                     sx={{
                                         '& .MuiBadge-badge': {
@@ -573,7 +571,7 @@ const TablePagination = () => {
                                                 : '/images/users/user.png'
                                         }
                                         alt={item?.name}
-                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                        sx={{ width: 36, height: 36, cursor: 'pointer' }}
                                     />
                                 </Badge>
                                 <Box>
@@ -582,7 +580,7 @@ const TablePagination = () => {
                                         color="textPrimary"
                                         sx={{
                                             cursor: 'pointer',
-                                            '&:hover': {color: '#173f98'},
+                                            '&:hover': { color: '#173f98' },
                                             width: 190,
                                         }}
                                     >
@@ -600,7 +598,7 @@ const TablePagination = () => {
             id: 'tradeName',
             header: () => 'Trade',
             cell: (info) => (
-                <Typography className="f-14" color="body2" sx={{px: 1.5}}>
+                <Typography className="f-14" color="body2" sx={{ px: 1.5 }}>
                     {info.row.original.trade_name ?? '-'}
                 </Typography>
             ),
@@ -671,7 +669,7 @@ const TablePagination = () => {
     const table = useReactTable({
         data: filteredData,
         columns,
-        state: {columnFilters, sorting},
+        state: { columnFilters, sorting },
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
@@ -714,15 +712,15 @@ const TablePagination = () => {
     return (
         <PermissionGuard permission="Teams">
             <Grid container spacing={2}>
-                <Grid size={{xs: 12, lg: 3}}>
+                <Grid size={{ xs: 12, lg: 3 }}>
                     <BlankCard>
-                        <CardContent sx={{pt: 1}}>
+                        <CardContent sx={{ pt: 1 }}>
                             <Box textAlign="center" display="flex" justifyContent="center">
                                 <Box>
                                     <Avatar
                                         src={data[0]?.supervisor_image || '/images/users/user.png'}
                                         alt={data[0]?.supervisor_name || 'user1'}
-                                        sx={{width: 120, height: 120, margin: '0 auto'}}
+                                        sx={{ width: 120, height: 120, margin: '0 auto' }}
                                     />
                                     <Typography variant="h5" mb={1}>
                                         {data[0]?.supervisor_name}
@@ -732,13 +730,13 @@ const TablePagination = () => {
                                     </Typography>
                                 </Box>
                             </Box>
-                            <Divider/>
+                            <Divider />
                             <Stack direction="row" spacing={2} py={2} alignItems="center">
                                 <Box>
                                     <Typography variant="h6">Phone</Typography>
                                 </Box>
                                 <Box
-                                    sx={{ml: 'auto !important', cursor: 'pointer'}}
+                                    sx={{ ml: 'auto !important', cursor: 'pointer' }}
                                     onClick={handleCopy}
                                 >
                                     <Typography variant="h5" color="textSecondary">
@@ -766,7 +764,7 @@ const TablePagination = () => {
                                     justifyContent="space-between"
                                 >
                                     <Typography variant="h6">Check-In</Typography>
-                                    <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle}/>
+                                    <IOSSwitch checked={!!enabled} onChange={handleSwitchToggle} />
                                 </Box>
                             </CardContent>
                         </BlankCard>
@@ -782,7 +780,7 @@ const TablePagination = () => {
                         }}
                     >
                         <BlankCard>
-                            <CardContent sx={{padding: 2}}>
+                            <CardContent sx={{ padding: 2 }}>
                                 <Box
                                     display="flex"
                                     justifyContent="space-between"
@@ -835,8 +833,8 @@ const TablePagination = () => {
                             ml={2}
                             mb={2}
                             justifyContent="space-between"
-                            direction={{xs: 'column', sm: 'row'}}
-                            spacing={{xs: 1, sm: 2, md: 4}}
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={{ xs: 1, sm: 2, md: 4 }}
                         >
                             <Grid display="flex" gap={1} alignItems={'center'}>
                                 <TextField
@@ -851,14 +849,14 @@ const TablePagination = () => {
                                         input: {
                                             endAdornment: (
                                                 <InputAdornment position="end">
-                                                    <IconSearch size={'16'}/>
+                                                    <IconSearch size={'16'} />
                                                 </InputAdornment>
                                             ),
                                         },
                                     }}
                                 />
                                 <Button variant="contained" onClick={() => setOpen(true)}>
-                                    <IconFilter width={18}/>
+                                    <IconFilter width={18} />
                                 </Button>
 
                                 <Dialog
@@ -868,7 +866,7 @@ const TablePagination = () => {
                                     maxWidth="sm"
                                 >
                                     <DialogTitle
-                                        sx={{m: 0, position: 'relative', overflow: 'visible'}}
+                                        sx={{ m: 0, position: 'relative', overflow: 'visible' }}
                                     >
                                         Filters
                                         <IconButton
@@ -886,7 +884,7 @@ const TablePagination = () => {
                                                 height: 50,
                                             }}
                                         >
-                                            <IconX size={40} style={{width: 40, height: 40}}/>
+                                            <IconX size={40} style={{ width: 40, height: 40 }} />
                                         </IconButton>
                                     </DialogTitle>
                                     <DialogContent>
@@ -896,7 +894,7 @@ const TablePagination = () => {
                                                 label="Team member"
                                                 value={tempFilters.team}
                                                 onChange={(e) =>
-                                                    setTempFilters({...tempFilters, team: e.target.value})
+                                                    setTempFilters({ ...tempFilters, team: e.target.value })
                                                 }
                                                 fullWidth
                                             >
@@ -962,21 +960,21 @@ const TablePagination = () => {
                             </Grid>
                             <Stack direction={'row-reverse'} mb={1} mr={1}>
                                 <IconButton
-                                    sx={{margin: '0px'}}
+                                    sx={{ margin: '0px' }}
                                     id="basic-button"
                                     aria-controls={openMenu ? 'basic-menu' : undefined}
                                     aria-haspopup="true"
                                     aria-expanded={openMenu ? 'true' : undefined}
                                     onClick={handleClick}
                                 >
-                                    <IconDotsVertical width={18}/>
+                                    <IconDotsVertical width={18} />
                                 </IconButton>
                                 <Menu
                                     id="basic-menu"
                                     anchorEl={anchorEl}
                                     open={openMenu}
                                     onClose={close}
-                                    slotProps={{list: {'aria-labelledby': 'basic-button'}}}
+                                    slotProps={{ list: { 'aria-labelledby': 'basic-button' } }}
                                 >
                                     <MenuItem
                                         onClick={() => {
@@ -985,7 +983,7 @@ const TablePagination = () => {
                                         }}
                                     >
                                         <ListItemIcon>
-                                            <IconUserPlus width={18}/>
+                                            <IconUserPlus width={18} />
                                         </ListItemIcon>
                                         Join Company
                                     </MenuItem>
@@ -997,7 +995,7 @@ const TablePagination = () => {
                                         }}
                                     >
                                         <ListItemIcon>
-                                            <IconRotate width={18}/>
+                                            <IconRotate width={18} />
                                         </ListItemIcon>
                                         Create Code
                                     </MenuItem>
@@ -1006,25 +1004,25 @@ const TablePagination = () => {
                                         onClick={handleOpenTeamHistory}
                                     >
                                         <ListItemIcon>
-                                            <IconActivity width={18}/>
+                                            <IconActivity width={18} />
                                         </ListItemIcon>
                                         Team Activity
                                     </MenuItem>
                                 </Menu>
                                 <IconButton
                                     onClick={handlePopoverOpen}
-                                    sx={{ml: 1}}
+                                    sx={{ ml: 1 }}
                                     color="primary"
                                 >
-                                    <IconEye/>
+                                    <IconEye />
                                 </IconButton>
                                 <Popover
                                     open={Boolean(anchorEl2)}
                                     anchorEl={anchorEl2}
                                     onClose={handlePopoverClose}
-                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                                    transformOrigin={{vertical: 'top', horizontal: 'right'}}
-                                    PaperProps={{sx: {width: 220, p: 1, borderRadius: 2}}}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                                    PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
                                 >
                                     <TextField
                                         size="small"
@@ -1032,7 +1030,7 @@ const TablePagination = () => {
                                         fullWidth
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
-                                        sx={{mb: 1}}
+                                        sx={{ mb: 1 }}
                                     />
                                     <FormGroup>
                                         {table
@@ -1055,11 +1053,11 @@ const TablePagination = () => {
                                                             disabled={col.id === 'conflicts'}
                                                         />
                                                     }
-                                                    sx={{textTransform: 'none'}}
+                                                    sx={{ textTransform: 'none' }}
                                                     label={
                                                         col.columnDef.meta?.label ||
                                                         (typeof col.columnDef.header === 'string' &&
-                                                        col.columnDef.header.trim() !== ''
+                                                            col.columnDef.header.trim() !== ''
                                                             ? col.columnDef.header
                                                             : col.id
                                                                 .replace(/([A-Z])/g, ' $1')
@@ -1127,13 +1125,11 @@ const TablePagination = () => {
                                     <Button
                                         variant="outlined"
                                         color="error"
-                                        startIcon={<IconTrash width={18}/>}
-                                        sx={{marginRight: '5px'}}
+                                        startIcon={<IconTrash width={18} />}
+                                        sx={{ marginRight: '5px' }}
                                         onClick={() => {
-                                            const selectedIds = Array.from(selectedRowIds).map(
-                                                (index) => filteredData[index]?.id,
-                                            );
-                                            setUsersToDelete(selectedIds);
+                                            const selectedIds = Array.from(selectedRowIds);
+                                            setUsersToDelete(selectedIds.filter(Boolean));
                                             setConfirmOpen(true);
                                         }}
                                     >
@@ -1187,7 +1183,7 @@ const TablePagination = () => {
                                 </Dialog>
                             </Stack>
                         </Stack>
-                        <Divider/>
+                        <Divider />
                         <Box
                             sx={{
                                 height: 'calc(88vh - 100px)',
@@ -1236,8 +1232,8 @@ const TablePagination = () => {
                                                                         borderRadius: '6px',
                                                                         display: 'flex',
                                                                         justifyContent: 'flex-start',
-                                                                        '&:hover': {color: '#888'},
-                                                                        '&:hover .hoverIcon': {opacity: 1},
+                                                                        '&:hover': { color: '#888' },
+                                                                        '&:hover .hoverIcon': { opacity: 1 },
                                                                     }}
                                                                 >
                                                                     <Typography variant="subtitle2">
@@ -1304,9 +1300,9 @@ const TablePagination = () => {
                                                 </TableRow>
                                             ) : (
                                                 table.getRowModel().rows.map((row) => (
-                                                    <TableRow key={row.id} hover sx={{cursor: 'pointer'}}>
+                                                    <TableRow key={row.id} hover sx={{ cursor: 'pointer' }}>
                                                         {row.getVisibleCells().map((cell) => (
-                                                            <TableCell key={cell.id} sx={{padding: '10px'}}>
+                                                            <TableCell key={cell.id} sx={{ padding: '10px' }}>
                                                                 {flexRender(
                                                                     cell.column.columnDef.cell,
                                                                     cell.getContext(),
@@ -1319,9 +1315,9 @@ const TablePagination = () => {
                                         </TableBody>
                                     </Table>
                                 </TableContainer>
-                                {data.length ? <Divider/> : <></>}
+                                {data.length ? <Divider /> : <></>}
                             </Box>
-                            <Divider/>
+                            <Divider />
                             <Stack
                                 gap={1}
                                 pr={3}
@@ -1329,7 +1325,7 @@ const TablePagination = () => {
                                 pl={3}
                                 pb={1}
                                 alignItems="center"
-                                direction={{xs: 'column', sm: 'row'}}
+                                direction={{ xs: 'column', sm: 'row' }}
                                 justifyContent="space-between"
                             >
                                 <Box display="flex" alignItems="center" gap={1}>
@@ -1377,19 +1373,19 @@ const TablePagination = () => {
                                         </CustomSelect>
                                         <IconButton
                                             size="small"
-                                            sx={{width: '30px'}}
+                                            sx={{ width: '30px' }}
                                             onClick={() => table.previousPage()}
                                             disabled={!table.getCanPreviousPage()}
                                         >
-                                            <IconChevronLeft/>
+                                            <IconChevronLeft />
                                         </IconButton>
                                         <IconButton
                                             size="small"
-                                            sx={{width: '30px'}}
+                                            sx={{ width: '30px' }}
                                             onClick={() => table.nextPage()}
                                             disabled={!table.getCanNextPage()}
                                         >
-                                            <IconChevronRight/>
+                                            <IconChevronRight />
                                         </IconButton>
                                     </Stack>
                                 </Box>

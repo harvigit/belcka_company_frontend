@@ -190,7 +190,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
       !nameValidate.test(last_name.trim())
     ) {
       return toast.error(
-        "Name must contain only alphabets and be between 1-50 characters."
+        "Must contain alphabets only"
       );
     }
     if (!nationalPhone) return toast.error("Please enter your phone number.");

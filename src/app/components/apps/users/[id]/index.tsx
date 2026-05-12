@@ -407,7 +407,7 @@ const TablePagination = () => {
                 user_id: data?.id,
             };
 
-            const res = await api.post('company/change-admin', payload);
+            const res = await api.post('company/make-admin', payload);
             if (res.data.IsSuccess) {
                 toast.success(res.data.message);
                 setOpenModel(false);
