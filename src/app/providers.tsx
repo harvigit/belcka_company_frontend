@@ -3,6 +3,7 @@ import { SessionProvider } from "next-auth/react";
 import NotificationClient from "./notifications/NotificationClient";
 import React from "react";
 import { AuthTokenSync } from "./components/AuthTokenSync";
+import CompanySyncProvider from "./components/CompanySyncProvider";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -14,8 +15,8 @@ export default function Providers({ children }: ProvidersProps) {
       refetchOnWindowFocus={false}
       refetchInterval={0}
     >
-       <AuthTokenSync />
-      {children}
+      <AuthTokenSync />
+      <CompanySyncProvider>{children}</CompanySyncProvider>
       <NotificationClient />
     </SessionProvider>
   );
