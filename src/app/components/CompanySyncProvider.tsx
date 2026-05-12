@@ -12,16 +12,21 @@ export default function CompanySyncProvider({
 
     useEffect(() => {
         const handler = async (event: any) => {
-            const company = event.detail;
+            try {
+                const company = event.detail;
 
-            await update({
-                company_id: company.id,
-                company_name: company.name,
-                company_image: company.image,
-                trade_name: company.trade_name,
-                trade_id: company.trade_id,
-                currency_id: company.currency_id,
-            });
+                await update({
+                    company_id: company.id,
+                    company_name: company.name,
+                    company_image: company.image,
+                    trade_name: company.trade_name,
+                    trade_id: company.trade_id,
+                    currency_id: company.currency_id,
+                    user_role_id: company.user_role_id,
+                });
+            } catch (error) {
+                console.error("Company sync failed:", error);
+            }
         };
 
         window.addEventListener(

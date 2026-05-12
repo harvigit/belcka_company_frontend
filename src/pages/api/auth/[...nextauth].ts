@@ -21,7 +21,7 @@ export const authOptions: NextAuthOptions = {
 
           const res = await fetch(`${api}app-login`, {
             method: "POST",
-            headers: { "Content-Type": "application/json","is_web" : 'true' },
+            headers: { "Content-Type": "application/json", "is_web": 'true' },
             body: JSON.stringify(credentials),
           });
 
@@ -39,7 +39,7 @@ export const authOptions: NextAuthOptions = {
           const companyRes = await fetch(`${api}company/active-company`, {
             headers: {
               "Content-Type": "application/json",
-              "is_web" : "true", 
+              "is_web": "true",
               authorization: `Bearer ${token}`,
             },
           });
@@ -47,9 +47,9 @@ export const authOptions: NextAuthOptions = {
           const companyData = await companyRes.json();
 
           const companyId = companyData?.info?.id ?? null;
-          
+
           if (companyId === null) {
-            throw new Error("NO_COMPANY"); 
+            throw new Error("NO_COMPANY");
           }
 
           if (!companyRes.ok || !companyData?.info) {
@@ -59,7 +59,7 @@ export const authOptions: NextAuthOptions = {
           return {
             ...data.info,
             token,
-            user_image: companyData?.info?.user_image ?? null ,
+            user_image: companyData?.info?.user_image ?? null,
             name: companyData?.info?.user_name ?? null,
             first_name: companyData?.info?.first_name ?? null,
             last_name: companyData?.info?.last_name ?? null,
@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
             currency_id: companyData?.info?.currency_id ?? null,
             user_role_id: companyData?.info?.user_role_id ?? null
           };
-          
+
         } catch (err) {
           throw new Error(err instanceof Error ? err.message : String(err));
         }
@@ -81,7 +81,7 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-      async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session }) {
       if (typeof token.user !== "object" || token.user === null) {
         token.user = {};
       }
@@ -108,7 +108,7 @@ export const authOptions: NextAuthOptions = {
         const res = await fetch(`${api}company/active-company`, {
           headers: {
             "Content-Type": "application/json",
-            "is_web" : "true", 
+            "is_web": "true",
             authorization: `Bearer ${user?.token}`,
           },
         });
