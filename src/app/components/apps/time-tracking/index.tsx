@@ -975,9 +975,8 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         message: '',
         severity: 'success',
     });
-    const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [expenseAnchorEl, setExpenseAnchorEl] = useState<null | HTMLElement>(null);
+
     const [search, setSearch] = useState('');
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
         ...initialSettings.columnVisibility,
@@ -987,7 +986,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
     const [tableExpanded, setTableExpanded] = useState(false);
     const [locations, setLocations] = useState<LocationPoint[]>([]);
     const mapRef = useRef<google.maps.Map | null>(null);
-    const { isLoaded: isGoogleMapsLoaded } = useJsApiLoader({
+    const { isLoaded: isGoogleMapsLoaded, loadError: googleMapsLoadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
         libraries: GOOGLE_MAP_LIBRARIES,
     });
@@ -1327,26 +1326,6 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         [dailyData]
     );
 
-    const isAllSelected =
-        selectableRowIds.length > 0 && selectedRows.size === selectableRowIds.length;
-    const isIndeterminate =
-        selectedRows.size > 0 && selectedRows.size < selectableRowIds.length;
-
-    const handleSelectAll = useCallback(
-        (checked: boolean) => {
-            setSelectedRows(checked ? new Set(selectableRowIds) : new Set());
-        },
-        [selectableRowIds]
-    );
-
-    const handleRowSelect = useCallback((rowId: string, checked: boolean) => {
-        setSelectedRows((prev) => {
-            const next = new Set(prev);
-            checked ? next.add(rowId) : next.delete(rowId);
-            return next;
-        });
-    }, []);
-
     const headerStyle: React.CSSProperties = {
         display: 'block',
         textAlign: 'center',
@@ -1355,34 +1334,6 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
 
     const mainTableColumns = useMemo<ColumnDef<DailyBreakdown, any>[]>(
         () => [
-            {
-                id: 'select',
-                header: () => (
-                    <Box
-                        className="select-icon"
-                        sx={{ height: '100%', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                        <CustomCheckbox
-                            checked={isAllSelected}
-                            indeterminate={isIndeterminate}
-                            onChange={(e) => handleSelectAll(e.target.checked)}
-                        />
-                    </Box>
-                ),
-                cell: ({ row }) => {
-                    if (row.original.rowType !== 'day') return null;
-                    const rowId = `row-${row.index}`;
-                    return (
-                        <CustomCheckbox
-                            checked={selectedRows.has(rowId)}
-                            onChange={(e) => handleRowSelect(rowId, e.target.checked)}
-                        />
-                    );
-                },
-                enableSorting: false,
-                size: 50,
-                meta: { align: 'center' },
-            },
             {
                 id: 'date',
                 header: () => <span style={headerStyle}>Date</span>,
@@ -1572,7 +1523,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                 size: 100,
             },
         ],
-        [isAllSelected, isIndeterminate, selectedRows, handleSelectAll, handleRowSelect]
+        []
     );
 
     const table = useReactTable({
@@ -1799,7 +1750,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
             console.error('Error fetching time clock data after closing add expense sidebar:', error);
         }
     };
-    
+
     const handlePopoverClose = useCallback(() => setAnchorEl(null), []);
 
     return (
@@ -2019,7 +1970,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                             </CardContent>
                         </Card>
 
-                        {/* Total Payable Card - IMPROVED WITH EYE ICON */}
+                        {/* Total Payable Card */}
                         <Card
                             sx={{
                                 borderRadius: 3,
@@ -2195,18 +2146,31 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                         Work Location
                                     </Typography>
                                 </Box>
-                                {!isGoogleMapsLoaded ? (
+                                {!isGoogleMapsLoaded || googleMapsLoadError ? (
                                     <Box
                                         sx={{
                                             height: { xs: 280, sm: 340, md: 450 },
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
+                                            background: '#f5f5f5',
+                                            borderRadius: 1,
+                                            flexDirection: 'column',
+                                            gap: 2,
                                         }}
                                     >
                                         <Typography color="textSecondary" fontSize={14}>
-                                            Loading map…
+                                            {googleMapsLoadError ? 'Failed to load map' : 'Loading map…'}
                                         </Typography>
+                                        {googleMapsLoadError && (
+                                            <Button
+                                                size="small"
+                                                onClick={() => window.location.reload()}
+                                                variant="outlined"
+                                            >
+                                                Retry
+                                            </Button>
+                                        )}
                                     </Box>
                                 ) : (
                                     <Box sx={{ height: { xs: 280, sm: 340, md: 450 } }}>
@@ -2292,7 +2256,6 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                             <TimeClockTable
                                 table={table}
                                 currency={currency}
-                                selectedRows={selectedRows}
                                 expandedWorklogsIds={[]}
                                 editingWorklogs={editingWorklogs}
                                 savingWorklogs={savingWorklogs}
@@ -2301,7 +2264,6 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 validateAndFormatTime={validateAndFormatTime}
                                 hasValidWorklogData={hasValidWorklogData}
                                 isRecordLocked={isRecordLocked}
-                                handleRowSelect={handleRowSelect}
                                 startEditingField={startEditingField}
                                 updateEditingField={updateEditingField}
                                 cancelEditingField={cancelEditingField}
@@ -2311,7 +2273,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                         </Box>
                     </Box>
                 </Box>
-                
+
                 {/* START WORK DIALOG */}
                 <StartWorkDialog
                     open={startDialogOpen}

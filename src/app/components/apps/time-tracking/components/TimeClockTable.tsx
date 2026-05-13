@@ -36,7 +36,6 @@ interface LocationDrawerState {
 interface TimeClockTableProps {
     table: any,
     currency: string,
-    selectedRows: Set<string>,
     expandedWorklogsIds: string[],
     editingWorklogs: { [key: string]: EditingWorklog },
     savingWorklogs: Set<string>,
@@ -45,7 +44,6 @@ interface TimeClockTableProps {
     validateAndFormatTime: (value: string) => string,
     hasValidWorklogData: (row: DailyBreakdown) => boolean,
     isRecordLocked: (log: any) => boolean,
-    handleRowSelect: (rowId: string, checked: boolean) => void,
     startEditingField: (worklogId: string, field: 'start' | 'end', log: any) => void,
     updateEditingField: (worklogId: string, field: keyof EditingWorklog, value: string) => void,
     cancelEditingField: (worklogId: string) => void,
@@ -56,7 +54,6 @@ interface TimeClockTableProps {
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            table,
                                                            currency,
-                                                           selectedRows,
                                                            expandedWorklogsIds,
                                                            editingWorklogs,
                                                            savingWorklogs,
@@ -65,7 +62,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            validateAndFormatTime,
                                                            hasValidWorklogData,
                                                            isRecordLocked,
-                                                           handleRowSelect,
                                                            startEditingField,
                                                            updateEditingField,
                                                            cancelEditingField,
@@ -122,8 +118,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         <Box sx={{
             flex: 1,
             overflow: 'hidden',
-            paddingBottom: selectedRows.size > 0 ? '80px' : '0px',
-            maxHeight: { xs: '420px', md: '520px' },
+            maxHeight: { xs: '420px'},
             position: 'relative'
         }}>
             <TableContainer sx={{
@@ -188,8 +183,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                     >
                         {table.getRowModel().rows.map((row: any) => {
                             const rowData = row.original;
-                            const rowId = `row-${row.index}`;
-                            const isRowSelected = selectedRows.has(rowId);
                             const isRowLocked = isRecordLocked(rowData);
                             
                             // Day rows with multiple worklogs
@@ -244,32 +237,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     },
                                                 }}
                                             >
-                                                {/* Select Column */}
-                                                {isFirstRow && visibleColumnConfigs.select?.visible && (
-                                                    <TableCell
-                                                        rowSpan={rowSpan}
-                                                        align="center"
-                                                        className="rowspan-cell"
-                                                        sx={{
-                                                            width: `${visibleColumnConfigs.select.width}px`,
-                                                            height: '45px',
-                                                            verticalAlign: 'middle',
-                                                        }}
-                                                    >
-                                                        <Box className="select-icon" sx={{
-                                                            height: '100%',
-                                                            display: { xs: 'flex', md: isRowSelected ? 'flex' : 'none' },
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}>
-                                                            <CustomCheckbox
-                                                                checked={isRowSelected}
-                                                                onChange={(e) => handleRowSelect(`row-${row.index}`, e.target.checked)}
-                                                            />
-                                                        </Box>
-                                                    </TableCell>
-                                                )}
-
                                                 {/* Date Column */}
                                                 {isFirstRow && visibleColumnConfigs.date?.visible && (
                                                     <TableCell
@@ -897,34 +864,6 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                     >
                                         {row.getVisibleCells().map((cell: any) => {
                                             const {column} = cell;
-
-                                            // Select column
-                                            if (column.id === 'select' && row.original.rowType === 'day') {
-                                                return (
-                                                    <TableCell
-                                                        key={cell.id}
-                                                        sx={{
-                                                            py: 0.5,
-                                                            fontSize: '0.875rem',
-                                                            height: '45px',
-                                                            verticalAlign: 'middle',
-                                                            textAlign: 'center',
-                                                        }}
-                                                    >
-                                                        <Box className="select-icon" sx={{
-                                                            height: '100%',
-                                                            display: { xs: 'flex', md: isRowSelected ? 'flex' : 'none' },
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}>
-                                                            <CustomCheckbox
-                                                                checked={isRowSelected}
-                                                                onChange={(e) => handleRowSelect(rowId, e.target.checked)}
-                                                            />
-                                                        </Box>
-                                                    </TableCell>
-                                                );
-                                            }
 
                                             // Date column with add button
                                             if (column.id === 'date' && row.original.rowType === 'day' && !row.original.rowsData) {
