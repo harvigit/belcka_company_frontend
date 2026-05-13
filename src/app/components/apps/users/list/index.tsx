@@ -473,38 +473,35 @@ const TablePagination = () => {
                     response.data.message || 'Permissions updated successfully',
                 );
 
-                setData((prevData) => {
-                    const newData = prevData.map((u) => {
-                        if (u.id === selectedUserPermissions.id) {
-                            const updatedPermissions = u.permissions.map((p) => {
-                                const hasWeb = tempPermissions.web.has(p.id);
-                                const hasApp = tempPermissions.app.has(p.id);
-                                let status = 0;
-                                if (hasWeb && hasApp) status = 1;
-                                else if (hasWeb) status = 2;
-                                else if (hasApp) status = 3;
+                const newPermissionCount = selectedUserPermissions.permissions.filter((p) => {
+                    return tempPermissions.web.has(p.id) || tempPermissions.app.has(p.id);
+                }).length;
 
-                                return {
-                                    ...p,
-                                    status: status,
-                                };
-                            });
-                            return {
-                                ...u,
-                                permissions: updatedPermissions,
-                                permission_count: updatedPermissions.filter((p) => p.status > 0)
-                                    .length,
-                            };
-                        }
-                        return u;
-                    });
-                    return newData;
-                });
+                setData((prevData) =>
+                    prevData.map((u) => {
+                        if (u.id !== selectedUserPermissions.id) return u;
 
-                setTimeout(() => {
-                    window.location.reload();
-                }, 100);
+                        const updatedPermissions = u.permissions.map((p) => {
+                            const hasWeb = tempPermissions.web.has(p.id);
+                            const hasApp = tempPermissions.app.has(p.id);
+                            let status = 0;
+                            if (hasWeb && hasApp) status = 1;
+                            else if (hasWeb) status = 2;
+                            else if (hasApp) status = 3;
+                            return { ...p, status };
+                        });
+
+                        return {
+                            ...u,
+                            permissions: updatedPermissions,
+                            permission_count: newPermissionCount,
+                        };
+                    }),
+                );
+
                 setPermissionsDrawerOpen(false);
+
+                await fetchUsers();
             }
         } catch (error: any) {
             console.error('Failed to update permissions', error);
@@ -1557,17 +1554,19 @@ const TablePagination = () => {
                             width: 450,
                             padding: 2,
                             backgroundColor: '#f9f9f9',
+                            display: 'flex',
+                            flexDirection: 'column',
                         },
                     }}
                 >
-                    <Box display="flex" flexDirection="column" height="100%">
+                    <Box display="flex" flexDirection="column" height="100%" sx={{ overflow: 'hidden' }}>
                         {/* Drawer Header */}
                         <Box
                             display="flex"
                             alignContent="center"
                             alignItems="center"
                             flexWrap="wrap"
-                            sx={{ mb: 2 }}
+                            sx={{ mb: 2, flexShrink: 0 }}
                         >
                             <IconButton
                                 onClick={() => setPermissionsDrawerOpen(false)}
@@ -1597,153 +1596,177 @@ const TablePagination = () => {
                             </IconButton>
                         </Box>
 
-                        {/* Drawer Content */}
-                        <Box height="100%" display="flex" flexDirection="column">
+                        {/* Search */}
+                        <Box sx={{ mb: 2, flexShrink: 0 }}>
+                            <TextField
+                                size="small"
+                                placeholder="Search permissions..."
+                                value={permissionSearch}
+                                onChange={(e) => setPermissionSearch(e.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <IconSearch size={16} />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                fullWidth
+                            />
+                        </Box>
 
-                            {/* Search */}
-                            <Box sx={{ mb: 2 }}>
-                                <TextField
-                                    size="small"
-                                    placeholder="Search permissions..."
-                                    value={permissionSearch}
-                                    onChange={(e) => setPermissionSearch(e.target.value)}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <IconSearch size={16} />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    fullWidth
-                                />
-                            </Box>
-
-                            <Box
-                                sx={{
-                                    flexGrow: 1,
-                                    overflowY: 'auto',
+                        {/* Scrollable Content */}
+                        <Box
+                            sx={{
+                                flex: 1,
+                                minHeight: 0,
+                                overflowY: 'auto',
+                                overflowX: 'hidden',
+                                width: '100%',
+                                pr: 1.5,
+                                '&::-webkit-scrollbar': {
+                                    width: '8px',
+                                },
+                                '&::-webkit-scrollbar-track': {
+                                    background: 'transparent',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                    background: '#ccc',
+                                    borderRadius: '4px',
+                                    '&:hover': {
+                                        background: '#999',
+                                    },
+                                },
+                            }}
+                        >
+                            <table
+                                style={{
                                     width: '100%',
+                                    borderCollapse: 'collapse',
+                                    tableLayout: 'fixed',
                                 }}
                             >
-                                <table
-                                    style={{
-                                        width: '100%',
-                                        borderCollapse: 'collapse',
-                                        tableLayout: 'fixed',
-                                    }}
+                                <colgroup>
+                                    <col style={{ width: 'auto' }} />
+                                    <col style={{ width: '120px' }} />
+                                    <col style={{ width: '120px' }} />
+                                </colgroup>
+
+                                <thead>
+                                {/* ── Header row ── */}
+                                <tr style={{ position: 'sticky', top: 0, backgroundColor: '#f9f9f9', zIndex: 1 }}>
+                                    <th style={{ padding: '6px 8px', textAlign: 'left' }} />
+                                    <th style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                        <Typography variant="subtitle2" fontWeight={600}>
+                                            Web
+                                        </Typography>
+                                    </th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                        <Typography variant="subtitle2" fontWeight={600}>
+                                            App
+                                        </Typography>
+                                    </th>
+                                </tr>
+
+                                <tr
+                                    style={{borderRadius: 4}}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f9f9f9')}
                                 >
-                                    <colgroup>
-                                        <col style={{ width: 'auto' }} />
-                                        <col style={{ width: '120px' }} />
-                                        <col style={{ width: '120px' }} />
-                                    </colgroup>
+                                    <td style={{ padding: '8px 8px' }}>
+                                        <Typography fontWeight={500}>Select All</Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                        <IOSSwitch
+                                            checked={allWebSelected}
+                                            onChange={() => handleSelectAll('web')}
+                                            disabled={loading || !isPermission}
+                                        />
+                                    </td>
+                                    <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                        <IOSSwitch
+                                            checked={allAppSelected}
+                                            onChange={() => handleSelectAll('app')}
+                                            disabled={loading || !isPermission}
+                                        />
+                                    </td>
+                                </tr>
+                                </thead>
 
-                                    <thead>
-                                        {/* ── Header row ── */}
-                                        <tr>
-                                            <th style={{ padding: '6px 8px', textAlign: 'left' }} />
-                                            <th style={{ padding: '6px 8px', textAlign: 'center' }}>
-                                                <Typography variant="subtitle2" fontWeight={600}>
-                                                    Web
-                                                </Typography>
-                                            </th>
-                                            <th style={{ padding: '6px 8px', textAlign: 'center' }}>
-                                                <Typography variant="subtitle2" fontWeight={600}>
-                                                    App
-                                                </Typography>
-                                            </th>
-                                        </tr>
+                                {/* ── Permission rows ── */}
+                                <tbody>
+                                {filteredPermissions.map((permission) => (
+                                    <tr
+                                        key={permission.id}
+                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                    >
+                                        {/* Name cell */}
+                                        <td style={{ padding: '8px 8px' }}>
+                                            <Typography>{permission.name}</Typography>
+                                        </td>
 
-                                        {/* ── Select All row ── */}
-                                        <tr
-                                            style={{ borderRadius: 4 }}
-                                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
-                                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                        >
-                                            <td style={{ padding: '8px 8px' }}>
-                                                <Typography fontWeight={500}>Select All</Typography>
-                                            </td>
-                                            <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                        <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                            {permission.is_web !== false && (
                                                 <IOSSwitch
-                                                    checked={allWebSelected}
-                                                    onChange={() => handleSelectAll('web')}
+                                                    checked={tempPermissions.web.has(permission.id)}
+                                                    onChange={() =>
+                                                        handlePermissionToggle(permission.id, 'web')
+                                                    }
                                                     disabled={loading || !isPermission}
                                                 />
-                                            </td>
-                                            <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                            )}
+                                        </td>
+
+                                        <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                                            {permission.is_app !== false && (
                                                 <IOSSwitch
-                                                    checked={allAppSelected}
-                                                    onChange={() => handleSelectAll('app')}
+                                                    checked={tempPermissions.app.has(permission.id)}
+                                                    onChange={() =>
+                                                        handlePermissionToggle(permission.id, 'app')
+                                                    }
                                                     disabled={loading || !isPermission}
                                                 />
-                                            </td>
-                                        </tr>
-                                    </thead>
-
-                                    {/* ── Permission rows ── */}
-                                    <tbody>
-                                        {filteredPermissions.map((permission) => (
-                                            <tr
-                                                key={permission.id}
-                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
-                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                            >
-                                                {/* Name cell */}
-                                                <td style={{ padding: '8px 8px' }}>
-                                                    <Typography>{permission.name}</Typography>
-                                                </td>
-
-                                                <td style={{ padding: '8px 8px', textAlign: 'center' }}>
-                                                    {permission.is_web !== false && (
-                                                        <IOSSwitch
-                                                            checked={tempPermissions.web.has(permission.id)}
-                                                            onChange={() =>
-                                                                handlePermissionToggle(permission.id, 'web')
-                                                            }
-                                                            disabled={loading || !isPermission}
-                                                        />
-                                                    )}
-                                                </td>
-
-                                                <td style={{ padding: '8px 8px', textAlign: 'center' }}>
-                                                    {permission.is_app !== false && (
-                                                        <IOSSwitch
-                                                            checked={tempPermissions.app.has(permission.id)}
-                                                            onChange={() =>
-                                                                handlePermissionToggle(permission.id, 'app')
-                                                            }
-                                                            disabled={loading || !isPermission}
-                                                        />
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </Box>
-
-                            {/* Drawer Actions */}
-                            {isPermission && (
-                                <Box mt={2} mb={2} display="flex" justifyContent="start" gap={2}>
-                                    <Button
-                                        color="primary"
-                                        variant="contained"
-                                        size="large"
-                                        onClick={handleSavePermissions}
-                                    >
-                                        Save
-                                    </Button>
-                                    <Button
-                                        color="error"
-                                        onClick={() => setPermissionsDrawerOpen(false)}
-                                        variant="outlined"
-                                        size="large"
-                                    >
-                                        Cancel
-                                    </Button>
-                                </Box>
-                            )}
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
                         </Box>
+
+                        {/* Save/Cancel Buttons */}
+                        {isPermission && (
+                            <Box
+                                mt={2}
+                                display="flex"
+                                justifyContent="flex-start"
+                                gap={2}
+                                sx={{
+                                    flexShrink: 0,
+                                    paddingTop: 2,
+                                    borderTop: '1px solid #e0e0e0',
+                                }}
+                            >
+                                <Button
+                                    color="primary"
+                                    variant="contained"
+                                    size="large"
+                                    onClick={handleSavePermissions}
+                                    sx={{ borderRadius: 1 }}
+                                >
+                                    Save
+                                </Button>
+                                <Button
+                                    color="error"
+                                    onClick={() => setPermissionsDrawerOpen(false)}
+                                    variant="outlined"
+                                    size="large"
+                                    sx={{ borderRadius: 1 }}
+                                >
+                                    Cancel
+                                </Button>
+                            </Box>
+                        )}
                     </Box>
                 </Drawer>
 
