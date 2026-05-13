@@ -2190,7 +2190,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 <AddExpense
                     onClose={closeAddExpenseSidebar}
                     userId={selectedTimeClock?.user_id}
-                    selecteUser={true}
+                    selectUser={true}
                     companyId={user.company_id}
                     onDataRefresh={refreshTimeClockData}
                 />

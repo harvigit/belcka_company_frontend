@@ -36,8 +36,8 @@ interface UploadedFile {
     preview?: string;
 }
 
-const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number; selecteUser: boolean, onDataRefresh?: () => void;
-}> = ({ onClose, userId, companyId, selecteUser , onDataRefresh}) => {
+const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: number; selectUser: boolean, onDataRefresh?: () => void;
+}> = ({ onClose, userId, companyId, selectUser , onDataRefresh}) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -85,8 +85,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
 
     const fetchProjects = async () => {
         try {
-            const id = selecteUser ? selectedUser : userId;
-            console.log("Fetching projects for user:", id);
+            const id = selectUser ? selectedUser : userId;
 
             const res: AxiosResponse<any> = await api.get(
                 `project/get?company_id=${companyId}${id ? `&user_id=${id}` : ''}`
@@ -102,7 +101,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
 
     useEffect(() => {
         fetchProjects();
-    }, [selecteUser, selectedUser]);
+    }, [selectUser, selectedUser]);
 
     useEffect(() => {
         setSelectedAddress('');
@@ -127,7 +126,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
 
     useEffect(() => {
         getUsers();
-    }, [selecteUser == true]);
+    }, [selectUser == true]);
 
     const filteredAddresses = React.useMemo(() => {
         if (!selectedProject) return [];
@@ -212,7 +211,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
         e.preventDefault();
         setError(null);
 
-        if (selecteUser == true && !selectedUser) {
+        if (selectUser == true && !selectedUser) {
             setError('Please select user.');
             return;
         }
@@ -230,7 +229,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
 
         // Create FormData for file upload
         const formData = new FormData();
-        formData.append('user_id', selecteUser == true ? selectedUser : userId.toString());
+        formData.append('user_id', selectUser == true ? selectedUser : userId.toString());
         formData.append('company_id', companyId.toString());
         formData.append('project_id', selectedProject);
         formData.append('address_id', selectedAddress);
@@ -329,7 +328,7 @@ const AddExpense: React.FC<{ onClose: () => void; userId: number; companyId: num
                 )}
 
                 <Box px={3} py={3} display="flex" flexDirection="column" gap={3}>
-                    {selecteUser == true && (
+                    {selectUser == true && (
                         /* User */
                         <Box display="grid" gridTemplateColumns="140px 1fr" alignItems="center" gap={2}>
                             <Typography variant="body2" fontWeight={600} color="#1a1a1a">

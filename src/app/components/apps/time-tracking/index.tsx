@@ -2339,8 +2339,8 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                     <AddExpense
                         onClose={closeAddExpenseSidebar}
                         userId={Number(userId)}
-                        selecteUser={false}
-                        companyId={companyId}
+                        selectUser={false}
+                        companyId={Number(user.company_id)}
                     />
                 </Drawer>
 
