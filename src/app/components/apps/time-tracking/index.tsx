@@ -1318,14 +1318,6 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         });
     }, [data, currency, formatHour, parseDate]);
 
-    const selectableRowIds = useMemo(
-        () =>
-            dailyData
-                .map((row, index) => (row.rowType === 'day' ? `row-${index}` : null))
-                .filter(Boolean) as string[],
-        [dailyData]
-    );
-
     const headerStyle: React.CSSProperties = {
         display: 'block',
         textAlign: 'center',
