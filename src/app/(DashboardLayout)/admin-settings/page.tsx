@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import PageContainer from '@/app/components/container/PageContainer';
-import {Grid, Tabs, Tab, Box, Stack} from '@mui/material';
+import { Grid, Tabs, Tab, Box, Stack } from '@mui/material';
 import CreateWork from '@/app/components/apps/settings/tasks/list';
 import LocationList from '@/app/components/apps/settings/locations/list';
 import LeaveList from '@/app/components/apps/settings/leaves/list';
@@ -19,18 +19,19 @@ import {
     IconCalendarOff,
     IconSquarePercentage,
     IconUsersMinus,
+    IconBuildingStore,
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
 import PermissionSettings from '@/app/components/apps/settings/permissions';
 import PermissionGuard from '@/app/auth/PermissionGuard';
 import CategoryList from '@/app/components/apps/settings/expense-categories/list';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
+import { useSession } from 'next-auth/react';
+import { User } from 'next-auth';
 import TradeList from '@/app/components/apps/settings/company-trades/list';
 import HistoryList from '@/app/components/apps/settings/history';
-import {IconCategoryPlus} from '@tabler/icons-react';
-import {IconBasket} from '@tabler/icons-react';
+import { IconCategoryPlus } from '@tabler/icons-react';
+import { IconBasket } from '@tabler/icons-react';
 import TradeCategoryList from '@/app/components/apps/trade-categories/list';
 import UnitList from '@/app/components/apps/units/list';
 import StockHistoryList from '@/app/components/apps/settings/history/stock-history';
@@ -40,6 +41,7 @@ import AnalyticsScore from '@/app/components/apps/analytics/score-settings';
 import RemoveUsers from '@/app/components/apps/settings/remove-users/list';
 import { IconCoinPound } from '@tabler/icons-react';
 import TeamPricing from '@/app/components/apps/team-pricing/index';
+import StoreSettings from '@/app/components/apps/settings/store-settings';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -48,7 +50,7 @@ interface TabPanelProps {
 }
 
 function TabPanel(props: TabPanelProps) {
-    const {children, value, index, ...other} = props;
+    const { children, value, index, ...other } = props;
 
     return (
         <div
@@ -58,7 +60,7 @@ function TabPanel(props: TabPanelProps) {
             aria-labelledby={`vertical-tab-${index}`}
             {...other}
         >
-            {value === index && <Box sx={{pt: 1}}>{children}</Box>}
+            {value === index && <Box sx={{ pt: 1 }}>{children}</Box>}
         </div>
     );
 }
@@ -111,100 +113,107 @@ const AdminSetting = () => {
                                         className="admin-settings"
                                         color="textSecondary"
                                         iconPosition="start"
-                                        icon={<IconNotebook size="20"/>}
+                                        icon={<IconNotebook size="20" />}
                                         label="Templates"
                                         {...a11yProps(0)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconMap size="20"/>}
+                                        icon={<IconMap size="20" />}
                                         label="Locations"
                                         {...a11yProps(1)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconDoorExit size="20"/>}
+                                        icon={<IconDoorExit size="20" />}
                                         label="Leaves"
                                         {...a11yProps(2)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconCalendarOff size="20"/>}
+                                        icon={<IconCalendarOff size="20" />}
                                         label="Holidays"
                                         {...a11yProps(3)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconBell size="20"/>}
+                                        icon={<IconBell size="20" />}
                                         label="Notification Setting"
                                         {...a11yProps(4)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconLock size="20"/>}
+                                        icon={<IconLock size="20" />}
                                         label="Permissions"
                                         {...a11yProps(5)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconCategoryPlus size="20"/>}
+                                        icon={<IconCategoryPlus size="20" />}
                                         label="Expense Category"
                                         {...a11yProps(6)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconCategory2 size="20"/>}
+                                        icon={<IconCategory2 size="20" />}
                                         label="Company Trades"
                                         {...a11yProps(7)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconCategoryPlus size="20"/>}
+                                        icon={<IconCategoryPlus size="20" />}
                                         label="Trade Categories"
                                         {...a11yProps(8)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconCoinPound size="20"/>}
+                                        icon={<IconCoinPound size="20" />}
                                         label="Team Pricing"
                                         {...a11yProps(9)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconUsers size="20"/>}
+                                        icon={<IconUsers size="20" />}
                                         label="Clients"
                                         {...a11yProps(10)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconUsersMinus size="20"/>}
+                                        icon={<IconUsersMinus size="20" />}
                                         label="Remove Users"
                                         {...a11yProps(11)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconExclamationCircle size="20"/>}
-                                        label="History"
+                                        icon={<IconBuildingStore size="20" />}
+                                        label="Store Setting"
                                         {...a11yProps(12)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconSquarePercentage size="20"/>}
-                                        label="Analytics Score"
+                                        icon={<IconExclamationCircle size="20" />}
+                                        label="History"
                                         {...a11yProps(13)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconSquarePercentage size="20" />}
+                                        label="Analytics Score"
+                                        {...a11yProps(14)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -219,46 +228,49 @@ const AdminSetting = () => {
                     >
                         <BlankCard>
                             <TabPanel value={value} index={0}>
-                                <CreateWork/>
+                                <CreateWork />
                             </TabPanel>
                             <TabPanel value={value} index={1}>
-                                <LocationList/>
+                                <LocationList />
                             </TabPanel>
                             <TabPanel value={value} index={2}>
-                                <LeaveList/>
+                                <LeaveList />
                             </TabPanel>
                             <TabPanel value={value} index={3}>
-                                <HolidayList/>
+                                <HolidayList />
                             </TabPanel>
                             <TabPanel value={value} index={4}>
-                                <NotificationSettings/>
+                                <NotificationSettings />
                             </TabPanel>
                             <TabPanel value={value} index={5}>
-                                <PermissionSettings/>
+                                <PermissionSettings />
                             </TabPanel>
                             <TabPanel value={value} index={6}>
-                                <CategoryList/>
+                                <CategoryList />
                             </TabPanel>
                             <TabPanel value={value} index={7}>
-                                <TradeList/>
+                                <TradeList />
                             </TabPanel>
                             <TabPanel value={value} index={8}>
-                                <TradeCategoryList/>
+                                <TradeCategoryList />
                             </TabPanel>
                             <TabPanel value={value} index={9}>
-                                <TeamPricing/>
+                                <TeamPricing />
                             </TabPanel>
                             <TabPanel value={value} index={10}>
-                                <ClientList/>
+                                <ClientList />
                             </TabPanel>
                             <TabPanel value={value} index={11}>
-                                <RemoveUsers/>
+                                <RemoveUsers />
                             </TabPanel>
                             <TabPanel value={value} index={12}>
-                                <HistoryList/>
+                                <StoreSettings />
                             </TabPanel>
                             <TabPanel value={value} index={13}>
-                                <AnalyticsScore/>
+                                <HistoryList />
+                            </TabPanel>
+                            <TabPanel value={value} index={14}>
+                                <AnalyticsScore />
                             </TabPanel>
                         </BlankCard>
                     </Grid>

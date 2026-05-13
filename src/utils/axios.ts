@@ -61,47 +61,50 @@ api.interceptors.response.use(
         return response;
       }
 
-      const session = await getSession();
-      const user = session?.user as User & {
-        company_id?: number | null;
-      };
-      const currentCompanyId =
-        user?.company_id;
+      // Optimize network overhead: query getSession only when API responses include an active company directive
+      if (activeCompanyId !== undefined && activeCompanyId !== null) {
+        const session = await getSession();
+        const user = session?.user as User & {
+          company_id?: number | null;
+        };
+        const currentCompanyId =
+          user?.company_id;
 
-      if (
-        activeCompanyId &&
-        Number(activeCompanyId) !==
-        Number(currentCompanyId)
-      ) {
-        console.log(
-          "Company changed:",
-          currentCompanyId,
-          "=>",
-          activeCompanyId,
-        );
-
-        const companyResponse =
-          await api.get(
-            "company/active-company",
-            {
-              headers: {
-                "x-skip-auth": true,
-              },
-            },
+        if (
+          activeCompanyId &&
+          Number(activeCompanyId) !==
+          Number(currentCompanyId)
+        ) {
+          console.log(
+            "Company changed:",
+            currentCompanyId,
+            "=>",
+            activeCompanyId,
           );
 
-        const company =
-          companyResponse?.data?.info;
-
-        if (company) {
-          window.dispatchEvent(
-            new CustomEvent(
-              "company-changed",
+          const companyResponse =
+            await api.get(
+              "company/active-company",
               {
-                detail: company,
+                headers: {
+                  "x-skip-auth": true,
+                },
               },
-            ),
-          );
+            );
+
+          const company =
+            companyResponse?.data?.info;
+
+          if (company) {
+            window.dispatchEvent(
+              new CustomEvent(
+                "company-changed",
+                {
+                  detail: company,
+                },
+              ),
+            );
+          }
         }
       }
     } catch (err) {

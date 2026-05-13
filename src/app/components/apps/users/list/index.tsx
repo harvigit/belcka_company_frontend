@@ -1737,14 +1737,13 @@ const TablePagination = () => {
                         {/* Save/Cancel Buttons */}
                         {isPermission && (
                             <Box
-                                mt={2}
+                                mb={1}
                                 display="flex"
                                 justifyContent="flex-start"
                                 gap={2}
                                 sx={{
                                     flexShrink: 0,
                                     paddingTop: 2,
-                                    borderTop: '1px solid #e0e0e0',
                                 }}
                             >
                                 <Button
@@ -1752,16 +1751,21 @@ const TablePagination = () => {
                                     variant="contained"
                                     size="large"
                                     onClick={handleSavePermissions}
-                                    sx={{ borderRadius: 1 }}
+                                    className='drawer_buttons'
+                                    sx={{ borderRadius: 3 }}
                                 >
                                     Save
                                 </Button>
                                 <Button
-                                    color="error"
+                                    color="inherit"
                                     onClick={() => setPermissionsDrawerOpen(false)}
-                                    variant="outlined"
+                                    variant="contained"
                                     size="large"
-                                    sx={{ borderRadius: 1 }}
+                                    sx={{
+                                        backgroundColor: "transparent",
+                                        borderRadius: 3,
+                                        color: "GrayText",
+                                    }}
                                 >
                                     Cancel
                                 </Button>

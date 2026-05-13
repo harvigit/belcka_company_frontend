@@ -1,6 +1,5 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { getSession } from "next-auth/react";
 
 export const authOptions: NextAuthOptions = {
   debug: true,
@@ -55,7 +54,7 @@ export const authOptions: NextAuthOptions = {
           if (!companyRes.ok || !companyData?.info) {
             throw new Error("Failed to fetch active company data");
           }
-          await getSession();
+
           return {
             ...data.info,
             token,
@@ -85,11 +84,20 @@ export const authOptions: NextAuthOptions = {
       if (typeof token.user !== "object" || token.user === null) {
         token.user = {};
       }
+
       if (trigger === "update" && session && typeof session === "object" && !Array.isArray(session)) {
+        // Unwraps session.user if client calls update({ ...session, user: updatedUser }) to prevent deep nesting/corruption
+        const sessionUser = session.user && typeof session.user === "object" ? session.user : session;
+
         token.user = {
           ...(token.user as Record<string, any>),
-          ...(session as Record<string, any>),
+          ...(sessionUser as Record<string, any>),
         };
+
+        // Ensure token.accessToken stays perfectly preserved
+        if ((token.user as any).token) {
+          token.accessToken = (token.user as any).token;
+        }
       }
 
       if (user) {
@@ -105,33 +113,34 @@ export const authOptions: NextAuthOptions = {
       let companyData = null;
 
       try {
-        const res = await fetch(`${api}company/active-company`, {
-          headers: {
-            "Content-Type": "application/json",
-            "is_web": "true",
-            authorization: `Bearer ${user?.token}`,
-          },
-        });
+        if (user?.token) {
+          const res = await fetch(`${api}company/active-company`, {
+            headers: {
+              "Content-Type": "application/json",
+              "is_web": "true",
+              authorization: `Bearer ${user.token}`,
+            },
+          });
 
-        const data = await res.json();
-        await getSession();
-        if (res.ok && data?.info) {
-          companyData = {
-            user_image: data?.info?.user_image ?? null,
-            name: data?.info?.user_name ?? null,
-            first_name: data?.info?.first_name ?? null,
-            last_name: data?.info?.last_name ?? null,
-            email: data?.info?.email ?? null,
-            company_id: data?.info?.id ?? null,
-            company_name: data?.info?.name ?? null,
-            company_image: data?.info?.image ?? null,
-            trade_id: data?.info?.trade_id ?? null,
-            trade_name: data?.info?.trade_name ?? null,
-            currency_id: data?.info?.currency_id ?? null,
-            user_role_id: data?.info?.user_role_id ?? null
-          };
-        } else {
-          console.error("Failed to fetch updated company data:", data);
+          const data = await res.json();
+          if (res.ok && data?.info) {
+            companyData = {
+              user_image: data?.info?.user_image ?? null,
+              name: data?.info?.user_name ?? null,
+              first_name: data?.info?.first_name ?? null,
+              last_name: data?.info?.last_name ?? null,
+              email: data?.info?.email ?? null,
+              company_id: data?.info?.id ?? null,
+              company_name: data?.info?.name ?? null,
+              company_image: data?.info?.image ?? null,
+              trade_id: data?.info?.trade_id ?? null,
+              trade_name: data?.info?.trade_name ?? null,
+              currency_id: data?.info?.currency_id ?? null,
+              user_role_id: data?.info?.user_role_id ?? null
+            };
+          } else {
+            console.error("Failed to fetch updated company data:", data);
+          }
         }
       } catch (err) {
         console.error("Error fetching active company in session:", err);
