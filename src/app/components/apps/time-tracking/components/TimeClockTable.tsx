@@ -107,6 +107,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     };
 
     const visibleColumnConfigs = getVisibleColumnConfigs();
+    const minTableWidth = Object.values(visibleColumnConfigs).reduce(
+        (total, config) => total + (config.visible ? config.width : 0),
+        0
+    );
 
     const getTruncatedName = (name: string) => {
         if (!name || name == '--') return '--';
@@ -117,16 +121,27 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
     return (
         <Box sx={{
             flex: 1,
-            overflow: 'auto',
+            overflow: 'hidden',
             paddingBottom: selectedRows.size > 0 ? '80px' : '0px',
-            maxHeight: '400px',
+            maxHeight: { xs: '420px', md: '520px' },
             position: 'relative'
         }}>
             <TableContainer sx={{
                 height: '100%',
-                overflow: 'auto',
+                width: '100%',
+                overflowX: 'auto',
+                overflowY: 'auto',
             }}>
-                <Table size="small" stickyHeader sx={{tableLayout: 'fixed', width: '100%', paddingBottom: '2rem'}}>
+                <Table
+                    size="small"
+                    stickyHeader
+                    sx={{
+                        tableLayout: 'fixed',
+                        width: 'max-content',
+                        minWidth: `${Math.max(minTableWidth, 860)}px`,
+                        paddingBottom: '2rem',
+                    }}
+                >
                     <TableHead>
                         {table.getHeaderGroups().map((hg: any) => (
                             <TableRow key={hg.id}>
@@ -142,13 +157,13 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                             minWidth: `${header.column.columnDef.size || 100}px`,
                                             maxWidth: `${header.column.columnDef.size || 100}px`,
                                             overflow: 'hidden',
-                                            padding: 0,
                                             textAlign: 'center',
                                             verticalAlign: 'middle',
-                                            p: 1
+                                            p: { xs: 0.75, md: 1 },
+                                            whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        <Typography sx={{color: '#203040'}}>
+                                        <Typography sx={{color: '#203040', fontSize: { xs: '0.75rem', md: '0.875rem' }}}>
                                             {flexRender(header.column.columnDef.header, header.getContext())}
                                         </Typography>
                                     </TableCell>
@@ -159,6 +174,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                     <TableBody
                         sx={{
+                            '& td, & th': {
+                                whiteSpace: 'nowrap',
+                                px: { xs: 0.75, md: 1 },
+                            },
                             '& tr:last-child > td': {
                                 borderBottom: '1px solid rgba(224, 224, 224, 1) !important',
                             },
@@ -239,7 +258,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     >
                                                         <Box className="select-icon" sx={{
                                                             height: '100%',
-                                                            display: isRowSelected ? 'flex' : 'none',
+                                                            display: { xs: 'flex', md: isRowSelected ? 'flex' : 'none' },
                                                             alignItems: 'center',
                                                             justifyContent: 'center'
                                                         }}>
@@ -809,7 +828,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 size="small"
                                                                 className="action-icon"
                                                                 sx={{
-                                                                    display: 'none',
+                                                                    display: { xs: 'flex', md: 'none' },
                                                                     padding: 0,
                                                                     minWidth: '30px',
                                                                     width: '30px',
@@ -894,7 +913,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     >
                                                         <Box className="select-icon" sx={{
                                                             height: '100%',
-                                                            display: isRowSelected ? 'flex' : 'none',
+                                                            display: { xs: 'flex', md: isRowSelected ? 'flex' : 'none' },
                                                             alignItems: 'center',
                                                             justifyContent: 'center'
                                                         }}>
@@ -952,7 +971,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 size="small"
                                                                 className="action-icon"
                                                                 sx={{
-                                                                    display: 'none',
+                                                                    display: { xs: 'flex', md: 'none' },
                                                                     '&:hover': {
                                                                         color: '#fc4b6c',
                                                                     },

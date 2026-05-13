@@ -27,6 +27,8 @@ import {
     MenuItem,
     Card,
     CardContent,
+    IconButton,
+    Menu, Drawer,
 } from '@mui/material';
 
 import {
@@ -37,6 +39,8 @@ import {
     IconClock,
     IconCurrencyDollar,
     IconSparkles,
+    IconEye,
+    IconEyeOff,
 } from '@tabler/icons-react';
 
 import { AxiosResponse } from 'axios';
@@ -67,6 +71,7 @@ import { useTimeClockData } from './hooks/useTimeClockData';
 import { useEditingState } from './hooks/useEditingState';
 import { DailyBreakdown } from './types/timeClock';
 import type { User } from 'next-auth';
+import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expenses/add-expense';
 
 const TIME_TRACKING_PAGE = 'time-tracking-page';
 
@@ -148,6 +153,7 @@ type ApiResponse<T = unknown> = {
 };
 
 type ActiveWorklogResponse = {
+    company_id: number;
     currency: string;
     IsSuccess: boolean;
     message: string;
@@ -348,7 +354,7 @@ const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> = ({
                                                                                onClose,
                                                                                onRetry,
                                                                                errorType
-}) => {
+                                                                           }) => {
     const isDenied = errorType === 'denied';
 
     return (
@@ -499,7 +505,7 @@ const ClockButton: React.FC<ClockButtonProps> = ({
                                                      isWorking,
                                                      onClick,
                                                      loading
-}) => {
+                                                 }) => {
     const gradient = isWorking ? 'linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%)' : 'linear-gradient(135deg, #4ecdc4 0%, #44a5c2 100%)';
     const shadow = isWorking ? '0 12px 32px rgba(255, 107, 107, 0.35)' : '0 12px 32px rgba(78, 205, 196, 0.35)';
 
@@ -511,8 +517,8 @@ const ClockButton: React.FC<ClockButtonProps> = ({
             aria-label={isWorking ? 'Stop Work' : 'Start Work'}
             onKeyDown={(e) => e.key === 'Enter' && onClick()}
             sx={{
-                width: 140,
-                height: 140,
+                width: { xs: 108, sm: 124, md: 140 },
+                height: { xs: 108, sm: 124, md: 140 },
                 borderRadius: '50%',
                 background: gradient,
                 display: 'flex',
@@ -546,7 +552,7 @@ const ClockButton: React.FC<ClockButtonProps> = ({
                 sx={{
                     color: '#fff',
                     fontWeight: 800,
-                    fontSize: 12,
+                    fontSize: { xs: 11, md: 12 },
                     letterSpacing: 0.5,
                     mt: 0.25,
                     textTransform: 'uppercase',
@@ -560,7 +566,7 @@ const ClockButton: React.FC<ClockButtonProps> = ({
 
 const PinOverlay: React.FC<PinOverlayProps> = ({
                                                    position, color, userName, userImage, userInitials
-}) => {
+                                               }) => {
     const [hovered, setHovered] = useState(false);
     const pinColor = color || '#1976d2';
     const displayInitials = userInitials?.slice(0, 2).toUpperCase()
@@ -623,7 +629,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
                                                              onConfirm,
                                                              loading,
                                                              companyId
-}) => {
+                                                         }) => {
     const { getLocation } = useGeolocation();
 
     const [shifts, setShifts] = useState<ShiftOption[]>([]);
@@ -643,7 +649,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({
             setShiftDayError(null);
 
             if (!shiftId) return;
-            
+
             const shift = currentShifts.find((s) => s.id === shiftId);
             if (!shift) return;
 
@@ -971,18 +977,24 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
     });
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [expenseAnchorEl, setExpenseAnchorEl] = useState<null | HTMLElement>(null);
     const [search, setSearch] = useState('');
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
         ...initialSettings.columnVisibility,
     });
     const [expanded, setExpanded] = useState<ExpandedState>({});
-    const [showPayableAmounts, setShowPayableAmounts] = useState(true);
+    const [showPayableAmounts, setShowPayableAmounts] = useState(false);
+    const [tableExpanded, setTableExpanded] = useState(false);
     const [locations, setLocations] = useState<LocationPoint[]>([]);
     const mapRef = useRef<google.maps.Map | null>(null);
     const { isLoaded: isGoogleMapsLoaded } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
         libraries: GOOGLE_MAP_LIBRARIES,
     });
+
+    const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
+    const [companyId, setCompanyId] = useState<number | null>(null);
+
 
     const {
         data,
@@ -1013,7 +1025,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         () => setToast((t) => ({ ...t, open: false })),
         []
     );
-
+    
     useEffect(() => {
         if (!mapRef.current || locations.length === 0) return;
 
@@ -1054,7 +1066,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         } else {
             if (timerRef.current) {
                 clearInterval(timerRef.current);
-                timerRef.current = null; 
+                timerRef.current = null;
             }
             setElapsed(0);
         }
@@ -1096,6 +1108,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                     weekly_payable_amount: data.weekly_payable_amount ?? '0.00',
                 });
 
+                setCompanyId(data.company_id);
                 if (data.currency !== null) {
                     setCurrency(data.currency);
                 }
@@ -1772,6 +1785,21 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         []
     );
 
+    const handleAddExpense = async () => {
+        setAddExpenseSidebar(true);
+    };
+
+    const closeAddExpenseSidebar = async () => {
+        setAddExpenseSidebar(false);
+        try {
+            const defaultStartDate = startDate;
+            const defaultEndDate = endDate;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+        } catch (error) {
+            console.error('Error fetching time clock data after closing add expense sidebar:', error);
+        }
+    };
+    
     const handlePopoverClose = useCallback(() => setAnchorEl(null), []);
 
     return (
@@ -1781,11 +1809,11 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                     {/* PAGE TITLE */}
                     <Typography
                         sx={{
-                            fontSize: 32,
+                            fontSize: { xs: 26, sm: 30, md: 32 },
                             fontWeight: 700,
                             color: '#1a1a1a',
                             my: 2,
-                            letterSpacing: -0.5,
+                            letterSpacing: 0,
                         }}
                     >
                         Time Tracking
@@ -1799,7 +1827,8 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                             mb: 3,
                             gridTemplateColumns: {
                                 xs: '1fr',
-                                lg: '2fr 1fr 1fr 1fr',
+                                sm: 'repeat(2, minmax(0, 1fr))',
+                                xl: '2fr 1fr 1fr 1fr',
                             },
                         }}
                     >
@@ -1812,7 +1841,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 background: '#fff',
                             }}
                         >
-                            <CardContent sx={{ p: 3 }}>
+                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                 <Typography
                                     sx={{
                                         fontSize: 13,
@@ -1827,9 +1856,9 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 </Typography>
 
                                 <Stack
-                                    direction="row"
+                                    direction={{ xs: 'column', sm: 'row' }}
                                     spacing={2}
-                                    alignItems="center"
+                                    alignItems={{ xs: 'flex-start', sm: 'center' }}
                                     justifyContent="space-between"
                                 >
                                     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -1839,7 +1868,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                             <>
                                                 <Typography
                                                     sx={{
-                                                        fontSize: 26,
+                                                        fontSize: { xs: 22, sm: 26 },
                                                         fontWeight: 700,
                                                         color: '#1a1a1a',
                                                         fontVariantNumeric: 'tabular-nums',
@@ -1924,7 +1953,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                         )}
                                     </Box>
 
-                                    <Box sx={{ flexShrink: 0 }}>
+                                    <Box sx={{ flexShrink: 0, alignSelf: { xs: 'center', sm: 'auto' } }}>
                                         <ClockButton
                                             isWorking={clockInfo.user_is_working}
                                             elapsed={elapsed}
@@ -1946,7 +1975,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
                             }}
                         >
-                            <CardContent sx={{ p: 3 }}>
+                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                                     <Box
                                         sx={{
@@ -1978,7 +2007,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 ) : (
                                     <Typography
                                         sx={{
-                                            fontSize: 28,
+                                            fontSize: { xs: 24, sm: 28 },
                                             fontWeight: 700,
                                             color: '#0d47a1',
                                             fontVariantNumeric: 'tabular-nums',
@@ -1990,7 +2019,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                             </CardContent>
                         </Card>
 
-                        {/* Total Payable Card */}
+                        {/* Total Payable Card - IMPROVED WITH EYE ICON */}
                         <Card
                             sx={{
                                 borderRadius: 3,
@@ -1998,22 +2027,22 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
                             }}
                         >
-                            <CardContent sx={{ p: 3 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                                    <Box
-                                        sx={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: 2,
-                                            background: '#a5d6a7',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                        }}
-                                    >
-                                        <IconCurrencyDollar size={22} color="#1b5e20" stroke={2} />
-                                    </Box>
+                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, justifyContent: 'space-between' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                        <Box
+                                            sx={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 2,
+                                                background: '#a5d6a7',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <IconCurrencyDollar size={22} color="#1b5e20" stroke={2} />
+                                        </Box>
                                         <Typography
                                             sx={{
                                                 fontSize: 12,
@@ -2026,21 +2055,41 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                             Total Payable
                                         </Typography>
                                     </Box>
+                                    {userHasRatePermission && (
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => setShowPayableAmounts(!showPayableAmounts)}
+                                            sx={{
+                                                padding: '4px',
+                                                color: '#1b5e20',
+                                                '&:hover': { backgroundColor: 'rgba(27, 94, 32, 0.08)' }
+                                            }}
+                                        >
+                                            {showPayableAmounts ? (
+                                                <IconEye size={18} />
+                                            ) : (
+                                                <IconEyeOff size={18} />
+                                            )}
+                                        </IconButton>
+                                    )}
                                 </Box>
-                                {/* FIX #6: Show skeleton until both loading and currency are ready */}
                                 {todayLoading || !currency ? (
                                     <Skeleton variant="text" height={44} width={120} />
                                 ) : (
                                     <Typography
                                         sx={{
-                                            fontSize: 28,
+                                            fontSize: { xs: 24, sm: 28 },
                                             fontWeight: 700,
                                             color: '#1b5e20',
                                             fontVariantNumeric: 'tabular-nums',
+                                            letterSpacing: showPayableAmounts ? 'normal' : '3px',
+                                            fontFamily: showPayableAmounts ? 'inherit' : 'monospace',
                                         }}
                                     >
                                         {userHasRatePermission
-                                            ? `${currency}${clockInfo.weekly_payable_amount}`
+                                            ? showPayableAmounts
+                                                ? `${currency}${clockInfo.weekly_payable_amount}`
+                                                : '••••••'
                                             : '0.00'}
                                     </Typography>
                                 )}
@@ -2055,7 +2104,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
                             }}
                         >
-                            <CardContent sx={{ p: 3 }}>
+                            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                                     <Box
                                         sx={{
@@ -2108,101 +2157,105 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                             mb: 3,
                             gridTemplateColumns: {
                                 xs: '1fr',
-                                lg: '2fr 3fr',
+                                lg: tableExpanded ? '1fr' : '2fr 3fr',
                             },
                         }}
                     >
                         {/* Map Card */}
-                        <Card
-                            sx={{
-                                borderRadius: 3,
-                                border: '1px solid #e8eef7',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-                                background: '#fff',
-                                overflow: 'hidden',
-                                height: '100%',
-                                minHeight: 460,
-                            }}
-                        >
-                            <Box
+                        {!tableExpanded && (
+                            <Card
                                 sx={{
-                                    p: 2,
-                                    borderBottom: '1px solid #e8eef7',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
+                                    borderRadius: 3,
+                                    border: '1px solid #e8eef7',
+                                    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                                    background: '#fff',
+                                    overflow: 'hidden',
+                                    height: '100%',
+                                    minHeight: { xs: 320, sm: 380, md: 460 },
                                 }}
                             >
-                                <Typography
-                                    sx={{
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        color: '#666',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 0.5,
-                                    }}
-                                >
-                                    Work Location
-                                </Typography>
-                            </Box>
-                            {!isGoogleMapsLoaded ? (
                                 <Box
                                     sx={{
-                                        height: '100%',
+                                        p: 2,
+                                        borderBottom: '1px solid #e8eef7',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
+                                        justifyContent: 'space-between',
                                     }}
                                 >
-                                    <Typography color="textSecondary" fontSize={14}>
-                                        Loading map…
+                                    <Typography
+                                        sx={{
+                                            fontSize: 13,
+                                            fontWeight: 700,
+                                            color: '#666',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: 0.5,
+                                        }}
+                                    >
+                                        Work Location
                                     </Typography>
                                 </Box>
-                            ) : (
-                                <GoogleMap
-                                    mapContainerStyle={{ width: '100%', height: '450px' }}
-                                    zoom={DEFAULT_ZOOM}
-                                    center={
-                                        locations.length > 0 && locations[0].latitude && locations[0].longitude
-                                            ? toLatLng(locations[0].latitude, locations[0].longitude)
-                                            : DEFAULT_CENTER
-                                    }
-                                    onLoad={handleMapLoad}
-                                    options={{
-                                        disableDefaultUI: false,
-                                        zoomControl: true,
-                                        streetViewControl: false,
-                                        mapTypeControl: false,
-                                        fullscreenControl: true,
-                                    }}
-                                >
-                                    {locations
-                                        .filter((l) => l.latitude && l.longitude)
-                                        .map((loc, index) => {
-                                            const pos = toLatLng(loc.latitude, loc.longitude);
-                                            const pinColor = PIN_COLORS[loc.type] ?? '#1976d2';
+                                {!isGoogleMapsLoaded ? (
+                                    <Box
+                                        sx={{
+                                            height: { xs: 280, sm: 340, md: 450 },
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Typography color="textSecondary" fontSize={14}>
+                                            Loading map…
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ height: { xs: 280, sm: 340, md: 450 } }}>
+                                        <GoogleMap
+                                            mapContainerStyle={{ width: '100%', height: '100%' }}
+                                            zoom={DEFAULT_ZOOM}
+                                            center={
+                                                locations.length > 0 && locations[0].latitude && locations[0].longitude
+                                                    ? toLatLng(locations[0].latitude, locations[0].longitude)
+                                                    : DEFAULT_CENTER
+                                            }
+                                            onLoad={handleMapLoad}
+                                            options={{
+                                                disableDefaultUI: false,
+                                                zoomControl: true,
+                                                streetViewControl: false,
+                                                mapTypeControl: false,
+                                                fullscreenControl: true,
+                                            }}
+                                        >
+                                            {locations
+                                                .filter((l) => l.latitude && l.longitude)
+                                                .map((loc, index) => {
+                                                    const pos = toLatLng(loc.latitude, loc.longitude);
+                                                    const pinColor = PIN_COLORS[loc.type] ?? '#1976d2';
 
-                                            const initials = user?.name
-                                                ? user.name.split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
-                                                : 'U';
+                                                    const initials = user?.name
+                                                        ? user.name.split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                                                        : 'U';
 
-                                            const userImg = (user as any)?.user_image || (user as any)?.image || undefined;
+                                                    const userImg = (user as any)?.user_image || (user as any)?.image || undefined;
 
-                                            return (
-                                                <PinOverlay
-                                                    key={`pin-${index}`}
-                                                    position={pos}
-                                                    color={pinColor}
-                                                    userName={user?.name ?? 'User'}
-                                                    userImage={userImg}
-                                                    userInitials={initials}
-                                                />
-                                            );
-                                        })
-                                    }
-                                </GoogleMap>
-                            )}
-                        </Card>
+                                                    return (
+                                                        <PinOverlay
+                                                            key={`pin-${index}`}
+                                                            position={pos}
+                                                            color={pinColor}
+                                                            userName={user?.name ?? 'User'}
+                                                            userImage={userImg}
+                                                            userInitials={initials}
+                                                        />
+                                                    );
+                                                })
+                                            }
+                                        </GoogleMap>
+                                    </Box>
+                                )}
+                            </Card>
+                        )}
 
                         {/* Table Section */}
                         <Box
@@ -2212,6 +2265,9 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 background: '#fff',
                                 overflow: 'hidden',
                                 boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                                minWidth: 0,
+                                display: 'flex',
+                                flexDirection: 'column',
                             }}
                         >
                             <TimeClockStats
@@ -2230,6 +2286,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                                 handlePopoverClose={handlePopoverClose}
                                 userHasRatePermission={userHasRatePermission}
                                 amountColumns={AMOUNT_COLUMNS as unknown as string[]}
+                                onAddExpense={handleAddExpense}
                             />
 
                             <TimeClockTable
@@ -2254,7 +2311,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                         </Box>
                     </Box>
                 </Box>
-
+                
                 {/* START WORK DIALOG */}
                 <StartWorkDialog
                     open={startDialogOpen}
@@ -2263,6 +2320,29 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
                     loading={clockLoading}
                     companyId={user?.company_id}
                 />
+
+                <Drawer
+                    anchor="right"
+                    open={addExpenseSidebar}
+                    onClose={closeAddExpenseSidebar}
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 0,
+                            boxShadow: 'none',
+                            overflow: 'hidden',
+                            width: '504px',
+                            borderTopLeftRadius: 18,
+                            borderBottomLeftRadius: 18,
+                        },
+                    }}
+                >
+                    <AddExpense
+                        onClose={closeAddExpenseSidebar}
+                        userId={Number(userId)}
+                        selecteUser={false}
+                        companyId={companyId}
+                    />
+                </Drawer>
 
                 {/* TOAST NOTIFICATION */}
                 <Snackbar

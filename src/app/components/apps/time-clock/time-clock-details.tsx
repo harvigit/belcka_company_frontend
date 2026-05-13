@@ -646,7 +646,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             await fetchTimeClockData(defaultStartDate, defaultEndDate);
             onDataChange?.();
         } catch (error) {
-            console.error('Error fetching time clock data after closing add leave sidebar:', error);
+            console.error('Error fetching time clock data after closing add expense sidebar:', error);
         }
     };
 

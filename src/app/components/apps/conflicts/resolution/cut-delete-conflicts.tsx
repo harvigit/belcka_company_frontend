@@ -44,7 +44,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
     const [selectedItem, setSelectedItem] = useState<ConflictItem | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    // ── Menu helpers ──────────────────────────────────────────────────────────
+    //  Menu helpers 
     const openMenu = useCallback((e: React.MouseEvent<HTMLElement>, type: 'cut' | 'delete') => {
         e.stopPropagation();
         setAnchorEl(e.currentTarget);
@@ -56,7 +56,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         setMenuType(null);
     }, []);
 
-    // ── Derived: which worklog is longer ──────────────────────────────────────
+    // Derived: which worklog is longer
     const longerWorklog = useMemo((): ConflictItem | null => {
         if (conflict.items.length !== 2) return null;
         const [a, b] = conflict.items.map((item) => ({
@@ -70,7 +70,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         return durationA >= durationB ? a.item : b.item;
     }, [conflict.items]);
 
-    // ── Cut preview rows ──────────────────────────────────────────────────────
+    // Cut preview rows
     const cutPreview = useMemo((): PreviewRow[] | null => {
         if (!selectedItem || conflict.items.length !== 2) return null;
 
@@ -130,7 +130,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         return rows;
     }, [selectedItem, conflict.items]);
 
-    // ── Delete preview row ────────────────────────────────────────────────────
+    //  Delete preview row 
     const deletePreview = useMemo((): PreviewRow[] | null => {
         if (!selectedItem) return null;
         const s = parseDT(selectedItem.start);
@@ -139,7 +139,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         return [{shift_name: selectedItem.shift_name, start: formatHM(s), end: formatHM(e), total: calcDiffHM(s, e)}];
     }, [selectedItem]);
 
-    // ── Handlers: open previews ───────────────────────────────────────────────
+    //  Handlers: open previews 
     const handleOpenCutPreview = useCallback((worklogId: number) => {
         const item = conflict.items.find((i) => i.worklog_id === worklogId);
         if (!item) return;
@@ -156,7 +156,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         closeMenu();
     }, [conflict.items, closeMenu]);
 
-    // ── Confirm cut ───────────────────────────────────────────────────────────
+    //  Confirm cut 
     const handleConfirmCut = useCallback(async () => {
         if (!cutPreview || !selectedItem?.worklog_id || isLoading) return;
         setIsLoading(true);
@@ -183,7 +183,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         }
     }, [cutPreview, selectedItem, isLoading, onClose]);
 
-    // ── Confirm delete ────────────────────────────────────────────────────────
+    //  Confirm delete 
     const handleConfirmDelete = useCallback(async () => {
         if (!selectedItem?.worklog_id || isLoading) return;
         setIsLoading(true);
@@ -201,7 +201,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         }
     }, [selectedItem, isLoading, onClose]);
 
-    // ── Cancel helpers ────────────────────────────────────────────────────────
+    //  Cancel helpers 
     const handleCancelCut = useCallback(() => {
         setCutPreviewOpen(false);
         setSelectedItem(null);
@@ -212,7 +212,7 @@ const CutDeleteCase: React.FC<CutDeleteCaseProps> = ({
         setSelectedItem(null);
     }, []);
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    //  Render 
     return (
         <>
             {/* Action buttons */}

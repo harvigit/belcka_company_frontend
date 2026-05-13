@@ -1,6 +1,16 @@
-import React from 'react';
-import { Box, Stack, Typography, IconButton, Popover, TextField, FormGroup, FormControlLabel, Checkbox } from '@mui/material';
-import { IconEye } from '@tabler/icons-react';
+import React, {useState} from 'react';
+import {
+    Box,
+    Typography,
+    IconButton,
+    Popover,
+    TextField,
+    FormGroup,
+    FormControlLabel,
+    Checkbox,
+    Button, Menu, MenuItem
+} from '@mui/material';
+import {IconChevronDown, IconChevronUp, IconEye} from '@tabler/icons-react';
 import {TimeClockDetailResponse} from '../types/timeClock';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 
@@ -20,6 +30,7 @@ interface TimeClockStatsProps {
     handlePopoverClose: () => void;
     userHasRatePermission: boolean;
     amountColumns: string[];
+    onAddExpense: () => void;
 }
 
 const TimeClockStats: React.FC<TimeClockStatsProps> = ({
@@ -38,102 +49,186 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                            handlePopoverClose,
                                                            userHasRatePermission,
                                                            amountColumns,
+                                                           onAddExpense,
                                                        }) => {
+    
+    const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
+    
+    const openAddSelect = Boolean(addDropDown);
+    
     const headerDetails = [
         { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
         { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
     ];
+    
+    const handleAddClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAddDropDown(event.currentTarget);
+    };
 
+    const handleAddClose = () => {
+        setAddDropDown(null);
+    };
+
+    const handleExpenseClick = () => {
+        setAddDropDown(null);
+        onAddExpense();
+    };
+    
     return (
         <Box
-            p={2}
+            p={{ xs: 1.5, sm: 2 }}
             sx={{
                 borderBottom: '1px solid #e0e0e0',
-                display: 'flex',
+                display: 'grid',
+                gridTemplateColumns: {
+                    xs: '1fr',
+                    xl: 'minmax(260px, auto) 1fr',
+                },
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                columnGap: { xs: 0, xl: 2 },
+                rowGap: { xs: 1.5, xl: 0 },
             }}
         >
-            <DateRangePickerBox
-                from={startDate}
-                to={endDate}
-                onChange={onDateRangeChange}
-                payrollCycle={payrollCycle}
-            />
-            
-            <Stack direction="row" spacing={4}>
-                <Stack direction="row" spacing={6} alignItems="center">
+            <Box sx={{ width: { xs: '100%', xl: 'auto' }, minWidth: 0 }}>
+                <DateRangePickerBox
+                    from={startDate}
+                    to={endDate}
+                    onChange={onDateRangeChange}
+                    payrollCycle={payrollCycle}
+                />
+            </Box>
+
+            <Box sx={{ minWidth: 0 }}>
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridAutoFlow: 'column',
+                        gridAutoColumns: 'max-content',
+                        alignItems: 'center',
+                        justifyContent: { xs: 'space-between', xl: 'end' },
+                        columnGap: { xs: 1, sm: 2, xl: 2.5 },
+                        width: '100%',
+                    }}
+                >
                     {headerDetails.map((stat, index) => (
-                        <Box key={index} textAlign="center">
-                            <Typography variant="h6" fontWeight={700} color="#8b939c">
+                        <Box
+                            key={index}
+                            textAlign="center"
+                            sx={{ minWidth: { xs: 78, sm: 110 } }}
+                        >
+                            <Typography
+                                sx={{
+                                    fontSize: { xs: '0.95rem', sm: '1.1rem' },
+                                    fontWeight: 700,
+                                    color: '#8b939c',
+                                    lineHeight: 1.2,
+                                }}
+                            >
                                 {stat.value}
                             </Typography>
-                            <Typography variant="caption" color="textSecondary">
+                            <Typography
+                                sx={{
+                                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                    color: 'text.secondary',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
                                 {stat.label}
                             </Typography>
                         </Box>
                     ))}
-                </Stack>
 
-                <Box sx={{ position: 'relative' }}>
-                    <IconButton onClick={handlePopoverOpen} color='primary'>
-                        <IconEye />
-                    </IconButton>
+                    <Box sx={{ position: 'relative' }}>
+                        <IconButton onClick={handlePopoverOpen} color='primary'>
+                            <IconEye />
+                        </IconButton>
 
-                    <Popover
-                        open={Boolean(anchorEl)}
-                        anchorEl={anchorEl}
-                        onClose={handlePopoverClose}
-                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                        PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+                        <Popover
+                            open={Boolean(anchorEl)}
+                            anchorEl={anchorEl}
+                            onClose={handlePopoverClose}
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                            PaperProps={{ sx: { width: { xs: 200, sm: 220 }, p: 1, borderRadius: 2 } }}
+                        >
+                            <TextField
+                                size="small"
+                                placeholder="Search columns..."
+                                fullWidth
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                sx={{ mb: 1 }}
+                            />
+
+                            <FormGroup>
+                                {table
+                                    .getAllLeafColumns()
+                                    .filter((col: any) => {
+                                        const excludedColumns = ['conflicts'];
+                                        if (excludedColumns.includes(col.id)) return false;
+
+                                        if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
+
+                                        return col.id.toLowerCase().includes(search.toLowerCase());
+                                    })
+                                    .map((col: any) => (
+                                        <FormControlLabel
+                                            key={col.id}
+                                            control={
+                                                <Checkbox
+                                                    checked={col.getIsVisible()}
+                                                    onChange={col.getToggleVisibilityHandler()}
+                                                    disabled={col.id === 'conflicts'}
+                                                />
+                                            }
+                                            label={
+                                                col.columnDef.meta?.label ||
+                                                (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
+                                                    ? col.columnDef.header
+                                                    : col.id
+                                                        .replace(/([A-Z])/g, ' $1')
+                                                        .replace(/^./, (str: string) => str.toUpperCase())
+                                                        .trim())
+                                            }
+                                            sx={{ textTransform: 'none' }}
+                                        />
+                                    ))}
+                            </FormGroup>
+                        </Popover>
+                    </Box>
+
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        sx={{
+                            p: 1,
+                            px: 1.5,
+                            minWidth: { xs: 82, sm: 92 },
+                            whiteSpace: 'nowrap',
+                            '&:hover': {
+                                backgroundColor: 'transparent',
+                                borderColor: 'inherit',
+                                boxShadow: 'none',
+                                color: '#1e4db7',
+                            },
+                        }}
+                        onClick={handleAddClick}
+                        endIcon={openAddSelect ? <IconChevronUp size={20}/> : <IconChevronDown size={20}/>}
                     >
-                        <TextField
-                            size="small"
-                            placeholder="Search columns..."
-                            fullWidth
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            sx={{ mb: 1 }}
-                        />
-
-                        <FormGroup>
-                            {table
-                                .getAllLeafColumns()
-                                .filter((col: any) => {
-                                    const excludedColumns = ['conflicts'];
-                                    if (excludedColumns.includes(col.id)) return false;
-
-                                    if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
-
-                                    return col.id.toLowerCase().includes(search.toLowerCase());
-                                })
-                                .map((col: any) => (
-                                    <FormControlLabel
-                                        key={col.id}
-                                        control={
-                                            <Checkbox
-                                                checked={col.getIsVisible()}
-                                                onChange={col.getToggleVisibilityHandler()}
-                                                disabled={col.id === 'conflicts'}
-                                            />
-                                        }
-                                        label={
-                                            col.columnDef.meta?.label ||
-                                            (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
-                                                ? col.columnDef.header
-                                                : col.id
-                                                    .replace(/([A-Z])/g, ' $1')
-                                                    .replace(/^./, (str: string) => str.toUpperCase())
-                                                    .trim())
-                                        }
-                                        sx={{ textTransform: 'none' }}
-                                    />
-                                ))}
-                        </FormGroup>
-                    </Popover>
+                        <Typography sx={{fontWeight: 600}}>Add</Typography>
+                    </Button>
+                    <Menu
+                        anchorEl={addDropDown}
+                        open={openAddSelect}
+                        onClose={handleAddClose}
+                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                        transformOrigin={{vertical: 'top', horizontal: 'right'}}
+                    >
+                        <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
+                    </Menu>
                 </Box>
-            </Stack>
+            </Box>
         </Box>
     );
 };

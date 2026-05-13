@@ -766,8 +766,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
 
-                                                                {log.start_location && (
-                                                                    <Tooltip title="View clock-in location" arrow placement="top">
+                                                                {(log.start_location || log.start_device_model_type) && (
+                                                                    <Tooltip
+                                                                        title={`View clock-in location${log.start_device_model_type ? ` (${log.start_device_model_type})` : ''}`}
+                                                                        arrow
+                                                                        placement="top"
+                                                                    >
                                                                         <Box
                                                                             sx={{
                                                                                 display: 'flex',
@@ -841,8 +845,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                {log.end_location && (
-                                                                    <Tooltip title="View clock-out location" arrow placement="top">
+                                                                {(log.end_location || log.end_device_model_type) && (
+                                                                    <Tooltip
+                                                                        title={`View clock-out location${log.end_device_model_type ? ` (${log.end_device_model_type})` : ''}`}
+                                                                        arrow
+                                                                        placement="top"
+                                                                    >
                                                                         <Box
                                                                             sx={{
                                                                                 display: 'flex',
@@ -858,6 +866,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                         </Box>
                                                                     </Tooltip>
                                                                 )}
+
                                                             </Box>
                                                         )}
                                                     </TableCell>

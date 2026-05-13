@@ -236,13 +236,6 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
     }
 };
 
-const getTimesheetIdList = (timesheetIds: string | number | null | undefined) => {
-    return String(timesheetIds ?? '')
-        .split(',')
-        .map((id) => id.trim())
-        .filter(Boolean);
-};
-
 const TimeClock = ({ queryParams }: Props) => {
     // Initialize default date range (current week)
     const today = new Date();
