@@ -221,9 +221,23 @@ const Company = () => {
       );
       if (response.data.IsSuccess == true) {
         toast.success(response.data.message);
+
+        const updatedInfo = response.data.info;
+        if (updatedInfo && updatedInfo.authToken) {
+          await session.update({
+            user: {
+              ...session.data?.user,
+              ...updatedInfo,
+              token: updatedInfo.authToken,
+            },
+          });
+        } else {
+          await session.update();
+        }
+
         setTimeout(() => {
           window.location.reload();
-        }, 500);
+        }, 1000);
       } else {
         toast.error(response.data.message);
       }
