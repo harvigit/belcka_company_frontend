@@ -112,10 +112,10 @@ const Company = () => {
   const [loadingFeeds, setLoadingFeeds] = useState(false);
   const [openCompanyDrawer, setOpenCompanyDrawer] = useState(false);
 
-  const user = session.data?.user as User & { company_id?: string | null } & {
+  const user = session.data?.user as User & { company_id?: string | number | null } & {
     company_name?: string | null;
   } & {
-    company_image?: number | null;
+    company_image?: string | null;
   } & { id: number } & { user_role_id: number };
 
   const router = useRouter();
@@ -634,10 +634,10 @@ const Company = () => {
                               } else if (item.request_name === "Shift") {
                                 const dateAdded = item.date
                                   ? parse(
-                                      item.date,
-                                      "d MMMM yyyy HH:mm",
-                                      new Date(),
-                                    )
+                                    item.date,
+                                    "d MMMM yyyy HH:mm",
+                                    new Date(),
+                                  )
                                   : undefined;
 
                                 const formattedDate = dateAdded
@@ -655,10 +655,10 @@ const Company = () => {
                               } else if (item.request_name === "Expense") {
                                 const dateAdded = item.date_added
                                   ? parse(
-                                      item.date_added,
-                                      "d MMMM yyyy HH:mm",
-                                      new Date(),
-                                    )
+                                    item.date_added,
+                                    "d MMMM yyyy HH:mm",
+                                    new Date(),
+                                  )
                                   : undefined;
 
                                 const formattedDate = dateAdded
@@ -676,10 +676,10 @@ const Company = () => {
                               } else if (item.request_name === "Leave") {
                                 const dateAdded = item.date_added
                                   ? parse(
-                                      item.date_added,
-                                      "d MMMM yyyy HH:mm",
-                                      new Date(),
-                                    )
+                                    item.date_added,
+                                    "d MMMM yyyy HH:mm",
+                                    new Date(),
+                                  )
                                   : undefined;
 
                                 const formattedDate = dateAdded

@@ -56,7 +56,9 @@ api.interceptors.response.use(
     try {
       const activeCompanyId =
         response?.data?.context?.active_company_id ??
-        response?.data?.active_company_id;
+        response?.data?.active_company_id ??
+        response?.headers?.["active-company-id"] ??
+        response?.headers?.["x-active-company-id"];
 
       if (activeCompanyId !== undefined && activeCompanyId !== null) {
         const numericActiveId = Number(activeCompanyId);
@@ -81,11 +83,11 @@ api.interceptors.response.use(
           const currentCompanyId = user?.company_id;
 
           if (
-            currentCompanyId &&
-            numericActiveId !== Number(currentCompanyId)
+            numericActiveId > 0 &&
+            Number(numericActiveId) !== Number(currentCompanyId)
           ) {
             console.log(
-              "Company change detected:",
+              "[Axios] Company change detected:",
               currentCompanyId,
               "=>",
               numericActiveId,
@@ -94,15 +96,11 @@ api.interceptors.response.use(
             if (!isSyncing) {
               isSyncing = true;
               try {
-                const companyResponse = await api.get("company/active-company", {
-                  headers: {
-                    "x-skip-auth": true,
-                  },
-                });
-
+                const companyResponse = await api.get("company/active-company");
                 const company = companyResponse?.data?.info;
 
                 if (company) {
+                  console.log("[Axios] Syncing company data:", company.name);
                   window.dispatchEvent(
                     new CustomEvent("company-changed", {
                       detail: company,
@@ -110,11 +108,12 @@ api.interceptors.response.use(
                   );
 
                   setTimeout(() => {
+                    console.log("[Axios] Reloading page...");
                     window.location.reload();
-                  }, 500);
+                  }, 800);
                 }
               } catch (syncErr) {
-                console.error("Failed to sync active company:", syncErr);
+                console.error("[Axios] Failed to sync active company:", syncErr);
               } finally {
                 isSyncing = false;
               }
@@ -140,7 +139,9 @@ api.interceptors.response.use(
 
     const activeCompanyId =
       error.response?.data?.context?.active_company_id ??
-      error.response?.data?.active_company_id;
+      error.response?.data?.active_company_id ??
+      error.response?.headers?.["active-company-id"] ??
+      error.response?.headers?.["x-active-company-id"];
 
     if (activeCompanyId !== undefined && activeCompanyId !== null) {
       const numericActiveId = Number(activeCompanyId);
@@ -154,25 +155,31 @@ api.interceptors.response.use(
         const user = session?.user as any;
         const currentCompanyId = user?.company_id;
 
-        if (currentCompanyId && numericActiveId !== Number(currentCompanyId)) {
+        if (numericActiveId > 0 && Number(numericActiveId) !== Number(currentCompanyId)) {
+          console.log(
+            "[Axios Error] Company change detected:",
+            currentCompanyId,
+            "=>",
+            numericActiveId,
+          );
           if (!isSyncing) {
             isSyncing = true;
             try {
-              const companyResponse = await api.get("company/active-company", {
-                headers: { "x-skip-auth": true },
-              });
+              const companyResponse = await api.get("company/active-company");
               const company = companyResponse?.data?.info;
               if (company) {
+                console.log("[Axios Error] Syncing company data:", company.name);
                 window.dispatchEvent(
                   new CustomEvent("company-changed", { detail: company }),
                 );
 
                 setTimeout(() => {
+                  console.log("[Axios Error] Reloading page...");
                   window.location.reload();
-                }, 500);
+                }, 800);
               }
             } catch (syncErr) {
-              console.error("Failed to sync active company in error handler:", syncErr);
+              console.error("[Axios Error] Failed to sync active company:", syncErr);
             } finally {
               isSyncing = false;
             }
