@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Typography,
   Box,
-  Button,
   Stack,
   IconButton,
   Drawer,
@@ -19,7 +18,6 @@ import {
   IconSearch,
   IconX,
   IconArrowLeft,
-  IconCheck,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
@@ -36,7 +34,10 @@ const TeamPricing = () => {
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [teamPercentage, setTeamPercentage] = useState("");
   const [search, setSearch] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [savingTeamId, setSavingTeamId] = useState<number | null>(null);
+  const [cachedAllProducts, setCachedAllProducts] = useState<any[] | null>(
+    null,
+  );
 
   const session = useSession();
   const user = session.data?.user as User & {
@@ -53,7 +54,10 @@ const TeamPricing = () => {
       if (res.data?.info) {
         const teamsNormalized = (res.data.info || []).map((t: any) => ({
           ...t,
-          percentage: t.percentage !== undefined && t.percentage !== null ? String(t.percentage) : "",
+          percentage:
+            t.percentage !== undefined && t.percentage !== null
+              ? String(t.percentage)
+              : "",
         }));
         setData(teamsNormalized);
       }
@@ -80,7 +84,7 @@ const TeamPricing = () => {
   const calculateProductPrice = (
     buyingPrice: number,
     marketPrice: number,
-    percentageStr: string
+    percentageStr: string,
   ): string | null => {
     if (!percentageStr || percentageStr === "") return null;
     const percentage = Number(percentageStr);
@@ -103,40 +107,54 @@ const TeamPricing = () => {
       setOpenDrawer(true);
       setLoadingProducts(true);
 
-      const teamPercentage =
+      const teamPercentageStr =
         team.percentage !== undefined && team.percentage !== null
           ? String(team.percentage)
           : "";
 
-      const productRes = await api.get(
-        `products/get?company_id=${user.company_id}&is_products=true`,
-      );
+      const [productRes, pricingRes] = await Promise.all([
+        cachedAllProducts
+          ? Promise.resolve({ data: { info: cachedAllProducts } })
+          : api.get(
+            `products/get?company_id=${user.company_id}&is_products=true`,
+          ),
+        api.get(
+          `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}`,
+        ),
+      ]);
 
       const allProducts = productRes.data?.info || [];
-      const pricingRes = await api.get(
-        `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}`,
-      );
+      if (!cachedAllProducts) {
+        setCachedAllProducts(allProducts);
+      }
 
       const pricingProducts = pricingRes.data?.info?.products || [];
+      const pricingMap = new Map<number, any>(
+        pricingProducts.map((x: any) => [Number(x.product_id), x]),
+      );
+
       const mergedProducts = allProducts.map((product: any) => {
-        const matched = pricingProducts.find(
-          (x: any) => Number(x.product_id) === Number(product.id),
-        );
+        const matched = pricingMap.get(Number(product.id));
 
         const resolvedPercentage =
           matched?.percentage !== undefined &&
             matched?.percentage !== null &&
             String(matched.percentage) !== ""
             ? String(matched.percentage)
-            : teamPercentage;
+            : teamPercentageStr;
 
         const buyingPrice = Number(product.price || product.buying_price || 0);
         const marketPrice = Number(product.market_price || 0);
 
         const calculatedPrice =
-          matched?.calculated_price !== undefined && matched?.calculated_price !== null
+          matched?.calculated_price !== undefined &&
+            matched?.calculated_price !== null
             ? Number(matched.calculated_price).toFixed(2)
-            : calculateProductPrice(buyingPrice, marketPrice, resolvedPercentage);
+            : calculateProductPrice(
+              buyingPrice,
+              marketPrice,
+              resolvedPercentage,
+            );
 
         return {
           ...product,
@@ -153,18 +171,72 @@ const TeamPricing = () => {
     }
   };
 
+  const autoApplyPricing = async (teamId: number, percentageStr: string) => {
+    try {
+      setSavingTeamId(teamId);
+      let allProducts = cachedAllProducts;
+
+      if (!allProducts) {
+        const productRes = await api.get(
+          `products/get?company_id=${user.company_id}&is_products=true`,
+        );
+        allProducts = productRes.data?.info || [];
+        setCachedAllProducts(allProducts);
+      }
+
+      const payload = {
+        company_id: Number(user.company_id),
+        team_id: Number(teamId),
+        products: allProducts!.map((p: any) => {
+          const buyingPrice = Number(p.price || p.buying_price || 0);
+          const marketPrice = Number(p.market_price || 0);
+          const calculatedPrice = calculateProductPrice(
+            buyingPrice,
+            marketPrice,
+            percentageStr,
+          );
+          return {
+            product_id: Number(p.id),
+            percentage: Number(percentageStr),
+            calculated_price: Number(calculatedPrice || 0),
+          };
+        }),
+      };
+
+      const res = await api.post(`team/save-team-pricing`, payload);
+      if (res.data?.IsSuccess) {
+        setData((prev) =>
+          prev.map((item) =>
+            item.team_id === teamId
+              ? { ...item, percentage: percentageStr }
+              : item,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error("Auto-apply failed", err);
+    } finally {
+      setSavingTeamId(null);
+    }
+  };
+
   const handleUpdateTeamCommonStatus = async (
     teamId: number,
     isEnabled: boolean,
-    percentageStr?: string
+    percentageStr?: string,
+    skipAutoApply: boolean = false,
   ) => {
     try {
       setData((prev) =>
         prev.map((item) =>
           item.team_id === teamId
-            ? { ...item, is_inventory: isEnabled, percentage: percentageStr || "" }
-            : item
-        )
+            ? {
+              ...item,
+              is_inventory: isEnabled,
+              percentage: percentageStr || "",
+            }
+            : item,
+        ),
       );
 
       if (selectedTeam && selectedTeam.team_id === teamId) {
@@ -172,49 +244,32 @@ const TeamPricing = () => {
           ...prev,
           percentage: percentageStr || "",
         }));
+        setTeamPercentage(percentageStr || "");
       }
 
       const payload = {
         company_id: Number(user.company_id),
         team_id: Number(teamId),
         is_enabled: isEnabled,
-        percentage: percentageStr !== undefined && percentageStr !== "" ? Number(percentageStr) : null,
+        percentage:
+          percentageStr !== undefined && percentageStr !== ""
+            ? Number(percentageStr)
+            : null,
       };
 
       const res = await api.post(`team/update-team-pricing-status`, payload);
       if (res.data?.IsSuccess) {
-        toast.success(res.data.message);
+        if (
+          !skipAutoApply &&
+          percentageStr !== undefined &&
+          percentageStr !== ""
+        ) {
+          await autoApplyPricing(teamId, percentageStr);
+        }
       }
+      toast.success(res.data.message);
     } catch (err) {
       console.error("Failed to update team pricing status", err);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      const payload = {
-        company_id: Number(user.company_id),
-        team_id: Number(selectedTeam?.team_id),
-        products: products
-          .filter((p) => p.percentage !== "" && p.percentage !== null)
-          .map((p) => ({
-            product_id: Number(p.id),
-            percentage: Number(p.percentage),
-            calculated_price: Number(p.calculated_price || 0),
-          })),
-      };
-
-      const res = await api.post(`team/save-team-pricing`, payload);
-
-      if (res.data?.IsSuccess) {
-        toast.success(res.data.message);
-        setOpenDrawer(false);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -306,14 +361,25 @@ const TeamPricing = () => {
                       value={item.percentage || ""}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (/^\d*$/.test(val) && (val === "" || Number(val) <= 100)) {
+                        if (
+                          /^\d*$/.test(val) &&
+                          (val === "" || Number(val) <= 100)
+                        ) {
                           setData((prev) =>
-                            prev.map((t) => (t.team_id === item.team_id ? { ...t, percentage: val } : t))
+                            prev.map((t) =>
+                              t.team_id === item.team_id
+                                ? { ...t, percentage: val }
+                                : t,
+                            ),
                           );
                         }
                       }}
                       onBlur={() =>
-                        handleUpdateTeamCommonStatus(item.team_id, item.is_inventory, item.percentage)
+                        handleUpdateTeamCommonStatus(
+                          item.team_id,
+                          item.is_inventory,
+                          item.percentage,
+                        )
                       }
                       sx={{ width: 60 }}
                     />
@@ -322,20 +388,30 @@ const TeamPricing = () => {
                       <IconButton
                         color="primary"
                         onClick={() => handleOpenDrawer(item)}
+                        disabled={savingTeamId === item.team_id}
                         sx={{
                           border: "1px solid #dbeafe",
-                          backgroundColor: "#eff6ff",
+                          backgroundColor:
+                            savingTeamId === item.team_id ? "#f3f4f6" : "#eff6ff",
                           "&:hover": {
                             backgroundColor: "#dbeafe",
                           },
                         }}
                       >
-                        <IconArrowsShuffle width={18} />
+                        {savingTeamId === item.team_id ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : (
+                          <IconArrowsShuffle width={18} />
+                        )}
                       </IconButton>
                       <IOSSwitch
                         checked={item.is_inventory}
                         onChange={(e) =>
-                          handleUpdateTeamCommonStatus(item.team_id, e.target.checked, item.percentage)
+                          handleUpdateTeamCommonStatus(
+                            item.team_id,
+                            e.target.checked,
+                            item.percentage,
+                          )
                         }
                         color="success"
                       />
@@ -395,7 +471,7 @@ const TeamPricing = () => {
 
         <Divider />
 
-        <Stack direction="row" spacing={1} alignItems="center" p={2} justifyContent="space-between">
+        <Stack direction="row" spacing={2} alignItems="center" p={2}>
           <TextField
             id="search"
             type="text"
@@ -473,16 +549,22 @@ const TeamPricing = () => {
                             }}
                           >
                             {item.short_name || item.name}
-                            <Chip label={item.uuid} size="small" sx={{ ml: 1 }} />
+                            <Chip
+                              label={item.uuid}
+                              size="small"
+                              sx={{ ml: 1 }}
+                            />
                           </Typography>
 
                           <Box display={"flex"} gap={1.5} alignItems={"center"}>
                             <Typography variant="body2" color="primary">
-                              Buying: {item.currency || "£"}{item.price || item.buying_price || "0.00"}
+                              Buying: {item.currency || "£"}
+                              {item.price || item.buying_price || "0.00"}
                             </Typography>
 
                             <Typography variant="body2" color="success.main">
-                              Market: {item.currency || "£"}{item.market_price || "0.00"}
+                              Market: {item.currency || "£"}
+                              {item.market_price || "0.00"}
                             </Typography>
                           </Box>
                           <Typography variant="h6" color="error.main">
@@ -492,36 +574,11 @@ const TeamPricing = () => {
                         </Box>
                       </Stack>
                     </Stack>
-
                   </Stack>
                 </Box>
               ))}
             </Stack>
           )}
-        </Box>
-
-        <Box
-          sx={{
-            position: "sticky",
-            bottom: 0,
-            background: "#fff",
-            borderTop: "1px solid #e5e7eb",
-            p: 2,
-            zIndex: 10,
-          }}
-        >
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saving}
-            className="drawer_buttons"
-            sx={{
-              borderRadius: 3,
-              py: 1.2,
-            }}
-          >
-            {saving ? "Saving..." : "Save Pricing"}
-          </Button>
         </Box>
       </Drawer>
     </Box>

@@ -700,13 +700,6 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                           }}
                           height={150}
                           width={150}
-                          // sx={{
-                          //   width: "100%",
-                          //   height: "100%",
-                          //   objectFit: "cover",
-                          //   cursor: "zoom-in",
-                          // }}
-                          // variant="square"
                         />
 
                         <IconButton
@@ -751,11 +744,12 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       placeholder="Name"
-                      inputProps={{ maxLength: 100 }}
+                      inputProps={{ maxLength: 50 }}
                       fullWidth
                       value={formData.short_name}
                       onChange={(e: any) => {
                         const value = e.target.value;
+                        if (!/^[a-zA-Z0-9 ]*$/.test(value)) return;
                         setFormData((p) => ({
                           ...p,
                           short_name: value,
@@ -932,9 +926,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       placeholder="Length"
                       fullWidth
                       value={formData.length || ""}
-                      onChange={(e: any) =>
-                        setFormData((p) => ({ ...p, length: e.target.value }))
-                      }
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*\.?\d*$/.test(value)) return;
+                        setFormData((p) => ({ ...p, length: value }));
+                      }}
                     />
                   </Grid>
                   <Grid size={{ xs: 3 }}>
@@ -943,9 +939,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       placeholder="Width"
                       fullWidth
                       value={formData.width || ""}
-                      onChange={(e: any) =>
-                        setFormData((p) => ({ ...p, width: e.target.value }))
-                      }
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*\.?\d*$/.test(value)) return;
+                        setFormData((p) => ({ ...p, width: value }));
+                      }}
                     />
                   </Grid>
                   <Grid size={{ xs: 3 }}>
@@ -954,9 +952,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       placeholder="Height"
                       fullWidth
                       value={formData.height || ""}
-                      onChange={(e: any) =>
-                        setFormData((p) => ({ ...p, height: e.target.value }))
-                      }
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*\.?\d*$/.test(value)) return;
+                        setFormData((p) => ({ ...p, height: value }));
+                      }}
                     />
                   </Grid>
                   <Grid size={{ xs: 3 }}>
@@ -1008,9 +1008,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       fullWidth
                       placeholder="Weight"
                       value={formData.weight || ""}
-                      onChange={(e: any) =>
-                        setFormData((p) => ({ ...p, weight: e.target.value }))
-                      }
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*\.?\d*$/.test(value)) return;
+                        setFormData((p) => ({ ...p, weight: value }));
+                      }}
                     />
                   </Grid>
                   <Grid size={{ xs: 3 }}>
@@ -1081,6 +1083,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                           onBlur={(e: any) => {
                             const value = e.target.value.trim();
                             if (!value) return;
+                            if (!/^[a-zA-Z0-9 ]*$/.test(value)) return;
 
                             setFormData((prev) => ({
                               ...prev,
@@ -1120,6 +1123,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                           onBlur={(e: any) => {
                             const value = e.target.value.trim();
                             if (!value) return;
+                            if (!/^[a-zA-Z0-9 ]*$/.test(value)) return;
 
                             setFormData((prev) => ({
                               ...prev,
@@ -1145,9 +1149,11 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       fullWidth
                       value={formData.price || ""}
                       placeholder="Buying price"
-                      onChange={(e: any) =>
-                        setFormData((p) => ({ ...p, price: e.target.value }))
-                      }
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*\.?\d{0,2}$/.test(value)) return;
+                        setFormData((p) => ({ ...p, price: value }));
+                      }}
                       sx={{ mb: 2 }}
                     />
                   </Box>
@@ -1162,12 +1168,14 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       fullWidth
                       placeholder="Market price"
                       value={formData.market_price || ""}
-                      onChange={(e: any) =>
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*\.?\d{0,2}$/.test(value)) return;
                         setFormData((p) => ({
                           ...p,
-                          market_price: e.target.value,
-                        }))
-                      }
+                          market_price: value,
+                        }));
+                      }}
                       sx={{ mb: 2 }}
                     />
                   </Box>
@@ -1182,9 +1190,12 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       fullWidth
                       placeholder="Tax"
                       value={formData.tax || ""}
-                      onChange={(e: any) =>
-                        setFormData((p) => ({ ...p, tax: e.target.value }))
-                      }
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*$/.test(value)) return;
+                        if (Number(value) > 100) return;
+                        setFormData((p) => ({ ...p, tax: value }));
+                      }}
                       sx={{ mb: 2 }}
                     />
                   </Box>
@@ -1245,12 +1256,14 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       placeholder="Pack off"
                       value={formData.pack_off_qty || ""}
                       disabled={!formData.is_sub_qty}
-                      onChange={(e: any) =>
+                      onChange={(e: any) => {
+                        const value = e.target.value;
+                        if (!/^\d*\.?\d*$/.test(value)) return;
                         setFormData((p) => ({
                           ...p,
-                          pack_off_qty: e.target.value,
-                        }))
-                      }
+                          pack_off_qty: value,
+                        }));
+                      }}
                     />
                   </Grid>
                   <Grid size={{ xs: 3 }}>
@@ -1391,6 +1404,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       placeholder="Enter description..."
                       fullWidth
                       rows={3}
+                      inputProps={{ maxLength: 150 }}
                       value={formData.description || ""}
                       onChange={(e) =>
                         setFormData((p) => ({

@@ -11,6 +11,7 @@ const api = axios.create({
 
 let isLoggingOut = false;
 let lastSwitchTime = 0;
+let isSyncing = false;
 
 const userLogout = async () => {
   if (isLoggingOut) return;
@@ -57,62 +58,67 @@ api.interceptors.response.use(
         response?.data?.context?.active_company_id ??
         response?.data?.active_company_id;
 
-      const isSwitchingURL =
-        response.config.url?.includes("company/switch-company") ||
-        response.config.url?.includes("user/switch-company-list");
+      if (activeCompanyId !== undefined && activeCompanyId !== null) {
+        const numericActiveId = Number(activeCompanyId);
+        const isSwitchingURL =
+          response.config.url?.includes("company/switch-company") ||
+          response.config.url?.includes("user/switch-company-list");
 
-      const now = Date.now();
-      const isRecentSwitch = now - lastSwitchTime < 5000;
-      const hasToken = !!getAccessToken();
+        const now = Date.now();
+        const isRecentSwitch = now - lastSwitchTime < 5000;
+        const hasToken = !!getAccessToken();
 
-      if (
-        activeCompanyId !== undefined &&
-        activeCompanyId !== null &&
-        Number(activeCompanyId) === 0 &&
-        !isSwitchingURL &&
-        !isRecentSwitch &&
-        hasToken
-      ) {
-        await userLogout();
-        return response;
-      }
+        if (numericActiveId === 0) {
+          if (!isSwitchingURL && !isRecentSwitch && hasToken) {
+            await userLogout();
+            return response;
+          }
+        } else if (hasToken) {
+          const session = await getSession();
+          const user = session?.user as User & {
+            company_id?: number | null;
+          };
+          const currentCompanyId = user?.company_id;
 
-      if (
-        activeCompanyId !== undefined &&
-        activeCompanyId !== null &&
-        Number(activeCompanyId) !== 0
-      ) {
-        const session = await getSession();
-        const user = session?.user as User & {
-          company_id?: number | null;
-        };
-        const currentCompanyId = user?.company_id;
-
-        if (
-          activeCompanyId &&
-          Number(activeCompanyId) !== Number(currentCompanyId)
-        ) {
-          console.log(
-            "Company changed:",
-            currentCompanyId,
-            "=>",
-            activeCompanyId,
-          );
-
-          const companyResponse = await api.get("company/active-company", {
-            headers: {
-              "x-skip-auth": true,
-            },
-          });
-
-          const company = companyResponse?.data?.info;
-
-          if (company) {
-            window.dispatchEvent(
-              new CustomEvent("company-changed", {
-                detail: company,
-              }),
+          if (
+            currentCompanyId &&
+            numericActiveId !== Number(currentCompanyId)
+          ) {
+            console.log(
+              "Company change detected:",
+              currentCompanyId,
+              "=>",
+              numericActiveId,
             );
+
+            if (!isSyncing) {
+              isSyncing = true;
+              try {
+                const companyResponse = await api.get("company/active-company", {
+                  headers: {
+                    "x-skip-auth": true,
+                  },
+                });
+
+                const company = companyResponse?.data?.info;
+
+                if (company) {
+                  window.dispatchEvent(
+                    new CustomEvent("company-changed", {
+                      detail: company,
+                    }),
+                  );
+
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 500);
+                }
+              } catch (syncErr) {
+                console.error("Failed to sync active company:", syncErr);
+              } finally {
+                isSyncing = false;
+              }
+            }
           }
         }
       }
@@ -130,6 +136,50 @@ api.interceptors.response.use(
 
     const now = Date.now();
     const isRecentSwitch = now - lastSwitchTime < 5000;
+    const hasToken = !!getAccessToken();
+
+    const activeCompanyId =
+      error.response?.data?.context?.active_company_id ??
+      error.response?.data?.active_company_id;
+
+    if (activeCompanyId !== undefined && activeCompanyId !== null) {
+      const numericActiveId = Number(activeCompanyId);
+
+      if (numericActiveId === 0) {
+        if (!isSwitchingURL && !isRecentSwitch && hasToken) {
+          await userLogout();
+        }
+      } else if (hasToken) {
+        const session = await getSession();
+        const user = session?.user as any;
+        const currentCompanyId = user?.company_id;
+
+        if (currentCompanyId && numericActiveId !== Number(currentCompanyId)) {
+          if (!isSyncing) {
+            isSyncing = true;
+            try {
+              const companyResponse = await api.get("company/active-company", {
+                headers: { "x-skip-auth": true },
+              });
+              const company = companyResponse?.data?.info;
+              if (company) {
+                window.dispatchEvent(
+                  new CustomEvent("company-changed", { detail: company }),
+                );
+
+                setTimeout(() => {
+                  window.location.reload();
+                }, 500);
+              }
+            } catch (syncErr) {
+              console.error("Failed to sync active company in error handler:", syncErr);
+            } finally {
+              isSyncing = false;
+            }
+          }
+        }
+      }
+    }
 
     if (error.response?.status === 401) {
       if (!isLoggingOut && !isSwitchingURL && !isRecentSwitch) {
