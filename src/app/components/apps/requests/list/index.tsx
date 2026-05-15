@@ -333,8 +333,7 @@ export default function UserRequests({
                     <></>
                 ) : filteredData.length > 0 ? (
                     <Grid container spacing={2}>
-                        {filteredData
-                            .filter((item: any) => item.request_type !== 103)
+                       {filteredData
                             .map((work, idx) => (
                                 <Grid size={{ xs: 12, md: 12 }} mt={1} key={idx}>
                                     <Box
