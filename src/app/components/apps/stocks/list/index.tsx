@@ -207,15 +207,15 @@ const StockList = () => {
     }
   }, [user, stores]);
 
-    useEffect(() => {
-        if (!searchParams || stores.length === 0) return;
-        const storeIdParam = searchParams.get("store_id");
-        if (storeIdParam) {
-            handleStoreChange(Number(storeIdParam));
-        }
-    }, [searchParams, stores]);
+  useEffect(() => {
+    if (!searchParams || stores.length === 0) return;
+    const storeIdParam = searchParams.get("store_id");
+    if (storeIdParam) {
+      handleStoreChange(Number(storeIdParam));
+    }
+  }, [searchParams, stores]);
 
-    const handleStoreConfirm = (store: { id: number; name: string }) => {
+  const handleStoreConfirm = (store: { id: number; name: string }) => {
     if (!user?.id) return;
 
     Cookies.set(
@@ -760,9 +760,12 @@ const StockList = () => {
                 }}
               >
                 {item.qty.toFixed(2)}
-                {item.is_sub_qty
-                  ? ` (${item?.pack_off_qty} ${item?.pack_off_unit ?? ""})`
-                  : ""}
+                <Typography>
+                  {" "}
+                  {item.is_sub_qty && item?.pack_off_unit
+                    ? `(${item?.pack_off_qty} ${item?.pack_off_unit ?? ""})`
+                    : `(${item?.pack_off_qty})`}
+                </Typography>
               </Typography>
             )}
           </Stack>
@@ -1331,16 +1334,18 @@ const StockList = () => {
                               header.column.id === "actions" ||
                               header.column.id === "barcode"
                                 ? 80
-                                : header.column.id === "subQty"
-                                  ? 100
-                                  : header.column.id === "QrCode"
-                                    ? 120
-                                    : header.column.id === "supplierCode" ||
-                                        header.column.id === "stockStatus"
-                                      ? 140
-                                      : header.column.id === "QrCode"
-                                        ? 120
-                                        : "auto",
+                                : header.column.id === "Qty"
+                                  ? 120
+                                  : header.column.id === "subQty"
+                                    ? 100
+                                    : header.column.id === "QrCode"
+                                      ? 120
+                                      : header.column.id === "supplierCode" ||
+                                          header.column.id === "stockStatus"
+                                        ? 140
+                                        : header.column.id === "QrCode"
+                                          ? 120
+                                          : "auto",
                           }}
                         >
                           <Box
