@@ -173,6 +173,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [mainFile, setMainFile] = useState<File | null>(null);
+  const [fetching, setFetching] = useState(false);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null } & {
     user_role_id: number;
@@ -192,6 +193,9 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   });
 
   const fetchProducts = async () => {
+    if (!productId || fetching) return;
+
+    setFetching(true);
     try {
       const res = await api.get(
         `products/get?company_id=${companyId}&product_id=${productId}&is_products=true`,
@@ -201,6 +205,8 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
       }
     } catch (err) {
       console.error("Failed to fetch product", err);
+    } finally {
+      setFetching(false);
     }
   };
 

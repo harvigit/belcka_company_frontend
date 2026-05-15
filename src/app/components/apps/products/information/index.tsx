@@ -42,6 +42,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
   const [product, setProduct] = useState<any>([]);
+  const [fetching, setFetching] = useState(false);
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -117,6 +118,9 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
   };
 
   const fetchProducts = async () => {
+    if (!productId || fetching) return;
+
+    setFetching(true);
     try {
       const res = await api.get(
         `products/get?company_id=${companyId}&product_id=${productId}&is_products=true`,
@@ -137,6 +141,8 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
       }
     } catch (err) {
       console.error("Failed to fetch product", err);
+    } finally {
+      setFetching(false);
     }
   };
 

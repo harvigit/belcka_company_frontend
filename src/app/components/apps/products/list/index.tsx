@@ -1050,6 +1050,7 @@ const ProductList = () => {
                   maxWidth: 300,
                   width: 250,
                   wordBreak: "break-word",
+                  "&:hover": { color: "#1976d2" },
                 }}
               >
                 {item.short_name ? item.short_name : "-"}

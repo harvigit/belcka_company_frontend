@@ -656,12 +656,13 @@ const StockList = () => {
                 width: 200,
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 1,
+                WebkitLineClamp: 2,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 lineHeight: 1.25,
-                maxWidth: 300,
+                maxWidth: 250,
                 wordBreak: "break-word",
+                "&:hover": { color: "#1976d2" },
               }}
             >
               {item.short_name ? item.short_name : "-"}
@@ -760,7 +761,7 @@ const StockList = () => {
               >
                 {item.qty.toFixed(2)}
                 {item.is_sub_qty
-                  ? ` (${item?.pack_off_qty} ${item?.pack_off_unit})`
+                  ? ` (${item?.pack_off_qty} ${item?.pack_off_unit ?? ""})`
                   : ""}
               </Typography>
             )}

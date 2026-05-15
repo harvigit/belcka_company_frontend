@@ -12,6 +12,7 @@ const api = axios.create({
 let isLoggingOut = false;
 let lastSwitchTime = 0;
 let isSyncing = false;
+let lastKnownCompanyId: number | null = null;
 
 const userLogout = async () => {
   if (isLoggingOut) return;
@@ -76,49 +77,20 @@ api.interceptors.response.use(
             return response;
           }
         } else if (hasToken) {
-          const session = await getSession();
-          const user = session?.user as User & {
-            company_id?: number | null;
-          };
-          const currentCompanyId = user?.company_id;
-
+          // Detect switch from last known ID
           if (
-            numericActiveId > 0 &&
-            Number(numericActiveId) !== Number(currentCompanyId)
+            lastKnownCompanyId !== null &&
+            numericActiveId !== lastKnownCompanyId
           ) {
             console.log(
-              "[Axios] Company change detected:",
-              currentCompanyId,
+              "[Axios] Company switch detected:",
+              lastKnownCompanyId,
               "=>",
               numericActiveId,
             );
-
-            if (!isSyncing) {
-              isSyncing = true;
-              try {
-                const companyResponse = await api.get("company/active-company");
-                const company = companyResponse?.data?.info;
-
-                if (company) {
-                  console.log("[Axios] Syncing company data:", company.name);
-                  window.dispatchEvent(
-                    new CustomEvent("company-changed", {
-                      detail: company,
-                    }),
-                  );
-
-                  setTimeout(() => {
-                    console.log("[Axios] Reloading page...");
-                    window.location.reload();
-                  }, 800);
-                }
-              } catch (syncErr) {
-                console.error("[Axios] Failed to sync active company:", syncErr);
-              } finally {
-                isSyncing = false;
-              }
-            }
+            window.location.reload();
           }
+          lastKnownCompanyId = numericActiveId;
         }
       }
     } catch (err) {
@@ -155,35 +127,20 @@ api.interceptors.response.use(
         const user = session?.user as any;
         const currentCompanyId = user?.company_id;
 
-        if (numericActiveId > 0 && Number(numericActiveId) !== Number(currentCompanyId)) {
-          console.log(
-            "[Axios Error] Company change detected:",
-            currentCompanyId,
-            "=>",
-            numericActiveId,
-          );
-          if (!isSyncing) {
-            isSyncing = true;
-            try {
-              const companyResponse = await api.get("company/active-company");
-              const company = companyResponse?.data?.info;
-              if (company) {
-                console.log("[Axios Error] Syncing company data:", company.name);
-                window.dispatchEvent(
-                  new CustomEvent("company-changed", { detail: company }),
-                );
-
-                setTimeout(() => {
-                  console.log("[Axios Error] Reloading page...");
-                  window.location.reload();
-                }, 800);
-              }
-            } catch (syncErr) {
-              console.error("[Axios Error] Failed to sync active company:", syncErr);
-            } finally {
-              isSyncing = false;
-            }
+        if (numericActiveId > 0) {
+          if (
+            lastKnownCompanyId !== null &&
+            numericActiveId !== lastKnownCompanyId
+          ) {
+            console.log(
+              "[Axios] Company switch detected in error:",
+              lastKnownCompanyId,
+              "=>",
+              numericActiveId,
+            );
+            window.location.reload();
           }
+          lastKnownCompanyId = numericActiveId;
         }
       }
     }

@@ -58,6 +58,7 @@ const AdjustStock: React.FC<Props> = ({
   const [products, setProducts] = useState<any[]>([]);
   const [productId, setProductId] = useState("");
   const [product, setProduct] = useState<any>([]);
+  const [fetching, setFetching] = useState(false);
 
   const [adjustQty, setAdjustQty] = useState<number | string>("");
   const [loading, setLoading] = useState(false);
@@ -101,6 +102,9 @@ const AdjustStock: React.FC<Props> = ({
   }, [open]);
 
   const fetchProducts = async () => {
+    if (!productId || fetching) return;
+
+    setFetching(true);
     try {
       const res = await api.get(
         `products/get?company_id=${companyId}&product_id=${productId}&is_products=true`,
@@ -113,6 +117,8 @@ const AdjustStock: React.FC<Props> = ({
       }
     } catch (err) {
       console.error("Failed to fetch product", err);
+    } finally {
+      setFetching(false);
     }
   };
 
