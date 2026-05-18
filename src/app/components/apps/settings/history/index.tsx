@@ -163,12 +163,12 @@ const HistoryList = () => {
   };
 
   useEffect(() => {
-    if (startDate && endDate) {
+    if (startDate && endDate && user?.company_id) {
       const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
       const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
       fetchHistories(formattedStart, formattedEnd);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, user?.company_id]);
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -182,8 +182,10 @@ const HistoryList = () => {
     }
   };
   useEffect(() => {
-    fetchUsers();
-  }, [api]);
+    if (user?.company_id) {
+      fetchUsers();
+    }
+  }, [user?.company_id]);
 
   const uniqueSupervisors = useMemo(
     () => [...new Set(users.map((item) => item.name).filter(Boolean))],
@@ -590,12 +592,12 @@ const HistoryList = () => {
                     label={
                       col.columnDef.meta?.label ||
                       (typeof col.columnDef.header === "string" &&
-                      col.columnDef.header.trim() !== ""
+                        col.columnDef.header.trim() !== ""
                         ? col.columnDef.header
                         : col.id
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str: string) => str.toUpperCase())
-                            .trim())
+                          .replace(/([A-Z])/g, " $1")
+                          .replace(/^./, (str: string) => str.toUpperCase())
+                          .trim())
                     }
                   />
                 ))}

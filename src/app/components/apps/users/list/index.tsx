@@ -311,10 +311,7 @@ const TablePagination = () => {
                 console.error('Failed to fetch trades', err);
             }
         };
-        fetchTrades();
-    }, [user?.company_id]);
-
-    useEffect(() => {
+        
         const fetchTeams = async () => {
             try {
                 const res = await api.get(
@@ -326,6 +323,7 @@ const TablePagination = () => {
             }
         };
         fetchTeams();
+        fetchTrades();
     }, [user?.company_id]);
 
     const closeInviteDrawer = () => {

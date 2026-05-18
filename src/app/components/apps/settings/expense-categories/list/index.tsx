@@ -102,7 +102,7 @@ const TablePagination = () => {
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
     const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
-    
+
     const [formData, setFormData] = useState<any>({
         id: 0,
         name: "",
@@ -216,7 +216,7 @@ const TablePagination = () => {
             };
 
             const result = await api.post("expense-categories/toggle-change", payload);
-            
+
             if (result.data.IsSuccess === true) {
                 toast.success("Transport category status updated successfully");
                 fetchExpenseCategories();
@@ -233,7 +233,7 @@ const TablePagination = () => {
             });
         }
     };
-    
+
     const filteredData = useMemo(() => {
         return data.filter((item) => {
             const search = searchTerm.toLowerCase();
@@ -367,9 +367,9 @@ const TablePagination = () => {
                         sx={{
                             display: 'flex',
                             justifyContent: 'flex-start',
-                            pl: 2,                       
+                            pl: 2,
                             py: 0.5
-                        }}    
+                        }}
                     >
                         <IOSSwitch
                             checked={item.is_transport_category ?? false}
@@ -533,7 +533,7 @@ const TablePagination = () => {
                                         label={
                                             col.columnDef.meta?.label ||
                                             (typeof col.columnDef.header === "string" &&
-                                            col.columnDef.header.trim() !== ""
+                                                col.columnDef.header.trim() !== ""
                                                 ? col.columnDef.header
                                                 : col.id
                                                     .replace(/([A-Z])/g, " $1")

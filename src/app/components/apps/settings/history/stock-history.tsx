@@ -169,12 +169,12 @@ const StockHistoryList: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    if (startDate && endDate) {
+    if (openDrawer && startDate && endDate && user?.company_id) {
       const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
       const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
       fetchHistories(formattedStart, formattedEnd);
     }
-  }, [startDate, endDate, openDrawer]);
+  }, [startDate, endDate, openDrawer, user?.company_id]);
 
   const handleDateRangeChange = (range: {
     from: Date | null;
@@ -188,8 +188,10 @@ const StockHistoryList: React.FC<Props> = ({
     }
   };
   useEffect(() => {
-    fetchUsers();
-  }, [api]);
+    if (openDrawer && user?.company_id) {
+      fetchUsers();
+    }
+  }, [openDrawer, user?.company_id]);
 
   const uniqueSupervisors = useMemo(
     () => [...new Set(users.map((item) => item.name).filter(Boolean))],

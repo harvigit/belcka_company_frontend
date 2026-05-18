@@ -264,7 +264,7 @@ const CreateStore: React.FC<CreateStoreProps> = ({
             />
             <Image
               src={item.image_url || "/images/products/product.svg"}
-              alt={"Supplier image"}
+              alt={"Product image"}
               width={50}
               height={50}
             />

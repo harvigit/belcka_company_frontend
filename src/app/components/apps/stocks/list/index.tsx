@@ -115,7 +115,7 @@ const StockList = () => {
   const [data, setData] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [fetchProduct, setFetchProduct] = useState<boolean>(true);
+  const [fetchProduct, setFetchProduct] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -662,7 +662,6 @@ const StockList = () => {
                 lineHeight: 1.25,
                 maxWidth: 250,
                 wordBreak: "break-word",
-                "&:hover": { color: "#1976d2" },
               }}
             >
               {item.short_name ? item.short_name : "-"}
@@ -760,11 +759,14 @@ const StockList = () => {
                 }}
               >
                 {item.qty.toFixed(2)}
-                <Typography>
+                <br />
+                <Typography variant="body2" color="textSecondary">
                   {" "}
-                  {item.is_sub_qty && item?.pack_off_unit
-                    ? `(${item?.pack_off_qty} ${item?.pack_off_unit ?? ""})`
-                    : `(${item?.pack_off_qty})`}
+                  {item.is_sub_qty && Number(item?.pack_off_qty) > 0
+                    ? item?.pack_off_unit
+                      ? `(${item.pack_off_qty} ${item.pack_off_unit})`
+                      : `(${item.pack_off_qty})`
+                    : ""}
                 </Typography>
               </Typography>
             )}

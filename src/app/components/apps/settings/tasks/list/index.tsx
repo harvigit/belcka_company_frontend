@@ -229,7 +229,7 @@ const TablePagination = () => {
   const editTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    
+
     if (formData.is_pricework && !formData.rate) {
       toast.error("Please add rate!");
       setIsSaving(false);
@@ -701,12 +701,12 @@ const TablePagination = () => {
                     label={
                       col.columnDef.meta?.label ||
                       (typeof col.columnDef.header === "string" &&
-                      col.columnDef.header.trim() !== ""
+                        col.columnDef.header.trim() !== ""
                         ? col.columnDef.header
                         : col.id
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str: string) => str.toUpperCase())
-                            .trim())
+                          .replace(/([A-Z])/g, " $1")
+                          .replace(/^./, (str: string) => str.toUpperCase())
+                          .trim())
                     }
                   />
                 ))}
