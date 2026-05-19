@@ -58,7 +58,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
     
     const headerDetails = [
         { value: formatHour(headerDetail?.payable_hours), label: 'Payable Hours' },
-        { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
+        // { value: `${currency}${headerDetail?.total_payable_amount || 0}`, label: 'Total Payable Amount' },
     ];
     
     const handleAddClick = (event: React.MouseEvent<HTMLButtonElement>) => {

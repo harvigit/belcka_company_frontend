@@ -4,7 +4,12 @@ import api from '@/utils/axios';
 import {ConflictDetail, Shift, Project, TimeClockDetailResponse} from '@/app/components/apps/time-clock/types/timeClock';
 import { TimeClock } from '@/app/components/apps/time-clock/time-clock';
 
-export const useTimeClockData = (user_id: any, currency: string, isRemovedUser?: boolean) => {
+export const useTimeClockData = (
+    user_id: any,
+    currency: string,
+    isRemovedUser?: boolean,
+    isArchivedUser?: boolean,
+) => {
     const [data, setData] = useState<TimeClock[]>([]);
     const [headerDetail, setHeaderDetail] = useState<TimeClockDetailResponse | null>(null);
     const [pendingRequestCount, setPendingRequestCount] = useState<number>(0);
@@ -42,6 +47,8 @@ export const useTimeClockData = (user_id: any, currency: string, isRemovedUser?:
 
             if (isRemovedUser) {
                 params.is_removed_user = '1';
+            } else if (isArchivedUser) {
+                params.is_archived_user = '1';
             }
 
             
@@ -62,7 +69,7 @@ export const useTimeClockData = (user_id: any, currency: string, isRemovedUser?:
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
         }
-    }, [user_id]);
+    }, [user_id, isRemovedUser, isArchivedUser]);
 
     const fetchConflicts = useCallback(async (start: Date, end: Date, userId?: any): Promise<void> => {
         try {

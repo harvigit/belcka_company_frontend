@@ -65,6 +65,7 @@ interface UserActivityProps {
     userId: number;
     active: boolean;
     isRemoveUser?: boolean;
+    isArchivedUser?: boolean;
 }
 
 // ─── Module config ────────────────────────────────────────────────────────────
@@ -390,7 +391,13 @@ const EmptyState: React.FC<{ dateRange?: { start: string; end: string }; onReset
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active, isRemoveUser = false }) => {
+const UserActivity: React.FC<UserActivityProps> = ({
+    companyId,
+    userId,
+    active,
+    isRemoveUser = false,
+    isArchivedUser = false,
+}) => {
     const [loading, setLoading] = useState(false);
     const [info, setInfo] = useState<ActivityInfo | null>(null);
 
@@ -409,7 +416,8 @@ const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active, 
                         company_id: Number(companyId),
                         start_date: toApiDate(start),
                         end_date: toApiDate(end),
-                        ...(!isRemoveUser ? {} : { is_remove_user: 1 }),
+                        ...(isRemoveUser ? { is_remove_user: 1 } : {}),
+                        ...(isArchivedUser ? { is_archived_user: 1 } : {}),
                     },
                 });
                 if (res.data?.IsSuccess) {
@@ -423,7 +431,7 @@ const UserActivity: React.FC<UserActivityProps> = ({ companyId, userId, active, 
                 setLoading(false);
             }
         },
-        [userId, companyId, isRemoveUser] // ← FIX: Added isRemoveUser to dependency array
+        [userId, companyId, isRemoveUser, isArchivedUser]
     );
 
     useEffect(() => {

@@ -215,6 +215,7 @@ interface Props {
     queryParams?: {
         user_id?: string | null;
         is_removed_user: boolean;
+        is_archived_user?: boolean;
         start_date?: string | null;
         end_date?: string | null;
         open?: string | null;
@@ -282,6 +283,8 @@ const TimeClock = ({ queryParams }: Props) => {
 
     const [fetchTimesheet, setFetchTimesheet] = useState<boolean>(false);
     const [openRecoverWorklogs, setOpenRecoverWorklogs] = useState(false);
+
+    const [selectedConflictUserId, setSelectedConflictUserId] = useState<any>(null);
 
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
@@ -352,6 +355,8 @@ const TimeClock = ({ queryParams }: Props) => {
                     params.user_id = userId;
                     if (currentParams.is_removed_user === true) {
                         params.is_removed_user = '1';
+                    } else if (currentParams.is_archived_user === true) {
+                        params.is_archived_user = '1';
                     }
                 }
             }
@@ -432,6 +437,7 @@ const TimeClock = ({ queryParams }: Props) => {
             ...queryParamsRef.current,
             user_id: null,
             is_removed_user: false,
+            is_archived_user: false,
         };
 
         const s = startDate || defaultStart;
@@ -442,6 +448,12 @@ const TimeClock = ({ queryParams }: Props) => {
     const isRemovedUser = useMemo(() => {
         return Boolean(queryParams?.is_removed_user === true || queryParamsRef.current?.is_removed_user === true);
     }, [queryParams?.is_removed_user]);
+
+    const isArchivedUser = useMemo(() => {
+        return Boolean(queryParams?.is_archived_user === true || queryParamsRef.current?.is_archived_user === true);
+    }, [queryParams?.is_archived_user]);
+
+    const isReadOnlyUser = isRemovedUser || isArchivedUser;
 
     const [payrollCycle, setPayrollCycle] = useState<string>('');
 
@@ -541,10 +553,12 @@ const TimeClock = ({ queryParams }: Props) => {
 
     const handleConflicts = async () => {
         setConflictSidebar(true);
+        setSelectedConflictUserId(null);
     };
 
     const closeConflictSidebar = async () => {
         setConflictSidebar(false);
+        setSelectedConflictUserId(null);
         try {
             const defaultStartDate = startDate || defaultStart;
             const defaultEndDate = endDate || defaultEnd;
@@ -795,6 +809,8 @@ const TimeClock = ({ queryParams }: Props) => {
                                 aria-label={`${conflictCount} scheduling conflict${conflictCount !== 1 ? 's' : ''}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    setConflictSidebar(true);
+                                    setSelectedConflictUserId(userId);
                                 }}
                                 sx={{
                                     p: 0.5,
@@ -828,7 +844,11 @@ const TimeClock = ({ queryParams }: Props) => {
                         <Link
                             href={{
                                 pathname: `/apps/users/${row?.user_id}`,
-                                query: isRemovedUser ? { is_removed_user: 'true' } : {}
+                                query: isReadOnlyUser
+                                    ? (isRemovedUser
+                                        ? { is_removed_user: 'true' }
+                                        : { is_archived_user: 'true' })
+                                    : {}
                             }}
                             passHref
                             onClick={(e) => e.stopPropagation()}
@@ -1583,7 +1603,7 @@ const TimeClock = ({ queryParams }: Props) => {
                         </Box>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                            {!queryParams?.is_removed_user && (
+                            {!isReadOnlyUser && (
                                 <>
                                     <Button
                                         size="small"
@@ -2103,7 +2123,8 @@ const TimeClock = ({ queryParams }: Props) => {
                     onClose={closeDetails}
                     onUserChange={handleUserChange}
                     onDataChange={handleDataChange}
-                    isRemovedUser={queryParams?.is_removed_user === true}
+                    isRemovedUser={isRemovedUser}
+                    isArchivedUser={isArchivedUser}
                     queryParams={queryParams}
                 />
             </Drawer>
@@ -2248,11 +2269,27 @@ const TimeClock = ({ queryParams }: Props) => {
                 }}
             >
                 <Conflicts
-                    conflictDetails={conflictDetails}
-                    totalConflicts={totalConflictsCount}
-                    onClose={closeConflictSidebar}
+                    conflictDetails={
+                        selectedConflictUserId
+                            ? conflictDetails.filter(
+                                (conflict) => conflict.user_id === selectedConflictUserId
+                            )
+                            : conflictDetails
+                    }
+                    totalConflicts={
+                        selectedConflictUserId
+                            ? conflictDetails.filter(
+                                (conflict) => conflict.user_id === selectedConflictUserId
+                            ).length
+                            : totalConflictsCount
+                    }
+                    onClose={() => {
+                        closeConflictSidebar();
+                        setSelectedConflictUserId(null);
+                    }}
                     startDate={startDate ? format(startDate, 'yyyy-MM-dd') : format(defaultStart, 'yyyy-MM-dd')}
                     endDate={endDate ? format(endDate, 'yyyy-MM-dd') : format(defaultEnd, 'yyyy-MM-dd')}
+                    selectedUserId={selectedConflictUserId}
                 />
             </Drawer>
 

@@ -88,6 +88,8 @@ const TablePagination = () => {
     const [supervisorDetails, setSupervisorDetails] = useState<{ team_id: number | null, team_name: string | null } | null>(null);
     const searchParams = useSearchParams();
     const isRemovedUser = searchParams?.get('is_removed_user') === 'true';
+    const isArchivedUser = searchParams?.get('is_archived_user') === 'true'  || searchParams?.get('is_archive_user') === 'true';
+    const isReadOnlyUserView = isRemovedUser || isArchivedUser;
     const [companyUsers, setCompanyUsers] = useState<any[]>([]);
 
     const allTabs = [
@@ -101,7 +103,7 @@ const TablePagination = () => {
         'Geofence & Penalty',
     ];
 
-    const visibleTabs = isRemovedUser
+    const visibleTabs = isReadOnlyUserView
         ? allTabs.filter((label) => label === 'Activity' || label === 'Payments' || label === 'Billing Info')
         : allTabs;
 
@@ -206,7 +208,12 @@ const TablePagination = () => {
         if (!userId) return;
         setLoading(true);
         try {
-            const url = isRemovedUser ? `user/get-user-lists?user_id=${userId}&is_removed_user=true` : `user/get-user-lists?user_id=${userId}`;
+            let url = `user/get-user-lists?user_id=${userId}`;
+            if (isRemovedUser) {
+                url = `${url}&is_removed_user=true`;
+            } else if (isArchivedUser) {
+                url = `${url}&is_archived_user=true`;
+            }
 
             const res = await api.get(url);
 
@@ -256,7 +263,7 @@ const TablePagination = () => {
 
     useEffect(() => {
         fetchData();
-    }, [userId]);
+    }, [userId, isRemovedUser, isArchivedUser]);
 
     const updateProfile = async () => {
         const payload = { user_id: userId, ...formData };
@@ -634,7 +641,7 @@ const TablePagination = () => {
                                 </Box>
                             </Box>
                             <Box display={'flex'} gap={2}>
-                                {!isRemovedUser && data?.is_working && user.user_role_id == 1 && (
+                                {!isReadOnlyUserView && data?.is_working && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="success"
@@ -644,7 +651,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {!isRemovedUser && data?.user_role_id == 2 && user.user_role_id == 1 && (
+                                {!isReadOnlyUserView && data?.user_role_id == 2 && user.user_role_id == 1 && (
                                     <Button
                                         variant="outlined"
                                         color="primary"
@@ -656,7 +663,7 @@ const TablePagination = () => {
                                     </Button>
                                 )}
 
-                                {isRemovedUser && user.user_role_id == 1 && (
+                                {isReadOnlyUserView && user.user_role_id == 1 && (
                                     <Tooltip title="Bookkeeper" arrow>
                                         <Button
                                             variant="outlined"
@@ -667,6 +674,7 @@ const TablePagination = () => {
                                                     JSON.stringify({
                                                         user_id: userId,
                                                         is_removed_user: isRemovedUser,
+                                                        is_archived_user: isArchivedUser,
                                                     })
                                                 );
                                                 router.push('/apps/timesheet/list');
@@ -830,7 +838,7 @@ const TablePagination = () => {
                                         }}
                                     />
                                 </form>
-                                {!isRemovedUser && (
+                                {!isReadOnlyUserView && (
                                     <Box mt={2}>
                                         <Button
                                             variant="contained"
@@ -845,7 +853,7 @@ const TablePagination = () => {
                             </Box>
                         </BlankCard>
 
-                        {!isRemovedUser && (
+                        {!isReadOnlyUserView && (
                             <Card sx={{ mt: 3 }}>
                                 <Box
                                     display="flex"
@@ -862,7 +870,7 @@ const TablePagination = () => {
                             </Card>
                         )}
 
-                        {!isRemovedUser && (userRole === 1 || Number(user?.id) === Number(userId)) && (
+                        {!isReadOnlyUserView && (userRole === 1 || Number(user?.id) === Number(userId)) && (
                             <Card sx={{ mt: 3 }}>
                                 <Box sx={{ m: 3 }}>
                                     <Button
@@ -923,14 +931,15 @@ const TablePagination = () => {
                                 </Tabs>
                             </Box>
                             <Box>
-                                {isRemovedUser ? (
+                                {isReadOnlyUserView ? (
                                     <>
                                         <Box hidden={value !== 0}>
                                             <UserActivity
                                                 companyId={Number(user.company_id)}
                                                 userId={Number(userId)}
                                                 active={value === 0}
-                                                isRemoveUser={true}
+                                                isRemoveUser={isRemovedUser}
+                                                isArchivedUser={isArchivedUser}
                                             />
                                         </Box>
                                         <Box hidden={value !== 1}>

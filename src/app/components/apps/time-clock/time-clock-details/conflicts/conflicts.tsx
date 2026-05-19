@@ -62,7 +62,7 @@ const formatFieldLabel = (key: string): string => {
 
 export const parseDT = (() => {
     const cache = new Map<string, DateTime>();
-    
+
     return (s: string): DateTime => {
         if (cache.has(s)) {
             return cache.get(s)!;
@@ -138,6 +138,7 @@ interface ConflictsProps {
     onClose: () => void;
     startDate: string;
     endDate: string;
+    selectedUserId?: number | string | null;
 }
 
 const ConflictCaseRenderer = React.memo(({conflict, index, startDate, endDate, onClose, onApprove, onReject, isLoading}: {
@@ -345,7 +346,7 @@ const BillingConflictCase = ({
                                  onApprove,
                                  onReject,
                                  isLoading
-}: {
+                             }: {
     conflict: Conflict;
     onApprove: (userId: number, requestLogId?: number | null) => void;
     onReject: (userId: number, requestLogId?: number | null) => void;
@@ -399,11 +400,22 @@ export default function Conflicts({
                                       totalConflicts,
                                       onClose,
                                       startDate,
-                                      endDate
-}: ConflictsProps) {
+                                      endDate,
+                                      selectedUserId
+                                  }: ConflictsProps) {
     const [isLoading, setIsLoading] = useState(false);
     const session = useSession();
     const user = session?.data?.user as User & { company_id: number };
+
+    const filteredConflicts = selectedUserId
+        ? conflictDetails.filter((conflict) => {
+            const conflictUserId = conflict.items?.[0]?.user_id;
+            return conflictUserId === Number(selectedUserId);
+        })
+        : conflictDetails;
+
+    const displayConflictCount = selectedUserId ? filteredConflicts.length : totalConflicts;
+
     const handleApprove = async (
         userId: number,
         requestLogId?: number | null,
@@ -489,13 +501,13 @@ export default function Conflicts({
                     <IconX size={18}/>
                 </IconButton>
                 <Typography variant="h6" sx={{fontSize: '1rem', fontWeight: 600}}>
-                    Conflicts ({totalConflicts})
+                    Conflicts ({displayConflictCount})
                 </Typography>
             </Box>
 
             <Box sx={{flex: 1, overflow: 'hidden'}}>
                 <Box sx={{p: 2, overflowY: 'auto', height: '100%'}}>
-                    {conflictDetails.map((conflict, idx) => {
+                    {filteredConflicts.map((conflict, idx) => {  {/* CHANGED: Use filteredConflicts */}
                         const userName = conflict.user_name ?? '';
                         const userThumbImage = conflict.user_thumb_image ?? '';
 
@@ -566,7 +578,7 @@ export default function Conflicts({
                 </Box>
             </Box>
 
-            {conflictDetails.length === 0 && <EmptyState/>}
+            {filteredConflicts.length === 0 && <EmptyState/>}
         </Box>
     );
 }

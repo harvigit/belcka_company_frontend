@@ -20,8 +20,8 @@ import {
     DialogActions,
     DialogTitle,
     DialogContent,
-    Dialog,
-} from "@mui/material";
+    Dialog, Badge, Tooltip,
+} from '@mui/material';
 import {
     flexRender,
     getCoreRowModel,
@@ -56,6 +56,7 @@ import "react-phone-input-2/lib/material.css";
 import PermissionGuard from "@/app/auth/PermissionGuard";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import Link from 'next/link';
 
 dayjs.extend(customParseFormat);
 
@@ -66,6 +67,7 @@ export interface Permission {
 }
 
 export interface UserList {
+    status_color: string;
     permissions: Permission[];
     id: number;
     name: string;
@@ -322,19 +324,47 @@ const ArchiveUserList = () => {
                             }}
                         />
                         <Stack direction="row" alignItems="center" spacing={4}>
-                            <Avatar
-                                src={rowUser.user_image || defaultImage}
-                                alt={rowUser.name}
-                                sx={{ width: 36, height: 36 }}
-                            />
-                            <Box>
-                                <Typography className="f-14" color="textPrimary">
-                                    {rowUser.name ?? "-"}
-                                </Typography>
-                                <Typography color="textSecondary" variant="subtitle1">
-                                    {rowUser.trade_name}
-                                </Typography>
-                            </Box>
+                            <Link href={`/apps/users/${rowUser.id}?is_archived_user=true`} passHref>
+                                <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    spacing={4}
+                                    sx={{ cursor: 'pointer' }}
+                                >
+                                    <Avatar
+                                        src={
+                                            rowUser?.user_image
+                                                ? rowUser.user_image
+                                                : '/images/users/user.png'
+                                        }
+                                        alt={rowUser?.name}
+                                        sx={{ width: 36, height: 36, cursor: 'pointer' }}
+                                    />
+                                    <Box>
+                                        <Typography
+                                            className="f-14"
+                                            color="textPrimary"
+                                            sx={{
+                                                cursor: 'pointer',
+                                                '&:hover': { color: '#173f98' },
+                                                width: 190,
+                                            }}
+                                        >
+                                            {rowUser.name ?? '-'}
+                                        </Typography>
+                                        <Tooltip title={rowUser.trade_name ?? '-'} placement="top" arrow>
+                                            <Typography
+                                                color="textSecondary"
+                                                variant="subtitle1"
+                                                width={190}
+                                                noWrap
+                                            >
+                                                {rowUser.trade_name}
+                                            </Typography>
+                                        </Tooltip>
+                                    </Box>
+                                </Stack>
+                            </Link>
                         </Stack>
                     </Stack>
                 );

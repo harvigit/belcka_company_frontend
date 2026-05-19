@@ -12,6 +12,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 type QueryParams = {
     user_id: string | null;
     is_removed_user: boolean;
+    is_archived_user: boolean;
     start_date: string | null;
     end_date: string | null;
     open: string | null;
@@ -27,6 +28,7 @@ const TimesheetPage = () => {
     const [queryParams, setQueryParams] = useState<QueryParams>({
         user_id: null,
         is_removed_user: false,
+        is_archived_user: false,
         start_date: null,
         end_date: null,
         open: null,
@@ -39,22 +41,30 @@ const TimesheetPage = () => {
 
         const urlUserId = searchParams.get('user_id');
         const isRemovedUserParam = searchParams.get('is_removed_user');
+        const isArchivedUserParam = searchParams.get('is_archived_user');
 
         let userId: string | null = null;
         let isRemoved = false;
+        let isArchived = false;
 
-        if (urlUserId || isRemovedUserParam) {
+        if (urlUserId || isRemovedUserParam || isArchivedUserParam) {
             isRemoved = isRemovedUserParam === 'true' || isRemovedUserParam === '1';
+            isArchived = isArchivedUserParam === 'true' || isArchivedUserParam === '1';
             userId = urlUserId;
 
             sessionStorage.setItem(
                 'timesheet_sensitive_params',
-                JSON.stringify({ user_id: userId, is_removed_user: isRemoved })
+                JSON.stringify({
+                    user_id: userId,
+                    is_removed_user: isRemoved,
+                    is_archived_user: isArchived,
+                })
             );
 
             const newSearchParams = new URLSearchParams(searchParams);
             newSearchParams.delete('user_id');
             newSearchParams.delete('is_removed_user');
+            newSearchParams.delete('is_archived_user');
 
             const newUrl = newSearchParams.toString()
                 ? `/apps/timesheet/list?${newSearchParams.toString()}`
@@ -68,6 +78,7 @@ const TimesheetPage = () => {
                     const parsed = JSON.parse(stored);
                     userId = parsed.user_id || null;
                     isRemoved = parsed.is_removed_user || false;
+                    isArchived = parsed.is_archived_user || false;
                 } catch {
                     sessionStorage.removeItem('timesheet_sensitive_params');
                 }
@@ -77,6 +88,7 @@ const TimesheetPage = () => {
         setQueryParams({
             user_id: userId,
             is_removed_user: isRemoved,
+            is_archived_user: isArchived,
             start_date: searchParams.get('start_date'),
             end_date: searchParams.get('end_date'),
             open: searchParams.get('open'),

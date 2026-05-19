@@ -96,8 +96,11 @@ const loadDateRangeFromStorage = () => {
 interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
     onDataChange?: () => void;
     isRemovedUser?: boolean;
+    isArchivedUser?: boolean;
     queryParams?: {
         user_id?: string | null;
+        is_removed_user?: boolean;
+        is_archived_user?: boolean;
         start_date?: string | null;
         end_date?: string | null;
         open?: string | null;
@@ -117,6 +120,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                                                                        onUserChange,
                                                                        onDataChange,
                                                                        isRemovedUser,
+                                                                       isArchivedUser,
                                                                        queryParams
                                                                    }) => {
     const today = new Date();
@@ -199,7 +203,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         fetchTimeClockData,
         payrollCycle,
         fetchPayrollCycle,
-    } = useTimeClockData(user_id, currency, isRemovedUser);
+    } = useTimeClockData(user_id, currency, isRemovedUser, isArchivedUser);
 
     const amountColumns = [
         'priceWork',
@@ -1798,7 +1802,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onAddLeave={handleAddLeave}
                 onAddExpense={handleAddExpense}
                 payrollCycle={payrollCycle}
-                isRemovedUser={isRemovedUser}
+                isRemovedUser={Boolean(isRemovedUser || isArchivedUser)}
             />
 
             <TimeClockStats
