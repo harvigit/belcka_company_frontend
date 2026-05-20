@@ -25,8 +25,6 @@ import { isNull } from "lodash";
 import { CustomizerContext } from "@/app/context/customizerContext";
 import { NavCollapseProps } from "@/app/(DashboardLayout)/types/layout/sidebar";
 
-
-
 // FC Component For Dropdown Menu
 export default function NavCollapse({
   menu,
@@ -46,11 +44,13 @@ export default function NavCollapse({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
-
   const menuIcon = Icon ? (
-    level > 1 ? <Icon stroke={1.5} size="1rem" /> : <Icon stroke={1.5} size="1.3rem" />
+    level > 1 ? (
+      <Icon stroke={1.5} size="1rem" />
+    ) : (
+      <Icon stroke={1.5} size="1.3rem" />
+    )
   ) : null;
-
 
   const handleClick = () => {
     setOpen(!open);
@@ -67,27 +67,29 @@ export default function NavCollapse({
   }, [pathname, menu.children]);
 
   const ListItemStyled = styled(ListItemButton)(() => ({
-    marginBottom: '2px',
-    padding: '6px 9px',
-    paddingLeft: hideMenu ? '10px' : level > 2 ? `${level * 15}px` : '10px',
-    backgroundColor: open && level < 2 ? theme.palette.primary.main : '',
-    whiteSpace: 'nowrap',
-    '&:hover': {
-      backgroundColor: pathname.includes(menu.href || '') || open
-        ? theme.palette.primary.main
-        : theme.palette.primary.light,
-      color: pathname.includes(menu.href || '') || open ? 'white' : theme.palette.primary.main,
+    marginBottom: "2px",
+    padding: "6px 9px",
+    paddingLeft: hideMenu ? "10px" : level > 2 ? `${level * 15}px` : "10px",
+    backgroundColor: open && level < 2 ? theme.palette.primary.main : "",
+    whiteSpace: "nowrap",
+    "&:hover": {
+      backgroundColor:
+        pathname.includes(menu.href || "") || open
+          ? theme.palette.primary.main
+          : theme.palette.primary.light,
+      color:
+        pathname.includes(menu.href || "") || open
+          ? "white"
+          : theme.palette.primary.main,
     },
     color:
       open && level < 2
-        ? 'white'
+        ? "white"
         : level > 1 && open
           ? theme.palette.primary.main
           : theme.palette.text.primary,
     borderRadius: `${isBorderRadius}px`,
   }));
-
-
 
   // If Menu has Children
   const submenus = menu.children?.map((item: any) => {
@@ -133,15 +135,13 @@ export default function NavCollapse({
         >
           {menuIcon}
         </ListItemIcon>
-        <ListItemText 
-          color="inherit"
-          primary={hideMenu ? "" : t(`${menu.title}`)}
-          primaryTypographyProps={{ noWrap: true }}
-        />
+        <ListItemText color="inherit">
+          {hideMenu ? "" : <>{t(`${menu.title}`)}</>}
+        </ListItemText>
         {!open ? (
-          <IconChevronDown size="1rem" style={{ flexShrink: 0 }} />
+          <IconChevronDown size="1rem" />
         ) : (
-          <IconChevronUp size="1rem" style={{ flexShrink: 0 }} />
+          <IconChevronUp size="1rem" />
         )}
       </ListItemStyled>
       <Collapse in={open} timeout="auto">

@@ -34,39 +34,45 @@ export default function NavItem({
   const { t } = useTranslation();
 
   const itemIcon = Icon ? (
-    (level ?? 1) > 1 ? <Icon stroke={1.5} size="1rem" /> : <Icon stroke={2.5} size="1.3rem" />
+    (level ?? 1) > 1 ? (
+      <Icon stroke={1.5} size="1rem" />
+    ) : (
+      <Icon stroke={2.5} size="1.3rem" />
+    )
   ) : null;
 
-
   const ListItemStyled = styled(ListItemButton)(() => ({
-    whiteSpace: 'nowrap',
-    marginBottom: '2px',
-    padding: '6px 9px',
+    whiteSpace: "nowrap",
+    marginBottom: "2px",
+    padding: "6px 9px",
     borderRadius: `${isBorderRadius}px`,
-    backgroundColor: (level ?? 1) > 1 ? 'transparent !important' : 'inherit',
+    backgroundColor: (level ?? 1) > 1 ? "transparent !important" : "inherit",
     color:
       (level ?? 1) > 1 && pathDirect === item?.href
         ? `${theme.palette.primary.main}!important`
         : theme.palette.text.primary,
-    paddingLeft: hideMenu ? '8px' : (level ?? 2) > 2 ? `${(level ?? 0) * 15}px` : '8px',
-    '&:hover': {
+    paddingLeft: hideMenu
+      ? "6px"
+      : (level ?? 2) > 2
+        ? `${(level ?? 0) * 15}px`
+        : "8px",
+    "&:hover": {
       backgroundColor: theme.palette.primary.light,
       color: theme.palette.primary.main,
     },
-    '&.Mui-selected': {
-      color: 'white',
+    "&.Mui-selected": {
+      color: "white",
       backgroundColor: theme.palette.primary.main,
-      '&:hover': {
+      "&:hover": {
         backgroundColor: theme.palette.primary.main,
-        color: 'white',
+        color: "white",
       },
     },
   }));
 
-
   return (
     <List component="li" disablePadding key={item?.id && item.title}>
-      <Link href={item.href || ''}>
+      <Link href={item.href || ""}>
         <ListItemStyled
           disabled={item?.disabled}
           selected={pathDirect === item?.href}
@@ -84,16 +90,29 @@ export default function NavItem({
           >
             {itemIcon}
           </ListItemIcon>
-          <ListItemText
-            primary={hideMenu ? "" : t(`${item?.title}`)}
-            secondary={hideMenu || !item?.subtitle ? undefined : item?.subtitle}
-            primaryTypographyProps={{ noWrap: true }}
-            secondaryTypographyProps={{ noWrap: true, variant: 'caption' }}
-          />
-
+          <ListItemText>
+            {hideMenu ? "" : <>{t(`${item?.title}`)}</>}
+            <br />
+            {item?.subtitle ? (
+              <Typography variant="caption">
+                {hideMenu ? "" : item?.subtitle}
+              </Typography>
+            ) : (
+              ""
+            )}
+          </ListItemText>
           {!item?.chip || hideMenu ? null : (
             <Chip
-              color={(item?.chipColor as "default" | "error" | "primary" | "secondary" | "info" | "success" | "warning") || "default"}
+              color={
+                (item?.chipColor as
+                  | "default"
+                  | "error"
+                  | "primary"
+                  | "secondary"
+                  | "info"
+                  | "success"
+                  | "warning") || "default"
+              }
               variant={(item?.variant as "filled" | "outlined") || "filled"}
               size="small"
               label={item?.chip}
