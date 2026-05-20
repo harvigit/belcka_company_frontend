@@ -133,13 +133,15 @@ export default function NavCollapse({
         >
           {menuIcon}
         </ListItemIcon>
-        <ListItemText color="inherit">
-          {hideMenu ? "" : <>{t(`${menu.title}`)}</>}
-        </ListItemText>
+        <ListItemText 
+          color="inherit"
+          primary={hideMenu ? "" : t(`${menu.title}`)}
+          primaryTypographyProps={{ noWrap: true }}
+        />
         {!open ? (
-          <IconChevronDown size="1rem" />
+          <IconChevronDown size="1rem" style={{ flexShrink: 0 }} />
         ) : (
-          <IconChevronUp size="1rem" />
+          <IconChevronUp size="1rem" style={{ flexShrink: 0 }} />
         )}
       </ListItemStyled>
       <Collapse in={open} timeout="auto">

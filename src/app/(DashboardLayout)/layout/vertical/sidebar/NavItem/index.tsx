@@ -84,17 +84,12 @@ export default function NavItem({
           >
             {itemIcon}
           </ListItemIcon>
-          <ListItemText>
-            {hideMenu ? "" : <>{t(`${item?.title}`)}</>}
-            <br />
-            {item?.subtitle ? (
-              <Typography variant="caption">
-                {hideMenu ? "" : item?.subtitle}
-              </Typography>
-            ) : (
-              ""
-            )}
-          </ListItemText>
+          <ListItemText
+            primary={hideMenu ? "" : t(`${item?.title}`)}
+            secondary={hideMenu || !item?.subtitle ? undefined : item?.subtitle}
+            primaryTypographyProps={{ noWrap: true }}
+            secondaryTypographyProps={{ noWrap: true, variant: 'caption' }}
+          />
 
           {!item?.chip || hideMenu ? null : (
             <Chip

@@ -148,6 +148,7 @@ const StockList = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [stockQty, setStockQty] = useState("0.00");
   const [productName, setProductName] = useState("");
+  const [isSubQty, setIsSubQty] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     id: 0,
     company_id: user?.company_id,
@@ -331,10 +332,12 @@ const StockList = () => {
         setHistory(res.data.info ?? []);
         setStockQty(res.data.stock_qty ?? "0.00");
         setProductName(res.data.product_name ?? "");
+        setIsSubQty(res.data.is_sub_qty);
       } else {
         setHistory([]);
         setStockQty("0.00");
         setProductName("");
+        setIsSubQty(false);
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -1571,7 +1574,7 @@ const StockList = () => {
                 fontWeight={500}
                 fontSize={20}
               >
-                Qty in Stock: {stockQty}
+                {isSubQty ? 'Sub qty' : 'Qty'} in Stock: {stockQty}
               </Typography>
               <IconButton onClick={() => setDrawerOpen(false)}>
                 <IconX size={18} />
@@ -1610,7 +1613,7 @@ const StockList = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Date</TableCell>
-                  <TableCell>Qty</TableCell>
+                  <TableCell>{isSubQty ? "Sub Qty" : "Qty"}</TableCell>
                   <TableCell>Reference</TableCell>
                   <TableCell>Price</TableCell>
                   <TableCell>New Qty</TableCell>

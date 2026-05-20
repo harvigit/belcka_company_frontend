@@ -488,6 +488,9 @@ const ComapnyRate: React.FC<ProjectListingProps> = ({
                     >
                       <Typography sx={{ color: "black !important", mr: 2 }}>
                         Rate request is pending please take an action.
+                        <Typography color="textSecondary" className="f-14">
+                        Requested Rate: {comapny?.currency}{comapny?.new_net_rate_perday}
+                      </Typography>
                       </Typography>
 
                       <Button

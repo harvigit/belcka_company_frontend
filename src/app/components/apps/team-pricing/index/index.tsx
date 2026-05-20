@@ -24,6 +24,7 @@ import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
+import Image from "next/image";
 
 const TeamPricing = () => {
   const [data, setData] = useState<any[]>([]);
@@ -116,8 +117,8 @@ const TeamPricing = () => {
         cachedAllProducts
           ? Promise.resolve({ data: { info: cachedAllProducts } })
           : api.get(
-            `products/get?company_id=${user.company_id}&is_products=true`,
-          ),
+              `products/get?company_id=${user.company_id}&is_products=true`,
+            ),
         api.get(
           `team/get-team-pricing-details?company_id=${user.company_id}&team_id=${team.team_id}`,
         ),
@@ -138,8 +139,8 @@ const TeamPricing = () => {
 
         const resolvedPercentage =
           matched?.percentage !== undefined &&
-            matched?.percentage !== null &&
-            String(matched.percentage) !== ""
+          matched?.percentage !== null &&
+          String(matched.percentage) !== ""
             ? String(matched.percentage)
             : teamPercentageStr;
 
@@ -148,13 +149,13 @@ const TeamPricing = () => {
 
         const calculatedPrice =
           matched?.calculated_price !== undefined &&
-            matched?.calculated_price !== null
+          matched?.calculated_price !== null
             ? Number(matched.calculated_price).toFixed(2)
             : calculateProductPrice(
-              buyingPrice,
-              marketPrice,
-              resolvedPercentage,
-            );
+                buyingPrice,
+                marketPrice,
+                resolvedPercentage,
+              );
 
         return {
           ...product,
@@ -231,10 +232,10 @@ const TeamPricing = () => {
         prev.map((item) =>
           item.team_id === teamId
             ? {
-              ...item,
-              is_inventory: isEnabled,
-              percentage: percentageStr || "",
-            }
+                ...item,
+                is_inventory: isEnabled,
+                percentage: percentageStr || "",
+              }
             : item,
         ),
       );
@@ -392,7 +393,9 @@ const TeamPricing = () => {
                         sx={{
                           border: "1px solid #dbeafe",
                           backgroundColor:
-                            savingTeamId === item.team_id ? "#f3f4f6" : "#eff6ff",
+                            savingTeamId === item.team_id
+                              ? "#f3f4f6"
+                              : "#eff6ff",
                           "&:hover": {
                             backgroundColor: "#dbeafe",
                           },
@@ -525,13 +528,11 @@ const TeamPricing = () => {
                       justifyContent="space-between"
                     >
                       <Stack direction="row" spacing={2} alignItems="center">
-                        <Avatar
+                        <Image
                           src={item.image_url || "/images/products/product.svg"}
-                          variant="rounded"
-                          sx={{
-                            width: 55,
-                            height: 55,
-                          }}
+                          alt="Product"
+                          height={55}
+                          width={55}
                         />
 
                         <Box>

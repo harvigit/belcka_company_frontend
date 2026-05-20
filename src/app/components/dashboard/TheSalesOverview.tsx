@@ -84,14 +84,19 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       chart: { type: "bar", toolbar: { show: false } },
       plotOptions: {
         bar: {
-          columnWidth: days.length <= 3 ? "25%" : "40%",
+          columnWidth:
+            days.length <= 1
+              ? "10%"
+              : days.length <= 3
+                ? "15%"
+                : "40%",
           borderRadius: 4,
           dataLabels: { position: "top" },
         },
       },
       dataLabels: {
         enabled: true,
-        offsetY: -15,
+        offsetY: -20,
         formatter: (val: number) => (val > 0 ? `${currency}${val}` : ""),
         style: {
           fontSize: "11px",
@@ -109,7 +114,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       },
       yaxis: {
         labels: { show: false },
-        max: (max) => max * 1.1,
+        max: (max) => max * 1.15,
       },
       grid: { show: false },
       legend: { show: false },
@@ -129,14 +134,21 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       chart: { type: "bar", toolbar: { show: false } },
       plotOptions: {
         bar: {
-          columnWidth: yearData.length <= 4 ? "20%" : "35%",
+          columnWidth:
+            yearData.length <= 1
+              ? "10%"
+              : yearData.length <= 3
+                ? "15%"
+                : yearData.length <= 6
+                  ? "25%"
+                  : "35%",
           borderRadius: 4,
           dataLabels: { position: "top" },
         },
       },
       dataLabels: {
         enabled: true,
-        offsetY: -15,
+        offsetY: -20,
         formatter: (val: number) => (val > 0 ? `${currency}${val}` : ""),
         style: {
           fontSize: "11px",
@@ -154,6 +166,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       },
       yaxis: {
         labels: { show: false },
+        max: (max) => max * 1.15,
       },
       grid: { show: false },
       legend: { show: false },

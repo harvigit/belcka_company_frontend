@@ -69,6 +69,7 @@ export interface TeamList {
     status_color: string;
     supervisor_team_id: number | null;
     supervisor_team_name: string | null;
+    is_company_owner: boolean;
 }
 
 export interface TradeList {
@@ -88,7 +89,7 @@ const TablePagination = () => {
     const [supervisorDetails, setSupervisorDetails] = useState<{ team_id: number | null, team_name: string | null } | null>(null);
     const searchParams = useSearchParams();
     const isRemovedUser = searchParams?.get('is_removed_user') === 'true';
-    const isArchivedUser = searchParams?.get('is_archived_user') === 'true'  || searchParams?.get('is_archive_user') === 'true';
+    const isArchivedUser = searchParams?.get('is_archived_user') === 'true' || searchParams?.get('is_archive_user') === 'true';
     const isReadOnlyUserView = isRemovedUser || isArchivedUser;
     const [companyUsers, setCompanyUsers] = useState<any[]>([]);
 
@@ -120,6 +121,7 @@ const TablePagination = () => {
     const userRole = user?.user_role_id;
     const [phone, setPhone] = useState('');
     const [openModel, setOpenModel] = useState(false);
+    const [openRemoveAdminModel, setOpenRemoveAdminModel] = useState(false);
     const [openIdCard, setOpenIdCard] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [originalPhone, setOriginalPhone] = useState({
@@ -439,6 +441,47 @@ const TablePagination = () => {
             console.error(error);
         } finally {
             setLoading(false);
+            fetchData();
+        }
+    };
+
+    const handleRemoveAdmin = async () => {
+        setLoading(true);
+        try {
+            const payload = {
+                company_id: user.company_id,
+                user_id: data?.id,
+            };
+
+            const res = await api.post('company/remove-admin', payload);
+            if (res.data.IsSuccess) {
+                toast.success(res.data.message);
+                setOpenRemoveAdminModel(false);
+                fetchData();
+                try {
+                    const res = await api.get(`user/get-user-lists?user_id=${user.id}`);
+
+                    if (res.data?.info?.length) {
+                        const data = res.data.info[0];
+
+                        await update({
+                            user: {
+                                ...session?.user,
+                                user_role_id: data.user_role_id,
+                            },
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch users', err);
+                }
+            } else {
+                toast.error(res.data.message);
+            }
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Something went wrong!');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -660,6 +703,18 @@ const TablePagination = () => {
                                         }}
                                     >
                                         Make an admin
+                                    </Button>
+                                )}
+
+                                {!data?.is_company_owner && data?.user_role_id == 1 && companyUsers.find((u: any) => Number(u.id) === Number(user.id))?.is_company_owner && (
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={() => {
+                                            setOpenRemoveAdminModel(true);
+                                        }}
+                                    >
+                                        Remove as admin
                                     </Button>
                                 )}
 
@@ -1322,6 +1377,48 @@ const TablePagination = () => {
 
                         <Button
                             onClick={handleConfirmAdmin}
+                            color="primary"
+                            variant="contained"
+                            disabled={loading}
+                        >
+                            {loading ? 'Updating...' : 'Yes, Confirm'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog open={openRemoveAdminModel} onClose={() => setOpenRemoveAdminModel(false)}>
+                    <DialogTitle>
+                        Confirmation
+                        <IconButton
+                            aria-label="close"
+                            onClick={() => setOpenRemoveAdminModel(false)}
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <IconX />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Typography>
+                            Are you sure you want to remove this user as an admin?
+                        </Typography>
+                    </DialogContent>
+
+                    <DialogActions>
+                        <Button
+                            onClick={() => setOpenRemoveAdminModel(false)}
+                            variant="outlined"
+                            color="error"
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            onClick={handleRemoveAdmin}
                             color="primary"
                             variant="contained"
                             disabled={loading}
