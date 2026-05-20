@@ -297,6 +297,25 @@ const saveSettingsToStorage = (
     }
 };
 
+const getIPAddress = async (): Promise<string | null> => {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch IP');
+
+        const data = await response.json();
+        return data.ip || null;
+    } catch (error) {
+        console.warn('Could not fetch IP address:', error);
+        return null;
+    }
+};
+
 const useGeolocation = () => {
     const getLocation = useCallback(
         (onError: (type: LocationErrorType) => void): Promise<LocationCoords | null> =>
@@ -1024,7 +1043,7 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         () => setToast((t) => ({ ...t, open: false })),
         []
     );
-    
+
     useEffect(() => {
         if (!mapRef.current || locations.length === 0) return;
 
@@ -1618,10 +1637,15 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         setClockLoading(true);
 
         try {
+            // Get IP address
+            const ipAddress = await getIPAddress();
+
             const payload: Record<string, unknown> = {
                 user_worklog_id: clockInfo.user_worklog_id,
-                device_type: 'web',
-                device_model_type: navigator.userAgent.substring(0, 50),
+                device_type: 3,
+                device_model_type: ipAddress
+                    ? `${navigator.userAgent.substring(0, 50)} | IP: ${ipAddress}`
+                    : navigator.userAgent.substring(0, 50),
                 ...(user?.company_id ? { company_id: user.company_id } : {}),
             };
 
@@ -1676,10 +1700,15 @@ const TimeTracking: React.FC<Props> = ({ queryParams: _queryParams }) => {
         async (shiftId: number, projectId: number | null, coords: LocationCoords) => {
             setClockLoading(true);
             try {
+                // Get IP address
+                const ipAddress = await getIPAddress();
+
                 const payload: Record<string, unknown> = {
                     shift_id: shiftId,
-                    device_type: 'web',
-                    device_model_type: navigator.userAgent.substring(0, 50),
+                    device_type: 3,
+                    device_model_type: ipAddress
+                        ? `${navigator.userAgent.substring(0, 50)} | IP: ${ipAddress}`
+                        : navigator.userAgent.substring(0, 50),
                     latitude: String(coords.latitude),
                     longitude: String(coords.longitude),
                     ...(user?.company_id ? { company_id: user.company_id } : {}),

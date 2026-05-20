@@ -16,7 +16,10 @@ import {flexRender} from '@tanstack/react-table';
 import {
     IconTrash,
     IconPointFilled,
-    IconMapPin
+    IconMapPin,
+    IconBrandAndroid,
+    IconBrandApple,
+    IconWorld,
 } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import EditableTimeCell from './EditableTimeCell';
@@ -86,7 +89,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             worklogId: undefined,
         });
     };
-    
+
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
         const configs: { [key: string]: { width: number; visible: boolean } } = {};
@@ -112,6 +115,158 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         if (!name || name == '--') return '--';
         const firstWord = name.trim().split(' ')[0];
         return firstWord.length > 10 ? firstWord.slice(0, 3) + '.' : firstWord + '.';
+    };
+
+    const getDeviceInfo = (type: number | null): {label: string; icon: React.ReactElement} => {
+        switch (Number(type)) {
+            case 1:
+                return {label: 'Android', icon: (<IconBrandAndroid size={18} color="#4CAF50" stroke={1.8}/>),};
+            case 2:
+                return {label: 'iOS', icon: (<IconBrandApple size={18} color="#000" stroke={1.8}/>),};
+            case 3:
+                return {label: 'Web', icon: (<IconWorld size={18} color="#1976d2" stroke={1.8}/>),};
+            case 4:
+                return {label: 'Cron', icon: (<IconWorld size={18} color="#1976d2" stroke={1.8}/>),};
+            default:
+                return {label: '--', icon: (<IconWorld size={18} color="#999" stroke={1.8}/>),};
+        }
+    };
+
+    const DeviceTooltipContent = ({log, isStartTime,}: { log: any; isStartTime: boolean; }) => {
+        const deviceType = isStartTime ? log.start_device_type : log.end_device_type;
+        const deviceModel = isStartTime ? log.start_device_model_type : log.end_device_model_type;
+        const timeText = isStartTime ? log.start : log.end;
+        const label = isStartTime ? 'Clock-in' : 'Clock-out';
+        const deviceInfo = deviceType != null ? getDeviceInfo(deviceType) : null;
+
+        return (
+            <Box sx={{p: 0.5}} >
+                
+                {deviceType != null && (
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.8, mb: 0.8,}}>
+                        {deviceInfo != null && deviceInfo.icon}
+                        <Typography 
+                            variant="body2"
+                            sx={{
+                                color: '#666',
+                                fontSize: '0.825rem',
+                                fontWeight: 500,
+                            }}
+                        >
+                            {deviceInfo != null && deviceInfo.label}
+                        </Typography>
+                    </Box>
+                )}
+                {deviceModel && (
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.8, mb: 1,}}>
+                        <IconWorld size={16} color="#888" stroke={1.8}/>
+                        <Typography variant="body2" sx={{
+                            color: '#666',
+                            fontSize: '0.825rem',
+                        }}>
+                            {deviceModel}
+                        </Typography>
+                    </Box>
+                )}
+                
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 0.8,}}>
+                <Chip label={label} size="small" sx={{
+                    backgroundColor: '#5b9ef5',
+                    color: '#fff',
+                    fontWeight: 500,
+                    height: '24px',
+                    fontSize: '0.75rem',
+                    textTransform: 'capitalize',
+                    '& .MuiChip-label': {px: 1,},
+                }}/>
+                <Typography variant="caption" sx={{
+                    color: '#999',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                }}>
+                    {sanitizeDateTime(timeText)}
+                </Typography>
+            </Box>
+            </Box>
+        );
+    };
+
+    const renderLocationPin = (log: any, isStartTime: boolean) => {
+        const hasLocation = isStartTime
+            ? (log.start_latitude || log.start_longitude)
+            : (log.end_latitude || log.end_longitude);
+
+        const deviceType = isStartTime ? log.start_device_type : log.end_device_type;
+
+        if (!hasLocation) return null;
+
+        if (deviceType == null) {
+            return (
+                <Tooltip
+                    title={`View clock-${isStartTime ? 'in' : 'out'} location`}
+                    arrow
+                    placement="top"
+                >
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            '&:hover': {
+                                opacity: 0.7,
+                            }
+                        }}
+                        onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                    >
+                        <IconMapPin size={14} style={{ color: '#1976d2' }} />
+                    </Box>
+                </Tooltip>
+            );
+        }
+
+        return (
+            <Tooltip
+                title={
+                    <DeviceTooltipContent
+                        log={log}
+                        isStartTime={isStartTime}
+                    />
+                }
+                arrow
+                placement="top"
+                slotProps={{
+                    tooltip: {
+                        sx: {
+                            backgroundColor: '#fff',
+                            color: '#333',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '10px',
+                            p: 1,
+                        },
+                    },
+                    arrow: {
+                        sx: {
+                            color: '#fff',
+                        },
+                    },
+                }}
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        '&:hover': {
+                            opacity: 0.7,
+                        },
+                    }}
+                    onClick={() => handleLocationPinClick(Number(log.worklog_id))}
+                >
+                    <IconMapPin size={14} style={{ color: '#1976d2' }}/>
+                </Box>
+            </Tooltip>
+        );
     };
 
     return (
@@ -184,7 +339,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         {table.getRowModel().rows.map((row: any) => {
                             const rowData = row.original;
                             const isRowLocked = isRecordLocked(rowData);
-                            
+
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
                                 const worklogIds = row.original.rowsData.map((log: any) => log.worklog_id);
@@ -198,7 +353,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                     const worklogId = log.is_expense ? `${row.id}-expense-${log.expense_id}-${index}` : log.is_leave ? `${row.id}-leave-${log.user_leave_id}-${index}` : `${row.id}-worklog-${log.worklog_id}`;
                                     const isFirstRow = index === 0;
                                     const isLogLocked = isRecordLocked(log) || log.is_timesheet_locked === true;
-                                    
+
                                     const hasValue = rowData.daily_adjustment_amount !== undefined && rowData.daily_adjustment_amount !== null && rowData.daily_adjustment_amount !== 0;
                                     const isPositive = (rowData.daily_adjustment_amount ?? 0) > 0;
 
@@ -345,23 +500,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                {(log.start_latitude || log.start_longitude) && (
-                                                                    <Tooltip title="View clock-in location" arrow placement="top">
-                                                                        <Box
-                                                                            sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                cursor: 'pointer',
-                                                                                '&:hover': {
-                                                                                    opacity: 0.7,
-                                                                                }
-                                                                            }}
-                                                                            onClick={() => handleLocationPinClick(Number(log.worklog_id))}
-                                                                        >
-                                                                            <IconMapPin size={14} style={{ color: '#1976d2' }} />
-                                                                        </Box>
-                                                                    </Tooltip>
-                                                                )}
+                                                                {renderLocationPin(log, true)}
                                                             </Box>
                                                         )}
                                                     </TableCell>
@@ -420,23 +559,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                     cancelEditingField={cancelEditingField}
                                                                     saveFieldChanges={saveFieldChanges}
                                                                 />
-                                                                {(log.end_latitude || log.end_longitude) && (
-                                                                    <Tooltip title="View clock-in location" arrow placement="top">
-                                                                        <Box
-                                                                            sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                cursor: 'pointer',
-                                                                                '&:hover': {
-                                                                                    opacity: 0.7,
-                                                                                }
-                                                                            }}
-                                                                            onClick={() => handleLocationPinClick(Number(log.worklog_id))}
-                                                                        >
-                                                                            <IconMapPin size={14} style={{ color: '#1976d2' }} />
-                                                                        </Box>
-                                                                    </Tooltip>
-                                                                )}
+                                                                {renderLocationPin(log, false)}
                                                             </Box>
                                                         )}
                                                     </TableCell>
