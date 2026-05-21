@@ -42,7 +42,7 @@ const ProductTrades: React.FC<ProductTradesProps> = ({
     try {
       if (!productId) return;
       const res = await api.get(
-        `products/get-product-trade?company_id=${companyId}&product_id=${productId}`,
+        `product-tools/get?company_id=${companyId}&product_id=${productId}`,
       );
       if (res.data?.info?.length) {
         setProducts(res.data.info);
@@ -87,7 +87,7 @@ const ProductTrades: React.FC<ProductTradesProps> = ({
         trade_ids: selectedIds.join(","),
       };
 
-      const res = await api.post("products/manage-trades", payload);
+      const res = await api.post("product-tools/manage-tools", payload);
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);

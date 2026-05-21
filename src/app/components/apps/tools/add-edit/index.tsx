@@ -53,7 +53,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
     if (!companyId) return;
     try {
       const res = await api.get(
-        `get-inventory-resources?company_id=${companyId}`,
+        `get-inventory-resources?company_id=${companyId}&is_web=true`,
       );
       if (res.data) {
         setProducts(res.data.products);
@@ -69,7 +69,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
 
     try {
       const res = await api.get(
-        `products/product-trade-detail?company_id=${companyId}&id=${setId}`,
+        `product-tools/detail?company_id=${companyId}&id=${setId}`,
       );
 
       const setData = res.data?.info;
@@ -146,7 +146,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
       };
       if (setId) payload.id = setId;
 
-      const res = await api.post("products/manage-trades", payload);
+      const res = await api.post("product-tools/manage-tools", payload);
 
       if (res.data?.IsSuccess) {
         toast.success(res.data.message);
@@ -154,6 +154,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
         onClose();
         setSelectedIds([]);
         setProductId("");
+        setStoreId("");
       } else {
       }
     } catch (err: any) {

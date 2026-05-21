@@ -46,6 +46,7 @@ import {
   IconChevronRight,
   IconClock,
   IconEdit,
+  IconNotes,
   IconPlaylistAdd,
   IconSearch,
   IconTrash,
@@ -70,6 +71,8 @@ import AddEditTool from "../add-edit";
 import AssignUserTool from "../assign-user";
 import ProductAddEdit from "../../products/create";
 import HireHistory from "../history";
+import { AxiosResponse } from "axios";
+import ArchiveTools from "../archive";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -143,6 +146,9 @@ const ToolsList = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [openStoreDialog, setOpenStoreDialog] = useState(false);
   const [selectedStore, setSelectedStore] = useState<number | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [archiveDrawerOpen, setArchiveDrawerOpen] = useState(false);
+
   const [formData, setFormData] = useState<any>({
     id: 0,
     company_id: user?.company_id,
@@ -188,7 +194,7 @@ const ToolsList = () => {
     setFetchProduct(true);
     try {
       const res = await api.get(
-        `products/get-product-trade?company_id=${user.company_id}&is_web=true`,
+        `product-tools/get?company_id=${user.company_id}&is_web=true`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -304,7 +310,7 @@ const ToolsList = () => {
         product_id: Number(productId),
         trade_ids: selected.map((c) => c.id).join(","),
       };
-      const res = await api.post("products/manage-trades", payload);
+      const res = await api.post("product-tools/manage-tools", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
         fetchProducts();
@@ -806,6 +812,21 @@ const ToolsList = () => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
+            {selectedRowIds.size > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<IconTrash width={18} />}
+                onClick={() => {
+                  const selectedIds = Array.from(selectedRowIds);
+                  setUsersToDelete(selectedIds);
+                  setOpenDialog(true);
+                }}
+              >
+                Archive
+              </Button>
+            )}
+
             <IconButton
               onClick={handlePopoverOpen}
               sx={{ ml: 1 }}
@@ -1007,6 +1028,29 @@ const ToolsList = () => {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
+                    setArchiveDrawerOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconNotes width={18} />
+                  </ListItemIcon>
+                  Archived Tool List
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
                     setHistoryDrawer(true);
                   }}
                   style={{
@@ -1068,6 +1112,13 @@ const ToolsList = () => {
           setId={selectedTaskId}
         />
 
+        {/* Archive task list */}
+        <ArchiveTools
+          open={archiveDrawerOpen}
+          onClose={() => setArchiveDrawerOpen(false)}
+          onWorkUpdated={fetchProducts}
+        />
+
         <Dialog
           maxWidth={"sm"}
           fullWidth
@@ -1104,6 +1155,48 @@ const ToolsList = () => {
               }}
             >
               Continue
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* archive client */}
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Confirm Archive</DialogTitle>
+          <DialogContent>
+            <Typography color="textSecondary">
+              Are you sure you want to archive products from Tools?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenDialog(false)}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const payload = {
+                    ids: usersToDelete.join(","),
+                  };
+                  const response: AxiosResponse<any> = await api.post(
+                    "product-tools/archive",
+                    payload,
+                  );
+                  toast.success(response.data.message);
+                  setSelectedRowIds(new Set());
+                  await fetchProducts();
+                } catch (error) {
+                } finally {
+                  setOpenDialog(false);
+                }
+              }}
+              variant="outlined"
+              color="error"
+            >
+              Archive
             </Button>
           </DialogActions>
         </Dialog>

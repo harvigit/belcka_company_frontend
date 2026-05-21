@@ -594,58 +594,58 @@ const BuyerDashboard = () => {
                     sm: 6,
                   }}
                 >
-                  {!loading ? (
-                    <CardContent
-                      sx={{
-                        borderRight: {
-                          xs: "0",
-                          sm: `1px solid ${borderColor}`,
-                        },
-                        p: 4,
-                        textAlign: "center",
-                      }}
+                  {/* {!loading ? ( */}
+                  <CardContent
+                    sx={{
+                      borderRight: {
+                        xs: "0",
+                        sm: `1px solid ${borderColor}`,
+                      },
+                      p: 4,
+                      textAlign: "center",
+                    }}
+                  >
+                    {topcard.title == "order_in_hands" ? (
+                      <IconBox
+                        size={40}
+                        color="#DBA362"
+                        style={{
+                          backgroundColor: "#FFEEDB",
+                          padding: 6,
+                          borderRadius: 6,
+                        }}
+                      />
+                    ) : (
+                      <IconMapPinCheck
+                        size={40}
+                        color="#817AF399"
+                        style={{
+                          backgroundColor: "#ECEAFF",
+                          padding: 6,
+                          borderRadius: 6,
+                        }}
+                      />
+                    )}
+                    <Box
+                      display="block"
+                      alignItems="center"
+                      color="text.secondary"
+                      mt={0.5}
                     >
-                      {topcard.title == "order_in_hands" ? (
-                        <IconBox
-                          size={40}
-                          color="#DBA362"
-                          style={{
-                            backgroundColor: "#FFEEDB",
-                            padding: 6,
-                            borderRadius: 6,
-                          }}
-                        />
-                      ) : (
-                        <IconMapPinCheck
-                          size={40}
-                          color="#817AF399"
-                          style={{
-                            backgroundColor: "#ECEAFF",
-                            padding: 6,
-                            borderRadius: 6,
-                          }}
-                        />
-                      )}
-                      <Box
-                        display="block"
-                        alignItems="center"
-                        color="text.secondary"
-                        mt={0.5}
-                      >
-                        <Typography variant="h3" fontWeight="400">
-                          {topcard.digits}
-                        </Typography>
+                      <Typography variant="h3" fontWeight="400">
+                        {topcard.digits}
+                      </Typography>
 
-                        <Typography
-                          color="textSecondary"
-                          variant="h6"
-                          fontWeight="400"
-                        >
-                          {topcard.text2}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  ) : (
+                      <Typography
+                        color="textSecondary"
+                        variant="h6"
+                        fontWeight="400"
+                      >
+                        {topcard.text2}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                  {/* ) : (
                     <>
                       {" "}
                       <CircularProgress
@@ -654,7 +654,7 @@ const BuyerDashboard = () => {
                         sx={{ ml: 5 }}
                       />
                     </>
-                  )}
+                  )} */}
                 </Grid>
               ))}
             </Grid>
@@ -780,77 +780,67 @@ const BuyerDashboard = () => {
                 </Link>
               </Box>
               <Grid container>
-                {loading ? (
-                  <Box width={"100%"} textAlign={"center"}>
-                    <CircularProgress
-                      size={30}
-                      color="primary"
-                      sx={{ m: "auto" }}
-                    />
-                  </Box>
-                ) : (
-                  suppliersData.map((topcard, index) => (
-                    <Grid
-                      key={index}
-                      size={{
-                        xs: 6,
-                        lg: 6,
-                        sm: 6,
+                {suppliersData.map((topcard, index) => (
+                  <Grid
+                    key={index}
+                    size={{
+                      xs: 6,
+                      lg: 6,
+                      sm: 6,
+                    }}
+                  >
+                    <CardContent
+                      sx={{
+                        borderRight: {
+                          xs: "0",
+                          sm: `1px solid ${borderColor}`,
+                        },
+                        p: 4,
+                        textAlign: "center",
                       }}
                     >
-                      <CardContent
-                        sx={{
-                          borderRight: {
-                            xs: "0",
-                            sm: `1px solid ${borderColor}`,
-                          },
-                          p: 4,
-                          textAlign: "center",
-                        }}
+                      {topcard.title == "suppliers" ? (
+                        <IconUserCircle
+                          size={40}
+                          color="#24B8F1"
+                          style={{
+                            backgroundColor: "#E5F7FD",
+                            padding: 6,
+                            borderRadius: 6,
+                          }}
+                        />
+                      ) : (
+                        <IconNotes
+                          size={40}
+                          color="#817AF399"
+                          style={{
+                            backgroundColor: "#ECEAFF",
+                            padding: 6,
+                            borderRadius: 6,
+                          }}
+                        />
+                      )}
+                      <Box
+                        display="block"
+                        alignItems="center"
+                        mt={1}
+                        color="text.secondary"
                       >
-                        {topcard.title == "suppliers" ? (
-                          <IconUserCircle
-                            size={40}
-                            color="#24B8F1"
-                            style={{
-                              backgroundColor: "#E5F7FD",
-                              padding: 6,
-                              borderRadius: 6,
-                            }}
-                          />
-                        ) : (
-                          <IconNotes
-                            size={40}
-                            color="#817AF399"
-                            style={{
-                              backgroundColor: "#ECEAFF",
-                              padding: 6,
-                              borderRadius: 6,
-                            }}
-                          />
-                        )}
-                        <Box
-                          display="block"
-                          alignItems="center"
-                          mt={1}
-                          color="text.secondary"
-                        >
-                          <Typography variant="h3" fontWeight="400">
-                            {topcard.digits}
-                          </Typography>
+                        <Typography variant="h3" fontWeight="400">
+                          {topcard.digits}
+                        </Typography>
 
-                          <Typography
-                            color="textSecondary"
-                            variant="h6"
-                            fontWeight="400"
-                          >
-                            {topcard.text2}
-                          </Typography>
-                        </Box>
-                      </CardContent>
-                    </Grid>
-                  ))
-                )}
+                        <Typography
+                          color="textSecondary"
+                          variant="h6"
+                          fontWeight="400"
+                        >
+                          {topcard.text2}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Grid>
+                ))}
               </Grid>
             </Card>
           </Grid>
