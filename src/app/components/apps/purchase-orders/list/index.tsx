@@ -1011,7 +1011,7 @@ const PurchaseOrderList = () => {
           <Stack direction="row" display={"flex"}>
             <IconButton
               color="primary"
-              disabled={!item.supplier_email}
+              // disabled={!item.supplier_email}
               onClick={(e) => {
                 e.stopPropagation();
 
@@ -1216,7 +1216,7 @@ Team Belcka
                         setLoading(true);
 
                         await api.post(
-                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}&is_price_hide=true`,
                         );
 
                         const res = await api.get(

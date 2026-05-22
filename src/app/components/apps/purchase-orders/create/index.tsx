@@ -265,13 +265,21 @@ const PurchaseOrder: React.FC<Props> = ({
   };
 
   useEffect(() => {
+    const totalQty = products.reduce((sum, p) => sum + (Number(p.qty) || 0), 0);
+    const taxPerUnit = totalQty > 0 ? taxAmount / totalQty : 0;
+
     setFormData((prev: any) => ({
       ...prev,
-      product_data: products.map((p) => ({
-        product_id: p.id,
-        qty: p.qty,
-        price: p.price,
-      })),
+      product_data: products.map((p) => {
+        const basePrice = Number(p.price) || 0;
+        const priceWithTax = basePrice + taxPerUnit;
+
+        return {
+          product_id: p.id,
+          qty: p.qty,
+          price: priceWithTax.toFixed(2),
+        };
+      }),
       tax: taxAmount.toFixed(2),
       total_amount: totalAmount.toFixed(2),
     }));

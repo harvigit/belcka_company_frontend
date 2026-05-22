@@ -85,11 +85,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
       plotOptions: {
         bar: {
           columnWidth:
-            days.length <= 1
-              ? "10%"
-              : days.length <= 3
-                ? "15%"
-                : "40%",
+            days.length <= 1 ? "10%" : days.length <= 3 ? "15%" : "40%",
           borderRadius: 4,
           dataLabels: { position: "top" },
         },
@@ -187,7 +183,7 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
         p: 2,
         mb: 2,
         borderRadius: 3,
-        display: yearData.length > 0 ? "block" : "none",
+        // display: yearData.length > 0 ? "block" : "none",
       }}
     >
       {/* HEADER */}
@@ -239,7 +235,13 @@ const InventoryOverview = ({ companyId }: { companyId: number }) => {
           {getWeekChart(week.days)}
         </Card>
       ))} */}
-      <Box sx={{ p: 2 }}>{getYearChart()}</Box>
+      {yearData.length > 0 ? (
+        <Box sx={{ p: 2 }}>{getYearChart()}</Box>
+      ) : (
+        <Box  sx={{ p: 2 }}>
+          <Typography>No inventory data found!!</Typography>
+        </Box>
+      )}
     </Card>
   );
 };
