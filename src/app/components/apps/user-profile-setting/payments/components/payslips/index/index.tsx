@@ -570,7 +570,8 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                 );
             },
         },
-        columnHelper.accessor('image', {
+
+        columnHelper.accessor('image_url', {
             id: 'Image',
             header: () => (
                 <Stack direction="row" alignItems="center">
@@ -579,41 +580,95 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                     </Typography>
                 </Stack>
             ),
-            enableSorting: true,
+            enableSorting: false,
             cell: ({row}) => {
                 const item = row.original;
 
-                const isPdf = item.extension === '.pdf';
+                const isPdf = item.pdf_extension === '.pdf';
+                const imageUrl = isPdf ? item.thumb_image_url : item.image_url;
+                const fullUrl = isPdf ? item.pdf_url : item.image_url;
+
                 return (
-                    <Stack direction="row" alignItems="center" spacing={4}>
-                        {item.image && (
-                            <div
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        {imageUrl ? (
+                            <Box
+                                component="div"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     if (isPdf) {
-                                        viewPdf(item.image);
+                                        viewPdf(fullUrl);
                                     } else {
-                                        setPreviewImage(item.image);
+                                        setPreviewImage(fullUrl);
                                         setOpenPreview(true);
                                     }
                                 }}
+                                sx={{
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '4px',
+                                    overflow: 'hidden',
+                                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                    '&:hover': {
+                                        transform: 'scale(1.08)',
+                                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                                    },
+                                }}
                             >
-                                {isPdf ? (
-                                    <Image
-                                        src={item.thumb_image}
-                                        alt={'Payslip'}
-                                        width={50}
-                                        height={50}
-                                    />
-                                ) : (
-                                    <Image
-                                        src={item.image}
-                                        alt={'Payslip'}
-                                        width={50}
-                                        height={50}
-                                    />
+                                <Image
+                                    src={imageUrl}
+                                    alt="Payslip document"
+                                    width={50}
+                                    height={50}
+                                    style={{
+                                        objectFit: 'cover',
+                                        borderRadius: '4px',
+                                    }}
+                                    onError={(e) => {
+                                        console.error('Image failed to load:', imageUrl);
+                                    }}
+                                />
+                                {isPdf && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            backgroundColor: 'rgba(211, 0, 0, 0.8)',
+                                            color: 'white',
+                                            borderRadius: '50%',
+                                            width: 22,
+                                            height: 22,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '10px',
+                                            fontWeight: 'bold',
+                                            bottom: -5,
+                                            right: -5,
+                                            border: '2px solid white',
+                                        }}
+                                    >
+                                        PDF
+                                    </Box>
                                 )}
-                            </div>
+                            </Box>
+                        ) : (
+                            <Box
+                                sx={{
+                                    width: 50,
+                                    height: 50,
+                                    backgroundColor: '#f0f0f0',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#999',
+                                    fontSize: '12px',
+                                }}
+                            >
+                                No file
+                            </Box>
                         )}
                     </Stack>
                 );
@@ -714,11 +769,6 @@ const PayslipsList: React.FC<Props> = ({userId, isShow, disableDateFilter}) => {
                 const item = row.original;
                 return (
                     <Stack direction="row" spacing={1}>
-                        {/*<Tooltip title="View">*/}
-                        {/*  <IconButton onClick={() => viewPdf(item.pdf)} color="primary">*/}
-                        {/*    <IconEye size={18} />*/}
-                        {/*  </IconButton>*/}
-                        {/*</Tooltip>*/}
                         <Tooltip title="Edit">
                             <IconButton onClick={() => handleEdit(item)} color="primary">
                                 <IconEdit size={18}/>
