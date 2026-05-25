@@ -96,10 +96,10 @@ const PurchaseOrder: React.FC<Props> = ({
       ids && ids.length > 0
         ? ids
         : editData?.purchase_orders?.map((po: any) => ({
-          id: po.product_id,
-          qty: Number(po.qty) || 0,
-          supplier_id: po.supplier_id,
-        })) || [];
+            id: po.product_id,
+            qty: Number(po.qty) || 0,
+            supplier_id: po.supplier_id,
+          })) || [];
 
     if (!source || source.length === 0) return;
 
@@ -235,10 +235,10 @@ const PurchaseOrder: React.FC<Props> = ({
       prev.map((item) =>
         item.id === id
           ? {
-            ...item,
-            qty: value,
-            line_total: (Number(item.price) || 0) * (Number(value) || 0),
-          }
+              ...item,
+              qty: value,
+              line_total: (Number(item.price) || 0) * (Number(value) || 0),
+            }
           : item,
       ),
     );
@@ -265,21 +265,13 @@ const PurchaseOrder: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    const totalQty = products.reduce((sum, p) => sum + (Number(p.qty) || 0), 0);
-    const taxPerUnit = totalQty > 0 ? taxAmount / totalQty : 0;
-
     setFormData((prev: any) => ({
       ...prev,
-      product_data: products.map((p) => {
-        const basePrice = Number(p.price) || 0;
-        const priceWithTax = basePrice + taxPerUnit;
-
-        return {
-          product_id: p.id,
-          qty: p.qty,
-          price: priceWithTax.toFixed(2),
-        };
-      }),
+      product_data: products.map((p) => ({
+        product_id: p.id,
+        qty: p.qty,
+        price: p.price,
+      })),
       tax: taxAmount.toFixed(2),
       total_amount: totalAmount.toFixed(2),
     }));
@@ -362,11 +354,11 @@ const PurchaseOrder: React.FC<Props> = ({
                 prev.map((item) =>
                   item.id === row.original.id
                     ? {
-                      ...item,
-                      price: value,
-                      line_total:
-                        (Number(value) || 0) * (Number(item.qty) || 0),
-                    }
+                        ...item,
+                        price: value,
+                        line_total:
+                          (Number(value) || 0) * (Number(item.qty) || 0),
+                      }
                     : item,
                 ),
               );
@@ -543,7 +535,7 @@ const PurchaseOrder: React.FC<Props> = ({
                   renderInput={(params) => (
                     <CustomTextField
                       {...params}
-                    // placeholder="Select Supplier"
+                      // placeholder="Select Supplier"
                     />
                   )}
                 />
