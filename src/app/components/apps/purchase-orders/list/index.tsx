@@ -1216,7 +1216,7 @@ Team Belcka
                         setLoading(true);
 
                         await api.post(
-                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}&is_price_hide=true`,
+                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
                         );
 
                         const res = await api.get(
