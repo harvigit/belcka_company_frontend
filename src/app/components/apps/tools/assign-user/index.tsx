@@ -164,7 +164,7 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
         </Box>
 
         {/* Select/Deselect All */}
-        {products.length > 0 && (
+        {products?.length > 0 && (
           <Box textAlign={"end"}>
             <Button variant="outlined" size="small" onClick={handleSelectAll}>
               {selectAll ? "Deselect All" : "Select All"}

@@ -19,7 +19,7 @@ const userLogout = async () => {
 
   isLoggingOut = true;
 
-  toast.error("You are not part of this company!");
+  // toast.error("You are not part of this company!");
 
   await signOut({
     callbackUrl: "/auth",
