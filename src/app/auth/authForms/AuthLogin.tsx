@@ -92,17 +92,20 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
       toast.success(response.data.message);
 
-      if (response.data.IsSuccess === true) {
-        if (!response.data.info || response.data.info.length === 0) {
-          openCompanyPopup();
+        if (response.data.IsSuccess === true) {
+            const companies = response.data.info || [];
+            
+            if (companies.length === 0) {
+                openCompanyPopup();
+            } else if (companies.length === 1) {
+                setSelectedCompany(companies[0].id);
+            }
+
+            setCompany(companies);
+            setId(response.data.user_id);
+            // setToken(response.data.token);
         }
-
-        setCompany(response.data.info || []);
-        setId(response.data.id);
-        setToken(response.data.token);
-      }
-
-      setCountdown(30);
+        setCountdown(30);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Unknown error");
     } finally {
@@ -110,81 +113,89 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
 
-    if (!extension || !nationalPhone) {
-      toast.error("Please enter your phone number.");
-      return;
-    }
+        if (!extension || !nationalPhone) {
+            toast.error("Please enter your phone number.");
+            return;
+        }
 
-    const payload: any = {
-      extension,
-      phone: nationalPhone,
-      otp,
-      is_web: true,
+        const payload: any = {
+            extension,
+            phone: nationalPhone,
+            otp,
+            is_web: true,
+        };
+
+        try {
+            setLoading(true);
+
+            if (!showVerification) {
+                const response = await api.post("send-otp-login", payload);
+
+                if (!response.data.IsSuccess) {
+                    toast.error(response.data.message || "Failed to send OTP");
+                    return;
+                }
+
+                toast.success(response.data.message);
+
+                const companies = response.data.info || [];
+
+                if (companies.length === 0) {
+                    openCompanyPopup();
+                } else if (companies.length === 1) {
+                    setSelectedCompany(companies[0].id);
+                }
+
+                setCompany(companies);
+                setId(response.data.user_id);
+                setShowVerification(true);
+                setCountdown(30);
+                return;
+            }
+
+            if (!otp.trim()) {
+                toast.error("Please enter the verification code.");
+                return;
+            }
+
+            if (company?.length === 1) {
+                payload.company_id = company[0].id;
+            } else if (company?.length >= 2) {
+                if (!selectedCompany) {
+                    toast.error("Please select your company");
+                    return;
+                }
+                payload.company_id = selectedCompany;
+            }
+
+            const result = await signIn("credentials", {
+                redirect: false,
+                ...payload,
+                callbackUrl: "/apps/users/list",
+            });
+
+            if (result?.error === "NO_COMPANY") {
+                openCompanyPopup();
+                return;
+            }
+
+            if (result?.ok) {
+                toast.success("Logged in successfully!!");
+                window.location.href = "/apps/users/list";
+            } else {
+                toast.error(result?.error || "Login failed");
+            }
+        } catch {
+            toast.error("An error occurred");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    try {
-      setLoading(true);
-
-      if (!showVerification) {
-        const response = await api.post("send-otp-login", payload);
-
-        toast.success(response.data.message);
-
-        if (response.data.IsSuccess === true) {
-          if (!response.data.info || response.data.info.length === 0) {
-            openCompanyPopup();
-          }
-
-          setCompany(response.data.info || []);
-          setId(response.data.id);
-          setToken(response.data.token);
-        }
-
-        setShowVerification(true);
-        setCountdown(30);
-        return;
-      }
-
-      if (!otp.trim()) {
-        toast.error("Please enter the verification code.");
-        return;
-      }
-
-      if (company?.length >= 2) {
-        if (!selectedCompany) {
-          toast.error("Please select your company");
-          return;
-        }
-        payload.company_id = selectedCompany;
-      }
-
-      const result = await signIn("credentials", {
-        redirect: false,
-        ...payload,
-        callbackUrl: "/apps/users/list",
-      });
-
-      if (result?.error === "NO_COMPANY") {
-        openCompanyPopup();
-        return;
-      }
-
-      if (result?.ok) {
-        toast.success("Logged in successfully!!");
-        window.location.href = "/apps/users/list";
-      } else {
-        toast.error(result?.error || "Login failed");
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
+    useEffect(() => {
     const fetchDropdownData = async () => {
       try {
         setLoadingDropdowns(true);
@@ -238,10 +249,11 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       const res = await api.post("company/company-app-registration", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
+          // Authorization: `Bearer ${token}`,
           is_web: "true",
         },
       });
+
       if (res.data.IsSuccess && Object.keys(res.data.info).length > 0) {
         const updated = res.data.info;
 
