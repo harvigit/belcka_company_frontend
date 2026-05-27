@@ -394,7 +394,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
               fullWidth
               displayEmpty
             >
-              <MenuItem value={0}>Select Supervisor</MenuItem>
+              <MenuItem value={0}>Select Company</MenuItem>
               {company.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
                   {item.name}
