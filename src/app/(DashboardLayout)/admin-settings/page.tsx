@@ -20,6 +20,7 @@ import {
     IconSquarePercentage,
     IconUsersMinus,
     IconBuildingStore,
+    IconFileAlert,
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -42,6 +43,7 @@ import RemoveUsers from '@/app/components/apps/settings/remove-users/list';
 import { IconCoinPound } from '@tabler/icons-react';
 import TeamPricing from '@/app/components/apps/team-pricing/index';
 import StoreSettings from '@/app/components/apps/settings/store-settings';
+import RequestAction from '@/app/components/apps/settings/request-action/list';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -197,23 +199,30 @@ const AdminSetting = () => {
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
+                                        icon={<IconFileAlert size="20" />}
+                                        label="Request Approvel"
+                                        {...a11yProps(12)}
+                                    />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
                                         icon={<IconBuildingStore size="20" />}
                                         label="Store Setting"
-                                        {...a11yProps(12)}
+                                        {...a11yProps(13)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconExclamationCircle size="20" />}
                                         label="History"
-                                        {...a11yProps(13)}
+                                        {...a11yProps(14)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconSquarePercentage size="20" />}
                                         label="Analytics Score"
-                                        {...a11yProps(14)}
+                                        {...a11yProps(15)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -264,12 +273,15 @@ const AdminSetting = () => {
                                 <RemoveUsers />
                             </TabPanel>
                             <TabPanel value={value} index={12}>
-                                <StoreSettings />
+                                <RequestAction />
                             </TabPanel>
                             <TabPanel value={value} index={13}>
-                                <HistoryList />
+                                <StoreSettings />
                             </TabPanel>
                             <TabPanel value={value} index={14}>
+                                <HistoryList />
+                            </TabPanel>
+                            <TabPanel value={value} index={15}>
                                 <AnalyticsScore />
                             </TabPanel>
                         </BlankCard>
