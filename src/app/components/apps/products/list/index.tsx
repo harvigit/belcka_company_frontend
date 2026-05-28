@@ -409,7 +409,34 @@ const ProductList = () => {
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchProducts(currentPage);
+        
+        setData((prev: any[]) =>
+          prev.map((p) => {
+            if (p.id === selectedRow.id) {
+              let newImageUrl = p.image_url;
+              if (res.data.data?.image_url) {
+                newImageUrl = res.data.data.image_url;
+              } else if (res.data.image_url) {
+                newImageUrl = res.data.image_url;
+              } else if (newMainImage) {
+                newImageUrl = URL.createObjectURL(newMainImage);
+              } else if (mainImageId !== null) {
+                const selectedImg = uploadedImages.find((img) => img.id === mainImageId);
+                if (selectedImg) newImageUrl = selectedImg.url;
+              } else {
+                const mainStillExists = uploadedImages.some(
+                  (img) => img.url === originalMainImage,
+                );
+                if (!mainStillExists && originalMainImage) {
+                  newImageUrl = null;
+                }
+              }
+              return { ...p, image_url: newImageUrl };
+            }
+            return p;
+          })
+        );
+        
         setOpenImageManager(false);
       } else {
         toast.error(res.data.message);
@@ -797,7 +824,17 @@ const ProductList = () => {
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchProducts();
+        setData((prev: any[]) =>
+          prev.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  ...(price !== undefined && { price }),
+                  ...(market_price !== undefined && { market_price }),
+                }
+              : p
+          )
+        );
       }
     } catch (error) {
       console.error("Update failed", error);
@@ -1337,6 +1374,22 @@ const ProductList = () => {
                     }
                   }
                 }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInputValue("");
+                        }}
+                        onMouseDown={(e) => e.preventDefault()}
+                      >
+                        <IconX size={14} />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
                 onBlur={async () => {
                   if (inputValue === "") return;
                   let number = Number(inputValue);
@@ -1438,6 +1491,22 @@ const ProductList = () => {
                       setInputValue(value);
                     }
                   }
+                }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInputValue("");
+                        }}
+                        onMouseDown={(e) => e.preventDefault()}
+                      >
+                        <IconX size={14} />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                 }}
                 onBlur={async () => {
                   if (inputValue === "") return;
