@@ -418,7 +418,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (!projectID) return;
     setLoading(true);
     try {
-      const res = await api.get(`address/get?project_id=${Number(projectID)}`);
+      const res = await api.get(`address/get?project_id=${Number(projectID)}&hide_completed_address=true`);
       if (res.data) {
         setData(res.data.info);
       }
