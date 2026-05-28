@@ -1510,8 +1510,6 @@ const TimeClock = ({ queryParams }: Props) => {
                 setErrorMessage(`Failed to ${action} timesheet(s).`);
             }
         } catch (error: any) {
-            console.error(`Error ${action}ing weekly timesheets:`, error);
-            setErrorMessage(`An error occurred while ${action}ing timesheet(s).`);
         }
     };
 

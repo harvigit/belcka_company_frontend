@@ -63,6 +63,7 @@ import {
     IconEye,
     IconChevronUp,
     IconChevronDown,
+    IconLock,
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
@@ -140,6 +141,8 @@ export interface TradeList {
 const TablePagination = () => {
     const [data, setData] = useState<UserList[]>([]);
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [hasPermissionUser, setHasPermissionUser] = useState<boolean>(false);
+    const [permissionUserType, setPermissionUserType] = useState<'view' | 'view_edit' | ''>('');
     const [columnFilters, setColumnFilters] = useState<any>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [fetchUser, setFetchUser] = useState<boolean>(false);
@@ -236,6 +239,8 @@ const TablePagination = () => {
             if (res.data) {
                 setData(res.data.info);
                 setIsAdmin(res.data.is_admin);
+                setHasPermissionUser(res.data.has_permission_user || false);
+                setPermissionUserType(res.data.permission_user_type || '');
             }
         } catch (err) {
             console.error('Failed to fetch users', err);
@@ -311,7 +316,7 @@ const TablePagination = () => {
                 console.error('Failed to fetch trades', err);
             }
         };
-        
+
         const fetchTeams = async () => {
             try {
                 const res = await api.get(
@@ -393,6 +398,16 @@ const TablePagination = () => {
         }
     };
 
+    // Check if user can access permissions drawer
+    const canAccessPermissions = () => {
+        return isAdmin || hasPermissionUser;
+    };
+
+    // Check if user can edit permissions
+    const canEditPermissions = () => {
+        return isAdmin || (hasPermissionUser && permissionUserType === 'view_edit');
+    };
+
     const handleOpenPermissionsDrawer = (userPermission: UserList) => {
         setSelectedUserPermissions(userPermission);
         const web = new Set<number>();
@@ -405,7 +420,7 @@ const TablePagination = () => {
         });
 
         setTempPermissions({ web, app });
-        const permission = user.user_role_id == 1 ? true : false || userPermission.id == user.id ? true : false;
+        const permission = canEditPermissions();
         setIsPermission(permission);
         setPermissionSearch('');
         setPermissionsDrawerOpen(true);
@@ -822,11 +837,28 @@ const TablePagination = () => {
             ),
             cell: (info) => {
                 const user = info.row.original;
+                const canAccess = canAccessPermissions();
+                const canEdit = canEditPermissions();
+
+                // Determine the icon and tooltip
+                let tooltipTitle = 'No permission to manage permissions';
+                let icon = null;
+                let isReadOnly = false;
+
+                if (canAccess) {
+                    if (canEdit) {
+                        tooltipTitle = 'Click to manage permissions';
+                    } else {
+                        tooltipTitle = 'View only - You can view but not edit permissions';
+                        icon = <IconLock size={14} style={{ marginLeft: '4px' }} />;
+                        isReadOnly = true;
+                    }
+                }
 
                 return (
                     <Chip
                         size="small"
-                        onClick={isAdmin ? () => handleOpenPermissionsDrawer(user) : undefined}
+                        onClick={canAccess ? () => handleOpenPermissionsDrawer(user) : undefined}
                         label={user.permission_count === 0 ? 'Select' : `${user.permission_count} Permissions`}
                         sx={{
                             backgroundColor: (theme) => theme.palette.primary.light,
@@ -834,10 +866,15 @@ const TablePagination = () => {
                             fontWeight: 500,
                             borderRadius: '10px',
                             px: 1.5,
-                            cursor: isAdmin ? 'pointer' : 'not-allowed',
-                            opacity: isAdmin ? 1 : 0.6,
+                            cursor: canAccess ? 'pointer' : 'not-allowed',
+                            opacity: canAccess ? 1 : 0.6,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                transform: canAccess ? 'translateY(-2px)' : 'none',
+                                boxShadow: canAccess ? '0 4px 8px rgba(0,0,0,0.15)' : 'none',
+                            },
                         }}
-                        {...(!isAdmin && {
+                        {...(!canAccess && {
                             onMouseEnter: undefined,
                             onMouseLeave: undefined,
                         })}
@@ -1419,7 +1456,7 @@ const TablePagination = () => {
                                             sx={{ textTransform: 'none' }}
                                             label={
                                                 typeof col.columnDef.header === 'string' &&
-                                                    col.columnDef.header.trim() !== ''
+                                                col.columnDef.header.trim() !== ''
                                                     ? col.columnDef.header
                                                     : col.id
                                                         .replace(/([A-Z])/g, ' $1')
@@ -1593,6 +1630,27 @@ const TablePagination = () => {
                                 <IconX size={18} />
                             </IconButton>
                         </Box>
+
+                        {/* Permission mode indicator */}
+                        {!isPermission && (
+                            <Box
+                                sx={{
+                                    mb: 2,
+                                    p: 1.5,
+                                    backgroundColor: '#fff3cd',
+                                    border: '1px solid #ffc107',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                }}
+                            >
+                                <IconLock size={18} style={{ color: '#ff6b6b' }} />
+                                <Typography variant="caption" color="textSecondary">
+                                    View only - You cannot edit permissions
+                                </Typography>
+                            </Box>
+                        )}
 
                         {/* Search */}
                         <Box sx={{ mb: 2, flexShrink: 0 }}>
@@ -1839,31 +1897,6 @@ const TablePagination = () => {
                         >
                             Archive
                         </Button>
-                        {/*<Button*/}
-                        {/*    onClick={async () => {*/}
-                        {/*        try {*/}
-                        {/*            const payload = {*/}
-                        {/*                user_ids: usersToDelete.join(','),*/}
-                        {/*                company_id: user.company_id,*/}
-                        {/*            };*/}
-                        {/*            const response = await api.post(*/}
-                        {/*                'user/remove-account',*/}
-                        {/*                payload,*/}
-                        {/*            );*/}
-                        {/*            toast.success(response.data.message);*/}
-                        {/*            setSelectedRowIds(new Set());*/}
-                        {/*            await fetchUsers();*/}
-                        {/*        } catch (error) {*/}
-                        {/*            console.error('Failed to remove users', error);*/}
-                        {/*        } finally {*/}
-                        {/*            setConfirmOpen(false);*/}
-                        {/*        }*/}
-                        {/*    }}*/}
-                        {/*    variant="outlined"*/}
-                        {/*    color="error"*/}
-                        {/*>*/}
-                        {/*    Delete User*/}
-                        {/*</Button>*/}
                     </DialogActions>
                 </Dialog>
 

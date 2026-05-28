@@ -101,7 +101,7 @@ const RateSetting = () => {
         company_id: user.company_id,
         user_permission: permission,
       };
-      const response = await api.post("setting/save-user-permission", payload);
+      const response = await api.post("setting/pay-rate-permission", payload);
 
       if (response.data.IsSuccess) {
         toast.success(response.data.message);
@@ -130,7 +130,7 @@ const RateSetting = () => {
         company_id: user.company_id,
         user_permission: newPermission,
       };
-      const response = await api.post("setting/save-user-permission", payload);
+      const response = await api.post("setting/pay-rate-permission", payload);
 
       if (response.data.IsSuccess) {
         toast.success(response.data.message);

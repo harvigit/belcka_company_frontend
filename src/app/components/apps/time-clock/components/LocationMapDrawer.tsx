@@ -7,7 +7,7 @@ import {
     Stack,
     IconButton,
     Typography,
-    Drawer,
+    Drawer, Badge,
 } from '@mui/material';
 import {
     GoogleMap,
@@ -251,9 +251,7 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
                     const firstName = info.user_first_name ?? '';
                     const lastName = info.user_last_name ?? '';
                     setHeaderUserName(`${firstName} ${lastName}`.trim() || 'Employee');
-                    setHeaderUserInitials(
-                        `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase() || initials
-                    );
+                    setHeaderUserInitials(`${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase() || initials);
                     setHeaderUserImage(info.user_thumbnail || info.user_image || undefined);
                 }
 
@@ -322,6 +320,8 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
 
     const hasAnyLocation = locations.some((l) => l.latitude && l.longitude);
 
+    const statusColor = isWorking ? '#22bf22' : '#df2626';
+
     return (
         <Drawer
             anchor="right"
@@ -342,35 +342,40 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box display="flex" alignItems="center" gap={1.5}>
                         <Box sx={{ position: 'relative' }}>
-                            <Avatar
-                                src={headerUserImage}
+                            <Badge
+                                overlap="circular"
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                variant="dot"
                                 sx={{
-                                    width: 42,
-                                    height: 42,
-                                    fontSize: 14,
-                                    fontWeight: 700,
-                                    backgroundColor: '#1976d2',
+                                    '& .MuiBadge-badge': {
+                                        backgroundColor: statusColor,
+                                        color: statusColor,
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        boxShadow: '0 0 0 2px white',
+                                        cursor: 'pointer',
+                                    },
                                 }}
                             >
-                                {!headerUserImage && headerUserInitials}
-                            </Avatar>
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    bottom: 1,
-                                    right: 1,
-                                    width: 10,
-                                    height: 10,
-                                    borderRadius: '50%',
-                                    backgroundColor: '#4caf50',
-                                    border: '2px solid white',
-                                }}
-                            />
+                                <Avatar
+                                    src={headerUserImage}
+                                    sx={{
+                                        width: 42,
+                                        height: 42,
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        backgroundColor: '#1976d2',
+                                    }}
+                                >
+                                    {!headerUserImage && headerUserInitials}
+                                </Avatar>
+                            </Badge>
                         </Box>
 
                         <Box>
                             <Typography fontWeight={700} fontSize={15} color="#1a1a1a">
-                                {headerUserName ?? 'Employee'}
+                                {headerUserName}
                             </Typography>
                             <Stack direction="row" spacing={1} alignItems="center" mt={0.25}>
                                 {date && (

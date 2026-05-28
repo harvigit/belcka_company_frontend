@@ -21,6 +21,7 @@ import {
     IconUsersMinus,
     IconBuildingStore,
     IconFileAlert,
+    IconUserCog
 } from '@tabler/icons-react';
 import BlankCard from '@/app/components/shared/BlankCard';
 import NotificationSettings from '@/app/components/apps/settings/notifications';
@@ -44,6 +45,7 @@ import { IconCoinPound } from '@tabler/icons-react';
 import TeamPricing from '@/app/components/apps/team-pricing/index';
 import StoreSettings from '@/app/components/apps/settings/store-settings';
 import RequestAction from '@/app/components/apps/settings/request-action/list';
+import UserSettings from '@/app/components/apps/settings/user-settings';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -224,6 +226,13 @@ const AdminSetting = () => {
                                         label="Analytics Score"
                                         {...a11yProps(15)}
                                     />
+                                    <Tab
+                                        className="admin-settings"
+                                        iconPosition="start"
+                                        icon={<IconUserCog size="20" />}
+                                        label="Users Setting"
+                                        {...a11yProps(16)}
+                                    />
                                 </Tabs>
                             </Stack>
                         </BlankCard>
@@ -283,6 +292,9 @@ const AdminSetting = () => {
                             </TabPanel>
                             <TabPanel value={value} index={15}>
                                 <AnalyticsScore />
+                            </TabPanel>
+                            <TabPanel value={value} index={16}>
+                                <UserSettings />
                             </TabPanel>
                         </BlankCard>
                     </Grid>

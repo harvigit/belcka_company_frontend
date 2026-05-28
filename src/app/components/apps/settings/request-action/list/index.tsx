@@ -31,12 +31,12 @@ import SkeletonLoader from '@/app/components/SkeletonLoader';
 import toast from 'react-hot-toast';
 
 const REQUEST_TYPES = [
-    { name: 'Worklog request', slug: 'worklog_request' },
+    { name: 'Timesheet request', slug: 'timesheet_request' },
     { name: 'Personal detail request', slug: 'personal_detail_request' },
     { name: 'Rate request', slug: 'rate_request' },
-    { name: 'Timesheet Worklog request', slug: 'timesheet_worklog_request' },
-    { name: 'Travel expense request', slug: 'travel_expense_request' },
+    { name: 'Expense request', slug: 'expense_request' },
     { name: 'Penalty request', slug: 'penalty_request' },
+    { name: 'Timesheet Approve', slug: 'timesheet_approve' },
 ];
 
 export interface RequestAction {
