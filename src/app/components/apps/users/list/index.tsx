@@ -840,21 +840,6 @@ const TablePagination = () => {
                 const canAccess = canAccessPermissions();
                 const canEdit = canEditPermissions();
 
-                // Determine the icon and tooltip
-                let tooltipTitle = 'No permission to manage permissions';
-                let icon = null;
-                let isReadOnly = false;
-
-                if (canAccess) {
-                    if (canEdit) {
-                        tooltipTitle = 'Click to manage permissions';
-                    } else {
-                        tooltipTitle = 'View only - You can view but not edit permissions';
-                        icon = <IconLock size={14} style={{ marginLeft: '4px' }} />;
-                        isReadOnly = true;
-                    }
-                }
-
                 return (
                     <Chip
                         size="small"
