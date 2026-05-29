@@ -168,8 +168,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
   const [openDialog, setOpenDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState({ status: "", sortOrder: "" });
+  const [filters, setFilters] = useState({
+    status: "",
+    sortOrder: "",
+    supplier: "",
+    category: "",
+  });
   const [tempFilters, setTempFilters] = useState(filters);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [value, setValue] = useState(0);
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -234,6 +241,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     name: "",
   });
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [openFilter, setOpenFilter] = useState(false);
+
   // For create
   const initialCreateState: ProjectFormData = {
     name: "",
@@ -328,6 +338,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       );
       if (res.data) {
         setProducts(res.data.products);
+        setSuppliers(res.data.suppliers);
+        setCategories(res.data.categories);
       }
     } catch (err) {
       console.error("Failed to fetch inventory resource", err);
@@ -356,7 +368,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   const fetchFavoriteProducts = async () => {
-    if(!projectID) return;
+    if (!projectID) return;
     try {
       const response = await api.get(
         `project/get-favorite?company_id=${user.company_id}&project_id=${projectID}`,
@@ -372,6 +384,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     } catch (error) {
       console.error("Failed to fetch favorite products:", error);
     }
+  };
+
+  const handleCloseProductDrawer = () => {
+    fetchFavoriteProducts();
+    setSearchProduct("");
+    setFilters({ status: "", sortOrder: "", supplier: "", category: "" });
+    setTempFilters({ status: "", sortOrder: "", supplier: "", category: "" });
+    setSelectAll(false);
+    setProductDrawer(false);
   };
 
   const fetchProjects = async () => {
@@ -396,6 +417,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setLoading(false);
   };
 
+
   useEffect(() => {
     if (user.company_id) {
       fetchProjects();
@@ -418,7 +440,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     if (!projectID) return;
     setLoading(true);
     try {
-      const res = await api.get(`address/get?project_id=${Number(projectID)}&hide_completed_address=true`);
+      const res = await api.get(
+        `address/get?project_id=${Number(projectID)}&hide_completed_address=true`,
+      );
       if (res.data) {
         setData(res.data.info);
       }
@@ -817,19 +841,42 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   }, [sidebar]);
 
   const filteredData = useMemo(() => {
-    return products.filter((item) => {
+    let result = products.filter((item) => {
       const search = searchProduct.toLowerCase();
-      if (filters.status == "All") return products;
-      const matchesSearch =
-        item.short_name?.toLowerCase().includes(search) ||
-        item.supplier_code?.toLowerCase().includes(search) ||
-        item.supplier_name?.toLowerCase().includes(search) ||
-        item.uuid?.toLowerCase().includes(search) ||
-        item.name?.toLowerCase().includes(search);
+      
+      let matchesSearch = true;
+      if (search) {
+        matchesSearch =
+          item.short_name?.toLowerCase().includes(search) ||
+          item.supplier_code?.toLowerCase().includes(search) ||
+          item.supplier_name?.toLowerCase().includes(search) ||
+          item.uuid?.toLowerCase().includes(search) ||
+          item.name?.toLowerCase().includes(search);
+      }
 
-      return matchesSearch;
+      let matchesSupplier = true;
+      if (filters.supplier && filters.supplier !== "All") {
+        matchesSupplier = item.supplier_name === filters.supplier;
+      }
+
+      let matchesCategory = true;
+      if (filters.category && filters.category !== "All") {
+        matchesCategory = item.category === filters.category || item.category_name === filters.category;
+      }
+
+      return matchesSearch && matchesSupplier && matchesCategory;
     });
-  }, [products, searchProduct]);
+
+    result.sort((a, b) => {
+      const aSelected = selectedProducts.includes(a.id);
+      const bSelected = selectedProducts.includes(b.id);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
+    });
+
+    return result;
+  }, [products, searchProduct, filters.supplier, filters.category, selectedProducts]);
 
   const paginatedProduct = filteredData?.slice(0, page * productLimit) || [];
 
@@ -1236,10 +1283,14 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 <Button
                   onClick={() => {
                     setTempFilters({
+                      supplier: "",
+                      category: "",
                       status: "",
                       sortOrder: "",
                     });
                     setFilters({
+                      supplier: "",
+                      category: "",
                       status: "",
                       sortOrder: "",
                     });
@@ -1961,11 +2012,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                                   : addr.type_name}
                             </Typography>
                           </Box>
-                          <Box
-                            display="initial"
-                            width="100%"
-                            textAlign="start"
-                          >
+                          <Box display="initial" width="100%" textAlign="start">
                             <Typography
                               fontSize="14px"
                               className="multi-ellipsis"
@@ -2021,13 +2068,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
         <Drawer
           anchor="right"
           open={productDrawer}
-          onClose={() => setProductDrawer(false)}
+          onClose={handleCloseProductDrawer}
           PaperProps={{
             sx: {
-              width: 500,
+              width: 550,
               maxWidth: "100%",
               "& .MuiDrawer-paper": {
-                width: 500,
+                width: 550,
                 padding: 2,
                 backgroundColor: "#f9f9f9",
                 display: "flex",
@@ -2045,7 +2092,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             pb={0}
           >
             <Box display={"flex"} alignContent={"center"} alignItems={"center"}>
-              <IconButton onClick={() => setProductDrawer(false)}>
+              <IconButton onClick={handleCloseProductDrawer}>
                 <IconArrowLeft />
               </IconButton>
               <Typography variant="h6" fontWeight={700}>
@@ -2055,7 +2102,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             {/* Close Button */}
             <IconButton
               aria-label="close"
-              onClick={() => setProductDrawer(false)}
+              onClick={handleCloseProductDrawer}
               size="small"
               sx={{
                 position: "absolute",
@@ -2071,29 +2118,66 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
               <IconX size={18} />
             </IconButton>
           </Box>
-          <TextField
-            id="search"
-            type="text"
-            size="small"
-            variant="outlined"
-            placeholder="Search..."
-            value={searchProduct}
-            fullWidth
-            sx={{
-              width: "90%",
-              ml: 2,
-            }}
-            onChange={(e) => setSearchProduct(e.target.value)}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconSearch size={"16"} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+          <Grid display="flex" alignItems={"center"} mr={1}>
+            <TextField
+              id="search"
+              type="text"
+              size="small"
+              variant="outlined"
+              placeholder="Search..."
+              value={searchProduct}
+              fullWidth
+              sx={{
+                width: "90%",
+                ml: 2,
+              }}
+              onChange={(e) => setSearchProduct(e.target.value)}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconSearch size={"16"} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            {products.length > 0 && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={selectAll}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setSelectAll(isChecked);
+                      if (isChecked) {
+                        const newSelected = [...selectedProducts];
+                        filteredData.forEach((p) => {
+                          if (!newSelected.includes(p.id)) newSelected.push(p.id);
+                        });
+                        setSelectedProducts(newSelected);
+                      } else {
+                        const filteredIds = filteredData.map((p) => p.id);
+                        setSelectedProducts(
+                          selectedProducts.filter((id) => !filteredIds.includes(id))
+                        );
+                      }
+                    }}
+                  />
+                }
+                label="Select All"
+                sx={{ width: "30%", m: 0 }}
+              />
+            )}
+
+            <Button
+              variant="contained"
+              onClick={() => setOpenFilter(true)}
+              sx={{ mt: { xs: 1, sm: 0 } }}
+            >
+              <IconFilter width={18} />
+            </Button>
+          </Grid>
           <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
             {/* Product List */}
             <Grid container spacing={2} display="block" mt={1}>
@@ -2173,10 +2257,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             </Button>
             <Button
               color="inherit"
-              onClick={() => {
-                setSelectedProducts([]);
-                setProductDrawer(false);
-              }}
+              onClick={handleCloseProductDrawer}
               variant="contained"
               size="large"
               sx={{
@@ -2190,6 +2271,110 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           </Box>
         </Drawer>
       </Box>
+      {/* Filter Dialog */}
+      <Dialog
+        open={openFilter}
+        onClose={() => setOpenFilter(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
+          Filters
+          <IconButton
+            aria-label="close"
+            onClick={() => setOpenFilter(false)}
+            size="large"
+            sx={{
+              position: "absolute",
+              right: 12,
+              top: 8,
+              color: (theme) => theme.palette.grey[900],
+              backgroundColor: "transparent",
+              zIndex: 10,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <IconX size={40} style={{ width: 40, height: 40 }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              select
+              label="Suppliers"
+              value={tempFilters.supplier}
+              onChange={(e) => {
+                setTempFilters({
+                  ...tempFilters,
+                  supplier: e.target.value,
+                });
+              }}
+              fullWidth
+            >
+              <MenuItem value="All">All</MenuItem>
+              {suppliers.map((item, i) => (
+                <MenuItem key={i} value={item.name}>
+                  {item.name}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              select
+              label="Category"
+              value={tempFilters.category}
+              onChange={(e) =>
+                setTempFilters({
+                  ...tempFilters,
+                  category: e.target.value,
+                })
+              }
+              fullWidth
+            >
+              <MenuItem value="All">All</MenuItem>
+              {categories.map((item, i) => (
+                <MenuItem key={i} value={item.name}>
+                  {item.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setTempFilters({
+                status: "",
+                sortOrder: "",
+                supplier: "",
+                category: "",
+              });
+              setFilters({
+                status: "",
+                sortOrder: "",
+                supplier: "",
+                category: "",
+              });
+              setOpenFilter(false);
+            }}
+            color="inherit"
+          >
+            Clear
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() => {
+              setFilters(tempFilters);
+              setOpenFilter(false);
+            }}
+          >
+            Apply
+          </Button>
+        </DialogActions>
+      </Dialog>
     </PermissionGuard>
   );
 };
