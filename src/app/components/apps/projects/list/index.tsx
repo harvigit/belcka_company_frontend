@@ -79,9 +79,11 @@ import PermissionGuard from "@/app/auth/PermissionGuard";
 import MapGantt from "../zone-map/MapGantt";
 import { IconMapPin } from "@tabler/icons-react";
 import Link from "next/link";
+import Image from "next/image";
 import { IconNotes } from "@tabler/icons-react";
 import { IconDatabase } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { Chip } from "@mui/material";
 
 dayjs.extend(customParseFormat);
 
@@ -416,7 +418,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
     setLoading(false);
   };
-
 
   useEffect(() => {
     if (user.company_id) {
@@ -843,7 +844,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const filteredData = useMemo(() => {
     let result = products.filter((item) => {
       const search = searchProduct.toLowerCase();
-      
+
       let matchesSearch = true;
       if (search) {
         matchesSearch =
@@ -861,7 +862,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       let matchesCategory = true;
       if (filters.category && filters.category !== "All") {
-        matchesCategory = item.category === filters.category || item.category_name === filters.category;
+        matchesCategory =
+          item.category === filters.category ||
+          item.category_name === filters.category;
       }
 
       return matchesSearch && matchesSupplier && matchesCategory;
@@ -876,7 +879,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     });
 
     return result;
-  }, [products, searchProduct, filters.supplier, filters.category, selectedProducts]);
+  }, [
+    products,
+    searchProduct,
+    filters.supplier,
+    filters.category,
+    selectedProducts,
+  ]);
 
   const paginatedProduct = filteredData?.slice(0, page * productLimit) || [];
 
@@ -2153,13 +2162,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       if (isChecked) {
                         const newSelected = [...selectedProducts];
                         filteredData.forEach((p) => {
-                          if (!newSelected.includes(p.id)) newSelected.push(p.id);
+                          if (!newSelected.includes(p.id))
+                            newSelected.push(p.id);
                         });
                         setSelectedProducts(newSelected);
                       } else {
                         const filteredIds = filteredData.map((p) => p.id);
                         setSelectedProducts(
-                          selectedProducts.filter((id) => !filteredIds.includes(id))
+                          selectedProducts.filter(
+                            (id) => !filteredIds.includes(id),
+                          ),
                         );
                       }
                     }}
@@ -2186,31 +2198,69 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   {paginatedProduct.map((product) => (
                     <Box
                       key={product.id}
+                      mt={1}
+                      p={1}
                       display="flex"
-                      alignItems={"center"}
-                      mb={1}
-                      p={2}
+                      alignItems="center"
+                      justifyContent="space-between"
                       sx={{
-                        borderRadius: "12px",
-                        border: "1px solid #eee",
+                        border: "1px solid #e7e3e3ff",
+                        borderRadius: "10px",
                         background: "#fff",
                       }}
                     >
-                      <FormControlLabel
-                        label={
-                          <Typography fontSize="14px" fontWeight={500}>
-                            {product.short_name
-                              ? product.short_name
-                              : product.name}
-                          </Typography>
-                        }
-                        control={
-                          <CustomCheckbox
-                            checked={selectedProducts.includes(product.id)}
-                            onChange={() => handleProductToggle(product.id)}
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <CustomCheckbox
+                          checked={selectedProducts.includes(product.id)}
+                          onChange={() => handleProductToggle(product.id)}
+                        />
+                        <Box
+                          sx={{
+                            border: "1px dashed #d1d5db",
+                            borderRadius: 2,
+                            p: 1,
+                            textAlign: "center",
+                          }}
+                        >
+                          <Image
+                            src={
+                              product.image_url ||
+                              "/images/products/product.svg"
+                            }
+                            alt={"product"}
+                            width={50}
+                            height={50}
+                            style={{ objectFit: "contain" }}
                           />
-                        }
-                      />
+                        </Box>
+                        <Stack mt={2} spacing={1}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              display: "-webkit-box",
+                              WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: 3,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              lineHeight: 1.25,
+                              maxWidth: 350,
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {product.short_name ?? product.name}{" "}
+                            {product.uuid && (
+                              <Chip
+                                label={product.uuid}
+                                size="small"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                            <Typography variant="body2">
+                              Supplier Code: {product.supplier_code}
+                            </Typography>
+                          </Typography>
+                        </Stack>
+                      </Box>
                     </Box>
                   ))}
                   {paginatedProduct.length < filteredData.length && (
