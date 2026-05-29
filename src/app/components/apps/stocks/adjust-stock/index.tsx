@@ -5,6 +5,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  createFilterOptions,
   Divider,
   Drawer,
   IconButton,
@@ -74,6 +75,17 @@ const AdjustStock: React.FC<Props> = ({
   const storedStore = Cookies.get(`user_store_${user.id}_${user.company_id}`);
 
   const store = storedStore ? JSON.parse(storedStore) : null;
+
+  const filterOptions = createFilterOptions({
+    stringify: (option: any) =>
+      `
+    ${option.name || ""}
+    ${option.short_name || ""}
+    ${option.supplier_code || ""}
+    ${option.uuid || ""}
+  `,
+  });
+
   const toggleMode = () => {
     setMode((prev) => (prev === "note" ? "user" : "note"));
   };
@@ -323,6 +335,7 @@ const AdjustStock: React.FC<Props> = ({
               fullWidth
               size="small"
               options={products}
+              filterOptions={filterOptions}
               value={
                 products.find((t: any) => t.id === Number(productId)) ?? null
               }

@@ -755,7 +755,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                       value={formData.short_name}
                       onChange={(e: any) => {
                         const value = e.target.value;
-                        if (!/^[a-zA-Z0-9 ]*$/.test(value)) return;
+                        if (!/^[a-zA-Z0-9 .()]*$/.test(value)) return;
                         setFormData((p) => ({
                           ...p,
                           short_name: value,
