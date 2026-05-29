@@ -822,6 +822,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       if (filters.status == "All") return products;
       const matchesSearch =
         item.short_name?.toLowerCase().includes(search) ||
+        item.supplier_code?.toLowerCase().includes(search) ||
+        item.supplier_name?.toLowerCase().includes(search) ||
+        item.uuid?.toLowerCase().includes(search) ||
         item.name?.toLowerCase().includes(search);
 
       return matchesSearch;

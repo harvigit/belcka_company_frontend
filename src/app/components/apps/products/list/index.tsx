@@ -801,7 +801,16 @@ const ProductList = () => {
 
       if (res.data?.IsSuccess) {
         toast.success(res.data.message);
-        fetchProducts();
+        setData((prev: any[]) =>
+          prev.map((p) =>
+            p.id === Number(id)
+              ? {
+                  ...p,
+                  is_sub_qty,
+                }
+              : p
+          )
+        );
       }
     } catch (err) {
       console.error(err);
@@ -1600,19 +1609,6 @@ const ProductList = () => {
               checked={Boolean(item.is_sub_qty)}
               onChange={async (e) => {
                 const checked = e.target.checked;
-
-                // optimistic UI update
-                setData((prev: any[]) =>
-                  prev.map((p) =>
-                    p.id === item.id
-                      ? {
-                        ...p,
-                        is_sub_qty: checked,
-                      }
-                      : p,
-                  ),
-                );
-
                 await updateSubQty(item.id, checked);
               }}
             />
