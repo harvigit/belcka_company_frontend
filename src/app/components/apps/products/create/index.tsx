@@ -94,6 +94,7 @@ interface ProductAddEditProps {
   isEdit?: boolean;
   storeId?: number | null;
   productId?: number | null;
+  isCategory?: boolean;
 }
 
 type GalleryImage = {
@@ -146,6 +147,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   isEdit,
   storeId,
   productId,
+  isCategory,
 }) => {
   const [barcodes, setBarcodes] = useState<string[]>([""]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -414,8 +416,16 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
 
     try {
       let url = `get-inventory-resources?company_id=${companyId}`;
+
+      if (isCategory !== undefined) {
+        url += `&is_tool_category=${isCategory}`;
+      }
+
       if (isEdit && product) {
         url = `get-inventory-resources?company_id=${companyId}&product_id=${productId}`;
+        if (isCategory !== undefined) {
+          url += `&is_tool_category=${isCategory}`;
+        }
       }
       const res = await api.get(url);
       if (res.data) {

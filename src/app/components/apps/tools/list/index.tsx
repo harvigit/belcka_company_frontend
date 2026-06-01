@@ -1148,6 +1148,7 @@ const ToolsList = () => {
           handleSubmit={handleSubmit}
           isSaving={isSaving}
           companyId={user?.company_id ?? null}
+          isCategory={true}
         />
 
         <Dialog

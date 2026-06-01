@@ -22,6 +22,7 @@ interface ProductInformationProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   isSaving: boolean;
+  isCategory?: boolean;
 }
 
 type GalleryImage = {
@@ -38,6 +39,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
   formData,
   setFormData,
   isSaving,
+  isCategory,
 }) => {
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
@@ -476,6 +478,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
         handleSubmit={editSupplier}
         isSaving={isSaving}
         companyId={companyId ?? null}
+        isCategory={isCategory}
       />
     </Stack>
   );

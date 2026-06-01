@@ -88,6 +88,7 @@ interface ProductViewProps {
   isSaving: boolean;
   isEdit?: boolean;
   productId?: number | null;
+  isCategory?: boolean;
 }
 
 const ProductView: React.FC<ProductViewProps> = ({
@@ -98,6 +99,7 @@ const ProductView: React.FC<ProductViewProps> = ({
   isSaving,
   companyId,
   productId,
+  isCategory,
 }) => {
   const [product, setProduct] = useState<any>([]);
   const [attachments, setAttachments] = useState<any>([]);
@@ -131,7 +133,7 @@ const ProductView: React.FC<ProductViewProps> = ({
       fetchProducts();
     }
     setValue(0);
-  }, [open, productId,shouldRefresh]);
+  }, [open, productId, shouldRefresh]);
 
   return (
     <Drawer
@@ -231,6 +233,7 @@ const ProductView: React.FC<ProductViewProps> = ({
                   formData={formData}
                   setFormData={setFormData}
                   isSaving={isSaving}
+                  isCategory={isCategory}
                 />
               </TabPanel>
               <TabPanel value={value} index={1}>
