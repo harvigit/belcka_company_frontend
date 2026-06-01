@@ -123,7 +123,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
     setFetching(true);
     try {
       const res = await api.get(
-        `products/get?company_id=${companyId}&product_id=${productId}&is_products=true`,
+        `products/get?company_id=${companyId}&product_id=${productId}&is_products=true&is_web=true`,
       );
       if (res.data.info) {
         setProduct(res.data.info);

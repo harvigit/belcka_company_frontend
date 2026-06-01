@@ -115,7 +115,7 @@ const ProductView: React.FC<ProductViewProps> = ({
   const fetchProducts = async () => {
     try {
       const res = await api.get(
-        `products/detail?company_id=${companyId}&product_id=${productId}&is_web=true`,
+        `products/detail?company_id=${companyId}&product_id=${productId}`,
       );
       if (res.data) {
         setProduct(res.data.info);
