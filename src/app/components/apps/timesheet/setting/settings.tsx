@@ -9,16 +9,7 @@ import {
 } from "@mui/material";
 import {
     IconSettings,
-    IconTools,
     IconCalendarWeek,
-    IconCoffee,
-    IconFileText,
-    IconHandStop,
-    IconMapPin,
-    IconBellRinging,
-    IconClock,
-    IconPaperclip,
-    IconRefresh,
     IconTiltShift,
     IconCoinPound,
     IconMapPinCog,
@@ -39,15 +30,6 @@ const menuItems = [
     { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
     { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
     { icon: <IconUserCog size={18} />, label: "Bookkeeper Setting" },
-    // { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
-    // { icon: <IconCoffee size={18} />, label: "Breaks" },
-    // { icon: <IconPaperclip size={18} />, label: "Shift entries" },
-    // { icon: <IconMapPin size={18} />, label: "Geolocation" },
-    // { icon: <IconClock size={18} />, label: "Reminders" },
-    // { icon: <IconBellRinging size={18} />, label: "Notifications" },
-    // { icon: <IconFileText size={18} />, label: "Auto reports" },
-    // { icon: <IconHandStop size={18} />, label: "Limitations" },
-    // { icon: <IconRefresh size={18} />, label: "Integrations" },
 ];
 
 interface SettingsProps {

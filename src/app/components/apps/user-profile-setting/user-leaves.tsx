@@ -44,6 +44,7 @@ import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import { Grid, Stack } from "@mui/system";
 import {
+    IconCalendar,
     IconCheck,
     IconChevronLeft,
     IconChevronRight,
@@ -54,7 +55,7 @@ import {
     IconSearch,
     IconSettings,
     IconX,
-} from "@tabler/icons-react";
+} from '@tabler/icons-react';
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
@@ -661,6 +662,18 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                     >
                                         Leave History
                                     </Button>
+                                </Grid>
+
+                                <Grid size="auto">
+                                    <IconButton
+                                        onClick={handleSettingOpen}
+                                        color="primary"
+                                        size="small"
+                                    >
+                                        <IconCalendar size={20} />
+                                    </IconButton>
+
+                                    <LeaveSetting open={settingOpen} onClose={handleSettingClose} />
                                 </Grid>
 
                                 <Grid size="auto">
