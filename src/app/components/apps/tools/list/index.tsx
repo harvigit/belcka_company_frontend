@@ -73,6 +73,7 @@ import ProductAddEdit from "../../products/create";
 import HireHistory from "../history";
 import { AxiosResponse } from "axios";
 import ArchiveTools from "../archive";
+import ProductView from "../../products/view";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -141,6 +142,7 @@ const ToolsList = () => {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [trades, setTrades] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -284,6 +286,16 @@ const ToolsList = () => {
     setSelectedTaskId(id);
     setDrawerOpen(true);
   }, []);
+
+  const handleView = useCallback((id: number) => {
+    setSelectedTaskId(id);
+    setViewDrawerOpen(true);
+  }, []);
+
+  const closeDrawer = () => {
+    setViewDrawerOpen(false);
+    fetchProducts();
+  };
 
   const handleEditCategories = (item: any) => {
     setEditingRowId(item.id);
@@ -486,7 +498,12 @@ const ToolsList = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            onClick={() => handleView(item.product_id)}
+          >
             <Tooltip
               title={item.short_name ? item.short_name : (item.name ?? "")}
               placement="top"
@@ -498,12 +515,14 @@ const ToolsList = () => {
                 sx={{
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 3,
+                  WebkitLineClamp: 2,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
                   maxWidth: 300,
+                  width: 250,
                   wordBreak: "break-word",
+                  "&:hover": { color: "#1976d2" },
                 }}
               >
                 {item.short_name ? item.short_name : "-"}
@@ -1117,6 +1136,18 @@ const ToolsList = () => {
           open={archiveDrawerOpen}
           onClose={() => setArchiveDrawerOpen(false)}
           onWorkUpdated={fetchProducts}
+        />
+
+        {/* View product */}
+        <ProductView
+          open={viewDrawerOpen}
+          onClose={() => closeDrawer()}
+          productId={selectedTaskId}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleSubmit}
+          isSaving={isSaving}
+          companyId={user?.company_id ?? null}
         />
 
         <Dialog
