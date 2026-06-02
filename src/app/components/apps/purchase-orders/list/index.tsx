@@ -820,7 +820,7 @@ const PurchaseOrderList = () => {
       },
     }),
 
-    columnHelper.accessor("user_name", {
+    columnHelper.accessor("receive_by_name", {
       id: "receivedBy",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
@@ -841,7 +841,7 @@ const PurchaseOrderList = () => {
             sx={{ pl: 0.3, ml: 1 }}
           >
             <Typography textTransform="capitalize" className="f-14">
-              {item.user_name ? item.user_name : "-"}
+              {item.receive_by_name ? item.receive_by_name : "-"}
             </Typography>
           </Stack>
         );
