@@ -760,7 +760,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
                     <CustomTextField
                       className="product_input"
                       placeholder="Name"
-                      inputProps={{ maxLength: 50 }}
+                      inputProps={{ maxLength: 100 }}
                       fullWidth
                       value={formData.short_name}
                       onChange={(e: any) => {
