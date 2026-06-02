@@ -349,27 +349,21 @@ const PurchaseProductList: React.FC<Props> = ({
     });
   }, [data, searchTerm, filters]);
 
-  useEffect(() => {
-    if (!open || !filteredData?.length) return;
-
-    const autoSelected = new Set<number>();
-
-    filteredData.forEach((item) => {
-      if (item.total_qty > 0 && !manuallyDeselected.has(item.id)) {
-        autoSelected.add(item.id);
-      }
+  const finalFilteredData = useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      const aSelected = selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
+      const bSelected = selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
     });
-
-    setSelectedRowIds(autoSelected);
-  }, [open, filteredData, manuallyDeselected]);
+  }, [filteredData, selectedRowIds]);
 
   const useSelectedProducts = (data: any[], selectedRowIds: Set<number>) => {
-    const toastShownRef = useRef(false);
-
     const selectedProductsWithQty = useMemo(() => {
       if (!data?.length || selectedRowIds.size === 0) return [];
 
-      const selected = data
+      return data
         .filter(
           (item) => selectedRowIds.has(item.id) && Number(item.total_qty) > 0,
         )
@@ -378,30 +372,16 @@ const PurchaseProductList: React.FC<Props> = ({
           qty: Number(item.total_qty),
           supplier_id: Number(item.supplier_id),
         }));
-
-      const supplierIds = [...new Set(selected.map((p) => p.supplier_id))];
-
-      if (supplierIds.length > 1) {
-        if (!toastShownRef.current) {
-          toast.error(
-            "All selected products must belong to the same supplier!",
-          );
-          toastShownRef.current = true;
-        }
-        return [];
-      } else {
-        toastShownRef.current = false;
-      }
-
-      return selected;
     }, [data, selectedRowIds]);
 
+    const supplierIds = [...new Set(selectedProductsWithQty.map((p) => p.supplier_id))];
     const isSameSupplierSelected = selectedProductsWithQty.length > 0;
+    const hasMultipleSuppliers = supplierIds.length > 1;
 
-    return { selectedProductsWithQty, isSameSupplierSelected };
+    return { selectedProductsWithQty, isSameSupplierSelected, hasMultipleSuppliers };
   };
 
-  const { selectedProductsWithQty, isSameSupplierSelected } =
+  const { selectedProductsWithQty, isSameSupplierSelected, hasMultipleSuppliers } =
     useSelectedProducts(data, selectedRowIds);
 
   const selectedRowCount = selectedRowIds.size;
@@ -429,12 +409,13 @@ const PurchaseProductList: React.FC<Props> = ({
           <CustomCheckbox
             className="header-checkbox"
             checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
+              selectedRowIds.size > 0 &&
+              finalFilteredData.length > 0 &&
+              finalFilteredData.every(row => selectedRowIds.has(row.id))
             }
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              finalFilteredData.some(row => selectedRowIds.has(row.id)) &&
+              !finalFilteredData.every(row => selectedRowIds.has(row.id))
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
@@ -443,23 +424,17 @@ const PurchaseProductList: React.FC<Props> = ({
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                const newSelected = new Set(selectedRowIds);
+                finalFilteredData.forEach(row => newSelected.add(row.id));
+                setSelectedRowIds(newSelected);
               } else {
-                setSelectedRowIds(
-                  new Set(
-                    filteredData
-                      .filter((row) => row.qty > 0)
-                      .map((row) => row.id),
-                  ),
-                );
-
-                setManuallyDeselected(
-                  new Set(
-                    filteredData
-                      .filter((row) => row.qty === 0)
-                      .map((row) => row.id),
-                  ),
-                );
+                const newSelected = new Set(selectedRowIds);
+                finalFilteredData.forEach(row => newSelected.delete(row.id));
+                setSelectedRowIds(newSelected);
+                
+                const newDeselected = new Set(manuallyDeselected);
+                finalFilteredData.forEach(row => newDeselected.add(row.id));
+                setManuallyDeselected(newDeselected);
               }
             }}
           />
@@ -888,7 +863,7 @@ const PurchaseProductList: React.FC<Props> = ({
   };
   const handlePopoverClose = () => setAnchorEl2(null);
   const table = useReactTable({
-    data: filteredData,
+    data: finalFilteredData,
     columns,
     state: { columnFilters, sorting },
     onSortingChange: setSorting,
@@ -1614,6 +1589,10 @@ const PurchaseProductList: React.FC<Props> = ({
               sx={{ borderRadius: 3, marginRight: "5px" }}
               disabled={selectedRowIds.size === 0 || !isSameSupplierSelected}
               onClick={() => {
+                if (hasMultipleSuppliers) {
+                  toast.error("All selected products must belong to the same supplier!");
+                  return;
+                }
                 handleOpenCreateDrawer();
               }}
             >

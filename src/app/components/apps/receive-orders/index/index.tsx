@@ -1258,7 +1258,7 @@ const ReceivePurchaseOrder = () => {
               >
                 <CustomCheckbox
                   checked={selectedRowIds.has(item.product_id)}
-                  disabled={item.receive_now <= 0}
+                  disabled={item.maxReceiveNow <= 0}
                   onChange={(e) => {
                     setSelectedRowIds((prev) => {
                       const updated = new Set(prev);
@@ -1334,11 +1334,11 @@ const ReceivePurchaseOrder = () => {
 
                         const num = Number(value || 0);
 
+                        if (num > item.maxReceiveNow) return;
+
                         setProducts((prev) =>
                           prev.map((p) => {
                             if (p.product_id !== item.product_id) return p;
-
-                            if (num > p.maxReceiveNow) return p;
 
                             return {
                               ...p,
@@ -1346,6 +1346,16 @@ const ReceivePurchaseOrder = () => {
                             };
                           }),
                         );
+
+                        setSelectedRowIds((prev) => {
+                          const updated = new Set(prev);
+                          if (num === 0) {
+                            updated.delete(item.product_id);
+                          } else {
+                            updated.add(item.product_id);
+                          }
+                          return updated;
+                        });
                       }}
                     />
                     {item.receive_now < item.maxReceiveNow && (
@@ -1539,7 +1549,7 @@ const ReceivePurchaseOrder = () => {
               >
                 <CustomCheckbox
                   checked={selectedRowIds.has(item.product_id)}
-                  disabled={item.receive_now <= 0}
+                  disabled={item.maxReceiveNow <= 0}
                   onChange={(e) => {
                     setSelectedRowIds((prev) => {
                       const updated = new Set(prev);
@@ -1597,7 +1607,7 @@ const ReceivePurchaseOrder = () => {
                         {item?.ordered_qty}
                       </Typography>
                       <TextField
-                        disabled={item.receive_now <= 0}
+                        disabled={item.maxReceiveNow <= 0}
                         size="small"
                         value={item?.receive_now}
                         inputProps={{
@@ -1609,16 +1619,27 @@ const ReceivePurchaseOrder = () => {
                           if (!/^\d*$/.test(value)) return;
                           const num = Number(value || 0);
 
+                          if (num > item.maxReceiveNow) return;
+
                           setProducts((prev) =>
                             prev.map((p) => {
                               if (p.product_id !== item.product_id) return p;
-                              if (num > p.maxReceiveNow) return p;
                               return {
                                 ...p,
                                 receive_now: Math.max(0, num),
                               };
                             }),
                           );
+
+                          setSelectedRowIds((prev) => {
+                            const updated = new Set(prev);
+                            if (num === 0) {
+                              updated.delete(item.product_id);
+                            } else {
+                              updated.add(item.product_id);
+                            }
+                            return updated;
+                          });
                         }}
                       />
                     </Box>
