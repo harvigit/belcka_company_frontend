@@ -371,12 +371,13 @@ const PurchaseProductList: React.FC<Props> = ({
           id: item.id,
           qty: Number(item.total_qty),
           supplier_id: Number(item.supplier_id),
+          supplier_name: item.supplier_name,
         }));
     }, [data, selectedRowIds]);
 
-    const supplierIds = [...new Set(selectedProductsWithQty.map((p) => p.supplier_id))];
+    const supplierNames = [...new Set(selectedProductsWithQty.map((p) => p.supplier_name || ''))];
     const isSameSupplierSelected = selectedProductsWithQty.length > 0;
-    const hasMultipleSuppliers = supplierIds.length > 1;
+    const hasMultipleSuppliers = supplierNames.length > 1;
 
     return { selectedProductsWithQty, isSameSupplierSelected, hasMultipleSuppliers };
   };
