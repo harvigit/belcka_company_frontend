@@ -939,7 +939,7 @@ const PurchaseProductList: React.FC<Props> = ({
         >
           <Grid display="flex" gap={1} alignItems={"center"}>
             <Button variant="contained" color="primary">
-              PRODUCTS ({table.getPrePaginationRowModel().rows.length}){" "}
+              PRODUCTS ({selectedTotalQty})
             </Button>
             <TextField
               id="search"
