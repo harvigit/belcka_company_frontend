@@ -7,6 +7,7 @@ import {
   Typography,
   Button,
   Autocomplete,
+  createFilterOptions,
 } from "@mui/material";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
 import api from "@/utils/axios";
@@ -14,6 +15,11 @@ import toast from "react-hot-toast";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import { DateTime } from "luxon";
+
+const filterProducts = createFilterOptions({
+  stringify: (option: any) =>
+    `${option.name || ""} ${option.short_name || ""} ${option.uuid || ""} ${option.supplier_code || ""}`,
+});
 
 interface AssignUserToolProps {
   open: boolean;
@@ -220,41 +226,40 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
           />
         </Box>
         {/* Products List */}
-        <Typography variant="body2" mb={1}>
-          Select Products
-        </Typography>
-        {products?.map((item, index) => {
-          const product = item;
-
-          if (!product) return null;
-
-          const productId = product.id;
-          const productName =
-            product.short_name || product.name || "Unnamed Product";
-
-          return (
-            <Box
-              key={productId ?? index}
-              mt={1}
-              p={1}
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{
-                border: "1px solid #e7e3e3ff",
-                borderRadius: "10px",
-              }}
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <CustomCheckbox
-                  checked={selectedIds.includes(productId)}
-                  onChange={() => handleCheckboxChange(productId)}
-                />
-                <Typography variant="body2">{productName}</Typography>
-              </Box>
-            </Box>
-          );
-        })}
+        <Box mb={2}>
+          <Typography variant="body2" mb={1}>
+            Select Products
+          </Typography>
+          <Autocomplete
+            multiple
+            fullWidth
+            className="product_selection"
+            size="small"
+            options={products}
+            disableCloseOnSelect
+            getOptionLabel={(option) =>
+              option.short_name ?? option.name ?? "Unnamed Product"
+            }
+            filterOptions={filterProducts}
+            value={products.filter((p) => selectedIds.includes(p.id))}
+            onChange={(e, val) => {
+              setSelectedIds(val.map((item: any) => item.id));
+            }}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderOption={(props, option, { selected }) => {
+              const { key, ...optionProps } = props as any;
+              return (
+                <li key={key || option.id} {...optionProps}>
+                  {/* <CustomCheckbox checked={selected} sx={{ mr: 1 }} /> */}
+                  {option.short_name ?? option.name ?? "Unnamed Product"}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <CustomTextField {...params} placeholder="Select Products" />
+            )}
+          />
+        </Box>
       </Box>
 
       {/* Buttons */}

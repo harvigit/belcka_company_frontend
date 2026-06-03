@@ -5,6 +5,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   Drawer,
   IconButton,
   Stack,
@@ -37,6 +38,7 @@ interface Product {
   image_url?: string | null;
   uuid: string;
   supplier_name: string | null;
+  supplier_code: string | null;
   currency: string;
 }
 
@@ -50,6 +52,7 @@ interface ProductRow {
   image_url?: string | null;
   uuid: string;
   supplier_name: String | null;
+  supplier_code: String | null;
 }
 
 interface Props {
@@ -136,6 +139,7 @@ const PurchaseOrder: React.FC<Props> = ({
           image_url: product.image_url,
           uuid: product.uuid,
           supplier_name: product.supplier_name,
+          supplier_code: product.supplier_code,
         };
       })
       .filter(Boolean) as ProductRow[];
@@ -195,6 +199,7 @@ const PurchaseOrder: React.FC<Props> = ({
             image_url: p.image_url,
             uuid: p.uuid,
             supplier_name: p.supplier_name,
+            supplier_code: p.supplier_code,
           };
         });
 
@@ -300,10 +305,15 @@ const PurchaseOrder: React.FC<Props> = ({
                   height={50}
                 />
               </Box>
-              <Box>
-                <Typography className="f-14">{item.short_name}</Typography>
-                <Typography variant="caption">Code: {item.uuid}</Typography>
-              </Box>
+              <Stack mt={2} spacing={1}>
+                <Typography variant="body2">
+                  {item.short_name}{" "}
+                  <Chip label={item.uuid} size="small" sx={{ ml: 1 }} />
+                </Typography>
+                <Typography variant="body2">
+                  Supplier Code: {item.supplier_code}
+                </Typography>
+              </Stack>
             </Stack>
           );
         },
