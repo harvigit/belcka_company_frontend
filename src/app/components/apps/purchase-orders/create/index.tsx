@@ -226,6 +226,10 @@ const PurchaseOrder: React.FC<Props> = ({
 
     if (!isEdit) {
       setOrderId(res.data.orderId);
+      setFormData((prev: any) => ({
+        ...prev,
+        order_id: res.data.orderId,
+      }));
       setProducts([]);
     }
   };
@@ -441,7 +445,7 @@ const PurchaseOrder: React.FC<Props> = ({
                   name="name"
                   fullWidth
                   disabled={isDisable}
-                  value={orderId}
+                  value={formData.order_id}
                   onChange={(e: any) =>
                     setFormData((prev: any) => ({
                       ...prev,
