@@ -496,12 +496,13 @@ const ProductList = () => {
     try {
       const selectedIds = Array.from(selectedRowIds);
       const ids = selectedIds.join(",");
-      const res = await api.get(
-        `products/export?company_id=${user.company_id}&ids=${ids}`,
-        {
-          responseType: "blob",
-        },
-      );
+      const payload = {
+        company_id: user.company_id,
+        ids: ids,
+      };
+      const res = await api.post(`products/export`, payload, {
+        responseType: "blob",
+      });
 
       const blob = new Blob([res.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
