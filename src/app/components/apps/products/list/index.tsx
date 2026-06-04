@@ -421,7 +421,9 @@ const ProductList = () => {
               } else if (newMainImage) {
                 newImageUrl = URL.createObjectURL(newMainImage);
               } else if (mainImageId !== null) {
-                const selectedImg = uploadedImages.find((img) => img.id === mainImageId);
+                const selectedImg = uploadedImages.find(
+                  (img) => img.id === mainImageId,
+                );
                 if (selectedImg) newImageUrl = selectedImg.url;
               } else {
                 const mainStillExists = uploadedImages.some(
@@ -434,7 +436,7 @@ const ProductList = () => {
               return { ...p, image_url: newImageUrl };
             }
             return p;
-          })
+          }),
         );
 
         setOpenImageManager(false);
@@ -805,11 +807,11 @@ const ProductList = () => {
           prev.map((p) =>
             p.id === Number(id)
               ? {
-                ...p,
-                is_sub_qty,
-              }
-              : p
-          )
+                  ...p,
+                  is_sub_qty,
+                }
+              : p,
+          ),
         );
       }
     } catch (err) {
@@ -837,12 +839,12 @@ const ProductList = () => {
           prev.map((p) =>
             p.id === id
               ? {
-                ...p,
-                ...(price !== undefined && { price }),
-                ...(market_price !== undefined && { market_price }),
-              }
-              : p
-          )
+                  ...p,
+                  ...(price !== undefined && { price }),
+                  ...(market_price !== undefined && { market_price }),
+                }
+              : p,
+          ),
         );
       }
     } catch (error) {
@@ -861,21 +863,21 @@ const ProductList = () => {
 
       const matchesCategory = filters.category
         ? item.product_categories
-          ?.toLowerCase()
-          .split(",")
-          .map((c: any) => c.trim())
-          .includes(filters.category.toLowerCase())
+            ?.toLowerCase()
+            .split(",")
+            .map((c: any) => c.trim())
+            .includes(filters.category.toLowerCase())
         : true;
 
       const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.short_name?.toLowerCase().includes(search) ||
-        item.uuid?.toLowerCase().includes(search) ||
-        item.price?.toLowerCase().includes(search) ||
-        item.supplier_code?.toLowerCase().includes(search) ||
-        item.product_categories?.toLowerCase().includes(search) ||
-        item.barcode_text?.toLowerCase().includes(search) ||
-        item.supplier_name?.toLowerCase().includes(search);
+        item.name?.toString().toLowerCase().includes(search) ||
+        item.short_name?.toString().toLowerCase().includes(search) ||
+        item.uuid?.toString().toLowerCase().includes(search) ||
+        item.price?.toString().toLowerCase().includes(search) ||
+        item.supplier_code?.toString().toLowerCase().includes(search) ||
+        item.product_categories?.toString().toLowerCase().includes(search) ||
+        item.barcode_text?.toString().toLowerCase().includes(search) ||
+        item.supplier_name?.toString().toLowerCase().includes(search);
 
       return matchesSearch && matchesCategory && matchesSupplier;
     });
@@ -1314,7 +1316,10 @@ const ProductList = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditing({ id: item.id, field: "max_stock" });
-                  const initVal = item.max_stock !== null && item.max_stock !== undefined ? String(item.max_stock).replace(/,/g, '') : "0";
+                  const initVal =
+                    item.max_stock !== null && item.max_stock !== undefined
+                      ? String(item.max_stock).replace(/,/g, "")
+                      : "0";
                   setInputValue(initVal);
                 }}
               >
@@ -1381,7 +1386,11 @@ const ProductList = () => {
                   if (/^\d*\.?\d*$/.test(value)) {
                     const parts = value.split(".");
                     if (!parts[1] || parts[1].length <= 2) {
-                      if (value === "" || value === "." || (!isNaN(Number(value)) && Number(value) <= 10000)) {
+                      if (
+                        value === "" ||
+                        value === "." ||
+                        (!isNaN(Number(value)) && Number(value) <= 10000)
+                      ) {
                         setInputValue(value);
                       }
                     }
@@ -1448,7 +1457,10 @@ const ProductList = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditing({ id: item.id, field: "price" });
-                  const initVal = item.price !== null && item.price !== undefined ? String(item.price).replace(/,/g, '') : "0";
+                  const initVal =
+                    item.price !== null && item.price !== undefined
+                      ? String(item.price).replace(/,/g, "")
+                      : "0";
                   setInputValue(initVal);
                 }}
               >
@@ -1504,7 +1516,11 @@ const ProductList = () => {
                   if (/^\d*\.?\d*$/.test(value)) {
                     const parts = value.split(".");
                     if (!parts[1] || parts[1].length <= 2) {
-                      if (value === "" || value === "." || (!isNaN(Number(value)) && Number(value) <= 100000)) {
+                      if (
+                        value === "" ||
+                        value === "." ||
+                        (!isNaN(Number(value)) && Number(value) <= 100000)
+                      ) {
                         setInputValue(value);
                       }
                     }
@@ -1571,7 +1587,11 @@ const ProductList = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditing({ id: item.id, field: "market_price" });
-                  const initVal = item.market_price !== null && item.market_price !== undefined ? String(item.market_price).replace(/,/g, '') : "0";
+                  const initVal =
+                    item.market_price !== null &&
+                    item.market_price !== undefined
+                      ? String(item.market_price).replace(/,/g, "")
+                      : "0";
                   setInputValue(initVal);
                 }}
               >
@@ -2138,7 +2158,6 @@ const ProductList = () => {
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-
             <Button
               color="primary"
               variant="outlined"
@@ -2169,7 +2188,11 @@ const ProductList = () => {
               </Button>
             )}
             <Tooltip title="Hire History">
-              <IconButton color="primary" onClick={() => setHireHistoryDrawer(true)} sx={{ ml: 1 }}>
+              <IconButton
+                color="primary"
+                onClick={() => setHireHistoryDrawer(true)}
+                sx={{ ml: 1 }}
+              >
                 <IconHistory width={18} />
               </IconButton>
             </Tooltip>
@@ -2222,14 +2245,14 @@ const ProductList = () => {
                           : col.columnDef.meta?.label
                             ? col.columnDef.meta.label
                             : typeof col.columnDef.header === "string" &&
-                              col.columnDef.header.trim() !== ""
+                                col.columnDef.header.trim() !== ""
                               ? col.columnDef.header
                               : col.id
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (str: string) =>
-                                  str.toUpperCase(),
-                                )
-                                .trim()
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}
@@ -2762,8 +2785,8 @@ const ProductList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ||
-                                header.column.id === "price" ||
-                                header.column.id === "barcode"
+                              header.column.id === "price" ||
+                              header.column.id === "barcode"
                                 ? 80
                                 : header.column.id === "QrCode"
                                   ? 120
