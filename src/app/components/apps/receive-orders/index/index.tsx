@@ -24,6 +24,7 @@ import {
   Menu,
   MenuItem,
   Divider,
+  Tooltip,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
@@ -143,9 +144,9 @@ const ReceivePurchaseOrder = () => {
         prev.map((p: any) =>
           p.product_id === item.product_id
             ? {
-              ...p,
-              images: [...(p.images || []), ...filesWithPreview],
-            }
+                ...p,
+                images: [...(p.images || []), ...filesWithPreview],
+              }
             : p,
         ),
       );
@@ -729,9 +730,9 @@ const ReceivePurchaseOrder = () => {
                 anchorPosition={
                   menuPos
                     ? {
-                      top: menuPos.mouseY + 8,
-                      left: menuPos.mouseX - 150,
-                    }
+                        top: menuPos.mouseY + 8,
+                        left: menuPos.mouseX - 150,
+                      }
                     : undefined
                 }
                 PaperProps={{
@@ -755,7 +756,7 @@ const ReceivePurchaseOrder = () => {
                 >
                   <Box width="100%">
                     <Box mb={1}>
-                      <Typography variant="subtitle1" fontWeight={700}>
+                      <Typography variant="subtitle1" fontWeight={500}>
                         Sharing Link
                       </Typography>
                       <Divider sx={{ mt: 1 }} />
@@ -773,7 +774,7 @@ const ReceivePurchaseOrder = () => {
                             .filter(
                               (p) =>
                                 Number(p.delivered_qty || 0) <
-                                Number(p.ordered_qty || 0) ||
+                                  Number(p.ordered_qty || 0) ||
                                 Number(p.cancelled_qty || 0) > 0,
                             )
                             .map((p) => p.product_id);
@@ -842,7 +843,7 @@ const ReceivePurchaseOrder = () => {
                             .filter(
                               (p) =>
                                 Number(p.delivered_qty || 0) <
-                                Number(p.ordered_qty || 0) ||
+                                  Number(p.ordered_qty || 0) ||
                                 Number(p.cancelled_qty || 0) > 0,
                             )
                             .map((p) => p.product_id);
@@ -909,7 +910,7 @@ const ReceivePurchaseOrder = () => {
                             .filter(
                               (p) =>
                                 Number(p.delivered_qty || 0) <
-                                Number(p.ordered_qty || 0) ||
+                                  Number(p.ordered_qty || 0) ||
                                 Number(p.cancelled_qty || 0) > 0,
                             )
                             .map((p) => p.product_id);
@@ -1173,7 +1174,7 @@ const ReceivePurchaseOrder = () => {
             <IconButton onClick={onClose}>
               <IconArrowLeft />
             </IconButton>
-            <Typography variant="h4" fontWeight={700}>
+            <Typography variant="h4" fontWeight={500}>
               Order {order?.order_id || ""}
             </Typography>
           </Box>
@@ -1249,47 +1250,76 @@ const ReceivePurchaseOrder = () => {
             {products?.map((item) => (
               <Box
                 key={item.product_id}
-                alignItems={"start"}
-                display={"flex"}
-                gap={1}
                 p={2}
-                border="1px solid #eee"
+                mb={2}
+                border="1px solid #ddd"
                 borderRadius={2}
+                bgcolor="#fff"
               >
-                <CustomCheckbox
-                  checked={selectedRowIds.has(item.product_id)}
-                  disabled={item.maxReceiveNow <= 0}
-                  onChange={(e) => {
-                    setSelectedRowIds((prev) => {
-                      const updated = new Set(prev);
+                <Box display="flex" alignItems="center" gap={2}>
+                  <CustomCheckbox
+                    checked={selectedRowIds.has(item.product_id)}
+                    disabled={item.maxReceiveNow <= 0}
+                    onChange={(e) => {
+                      setSelectedRowIds((prev) => {
+                        const updated = new Set(prev);
 
-                      if (e.target.checked) {
-                        updated.add(item.product_id);
-                      } else {
-                        updated.delete(item.product_id);
-                      }
+                        if (e.target.checked) {
+                          updated.add(item.product_id);
+                        } else {
+                          updated.delete(item.product_id);
+                        }
 
-                      return updated;
-                    });
-                  }}
-                />
-                <Box>
-                  <Image
-                    src={item.image_url || "/images/products/product.svg"}
-                    alt="Product"
-                    height={50}
-                    width={50}
+                        return updated;
+                      });
+                    }}
                   />
-                </Box>
-                <Box ml={3} width={"100%"}>
-                  <Typography variant="h6" fontWeight={600} mb={1}>
-                    {item.short_name}
-                  </Typography>
-                  <Typography variant="h6" mb={1}>
-                    {item.uuid}
-                  </Typography>
+                  <Box>
+                    <Image
+                      src={item.image_url || "/images/products/product.svg"}
+                      alt="Product"
+                      height={50}
+                      width={50}
+                      style={{ borderRadius: 8, objectFit: "cover" }}
+                    />
+                  </Box>
+                  <Box flex={1} minWidth={0}>
+                    <Typography
+                      variant="subtitle1"
+                      className="f-14"
+                      noWrap
+                      title={item.short_name}
+                      sx={{ lineHeight: 1.3, fontWeight: 600 }}
+                    >
+                      {item.short_name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                      {item.uuid}
+                    </Typography>
 
-                  <Box display={"flex"} alignItems={"center"}>
+                    <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                      <Typography variant="caption" color="text.secondary">
+                        Delivered: {item?.delivered_qty}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        sx={{ padding: 0.5 }}
+                        onClick={() => {
+                          setSelectedProduct(item);
+                          setHistoryReceiveModalOpen(true);
+                        }}
+                      >
+                        <IconHistory size={16} />
+                      </IconButton>
+                      {item?.cancelled_qty > 0 && (
+                        <Typography variant="caption" color="error">
+                          Cancelled: {item?.cancelled_qty}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Box display="flex" alignItems="center" gap={1}>
                     {item.receive_now > 0 && (
                       <Fab
                         size="small"
@@ -1298,10 +1328,9 @@ const ReceivePurchaseOrder = () => {
                             prev.map((p) =>
                               p.product_id === item.product_id
                                 ? {
-                                  ...p,
-                                  receive_now: Math.max(0, p.receive_now - 1),
-                                  // maxReceiveNow stays the same
-                                }
+                                    ...p,
+                                    receive_now: Math.max(0, p.receive_now - 1),
+                                  }
                                 : p,
                             ),
                           );
@@ -1324,9 +1353,13 @@ const ReceivePurchaseOrder = () => {
                       size="small"
                       value={item.receive_now}
                       inputProps={{
-                        style: { textAlign: "center" },
+                        style: {
+                          textAlign: "center",
+                          fontWeight: 600,
+                          padding: "6px 8px",
+                        },
                       }}
-                      sx={{ width: 60, ml: 1, mr: 1 }}
+                      sx={{ width: 50 }}
                       onChange={(e) => {
                         const value = e.target.value;
 
@@ -1366,12 +1399,12 @@ const ReceivePurchaseOrder = () => {
                             prev.map((p) =>
                               p.product_id === item.product_id
                                 ? {
-                                  ...p,
-                                  receive_now: Math.min(
-                                    p.maxReceiveNow,
-                                    p.receive_now + 1,
-                                  ),
-                                }
+                                    ...p,
+                                    receive_now: Math.min(
+                                      p.maxReceiveNow,
+                                      p.receive_now + 1,
+                                    ),
+                                  }
                                 : p,
                             ),
                           );
@@ -1391,29 +1424,8 @@ const ReceivePurchaseOrder = () => {
                       </Fab>
                     )}
                   </Box>
-
-                  <Box
-                    display={"flex"}
-                    gap={1}
-                    alignItems={"center"}
-                    justifyContent={"center"}
-                  >
-                    <Typography mt={1} variant="h6">
-                      Delivered: {item?.delivered_qty}{" "}
-                    </Typography>
-                    <Typography mt={1} variant="h6">
-                      Cancelled: {item?.cancelled_qty}{" "}
-                    </Typography>
-                    <IconButton
-                      onClick={() => {
-                        setSelectedProduct(item);
-                        setHistoryReceiveModalOpen(true);
-                      }}
-                      title="View Notes & Attachments"
-                    >
-                      <IconHistory size={18} />
-                    </IconButton>
-                  </Box>
+                </Box>
+                <Box mt={2} pt={2} borderTop="1px dashed #eee">
                   <TextField
                     fullWidth
                     size="small"
@@ -1457,11 +1469,11 @@ const ReceivePurchaseOrder = () => {
                               prev.map((p) =>
                                 p.product_id === item.product_id
                                   ? {
-                                    ...p,
-                                    images: p.images.filter(
-                                      (_: any, idx: number) => idx !== i,
-                                    ),
-                                  }
+                                      ...p,
+                                      images: p.images.filter(
+                                        (_: any, idx: number) => idx !== i,
+                                      ),
+                                    }
                                   : p,
                               ),
                             );
@@ -1526,11 +1538,11 @@ const ReceivePurchaseOrder = () => {
               <IconButton onClick={() => setReceiveModalOpen(false)}>
                 <IconArrowLeft />
               </IconButton>
-              <Typography variant="h4" fontWeight={700} color="textSecondary">
+              <Typography variant="h4" fontWeight={500} color="textSecondary">
                 {supplierIdsFromPO.join(", ")}
               </Typography>
             </Box>
-            <Typography variant="h4" fontWeight={700}>
+            <Typography variant="h4" fontWeight={500}>
               Order ID: {order?.order_id || ""}
             </Typography>
           </Box>
@@ -1539,10 +1551,12 @@ const ReceivePurchaseOrder = () => {
             {products?.map((item) => (
               <Box
                 key={item.product_id}
-                alignItems="center"
+                alignItems="stretch"
                 display="flex"
                 gap={2}
                 p={2}
+                pb={0}
+                mb={2}
                 border="1px solid #ddd"
                 borderRadius={2}
                 bgcolor="#fff"
@@ -1570,90 +1584,32 @@ const ReceivePurchaseOrder = () => {
                       height: 50,
                       width: 50,
                       objectFit: "cover",
+                      borderRadius: 8,
                     }}
                   />
                 </Box>
-                <Box
-                  flex={1}
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="flex-start"
-                  gap={2}
-                >
-                  <Box sx={{ width: "100%", maxWidth: "60%" }}>
+                <Box flex={1} minWidth={0} alignItems={"center"}>
+                  <Tooltip title={item.name ? item.name : item.short_name}>
                     <Typography
                       variant="subtitle1"
-                      fontWeight={600}
-                      sx={{
-                        lineHeight: 1.3,
-                        mb: 0.5,
-                        display: "block",
-                        wordWrap: "break-word",
-                      }}
+                      className="f-14"
+                      noWrap
+                      sx={{ lineHeight: 1.3, fontWeight: 600, mb: 0.5 }}
                     >
                       {item.name ? item.name : item.short_name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item?.uuid}
-                    </Typography>
-                  </Box>
-                  <Box
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="flex-start"
-                  >
-                    <Box display="flex" alignItems="center">
-                      <Typography variant="h6" fontWeight={700} color="primary" sx={{ fontSize: 16 }}>
-                        {item?.ordered_qty}
-                      </Typography>
-                      <TextField
-                        disabled={item.maxReceiveNow <= 0}
-                        size="small"
-                        value={item?.receive_now}
-                        inputProps={{
-                          style: { textAlign: "center", fontWeight: "bold" },
-                        }}
-                        sx={{ width: 50, ml: 2 }}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (!/^\d*$/.test(value)) return;
-                          const num = Number(value || 0);
+                  </Tooltip>
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    {item?.uuid}
+                  </Typography>
 
-                          if (num > item.maxReceiveNow) return;
-
-                          setProducts((prev) =>
-                            prev.map((p) => {
-                              if (p.product_id !== item.product_id) return p;
-                              return {
-                                ...p,
-                                receive_now: Math.max(0, num),
-                              };
-                            }),
-                          );
-
-                          setSelectedRowIds((prev) => {
-                            const updated = new Set(prev);
-                            if (num === 0) {
-                              updated.delete(item.product_id);
-                            } else {
-                              updated.add(item.product_id);
-                            }
-                            return updated;
-                          });
-                        }}
-                      />
-                    </Box>
-                    <Box display="flex" alignItems="center">
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                        sx={{ whiteSpace: "nowrap" }}
-                      >
+                  <Box display="flex" alignItems="start" gap={1}>
+                    <Box display={"flex"} alignItems={"center"}>
+                      <Typography variant="caption" color="text.secondary">
                         Received: {item?.delivered_qty}
                       </Typography>
                       <IconButton
                         size="small"
-                        sx={{ padding: 0.5 }}
                         onClick={() => {
                           setSelectedProduct(item);
                           setHistoryReceiveModalOpen(true);
@@ -1663,16 +1619,64 @@ const ReceivePurchaseOrder = () => {
                       </IconButton>
                     </Box>
                     {item?.cancelled_qty > 0 && (
-                      <Typography
-                        variant="body2"
-                        color="error"
-                        fontWeight={600}
-                        sx={{ whiteSpace: "nowrap" }}
-                      >
+                      <Typography variant="caption" color="error" mt={"10px"}>
                         Cancelled: {item?.cancelled_qty}
                       </Typography>
                     )}
                   </Box>
+                </Box>
+
+                <Box display="flex" alignItems="stretch" gap={1}>
+                  <Typography
+                    variant="h6"
+                    fontWeight={500}
+                    color="primary"
+                    className="f-14"
+                    mt={1}
+                  >
+                    {item?.ordered_qty}
+                  </Typography>
+                  <TextField
+                    className="f-14"
+                    disabled={item.maxReceiveNow <= 0}
+                    size="small"
+                    value={item?.receive_now}
+                    inputProps={{
+                      style: {
+                        textAlign: "center",
+                        fontWeight: 600,
+                        padding: "6px 8px",
+                      },
+                    }}
+                    sx={{ width: 50 }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (!/^\d*$/.test(value)) return;
+                      const num = Number(value || 0);
+
+                      if (num > item.maxReceiveNow) return;
+
+                      setProducts((prev) =>
+                        prev.map((p) => {
+                          if (p.product_id !== item.product_id) return p;
+                          return {
+                            ...p,
+                            receive_now: Math.max(0, num),
+                          };
+                        }),
+                      );
+
+                      setSelectedRowIds((prev) => {
+                        const updated = new Set(prev);
+                        if (num === 0) {
+                          updated.delete(item.product_id);
+                        } else {
+                          updated.add(item.product_id);
+                        }
+                        return updated;
+                      });
+                    }}
+                  />
                 </Box>
               </Box>
             ))}
@@ -1725,7 +1729,12 @@ const ReceivePurchaseOrder = () => {
                 History
               </Typography> */}
               {selectedProduct?.short_name && (
-                <Typography variant="body2" color="text.secondary" fontWeight={600} lineHeight={1.2}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  fontWeight={600}
+                  lineHeight={1.2}
+                >
                   {selectedProduct.short_name}
                 </Typography>
               )}
@@ -1844,77 +1853,79 @@ const ReceivePurchaseOrder = () => {
             )}
 
             {selectedProduct?.storeman_orders?.length > 0 &&
-              selectedProduct.storeman_orders.map((receive: any, idx: number) => (
-                <Box
-                  key={`receive-${idx}`}
-                  flex={1}
-                  p={2}
-                  border="1px solid #d4edda"
-                  borderRadius={2}
-                  bgcolor="#f0fdf4"
-                >
-                  <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body2" color="success.main">
-                      Received By (Qty: {receive.receive_order_qty})
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {receive.date_formate}
-                    </Typography>
-                  </Box>
-
+              selectedProduct.storeman_orders.map(
+                (receive: any, idx: number) => (
                   <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={1.5}
-                    mb={receive.note ? 1 : 0}
+                    key={`receive-${idx}`}
+                    flex={1}
+                    p={2}
+                    border="1px solid #d4edda"
+                    borderRadius={2}
+                    bgcolor="#f0fdf4"
                   >
-                    {receive.user_image ? (
-                      <img
-                        src={receive.user_image}
-                        alt="receive_by"
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <Box
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          bgcolor: "success.main",
-                          color: "#fff",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: "bold",
-                        }}
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2" color="success.main">
+                        Received By (Qty: {receive.receive_order_qty})
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {receive.date_formate}
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={1.5}
+                      mb={receive.note ? 1 : 0}
+                    >
+                      {receive.user_image ? (
+                        <img
+                          src={receive.user_image}
+                          alt="receive_by"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            bgcolor: "success.main",
+                            color: "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {receive.user_name?.charAt(0) || "U"}
+                        </Box>
+                      )}
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        color="success.main"
                       >
-                        {receive.user_name?.charAt(0) || "U"}
-                      </Box>
+                        {receive.user_name || "-"}
+                      </Typography>
+                    </Box>
+                    {receive.note && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ fontStyle: "italic" }}
+                      >
+                        Note: {receive.note}
+                      </Typography>
                     )}
-                    <Typography
-                      variant="subtitle2"
-                      fontWeight={600}
-                      color="success.main"
-                    >
-                      {receive.user_name || "-"}
-                    </Typography>
                   </Box>
-                  {receive.note && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ fontStyle: "italic" }}
-                    >
-                      Note: {receive.note}
-                    </Typography>
-                  )}
-                </Box>
-              ))}
+                ),
+              )}
 
             {selectedProduct?.cancel_orders?.length > 0 &&
               selectedProduct.cancel_orders.map((cancel: any, idx: number) => (
@@ -1990,7 +2001,7 @@ const ReceivePurchaseOrder = () => {
               ))}
           </Box>
 
-          <Typography variant="h6" fontWeight={700} gutterBottom>
+          <Typography variant="h6" fontWeight={500} gutterBottom>
             Attachments:
           </Typography>
           <Box display="flex" flexWrap="wrap" gap={1}>

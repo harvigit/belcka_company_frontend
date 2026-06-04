@@ -409,7 +409,7 @@ const ProductList = () => {
 
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        
+
         setData((prev: any[]) =>
           prev.map((p) => {
             if (p.id === selectedRow.id) {
@@ -436,7 +436,7 @@ const ProductList = () => {
             return p;
           })
         );
-        
+
         setOpenImageManager(false);
       } else {
         toast.error(res.data.message);
@@ -805,9 +805,9 @@ const ProductList = () => {
           prev.map((p) =>
             p.id === Number(id)
               ? {
-                  ...p,
-                  is_sub_qty,
-                }
+                ...p,
+                is_sub_qty,
+              }
               : p
           )
         );
@@ -837,10 +837,10 @@ const ProductList = () => {
           prev.map((p) =>
             p.id === id
               ? {
-                  ...p,
-                  ...(price !== undefined && { price }),
-                  ...(market_price !== undefined && { market_price }),
-                }
+                ...p,
+                ...(price !== undefined && { price }),
+                ...(market_price !== undefined && { market_price }),
+              }
               : p
           )
         );
@@ -1314,7 +1314,8 @@ const ProductList = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditing({ id: item.id, field: "max_stock" });
-                  setInputValue(item.max_stock || "0");
+                  const initVal = item.max_stock !== null && item.max_stock !== undefined ? String(item.max_stock).replace(/,/g, '') : "0";
+                  setInputValue(initVal);
                 }}
               >
                 {item.max_stock || "0"}
@@ -1375,11 +1376,14 @@ const ProductList = () => {
                   e.stopPropagation();
                 }}
                 onChange={(e) => {
-                  const value = e.target.value;
+                  let value = e.target.value.replace(/,/g, ".");
 
-                  if (/^\d*(\.\d{0,2})?$/.test(value)) {
-                    if (value === "" || Number(value) <= 10000) {
-                      setInputValue(value);
+                  if (/^\d*\.?\d*$/.test(value)) {
+                    const parts = value.split(".");
+                    if (!parts[1] || parts[1].length <= 2) {
+                      if (value === "" || value === "." || (!isNaN(Number(value)) && Number(value) <= 10000)) {
+                        setInputValue(value);
+                      }
                     }
                   }
                 }}
@@ -1402,7 +1406,7 @@ const ProductList = () => {
                 onBlur={async () => {
                   if (inputValue === "") return;
                   let number = Number(inputValue);
-                  if (number > 10000) {
+                  if (isNaN(number) || number > 10000) {
                     return;
                   }
 
@@ -1415,8 +1419,9 @@ const ProductList = () => {
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
+                    if (inputValue === "") return;
                     let number = Number(inputValue);
-                    if (number > 10000) {
+                    if (isNaN(number) || number > 10000) {
                       return;
                     }
                     const formatted = number.toFixed(2);
@@ -1443,7 +1448,8 @@ const ProductList = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditing({ id: item.id, field: "price" });
-                  setInputValue(item.price || "0");
+                  const initVal = item.price !== null && item.price !== undefined ? String(item.price).replace(/,/g, '') : "0";
+                  setInputValue(initVal);
                 }}
               >
                 {item.currency}
@@ -1493,11 +1499,14 @@ const ProductList = () => {
                   e.stopPropagation();
                 }}
                 onChange={(e) => {
-                  const value = e.target.value;
+                  let value = e.target.value.replace(/,/g, ".");
 
-                  if (/^\d*(\.\d{0,2})?$/.test(value)) {
-                    if (value === "" || Number(value) <= 10000) {
-                      setInputValue(value);
+                  if (/^\d*\.?\d*$/.test(value)) {
+                    const parts = value.split(".");
+                    if (!parts[1] || parts[1].length <= 2) {
+                      if (value === "" || value === "." || (!isNaN(Number(value)) && Number(value) <= 100000)) {
+                        setInputValue(value);
+                      }
                     }
                   }
                 }}
@@ -1520,7 +1529,7 @@ const ProductList = () => {
                 onBlur={async () => {
                   if (inputValue === "") return;
                   let number = Number(inputValue);
-                  if (number > 10000) {
+                  if (isNaN(number) || number > 100000) {
                     return;
                   }
 
@@ -1533,8 +1542,9 @@ const ProductList = () => {
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
+                    if (inputValue === "") return;
                     let number = Number(inputValue);
-                    if (number > 10000) {
+                    if (isNaN(number) || number > 100000) {
                       return;
                     }
                     const formatted = number.toFixed(2);
@@ -1561,7 +1571,8 @@ const ProductList = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditing({ id: item.id, field: "market_price" });
-                  setInputValue(item.market_price || "0");
+                  const initVal = item.market_price !== null && item.market_price !== undefined ? String(item.market_price).replace(/,/g, '') : "0";
+                  setInputValue(initVal);
                 }}
               >
                 {item.currency}

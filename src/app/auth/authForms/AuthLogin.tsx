@@ -107,7 +107,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         }
         setCountdown(30);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Unknown error");
+      // toast.error(error?.response?.data?.message || "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -189,7 +189,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
                 toast.error(result?.error || "Login failed");
             }
         } catch {
-            toast.error("An error occurred");
+            // toast.error("An error occurred");
         } finally {
             setLoading(false);
         }
