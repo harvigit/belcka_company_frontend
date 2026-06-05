@@ -674,6 +674,9 @@ const PurchaseOrderList = () => {
         String(item.status_text ?? "")
           .toLowerCase()
           .includes(search) ||
+        String(item.supplier_name ?? "")
+          .toLowerCase()
+          .includes(search) ||
         String(item.ref ?? "")
           .toLowerCase()
           .includes(search);
@@ -888,6 +891,46 @@ const PurchaseOrderList = () => {
             <Typography textTransform="capitalize" className="f-14" ml={1}>
               {item.store_name ? item.store_name : "-"}
             </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.supplier_name, {
+      id: "supplier",
+      header: () => (
+        <Stack direction="row" alignItems="center" spacing={4}>
+          <Typography variant="subtitle2">Supplier</Typography>
+        </Stack>
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} ml={1}>
+            <Box
+              sx={{
+                minWidth: 50,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontSize: 14,
+                  display: "flex",
+                  textAlign: "center",
+                  color: item.supplier_name ? "inherit" : "text.secondary",
+                }}
+              >
+                {item.supplier_name || "-"}
+              </Typography>
+            </Box>
           </Stack>
         );
       },
