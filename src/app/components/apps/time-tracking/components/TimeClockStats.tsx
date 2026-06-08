@@ -8,9 +8,15 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox,
-    Button, Menu, MenuItem
+    Button, Menu, MenuItem,
 } from '@mui/material';
-import {IconChevronDown, IconChevronUp, IconEye} from '@tabler/icons-react';
+import {
+    IconChevronDown,
+    IconChevronUp,
+    IconEye,
+    IconLayoutSidebarLeftExpand,
+    IconLayoutSidebarRightExpand,
+} from '@tabler/icons-react';
 import {TimeClockDetailResponse} from '../types/timeClock';
 import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 
@@ -31,6 +37,9 @@ interface TimeClockStatsProps {
     userHasRatePermission: boolean;
     amountColumns: string[];
     onAddExpense: () => void;
+    onAddWorklog: () => void;
+    tableExpanded: boolean;
+    onToggleTableExpanded: () => void;
 }
 
 const TimeClockStats: React.FC<TimeClockStatsProps> = ({
@@ -50,6 +59,9 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                            userHasRatePermission,
                                                            amountColumns,
                                                            onAddExpense,
+                                                           onAddWorklog,
+                                                           tableExpanded,
+                                                           onToggleTableExpanded,
                                                        }) => {
     
     const [addDropDown, setAddDropDown] = useState<null | HTMLElement>(null);
@@ -72,6 +84,11 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
     const handleExpenseClick = () => {
         setAddDropDown(null);
         onAddExpense();
+    };
+
+    const handleWorklogClick = () => {
+        setAddDropDown(null);
+        onAddWorklog();
     };
     
     return (
@@ -137,6 +154,19 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                             </Typography>
                         </Box>
                     ))}
+
+                    <IconButton
+                        onClick={onToggleTableExpanded}
+                        color="primary"
+                        aria-label={tableExpanded ? 'Show work location map' : 'Hide work location map'}
+                        sx={{
+                            border: '1px solid #d5e0f0',
+                            width: 36,
+                            height: 36,
+                        }}
+                    >
+                        {tableExpanded ? <IconLayoutSidebarLeftExpand size={20} /> : <IconLayoutSidebarRightExpand size={20} />}
+                    </IconButton>
 
                     <Box sx={{ position: 'relative' }}>
                         <IconButton onClick={handlePopoverOpen} color='primary'>
@@ -226,6 +256,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                         transformOrigin={{vertical: 'top', horizontal: 'right'}}
                     >
                         <MenuItem onClick={handleExpenseClick}>Add Expense</MenuItem>
+                        <MenuItem onClick={handleWorklogClick}>Add Worklog</MenuItem>
                     </Menu>
                 </Box>
             </Box>

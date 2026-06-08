@@ -65,6 +65,15 @@ const getAssignedToLabel = (assignedTo?: string | null) => {
     return assignedTo;
 };
 
+const getApiErrorMessage = (err: unknown, fallback: string) => {
+    if (err && typeof err === 'object' && 'response' in err) {
+        const response = (err as any).response;
+        return response?.data?.message || fallback;
+    }
+
+    return fallback;
+};
+
 const Index = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -167,13 +176,15 @@ const Index = () => {
         try {
             const response = await api.post('forms/archive', {
                 form_ids: selectedFormIds.join(','),
-            });
-            toast.success(response.data?.message || 'Form archived successfully');
+            }, {
+                skipToast: true,
+            } as any);
+            toast.success(response.data?.message || `Form${selectedFormIds.length > 1 ? 's' : ''} archived successfully`);
             setSelectedRowIds(new Set());
             await fetchForms();
         } catch (err) {
             console.error('Failed to archive forms', err);
-            toast.error('Failed to archive forms');
+            toast.error(getApiErrorMessage(err, 'Failed to archive forms'));
         } finally {
             setBulkActionLoading(false);
             setConfirmAction(null);
@@ -189,13 +200,14 @@ const Index = () => {
                 data: {
                     form_ids: selectedFormIds.join(','),
                 },
-            });
-            toast.success(response.data?.message || 'Form deleted successfully');
+                skipToast: true,
+            } as any);
+            toast.success(response.data?.message || `Form${selectedFormIds.length > 1 ? 's' : ''} deleted successfully`);
             setSelectedRowIds(new Set());
             await fetchForms();
         } catch (err) {
             console.error('Failed to delete forms', err);
-            toast.error('Failed to delete forms');
+            toast.error(getApiErrorMessage(err, 'Failed to delete forms'));
         } finally {
             setBulkActionLoading(false);
             setConfirmAction(null);

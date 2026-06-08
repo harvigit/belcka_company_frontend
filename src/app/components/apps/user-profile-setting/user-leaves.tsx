@@ -59,7 +59,22 @@ import {
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import CustomCheckbox from "../../forms/theme-elements/CustomCheckbox";
-import { format } from "date-fns";
+import {
+    addDays,
+    addMonths,
+    endOfMonth,
+    endOfWeek,
+    format,
+    isSameDay,
+    isSameMonth,
+    isValid,
+    parse,
+    parseISO,
+    startOfMonth,
+    startOfDay,
+    startOfWeek,
+    subMonths,
+} from "date-fns";
 import CustomSelect from "../../forms/theme-elements/CustomSelect";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
@@ -108,6 +123,55 @@ const saveDateRangeToStorage = (
     }
 };
 
+const LEAVE_TYPE_COLOR: Record<string, string> = {
+    paid: "#4CBC6D",
+    unpaid: "#FF9800",
+};
+
+const parseLeaveDate = (value?: string | null) => {
+    if (!value) return null;
+
+    const parsers = [
+        () => parseISO(value),
+        () => parse(value, "dd/MM/yyyy", new Date()),
+        () => parse(value, "dd/MMM/yyyy", new Date()),
+        () => parse(value, "dd MMM yyyy", new Date()),
+        () => parse(value, "yyyy-MM-dd", new Date()),
+    ];
+
+    for (const parser of parsers) {
+        const date = parser();
+        if (isValid(date)) return date;
+    }
+
+    const fallbackDate = new Date(value);
+    return isValid(fallbackDate) ? fallbackDate : null;
+};
+
+const isApprovedLeave = (leave: any) =>
+    Number(leave?.status) === 5 ||
+    String(leave?.status_text ?? "").toLowerCase() === "approved";
+
+const getLeaveType = (leave: any) =>
+    String(leave?.leave_type ?? leave?.type ?? leave?.paid_type ?? "").toLowerCase();
+
+const getLeaveColor = (leave: any) =>
+    LEAVE_TYPE_COLOR[getLeaveType(leave)] || leave?.color || "#4CBC6D";
+
+const getMonthDays = (month: Date) => {
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+    const gridStart = startOfWeek(monthStart);
+    const gridEnd = endOfWeek(monthEnd);
+    const days: Date[] = [];
+
+    for (let date = gridStart; date <= gridEnd; date = addDays(date, 1)) {
+        days.push(date);
+    }
+
+    return days;
+};
+
 const UserLeaves: React.FC<UserLeaveProps> = ({
                                                   active,
                                                   name,
@@ -148,6 +212,11 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
     const [settingOpen, setSettingOpen] = useState(false);
     const handleSettingOpen = () => setSettingOpen(true);
     const handleSettingClose = async () => setSettingOpen(false);
+    const [calendarOpen, setCalendarOpen] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
+    const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
+    const [calendarLeaves, setCalendarLeaves] = useState<any[]>([]);
+    const [calendarLoading, setCalendarLoading] = useState(false);
     
     const getInitialDates = () => {
         const urlStart = searchParams?.get("leave_start");
@@ -257,6 +326,57 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         }
         setFetchLeave(false);
     };
+
+    const fetchCalendarLeaves = async (month: Date): Promise<void> => {
+        if (!userId) return;
+
+        setCalendarLoading(true);
+        try {
+            const days = getMonthDays(month);
+            const payload = {
+                company_id: user?.company_id ?? companyId,
+                start_date: format(days[0], "dd/MM/yyyy"),
+                end_date: format(days[days.length - 1], "dd/MM/yyyy"),
+                user_id: userId,
+            };
+            const res = await api.post(`user-leaves/get-list`, payload);
+            setCalendarLeaves((res.data?.data || []).filter(isApprovedLeave));
+        } catch (err) {
+            console.error("Failed to fetch leave calendar", err);
+            setCalendarLeaves([]);
+        } finally {
+            setCalendarLoading(false);
+        }
+    };
+
+    const openLeaveCalendar = () => {
+        const baseDate = startDate || new Date();
+        const month = startOfMonth(baseDate);
+        setCalendarMonth(month);
+        setSelectedCalendarDate(baseDate);
+        setCalendarOpen(true);
+        fetchCalendarLeaves(month);
+    };
+
+    const closeLeaveCalendar = () => setCalendarOpen(false);
+
+    const changeCalendarMonth = (month: Date) => {
+        const nextMonth = startOfMonth(month);
+        setCalendarMonth(nextMonth);
+        setSelectedCalendarDate(nextMonth);
+        fetchCalendarLeaves(nextMonth);
+    };
+
+    const leavesForDate = (date: Date) =>
+        calendarLeaves.filter((leave) => {
+            const leaveStart = parseLeaveDate(leave.start_date || leave.leave_date);
+            const leaveEnd = parseLeaveDate(leave.end_date || leave.start_date || leave.leave_date);
+
+            if (!leaveStart) return false;
+            const normalizedEnd = leaveEnd || leaveStart;
+
+            return date >= startOfDay(leaveStart) && date <= startOfDay(normalizedEnd);
+        });
 
       useEffect(() => {
         if (!userId || !active ) return;
@@ -564,6 +684,8 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
         name: column.id ?? "Unnamed Column",
         width: "auto",
     }));
+    const calendarDays = getMonthDays(calendarMonth);
+    const selectedDateLeaves = leavesForDate(selectedCalendarDate);
 
     return (
         <Box
@@ -666,14 +788,12 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
 
                                 <Grid size="auto">
                                     <IconButton
-                                        onClick={handleSettingOpen}
+                                        onClick={openLeaveCalendar}
                                         color="primary"
                                         size="small"
                                     >
                                         <IconCalendar size={20} />
                                     </IconButton>
-
-                                    <LeaveSetting open={settingOpen} onClose={handleSettingClose} />
                                 </Grid>
 
                                 <Grid size="auto">
@@ -1029,6 +1149,213 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             </Button>
                         </DialogActions>
                     </Dialog>
+
+                    {/* Approved leave calendar drawer */}
+                    <Drawer
+                        anchor="right"
+                        open={calendarOpen}
+                        onClose={closeLeaveCalendar}
+                        sx={{
+                            "& .MuiDrawer-paper": {
+                                width: { xs: "100%", sm: 760 },
+                                p: { xs: 2, sm: 3 },
+                                backgroundColor: "#f8fafc",
+                            },
+                        }}
+                    >
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                            <Box>
+                                <Typography variant="h5" fontWeight={700}>
+                                    {name ? `${name}'s Leave Calendar` : "Leave Calendar"}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Approved leave only
+                                </Typography>
+                            </Box>
+                            <IconButton onClick={closeLeaveCalendar}>
+                                <IconX />
+                            </IconButton>
+                        </Box>
+
+                        <Stack direction="row" spacing={3} alignItems="center" mb={2}>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: LEAVE_TYPE_COLOR.paid }} />
+                                <Typography color="text.secondary">Paid</Typography>
+                            </Stack>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: LEAVE_TYPE_COLOR.unpaid }} />
+                                <Typography color="text.secondary">Unpaid</Typography>
+                            </Stack>
+                        </Stack>
+
+                        <Box
+                            sx={{
+                                bgcolor: "#fff",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 3,
+                                overflow: "hidden",
+                                boxShadow: "0 1px 3px rgba(15, 23, 42, 0.08)",
+                            }}
+                        >
+                            <Box
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="space-between"
+                                sx={{ px: 2, py: 1.5, borderBottom: "1px solid #e5e7eb" }}
+                            >
+                                <IconButton onClick={() => changeCalendarMonth(subMonths(calendarMonth, 1))}>
+                                    <IconChevronLeft />
+                                </IconButton>
+                                <Typography variant="h5" fontWeight={700}>
+                                    {format(calendarMonth, "MMMM yyyy")}
+                                </Typography>
+                                <IconButton onClick={() => changeCalendarMonth(addMonths(calendarMonth, 1))}>
+                                    <IconChevronRight />
+                                </IconButton>
+                            </Box>
+
+                            <Grid container columns={7}>
+                                {["SUN", "MON", "TUE", "WED", "THUR", "FRI", "SAT"].map((day) => (
+                                    <Grid key={day} size={1}>
+                                        <Typography
+                                            sx={{
+                                                p: 1.25,
+                                                fontSize: 13,
+                                                fontWeight: 700,
+                                                color: day === "SUN" || day === "SAT" ? "#ff4d4f" : "text.primary",
+                                                borderBottom: "1px solid #e5e7eb",
+                                            }}
+                                        >
+                                            {day}
+                                        </Typography>
+                                    </Grid>
+                                ))}
+
+                                {calendarDays.map((day) => {
+                                    const dayLeaves = leavesForDate(day);
+                                    const selected = isSameDay(day, selectedCalendarDate);
+
+                                    return (
+                                        <Grid key={day.toISOString()} size={1}>
+                                            <Box
+                                                onClick={() => setSelectedCalendarDate(day)}
+                                                sx={{
+                                                    minHeight: { xs: 76, sm: 96 },
+                                                    p: 1,
+                                                    borderRight: "1px solid #e5e7eb",
+                                                    borderBottom: "1px solid #e5e7eb",
+                                                    cursor: "pointer",
+                                                    bgcolor: selected ? "#e8f1ff" : "#fff",
+                                                    opacity: isSameMonth(day, calendarMonth) ? 1 : 0.48,
+                                                    "&:hover": { bgcolor: selected ? "#e8f1ff" : "#f8fafc" },
+                                                }}
+                                            >
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 16,
+                                                        fontWeight: selected ? 700 : 500,
+                                                        color:
+                                                            day.getDay() === 0 || day.getDay() === 6
+                                                                ? "#ff4d4f"
+                                                                : "text.primary",
+                                                    }}
+                                                >
+                                                    {format(day, "d")}
+                                                </Typography>
+
+                                                <Stack spacing={0.5} mt={1}>
+                                                    {dayLeaves.slice(0, 2).map((leave) => (
+                                                        <Box
+                                                            key={`${leave.id}-${day.toISOString()}`}
+                                                            sx={{
+                                                                height: 7,
+                                                                borderRadius: 4,
+                                                                bgcolor: getLeaveColor(leave),
+                                                            }}
+                                                        />
+                                                    ))}
+                                                    {dayLeaves.length > 2 && (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            +{dayLeaves.length - 2} more
+                                                        </Typography>
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                        </Grid>
+                                    );
+                                })}
+                            </Grid>
+                        </Box>
+
+                        <Box mt={3}>
+                            <Typography variant="h6" fontWeight={700} mb={1}>
+                                {format(selectedCalendarDate, "dd/MMM/yyyy")}
+                                {selectedDateLeaves.length ? ` (${selectedDateLeaves.length} Approved Leave${selectedDateLeaves.length > 1 ? "s" : ""})` : ""}
+                            </Typography>
+
+                            {calendarLoading ? (
+                                <Box display="flex" justifyContent="center" py={4}>
+                                    <CircularProgress size={28} />
+                                </Box>
+                            ) : selectedDateLeaves.length ? (
+                                <Stack spacing={1.5}>
+                                    {selectedDateLeaves.map((leave) => (
+                                        <Box
+                                            key={leave.id}
+                                            sx={{
+                                                bgcolor: "#fff",
+                                                border: "1px solid #e5e7eb",
+                                                borderRadius: 3,
+                                                p: 2,
+                                            }}
+                                        >
+                                            <Box display="flex" justifyContent="space-between" gap={2}>
+                                                <Box>
+                                                    <Typography variant="h6" fontWeight={700}>
+                                                        {leave.leave_name || "Leave"}
+                                                    </Typography>
+                                                    <Typography color="text.secondary">
+                                                        Date: {leave.leave_date || leave.start_date}
+                                                        {leave.end_date && leave.end_date !== leave.start_date ? ` - ${leave.end_date}` : ""}
+                                                    </Typography>
+                                                    {(leave.start_time || leave.end_time) && (
+                                                        <Typography color="text.secondary">
+                                                            Time: {leave.start_time || "-"} - {leave.end_time || "-"}
+                                                        </Typography>
+                                                    )}
+                                                    <Typography color="text.secondary">
+                                                        Duration: {leave.duration || "All Day"}
+                                                    </Typography>
+                                                </Box>
+                                                <Chip
+                                                    label={getLeaveType(leave) || leave.status_text || "Approved"}
+                                                    sx={{
+                                                        alignSelf: "flex-start",
+                                                        bgcolor: getLeaveColor(leave),
+                                                        color: "#fff",
+                                                        textTransform: "capitalize",
+                                                        fontWeight: 600,
+                                                    }}
+                                                />
+                                            </Box>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                            ) : (
+                                <Box
+                                    sx={{
+                                        bgcolor: "#fff",
+                                        border: "1px dashed #cbd5e1",
+                                        borderRadius: 3,
+                                        p: 3,
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    <Typography color="text.secondary">No approved leave on this date.</Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </Drawer>
 
                     {/* Leave history drawer */}
                     <Drawer

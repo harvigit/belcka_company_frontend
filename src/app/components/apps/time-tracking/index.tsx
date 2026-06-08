@@ -74,6 +74,7 @@ import { useEditingState } from './hooks/useEditingState';
 import { DailyBreakdown } from './types/timeClock';
 import type { User } from 'next-auth';
 import AddExpense from '@/app/components/apps/time-clock/time-clock-details/expenses/add-expense';
+import AddWorklog from '@/app/components/apps/time-clock/time-clock-details/worklog/add-worklog';
 
 const TIME_TRACKING_PAGE = 'time-tracking-page';
 const GOOGLE_MAP_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
@@ -1052,6 +1053,7 @@ const TimeTracking: React.FC<Props> = () => {
     const [locations, setLocations] = useState<LocationPoint[]>([]);
     const [geofences, setGeofences] = useState<WorklogGeofence[]>([]);
     const [addExpenseSidebar, setAddExpenseSidebar] = useState(false);
+    const [addWorklogSidebar, setAddWorklogSidebar] = useState(false);
 
     const latestTodayClockRequestRef = useRef(0);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -1099,9 +1101,9 @@ const TimeTracking: React.FC<Props> = () => {
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
-            ...Object.fromEntries(AMOUNT_COLUMNS.map((col) => [col, userHasRatePermission && showPayableAmounts])),
+            ...Object.fromEntries(AMOUNT_COLUMNS.map((col) => [col, userHasRatePermission])),
         }));
-    }, [userHasRatePermission, showPayableAmounts]);
+    }, [userHasRatePermission]);
 
     useEffect(() => {
         if (clockInfo.user_is_working) {
@@ -1650,6 +1652,11 @@ const TimeTracking: React.FC<Props> = () => {
         try { await fetchTimeClockData(startDate, endDate); } catch { /* ignore */ }
     }, [fetchTimeClockData, startDate, endDate]);
 
+    const closeAddWorklogSidebar = useCallback(async () => {
+        setAddWorklogSidebar(false);
+        try { await fetchTimeClockData(startDate, endDate); } catch { /* ignore */ }
+    }, [fetchTimeClockData, startDate, endDate]);
+
     const userImg = (user as any)?.user_image || (user as any)?.image || undefined;
     const userInitials = user?.name
         ? user.name.split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -1872,6 +1879,9 @@ const TimeTracking: React.FC<Props> = () => {
                                 userHasRatePermission={userHasRatePermission}
                                 amountColumns={AMOUNT_COLUMNS as unknown as string[]}
                                 onAddExpense={() => setAddExpenseSidebar(true)}
+                                onAddWorklog={() => setAddWorklogSidebar(true)}
+                                tableExpanded={tableExpanded}
+                                onToggleTableExpanded={() => setTableExpanded((prev) => !prev)}
                             />
                             <TimeClockTable
                                 table={table} currency={currency}
@@ -1906,6 +1916,17 @@ const TimeTracking: React.FC<Props> = () => {
                         userId={Number(userId)}
                         selectUser={false}
                         companyId={Number(user.company_id)}
+                    />
+                </Drawer>
+
+                <Drawer anchor="right" open={addWorklogSidebar} onClose={closeAddWorklogSidebar}
+                        PaperProps={{ sx: { width: '504px', borderTopLeftRadius: 18, borderBottomLeftRadius: 18, overflow: 'hidden' } }}>
+                    <AddWorklog
+                        onClose={closeAddWorklogSidebar}
+                        userId={Number(userId)}
+                        selectUser={false}
+                        companyId={Number(user.company_id)}
+                        onDataRefresh={() => fetchTimeClockData(startDate, endDate)}
                     />
                 </Drawer>
 

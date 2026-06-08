@@ -299,21 +299,7 @@ const TimeClock = ({ queryParams }: Props) => {
         'total_payable_amount',
     ];
 
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-        name_on_account: false,
-        sort_code: false,
-        account_number: false,
-        utr_name: false,
-        utr_number: false,
-        nin_number: false,
-        daylog_payable_amount: false,
-        pricework_total_amount: false,
-        cis_amount: false,
-        gross_amount: false,
-        net_payable_amount: false,
-        total_adjustment_amount: false,
-        total_payable_amount: false,
-    });
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
     const queryParamsRef = useRef(queryParams);
     useEffect(() => {

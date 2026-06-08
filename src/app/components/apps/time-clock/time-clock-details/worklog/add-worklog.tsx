@@ -41,6 +41,7 @@ interface AddWorklogProps {
     userId: number;
     companyId: number;
     onDataRefresh?: () => void;
+    selectUser?: boolean;
 }
 
 export type NewRecord = {
@@ -91,12 +92,13 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                                                    userId,
                                                    companyId,
                                                    onDataRefresh,
+                                                   selectUser = true,
                                                }) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [users, setUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [newRecord, setNewRecord] = useState<NewRecord>({
-        userId: 0,
+        userId: selectUser ? 0 : Number(userId),
         project_id: 0,
         shift_id: 0,
         date: "",
@@ -189,6 +191,8 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
     };
 
     const getUsers = useCallback(async () => {
+        if (!selectUser) return;
+
         setLoading(true);
         try {
             const res = await api.get(`user/list`);
@@ -198,12 +202,21 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
         } finally {
             setLoading(false);
         }
-    }, [userId]);
+    }, [selectUser]);
 
     useEffect(() => {
         getUsers();
         fetchTimeClockResources();
     }, [userId, companyId]);
+
+    useEffect(() => {
+        if (!selectUser) {
+            setNewRecord((prev) => ({
+                ...prev,
+                userId: Number(userId),
+            }));
+        }
+    }, [selectUser, userId]);
 
     const handleSearchChange = useCallback(
         debounce((value: string) => {
@@ -390,141 +403,145 @@ const AddWorklog: React.FC<AddWorklogProps> = ({
                         gap={2}
                         mb={2}
                     >
-                        <Typography
-                            variant="body2"
-                            fontWeight={600}
-                            color="#1a1a1a"
-                            component="div"
-                        >
-                            Select user
-                        </Typography>
-                        <FormControl fullWidth>
-                            <Select
-                                name="userId"
-                                value={newRecord.userId}
-                                onChange={handleChange("userId")}
-                                displayEmpty
-                                size="small"
-                                sx={{
-                                    "& .MuiOutlinedInput-notchedOutline": {
-                                        borderColor: "#e0e0e0",
-                                    },
-                                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                                        borderColor: "#bdbdbd",
-                                    },
-                                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                                        borderColor: "#50ABFF",
-                                    },
-                                }}
-                                MenuProps={{
-                                    PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
-                                    autoFocus: false,
-                                }}
-                                renderValue={(selected) => {
-                                    if (!selected)
-                                        return (
-                                            <Typography color="#999" component="span">
-                                                Select User
-                                            </Typography>
-                                        );
-                                    const user = users.find((u) => u.id === Number(selected));
-                                    return (
-                                        <Box display="flex" alignItems="center" gap={1}>
-                                            <Avatar
-                                                src={user?.user_image || user?.image}
-                                                sx={{ width: 24, height: 24, fontSize: "12px" }}
-                                            >
-                                                {user?.first_name?.[0]?.toUpperCase()}
-                                            </Avatar>
-                                            <Typography
-                                                component={"span"}
-                                                variant="body1"
-                                                className="f-14"
-                                                sx={{
-                                                    display: "-webkit-box",
-                                                    WebkitBoxOrient: "vertical",
-                                                    WebkitLineClamp: 1,
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    maxWidth: 250,
-                                                    wordBreak: "break-word",
-                                                }}
-                                            >
-                                                {getUserName(user || ({} as User))}
-                                            </Typography>
-                                        </Box>
-                                    );
-                                }}
-                            >
-                                <Box
-                                    px={2}
-                                    py={1.5}
-                                    position="sticky"
-                                    top={0}
-                                    bgcolor="white"
-                                    zIndex={1}
+                        {selectUser && (
+                            <>
+                                <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    color="#1a1a1a"
+                                    component="div"
                                 >
-                                    <TextField
-                                        fullWidth
+                                    Select user
+                                </Typography>
+                                <FormControl fullWidth>
+                                    <Select
+                                        name="userId"
+                                        value={newRecord.userId}
+                                        onChange={handleChange("userId")}
+                                        displayEmpty
                                         size="small"
-                                        placeholder="Search User"
-                                        onChange={(e) => handleSearchChange(e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onKeyDown={(e) => e.stopPropagation()}
-                                        InputProps={{
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <SearchIcon sx={{ color: "#999", fontSize: 20 }} />
-                                                </InputAdornment>
-                                            ),
-                                        }}
                                         sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                                "& fieldset": { borderColor: "#e0e0e0" },
-                                                "&:hover fieldset": { borderColor: "#bdbdbd" },
-                                                "&.Mui-focused fieldset": { borderColor: "#50ABFF" },
+                                            "& .MuiOutlinedInput-notchedOutline": {
+                                                borderColor: "#e0e0e0",
+                                            },
+                                            "&:hover .MuiOutlinedInput-notchedOutline": {
+                                                borderColor: "#bdbdbd",
+                                            },
+                                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                                                borderColor: "#50ABFF",
                                             },
                                         }}
-                                    />
-                                </Box>
-                                {filteredUsers.length === 0 ? (
-                                    <MenuItem disabled>
-                                        <Typography color="text.secondary" component="span">
-                                            No users found
-                                        </Typography>
-                                    </MenuItem>
-                                ) : (
-                                    filteredUsers.map((user) => (
-                                        <MenuItem key={user.id} value={user.id.toString()}>
-                                            <Box display="flex" alignItems="center" gap={1.5}>
-                                                <Avatar
-                                                    src={user.user_image || user.image}
-                                                    sx={{ width: 32, height: 32, fontSize: "14px" }}
-                                                >
-                                                    {user.first_name?.[0]?.toUpperCase()}
-                                                </Avatar>
-                                                <Typography
-                                                    component={"span"}
-                                                    variant="body1"
-                                                    className="f-14"
-                                                    sx={{
-                                                        display: "-webkit-box",
-                                                        WebkitBoxOrient: "vertical",
-                                                        WebkitLineClamp: 1,
-                                                        overflow: "hidden",
-                                                        textOverflow: "ellipsis",
-                                                        maxWidth: 450,
-                                                        wordBreak: "break-word",
-                                                    }}
-                                                >
-                                                    {getUserName(user)}
+                                        MenuProps={{
+                                            PaperProps: { style: { maxHeight: 400, maxWidth: 50 } },
+                                            autoFocus: false,
+                                        }}
+                                        renderValue={(selected) => {
+                                            if (!selected)
+                                                return (
+                                                    <Typography color="#999" component="span">
+                                                        Select User
+                                                    </Typography>
+                                                );
+                                            const user = users.find((u) => u.id === Number(selected));
+                                            return (
+                                                <Box display="flex" alignItems="center" gap={1}>
+                                                    <Avatar
+                                                        src={user?.user_image || user?.image}
+                                                        sx={{ width: 24, height: 24, fontSize: "12px" }}
+                                                    >
+                                                        {user?.first_name?.[0]?.toUpperCase()}
+                                                    </Avatar>
+                                                    <Typography
+                                                        component={"span"}
+                                                        variant="body1"
+                                                        className="f-14"
+                                                        sx={{
+                                                            display: "-webkit-box",
+                                                            WebkitBoxOrient: "vertical",
+                                                            WebkitLineClamp: 1,
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            maxWidth: 250,
+                                                            wordBreak: "break-word",
+                                                        }}
+                                                    >
+                                                        {getUserName(user || ({} as User))}
+                                                    </Typography>
+                                                </Box>
+                                            );
+                                        }}
+                                    >
+                                        <Box
+                                            px={2}
+                                            py={1.5}
+                                            position="sticky"
+                                            top={0}
+                                            bgcolor="white"
+                                            zIndex={1}
+                                        >
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                placeholder="Search User"
+                                                onChange={(e) => handleSearchChange(e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onKeyDown={(e) => e.stopPropagation()}
+                                                InputProps={{
+                                                    endAdornment: (
+                                                        <InputAdornment position="end">
+                                                            <SearchIcon sx={{ color: "#999", fontSize: 20 }} />
+                                                        </InputAdornment>
+                                                    ),
+                                                }}
+                                                sx={{
+                                                    "& .MuiOutlinedInput-root": {
+                                                        "& fieldset": { borderColor: "#e0e0e0" },
+                                                        "&:hover fieldset": { borderColor: "#bdbdbd" },
+                                                        "&.Mui-focused fieldset": { borderColor: "#50ABFF" },
+                                                    },
+                                                }}
+                                            />
+                                        </Box>
+                                        {filteredUsers.length === 0 ? (
+                                            <MenuItem disabled>
+                                                <Typography color="text.secondary" component="span">
+                                                    No users found
                                                 </Typography>
-                                            </Box>
-                                        </MenuItem>
-                                    ))
-                                )}
-                            </Select>
-                        </FormControl>
+                                            </MenuItem>
+                                        ) : (
+                                            filteredUsers.map((user) => (
+                                                <MenuItem key={user.id} value={user.id.toString()}>
+                                                    <Box display="flex" alignItems="center" gap={1.5}>
+                                                        <Avatar
+                                                            src={user.user_image || user.image}
+                                                            sx={{ width: 32, height: 32, fontSize: "14px" }}
+                                                        >
+                                                            {user.first_name?.[0]?.toUpperCase()}
+                                                        </Avatar>
+                                                        <Typography
+                                                            component={"span"}
+                                                            variant="body1"
+                                                            className="f-14"
+                                                            sx={{
+                                                                display: "-webkit-box",
+                                                                WebkitBoxOrient: "vertical",
+                                                                WebkitLineClamp: 1,
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                maxWidth: 450,
+                                                                wordBreak: "break-word",
+                                                            }}
+                                                        >
+                                                            {getUserName(user)}
+                                                        </Typography>
+                                                    </Box>
+                                                </MenuItem>
+                                            ))
+                                        )}
+                                    </Select>
+                                </FormControl>
+                            </>
+                        )}
 
                         <Typography
                             variant="body2"
