@@ -137,7 +137,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get(`categories/get?company_id=${companyId}&hide_completed_address=true`);
+      const res = await api.get(`categories/get?company_id=${companyId}`);
       if (res.data) setUnits(res.data.info);
     } catch (err) {
       console.error("Failed to fetch categories", err);
@@ -148,7 +148,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     if (!supplierId || !companyId) return;
     try {
       const res = await api.get(
-        `categories/get?company_id=${companyId}&id=${supplierId}&hide_completed_address=true`,
+        `categories/get?company_id=${companyId}&id=${supplierId}`,
       );
       if (res.data?.info) {
         const data = res.data.info[0];

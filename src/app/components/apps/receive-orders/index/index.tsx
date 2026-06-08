@@ -1547,6 +1547,54 @@ const ReceivePurchaseOrder = () => {
             </Typography>
           </Box>
 
+          <Box
+            mb={2}
+            display="flex"
+            alignItems={"center"}
+            textAlign={"center"}
+            justifyContent={"flex-end"}
+            gap={1}
+          >
+            <CustomCheckbox
+              checked={
+                products.filter((p) => p.maxReceiveNow > 0).length > 0 &&
+                products
+                  .filter((p) => p.maxReceiveNow > 0)
+                  .every((item) => selectedRowIds.has(item.product_id))
+              }
+              indeterminate={
+                products
+                  .filter((p) => p.maxReceiveNow > 0)
+                  .some((item) => selectedRowIds.has(item.product_id)) &&
+                !products
+                  .filter((p) => p.maxReceiveNow > 0)
+                  .every((item) => selectedRowIds.has(item.product_id))
+              }
+              onChange={(e) => {
+                if (e.target.checked) {
+                  const allIds = new Set(selectedRowIds);
+                  products.forEach((item) => {
+                    if (item.maxReceiveNow > 0) {
+                      allIds.add(item.product_id);
+                    }
+                  });
+                  setSelectedRowIds(allIds);
+                } else {
+                  const remainingIds = new Set(selectedRowIds);
+                  products.forEach((item) => {
+                    if (item.maxReceiveNow > 0) {
+                      remainingIds.delete(item.product_id);
+                    }
+                  });
+                  setSelectedRowIds(remainingIds);
+                }
+              }}
+            />
+            <Typography variant="subtitle1" fontWeight={600}>
+              Select All
+            </Typography>
+          </Box>
+
           <Stack spacing={2}>
             {products?.map((item) => (
               <Box

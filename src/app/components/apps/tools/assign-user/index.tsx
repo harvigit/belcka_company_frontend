@@ -27,6 +27,7 @@ interface AssignUserToolProps {
   onWorkUpdated?: () => void;
   companyId?: number | null;
   setId?: number | null;
+  preselectedUserId?: number | null;
 }
 
 const AssignUserTool: React.FC<AssignUserToolProps> = ({
@@ -35,6 +36,7 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
   onWorkUpdated,
   companyId,
   setId,
+  preselectedUserId,
 }) => {
   const [products, setProducts] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -44,6 +46,8 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
   const [selectAll, setSelectAll] = useState(false);
   const [trades, setTrades] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [fromDate, setFromDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
@@ -72,6 +76,11 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
         setUsers(res.data.users);
         setProducts(res.data.tools);
       }
+      
+      const catRes = await api.get(`tool-categories/get?company_id=${companyId}`);
+      if (catRes.data?.info) {
+        setCategories(catRes.data.info);
+      }
     } catch (err) {
       console.error("Failed to fetch inventory resources", err);
     }
@@ -81,13 +90,14 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
     if (open) {
       fetchTrades();
       fetchResources();
-      setUserId([]);
+      setUserId(preselectedUserId ? [preselectedUserId] : []);
     }
-  }, [open]);
+  }, [open, preselectedUserId]);
 
   useEffect(() => {
     if (open && !setId) {
       setSelectedIds([]);
+      setSelectedCategories([]);
       setProductId("");
       setSelectAll(false);
     }
@@ -120,11 +130,13 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
     try {
       const payload: any = {
         company_id: companyId,
-        product_ids: selectedIds.join(","),
-        user_Id: Number(userId),
+        product_id: selectedIds.join(","),
+        user_id: Number(userId),
         from_date: convertToDDMMYYYY(fromDate),
         to_date: convertToDDMMYYYY(toDate),
         status: 3,
+        category_ids: selectedCategories.join(","),
+        is_update: !!setId,
       };
 
       const res = await api.post("hire-orders/create", payload);
@@ -169,14 +181,6 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
           </Typography>
         </Box>
 
-        {/* Select/Deselect All */}
-        {products?.length > 0 && (
-          <Box textAlign={"end"}>
-            <Button variant="outlined" size="small" onClick={handleSelectAll}>
-              {selectAll ? "Deselect All" : "Select All"}
-            </Button>
-          </Box>
-        )}
         {/* Set Name Input */}
         <Box mb={2}>
           <Typography variant="body2" gutterBottom>
@@ -228,35 +232,63 @@ const AssignUserTool: React.FC<AssignUserToolProps> = ({
         {/* Products List */}
         <Box mb={2}>
           <Typography variant="body2" mb={1}>
-            Select Products
+            Select Product
           </Typography>
           <Autocomplete
-            multiple
             fullWidth
             className="product_selection"
             size="small"
             options={products}
-            disableCloseOnSelect
             getOptionLabel={(option) =>
               option.short_name ?? option.name ?? "Unnamed Product"
             }
             filterOptions={filterProducts}
-            value={products.filter((p) => selectedIds.includes(p.id))}
+            value={products.find((p) => selectedIds[0] === p.id) || null}
             onChange={(e, val) => {
-              setSelectedIds(val.map((item: any) => item.id));
+              setSelectedIds(val ? [val.id] : []);
             }}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             renderOption={(props, option, { selected }) => {
               const { key, ...optionProps } = props as any;
               return (
                 <li key={key || option.id} {...optionProps}>
-                  {/* <CustomCheckbox checked={selected} sx={{ mr: 1 }} /> */}
                   {option.short_name ?? option.name ?? "Unnamed Product"}
                 </li>
               );
             }}
             renderInput={(params) => (
-              <CustomTextField {...params} placeholder="Select Products" />
+              <CustomTextField {...params} placeholder="Select Product" />
+            )}
+          />
+        </Box>
+
+        {/* Categories List */}
+        <Box mb={2}>
+          <Typography variant="body2" mb={1}>
+            Select Categories
+          </Typography>
+          <Autocomplete
+            multiple
+            fullWidth
+            size="small"
+            options={categories}
+            disableCloseOnSelect
+            getOptionLabel={(option) => option.name}
+            value={categories.filter((c) => selectedCategories.includes(c.id))}
+            onChange={(e, val) => {
+              setSelectedCategories(val.map((item: any) => item.id));
+            }}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderOption={(props, option, { selected }) => {
+              const { key, ...optionProps } = props as any;
+              return (
+                <li key={key || option.id} {...optionProps}>
+                  {option.name}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <CustomTextField {...params} placeholder="Select Categories" />
             )}
           />
         </Box>

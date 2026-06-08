@@ -290,7 +290,7 @@ const CategoryList = () => {
   const fetchCategories = async (restorePage?: number) => {
     setFetchCategory(true);
     try {
-      const res = await api.get(`categories/get?company_id=${user.company_id}&hide_completed_address=true`);
+      const res = await api.get(`categories/get?company_id=${user.company_id}`);
       if (res.data) {
         setData(res.data.info);
         if (restorePage !== undefined) {

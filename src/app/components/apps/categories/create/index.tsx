@@ -142,7 +142,7 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get(`categories/get?company_id=${companyId}&hide_completed_address=true`);
+      const res = await api.get(`categories/get?company_id=${companyId}`);
       if (res.data) setUnits(res.data.info);
     } catch (err) {
       console.error("Failed to fetch units", err);

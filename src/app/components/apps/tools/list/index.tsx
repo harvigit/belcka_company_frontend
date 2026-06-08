@@ -51,6 +51,7 @@ import {
   IconSearch,
   IconTrash,
   IconX,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -74,6 +75,8 @@ import HireHistory from "../history";
 import { AxiosResponse } from "axios";
 import ArchiveTools from "../archive";
 import ProductView from "../../products/view";
+import ToolCategoriesDrawer from "../categories";
+import ProductHistory from "../product-history";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -131,7 +134,14 @@ const ToolsList = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openToolDrawer, setOpenToolDrawer] = useState(false);
   const [historyDrawer, setHistoryDrawer] = useState(false);
+  const [productHistoryDrawer, setProductHistoryDrawer] = useState(false);
+  const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
   const [openProductDrawer, setOpenProductDrawer] = useState(false);
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false);
+  const [selectedUsersList, setSelectedUsersList] = useState<any[]>([]);
+  const [preselectedUserId, setPreselectedUserId] = useState<number | null>(
+    null,
+  );
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -141,6 +151,7 @@ const ToolsList = () => {
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
+  const [openTradeModal, setOpenTradeModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [trades, setTrades] = useState<any[]>([]);
@@ -150,6 +161,9 @@ const ToolsList = () => {
   const [selectedStore, setSelectedStore] = useState<number | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [archiveDrawerOpen, setArchiveDrawerOpen] = useState(false);
+  const [rowCategories, setRowCategories] = useState<Record<string, any[]>>({});
+  const [draftCategories, setDraftCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   const [formData, setFormData] = useState<any>({
     id: 0,
@@ -184,7 +198,11 @@ const ToolsList = () => {
     setOpenToolDrawer(false);
     setOpenProductDrawer(false);
     setHistoryDrawer(false);
+    setProductHistoryDrawer(false);
+    setCategoriesDrawerOpen(false);
     setSelectedTaskId(null);
+    setPreselectedUserId(null);
+    setUsersDialogOpen(false);
   };
 
   const handleTradeClose = () => {
@@ -298,6 +316,50 @@ const ToolsList = () => {
   };
 
   const handleEditCategories = (item: any) => {
+    setEditingRowId(item.product_id);
+    let initialCategories: any[] = [];
+
+    if (rowCategories[item.product_id]) {
+      initialCategories = rowCategories[item.product_id];
+    } else if (Array.isArray(item.product_categories)) {
+      initialCategories = item.product_categories;
+    } else if (typeof item.product_categories === "string") {
+      initialCategories = item.product_categories
+        .split(",")
+        .map((name: string) => ({ name: name.trim() }));
+    }
+
+    const selectedIds = item.category_ids
+      ? item.category_ids.split(",").map((id: string) => Number(id))
+      : [];
+    initialCategories = categories.filter((cat) =>
+      selectedIds.includes(cat.id),
+    );
+
+    setDraftCategories(initialCategories);
+
+    setOpenCategoryModal(true);
+  };
+
+  const updateCategories = async (id: string, selected: any[]) => {
+    try {
+      const payload = {
+        id: Number(id),
+        company_id: Number(user.company_id),
+        tool_category_ids: selected.map((c) => c.id).join(","),
+      };
+      const res = await api.post("products/update", payload);
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+        setOpenCategoryModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleEditTrades = (item: any) => {
     setEditingRowId(item.id);
     setEditingProductId(item.product_id);
 
@@ -307,7 +369,7 @@ const ToolsList = () => {
     const selected = trades.filter((cat) => selectedIds.includes(cat.id));
 
     setRowTrades((prev) => ({ ...prev, [item.id]: selected }));
-    setOpenCategoryModal(true);
+    setOpenTradeModal(true);
   };
 
   const updateTrades = async (
@@ -335,10 +397,11 @@ const ToolsList = () => {
 
   const fetchResources = async () => {
     try {
-      let url = `get-inventory-resources?company_id=${user.company_id}`;
+      let url = `get-inventory-resources?company_id=${user.company_id}&is_web=true`;
       const res = await api.get(url);
       if (res.data) {
         setStores(res.data.stores);
+        setCategories(res.data.tool_categories);
       }
     } catch (err) {
       console.error("Failed to fetch inventory resources", err);
@@ -519,8 +582,8 @@ const ToolsList = () => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   lineHeight: 1.25,
-                  maxWidth: 300,
-                  width: 250,
+                  maxWidth: 250,
+                  width: 200,
                   wordBreak: "break-word",
                   "&:hover": { color: "#1976d2" },
                 }}
@@ -578,15 +641,91 @@ const ToolsList = () => {
         );
       },
     }),
-    columnHelper.accessor((row) => row?.hire_qty, {
-      id: "qty",
-      header: () => "Qty",
+
+    columnHelper.accessor((row) => row.product_categories, {
+      id: "categories",
+      header: () => "Categories",
+      cell: ({ row }) => {
+        const item = row.original;
+        const selectedForRow = rowCategories[item.id] || [];
+
+        return (
+          <Stack
+            sx={{ cursor: "pointer" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditCategories(item);
+            }}
+          >
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                wordBreak: "break-word",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                border: "1px solid transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  border: "1px solid #1976d2",
+                },
+              }}
+            >
+              {selectedForRow.length
+                ? selectedForRow.map((c) => c.name).join(", ")
+                : item.product_categories || "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.user_name, {
+      id: "assignUser",
+      header: () => "Assign User",
+      cell: ({ row }) => {
+        const item = row.original;
+        const name = item.user_name;
+        const usersList = item.users_with_trades || [];
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography textTransform="capitalize" className="f-14">
+              {name ? name : "-"}
+            </Typography>
+            {usersList.length > 0 && item.order_id && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedUsersList(usersList);
+                  setSelectedTaskId(item.order_id);
+                  setUsersDialogOpen(true);
+                }}
+              >
+                <IconInfoCircle size={16} />
+              </IconButton>
+            )}
+          </Stack>
+        );
+      },
+    }),
+    columnHelper.accessor((row) => row?.team_name, {
+      id: "team",
+      header: () => "Team",
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center">
             <Typography textTransform="capitalize" className="f-14">
-              {item.hire_qty ? item.hire_qty : "-"}
+              {item.team_name ? item.team_name : "-"}
             </Typography>
           </Stack>
         );
@@ -605,7 +744,7 @@ const ToolsList = () => {
             sx={{ cursor: "pointer", minWidth: 200 }}
             onClick={(e) => {
               e.stopPropagation();
-              handleEditCategories(item);
+              handleEditTrades(item);
             }}
           >
             <Typography
@@ -631,6 +770,39 @@ const ToolsList = () => {
         );
       },
     }),
+    columnHelper.accessor((row) => row?.assigned_days, {
+      id: "borrowDays",
+      header: () => "Borrow days",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+            <Typography className="f-14" fontWeight={500} sx={{ width: 100 }}>
+              {item.assigned_days ? item.assigned_days : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
+    columnHelper.accessor((row) => row?.order_status, {
+      id: "status",
+      header: () => "Status",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <Stack direction="row" alignItems="center" spacing={4} sx={{ pl: 1 }}>
+            <Typography
+              className="f-14"
+              color={item.order_status_color}
+              fontWeight={500}
+              sx={{ width: 100 }}
+            >
+              {item.order_status ? item.order_status : "-"}
+            </Typography>
+          </Stack>
+        );
+      },
+    }),
 
     columnHelper.display({
       id: "actions",
@@ -642,6 +814,14 @@ const ToolsList = () => {
             <Tooltip title="Edit">
               <IconButton onClick={() => handleEdit(item.id)} color="primary">
                 <IconEdit size={18} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="History">
+              <IconButton onClick={() => {
+                setSelectedTaskId(item.product_id);
+                setProductHistoryDrawer(true);
+              }} color="primary">
+                <IconClock size={18} />
               </IconButton>
             </Tooltip>
             {item.need_service && (
@@ -696,11 +876,8 @@ const ToolsList = () => {
           flexDirection: "column",
         }}
       >
-        {/* for handling categories update */}
-        <Dialog
-          open={openCategoryModal}
-          onClose={() => setOpenCategoryModal(false)}
-        >
+        {/* for handling trade update */}
+        <Dialog open={openTradeModal} onClose={() => setOpenTradeModal(false)}>
           <DialogTitle>Select Trades</DialogTitle>
           <DialogContent>
             <Autocomplete
@@ -735,6 +912,65 @@ const ToolsList = () => {
                     rowTrades[editingRowId],
                   );
                 }
+                setOpenTradeModal(false);
+              }}
+              variant="contained"
+              color="primary"
+            >
+              Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* for handling categories update */}
+        <Dialog
+          open={openCategoryModal}
+          onClose={() => setOpenCategoryModal(false)}
+        >
+          <DialogTitle>Select Categories</DialogTitle>
+          <DialogContent>
+            <Autocomplete
+              multiple
+              className="product_selection"
+              options={categories || []}
+              getOptionLabel={(option) => option.name}
+              value={Array.isArray(draftCategories) ? draftCategories : []}
+              onChange={(_, newValue) => {
+                setDraftCategories(newValue);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={
+                    draftCategories.length === 0 ? "Select categories" : ""
+                  }
+                />
+              )}
+              size="small"
+              sx={{ width: 400 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setOpenCategoryModal(false);
+                setDraftCategories([]);
+              }}
+              color="error"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingRowId) {
+                  setRowCategories((prev) => ({
+                    ...prev,
+                    [editingRowId]: draftCategories,
+                  }));
+
+                  updateCategories(editingRowId, draftCategories);
+                }
+
                 setOpenCategoryModal(false);
               }}
               variant="contained"
@@ -1070,6 +1306,29 @@ const ToolsList = () => {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
+                    setCategoriesDrawerOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconNotes width={18} />
+                  </ListItemIcon>
+                  Categories
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
                     setHistoryDrawer(true);
                   }}
                   style={{
@@ -1120,6 +1379,7 @@ const ToolsList = () => {
           companyId={user?.company_id ?? null}
           onWorkUpdated={fetchProducts}
           setId={selectedTaskId}
+          preselectedUserId={preselectedUserId}
         />
 
         {/* history */}
@@ -1131,11 +1391,26 @@ const ToolsList = () => {
           setId={selectedTaskId}
         />
 
+        {/* Product history */}
+        <ProductHistory
+          open={productHistoryDrawer}
+          onClose={() => onClose()}
+          productId={selectedTaskId}
+        />
+
         {/* Archive task list */}
         <ArchiveTools
           open={archiveDrawerOpen}
           onClose={() => setArchiveDrawerOpen(false)}
           onWorkUpdated={fetchProducts}
+        />
+
+        {/* Categories list */}
+        <ToolCategoriesDrawer
+          open={categoriesDrawerOpen}
+          onClose={() => onClose()}
+          onWorkUpdated={fetchResources}
+          companyId={user?.company_id ?? null}
         />
 
         {/* View product */}
@@ -1188,6 +1463,65 @@ const ToolsList = () => {
             >
               Continue
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Users List Dialog */}
+        <Dialog
+          open={usersDialogOpen}
+          onClose={() => onClose()}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Trades</DialogTitle>
+          <DialogContent>
+            <Box display="flex" flexDirection="column" gap={2} mt={1}>
+              {selectedUsersList.length > 0 ? (
+                selectedUsersList.map((item: any) => (
+                  <Box key={item.id} display="flex" alignItems="center" gap={2}>
+                    <Image
+                      src={item.image_url || "/images/users/user.svg"}
+                      alt={item.name}
+                      width={40}
+                      height={40}
+                      style={{ borderRadius: "50%" }}
+                    />
+                    <Typography variant="body1" flex={1}>
+                      {item.name}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={async () => {
+                        try {
+                          const payload = {
+                            company_id: user.company_id,
+                            order_id: selectedTaskId,
+                            user_id: item.id,
+                          };
+                          const res = await api.post(
+                            "hire-orders/update-user",
+                            payload,
+                          );
+                          if (res.data?.IsSuccess) {
+                            toast.success(res.data.message);
+                            setUsersDialogOpen(false);
+                            fetchProducts();
+                          }
+                        } catch (err: any) {}
+                      }}
+                    >
+                      Assign
+                    </Button>
+                  </Box>
+                ))
+              ) : (
+                <Typography>No users found.</Typography>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => onClose()}>Close</Button>
           </DialogActions>
         </Dialog>
 
@@ -1257,7 +1591,7 @@ const ToolsList = () => {
                             paddingTop: "10px",
                             paddingBottom: "10px",
                             width:
-                              header.column.id === "actions" ? 200 : "auto",
+                              header.column.id === "actions" ? 100 : "auto",
                           }}
                         >
                           <Box
