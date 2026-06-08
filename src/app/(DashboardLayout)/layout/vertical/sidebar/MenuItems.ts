@@ -10,6 +10,7 @@ import {
   IconInfoCircle,
   IconKeyframes,
   IconReportMedical,
+  IconForms,
   IconServer,
   IconShieldCheck,
   IconShoppingBag,
@@ -87,6 +88,13 @@ const MenuItems: NavGroup[] = [
     slug: "health_safety",
     icon: IconReportMedical,
     href: "/apps/health-safety/index",
+  },
+  {
+    id: uniqueId(),
+    title: "Forms",
+    slug: "forms",
+    icon: IconForms,
+    href: "/apps/forms",
   },
   {
     id: uniqueId(),
