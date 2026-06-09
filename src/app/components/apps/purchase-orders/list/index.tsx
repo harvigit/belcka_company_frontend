@@ -339,7 +339,7 @@ const PurchaseOrderList = () => {
       const res = await api.get(
         `purchase-orders/get?company_id=${user.company_id}&id=${orderId}`,
       );
-      
+
       let purchaseOrder = res.data?.info?.[0];
 
       if (purchaseOrder && !purchaseOrder.invoice) {
@@ -706,6 +706,22 @@ const PurchaseOrderList = () => {
       }));
   }, [data, selectedRowIds]);
 
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (tableContainerRef.current) {
+        setIsScrollable(
+          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+        );
+      }
+    };
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, [filteredData, drawerOpen, editDrawerOpen, productDrawerOpen]);
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -808,7 +824,11 @@ const PurchaseOrderList = () => {
       id: "orderId",
       header: () => (
         <Stack direction="row" alignItems="center" spacing={4}>
-          <Typography variant="subtitle2" fontWeight="inherit">
+          <Typography
+            variant="subtitle2"
+            fontWeight="inherit"
+            sx={{ whiteSpace: "nowrap" }}
+          >
             Order ID
           </Typography>
         </Stack>
@@ -824,7 +844,11 @@ const PurchaseOrderList = () => {
             spacing={4}
             sx={{ pl: 0.3, ml: 1 }}
           >
-            <Typography textTransform="capitalize" className="f-14">
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              sx={{ whiteSpace: "nowrap" }}
+            >
               {item.order_id ? item.order_id : "-"}
             </Typography>
           </Stack>
@@ -892,12 +916,25 @@ const PurchaseOrderList = () => {
 
     columnHelper.accessor((row) => row?.store_name, {
       id: "deliveryAddress",
-      header: () => "Delivery address",
+      header: () => (
+        <Typography
+          variant="subtitle2"
+          fontWeight="inherit"
+          sx={{ whiteSpace: "nowrap" }}
+        >
+          Delivery address
+        </Typography>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         return (
           <Stack direction="row" alignItems="center">
-            <Typography textTransform="capitalize" className="f-14" ml={1}>
+            <Typography
+              textTransform="capitalize"
+              className="f-14"
+              ml={1}
+              sx={{ whiteSpace: "nowrap" }}
+            >
               {item.store_name ? item.store_name : "-"}
             </Typography>
           </Stack>
@@ -1139,7 +1176,7 @@ const PurchaseOrderList = () => {
 
                           invoice = res.data?.invoice || "";
                         }
-                        
+
                         if (!invoice) return;
 
                         const subject = encodeURIComponent(
@@ -1206,7 +1243,7 @@ Team Belcka
 
                           invoice = res.data?.invoice || "";
                         }
-                        
+
                         if (!invoice) return;
 
                         const subject = encodeURIComponent(
@@ -2125,7 +2162,7 @@ Team Belcka
             overflow: "auto",
           }}
         >
-          <TableContainer>
+          <TableContainer ref={tableContainerRef}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -2148,6 +2185,13 @@ Team Belcka
                                 : header.column.id === "shortName"
                                   ? 400
                                   : "auto",
+                            ...(header.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 3,
+                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
+                            }),
                           }}
                         >
                           <Box
@@ -2232,7 +2276,16 @@ Team Belcka
                         {row.getVisibleCells().map((cell) => (
                           <TableCell
                             key={cell.id}
-                            sx={{ padding: "10px" }}
+                            sx={{
+                              padding: "10px",
+                              ...(cell.column.id === "actions" && {
+                                position: "sticky",
+                                right: 0,
+                                backgroundColor: "background.paper",
+                                zIndex: 1,
+                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
+                              }),
+                            }}
                             onClick={() => {
                               handleEdit(item);
                             }}

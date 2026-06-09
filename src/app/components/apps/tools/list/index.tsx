@@ -429,6 +429,32 @@ const ToolsList = () => {
     });
   }, [data, searchTerm]);
 
+  
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkScroll = () => {
+      if (tableContainerRef.current) {
+        setIsScrollable(
+          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+        );
+      }
+    };
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    
+    const observer = new MutationObserver(checkScroll);
+    if (tableContainerRef.current) {
+      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+    }
+    
+    return () => {
+      window.removeEventListener("resize", checkScroll);
+      observer.disconnect();
+    };
+  }, []);
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -1574,7 +1600,7 @@ const ToolsList = () => {
             overflow: "auto",
           }}
         >
-          <TableContainer>
+          <TableContainer ref={tableContainerRef}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -1592,7 +1618,14 @@ const ToolsList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ? 100 : "auto",
-                          }}
+                          
+                            ...(header.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 3,
+                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
+                            }),}}
                         >
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
@@ -1682,7 +1715,18 @@ const ToolsList = () => {
                       >
                         {row.getVisibleCells().map((cell) => {
                           return (
-                            <TableCell key={cell.id}>
+                            <TableCell 
+      key={cell.id}
+      sx={{
+        ...(cell.column.id === "actions" && {
+          position: "sticky",
+          right: 0,
+          backgroundColor: "background.paper",
+          zIndex: 1,
+          boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
+        }),
+      }}
+    >
                               {flexRender(
                                 cell.column.columnDef.cell,
                                 cell.getContext(),
