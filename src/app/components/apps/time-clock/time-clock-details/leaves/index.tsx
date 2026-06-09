@@ -92,7 +92,11 @@ const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
 
 const LEAVE_TYPE_COLOR: Record<string, string> = {
     paid: '#4CBC6D',
-    unpaid: '#FF9800',
+    unpaid: '#2196F3',
+};
+
+const LEAVE_STATUS_COLOR: Record<string, string> = {
+    pending: '#FFCC80',
 };
 
 const parseLeaveDate = (value?: string | null) => {
@@ -118,11 +122,26 @@ const parseLeaveDate = (value?: string | null) => {
 const getLeaveType = (leave: any) =>
     String(leave?.leave_type ?? leave?.type ?? leave?.paid_type ?? '').toLowerCase();
 
-const getLeaveColor = (leave: any) =>
-    LEAVE_TYPE_COLOR[getLeaveType(leave)] || leave?.color || '#4CBC6D';
+const getLeaveStatusText = (leave: any) =>
+    String(leave?.status_text ?? leave?.request_status_text ?? '').toLowerCase();
+
+const isPendingLeave = (leave: any) => {
+    const statusText = getLeaveStatusText(leave);
+
+    return Number(leave?.status) === 3 ||
+        Number(leave?.request_status) === 3 ||
+        statusText === 'pending' ||
+        statusText.includes('pending');
+};
+
+const getLeaveColor = (leave: any) => {
+    if (isPendingLeave(leave)) return LEAVE_STATUS_COLOR.pending;
+
+    return LEAVE_TYPE_COLOR[getLeaveType(leave)] || leave?.color || '#4CBC6D';
+};
 
 const getStatusColor = (leave: any) => {
-    const statusText = String(leave?.status_text ?? '').toLowerCase();
+    const statusText = getLeaveStatusText(leave);
 
     if (Number(leave?.status) === 5 || statusText === 'approved') return '#008000';
     if (Number(leave?.status) === 12 || statusText === 'rejected') return '#ff1744';
@@ -130,10 +149,12 @@ const getStatusColor = (leave: any) => {
 };
 
 const isApprovedLeave = (leave: any) => {
-    const statusText = String(leave?.status_text ?? '').toLowerCase();
+    const statusText = getLeaveStatusText(leave);
 
     return Number(leave?.status) === 5 || statusText === 'approved';
 };
+
+const isCalendarLeave = (leave: any) => isApprovedLeave(leave) || isPendingLeave(leave);
 
 const isAllDayLeave = (leave: any) => {
     const value = leave?.is_allday_leave;
@@ -278,7 +299,7 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
 
     const leavesForDate = (date: Date) =>
         calendarLeaves.filter((leave) => {
-            if (!isApprovedLeave(leave)) return false;
+            if (!isCalendarLeave(leave)) return false;
 
             const normalizedDate = startOfDay(date);
             const leaveStart = parseLeaveDate(leave.start_date || leave.leave_date);
@@ -669,6 +690,11 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                             <Stack direction="row" spacing={0.75} alignItems="center">
                                 <Box sx={{width: 9, height: 9, borderRadius: '50%', backgroundColor: LEAVE_TYPE_COLOR.unpaid}}/>
                                 <Typography variant="caption" color="text.secondary">Unpaid</Typography>
+                            </Stack>
+
+                            <Stack direction="row" spacing={0.75} alignItems="center">
+                                <Box sx={{width: 9, height: 9, borderRadius: '50%', backgroundColor: LEAVE_STATUS_COLOR.pending}}/>
+                                <Typography variant="caption" color="text.secondary">Pending</Typography>
                             </Stack>
                         </Stack>
                     </Box>

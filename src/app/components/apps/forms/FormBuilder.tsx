@@ -84,11 +84,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                 const form = res.data.info;
                 setName(form.name || '');
                 setFields(normalizeFields(form.fields));
-                setPublishWizardState(parsePublishWizardState(
-                    form.assigned_to ?? form.assignedTo,
-                    form.fields,
-                    form.publish_target ?? form.publishTarget,
-                ));
+                setPublishWizardState(parsePublishWizardState(form.assigned_to ?? form.assignedTo, form.fields, form.publish_target ?? form.publishTarget));
             } catch (err) {}
         };
         fetchForm();

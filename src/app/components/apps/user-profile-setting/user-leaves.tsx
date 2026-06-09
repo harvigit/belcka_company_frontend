@@ -125,7 +125,11 @@ const saveDateRangeToStorage = (
 
 const LEAVE_TYPE_COLOR: Record<string, string> = {
     paid: "#4CBC6D",
-    unpaid: "#FF9800",
+    unpaid: "#2196F3",
+};
+
+const LEAVE_STATUS_COLOR: Record<string, string> = {
+    pending: "#FFCC80",
 };
 
 const parseLeaveDate = (value?: string | null) => {
@@ -148,15 +152,31 @@ const parseLeaveDate = (value?: string | null) => {
     return isValid(fallbackDate) ? fallbackDate : null;
 };
 
-const isApprovedLeave = (leave: any) =>
-    Number(leave?.status) === 5 ||
-    String(leave?.status_text ?? "").toLowerCase() === "approved";
-
 const getLeaveType = (leave: any) =>
     String(leave?.leave_type ?? leave?.type ?? leave?.paid_type ?? "").toLowerCase();
 
-const getLeaveColor = (leave: any) =>
-    LEAVE_TYPE_COLOR[getLeaveType(leave)] || leave?.color || "#4CBC6D";
+const getLeaveStatusText = (leave: any) =>
+    String(leave?.status_text ?? leave?.request_status_text ?? "").toLowerCase();
+
+const isApprovedLeave = (leave: any) =>
+    Number(leave?.status) === 5 || getLeaveStatusText(leave) === "approved";
+
+const isPendingLeave = (leave: any) => {
+    const statusText = getLeaveStatusText(leave);
+
+    return Number(leave?.status) === 3 ||
+        Number(leave?.request_status) === 3 ||
+        statusText === "pending" ||
+        statusText.includes("pending");
+};
+
+const isCalendarLeave = (leave: any) => isApprovedLeave(leave) || isPendingLeave(leave);
+
+const getLeaveColor = (leave: any) => {
+    if (isPendingLeave(leave)) return LEAVE_STATUS_COLOR.pending;
+
+    return LEAVE_TYPE_COLOR[getLeaveType(leave)] || leave?.color || "#4CBC6D";
+};
 
 const getMonthDays = (month: Date) => {
     const monthStart = startOfMonth(month);
@@ -340,7 +360,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                 user_id: userId,
             };
             const res = await api.post(`user-leaves/get-list`, payload);
-            setCalendarLeaves((res.data?.data || []).filter(isApprovedLeave));
+            setCalendarLeaves((res.data?.data || []).filter(isCalendarLeave));
         } catch (err) {
             console.error("Failed to fetch leave calendar", err);
             setCalendarLeaves([]);
@@ -1213,7 +1233,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                     {name ? `${name}'s Leave Calendar` : "Leave Calendar"}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Approved leave only
+                                    Approved and pending leave requests
                                 </Typography>
                             </Box>
                             <IconButton onClick={closeLeaveCalendar}>
@@ -1229,6 +1249,10 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                             <Stack direction="row" spacing={1} alignItems="center">
                                 <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: LEAVE_TYPE_COLOR.unpaid }} />
                                 <Typography color="text.secondary">Unpaid</Typography>
+                            </Stack>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: LEAVE_STATUS_COLOR.pending }} />
+                                <Typography color="text.secondary">Pending</Typography>
                             </Stack>
                         </Stack>
 
@@ -1334,7 +1358,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                         <Box mt={3}>
                             <Typography variant="h6" fontWeight={700} mb={1}>
                                 {format(selectedCalendarDate, "dd/MMM/yyyy")}
-                                {selectedDateLeaves.length ? ` (${selectedDateLeaves.length} Approved Leave${selectedDateLeaves.length > 1 ? "s" : ""})` : ""}
+                                {selectedDateLeaves.length ? ` (${selectedDateLeaves.length} Leave${selectedDateLeaves.length > 1 ? "s" : ""})` : ""}
                             </Typography>
 
                             {calendarLoading ? (
@@ -1395,7 +1419,7 @@ const UserLeaves: React.FC<UserLeaveProps> = ({
                                         textAlign: "center",
                                     }}
                                 >
-                                    <Typography color="text.secondary">No approved leave on this date.</Typography>
+                                    <Typography color="text.secondary">No leave on this date.</Typography>
                                 </Box>
                             )}
                         </Box>
