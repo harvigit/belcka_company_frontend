@@ -336,15 +336,24 @@ const PurchaseOrderList = () => {
     try {
       setLoading(true);
 
-      const response = await api.post(
-        `purchase-orders/invoice?company_id=${user.company_id}&id=${orderId}`,
-      );
-
       const res = await api.get(
         `purchase-orders/get?company_id=${user.company_id}&id=${orderId}`,
       );
-      if (response.data.IsSuccess && res.data.IsSuccess) {
-        setPurchaseOrder(res.data.info[0]);
+      
+      let purchaseOrder = res.data?.info?.[0];
+
+      if (purchaseOrder && !purchaseOrder.invoice) {
+        await api.post(
+          `purchase-orders/invoice?company_id=${user.company_id}&id=${orderId}`,
+        );
+        const refetchRes = await api.get(
+          `purchase-orders/get?company_id=${user.company_id}&id=${orderId}`,
+        );
+        purchaseOrder = refetchRes.data?.info?.[0];
+      }
+
+      if (res.data.IsSuccess) {
+        setPurchaseOrder(purchaseOrder);
         setOpen(true);
       }
     } catch (error) {
@@ -1120,17 +1129,17 @@ const PurchaseOrderList = () => {
                       try {
                         setLoading(true);
 
-                        await api.post(
-                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                        );
+                        let invoice = selectedRow2.invoice;
+                        if (!invoice) {
+                          const res = await api.post(
+                            `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                          );
 
-                        const res = await api.get(
-                          `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                        );
+                          if (!res.data?.IsSuccess) return;
 
-                        if (!res.data?.IsSuccess) return;
-
-                        const invoice = res.data?.info?.[0]?.invoice || "";
+                          invoice = res.data?.invoice || "";
+                        }
+                        
                         if (!invoice) return;
 
                         const subject = encodeURIComponent(
@@ -1187,17 +1196,17 @@ Team Belcka
                       try {
                         setLoading(true);
 
-                        await api.post(
-                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                        );
+                        let invoice = selectedRow2.invoice;
+                        if (!invoice) {
+                          const res = await api.post(
+                            `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                          );
 
-                        const res = await api.get(
-                          `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                        );
+                          if (!res.data?.IsSuccess) return;
 
-                        if (!res.data?.IsSuccess) return;
-
-                        const invoice = res.data?.info?.[0]?.invoice || "";
+                          invoice = res.data?.invoice || "";
+                        }
+                        
                         if (!invoice) return;
 
                         const subject = encodeURIComponent(
@@ -1258,17 +1267,16 @@ Team Belcka
                       try {
                         setLoading(true);
 
-                        await api.post(
-                          `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                        );
+                        let invoiceUrl = selectedRow2.invoice;
+                        if (!invoiceUrl) {
+                          const res = await api.post(
+                            `purchase-orders/invoice?company_id=${user.company_id}&id=${selectedRow2.id}`,
+                          );
 
-                        const res = await api.get(
-                          `purchase-orders/get?company_id=${user.company_id}&id=${selectedRow2.id}`,
-                        );
+                          if (!res.data?.IsSuccess) return;
 
-                        if (!res.data?.IsSuccess) return;
-
-                        const invoiceUrl = res.data.info[0]?.invoice;
+                          invoiceUrl = res.data?.invoice || "";
+                        }
 
                         if (!invoiceUrl) return;
 

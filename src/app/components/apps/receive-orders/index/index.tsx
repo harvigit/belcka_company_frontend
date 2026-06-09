@@ -782,14 +782,11 @@ const ReceivePurchaseOrder = () => {
                             pendingProductIds.length > 0
                               ? `&productIds=${pendingProductIds.join(",")}`
                               : "";
-                          await api.post(
+                          const res = await api.post(
                             `purchase-orders/invoice?company_id=${user.company_id}&id=${order?.id}&type=pending${productIdsQuery}`,
                           );
-                          const res = await api.get(
-                            `purchase-orders/get?company_id=${user.company_id}&id=${order?.id}`,
-                          );
                           if (!res.data?.IsSuccess) return;
-                          const invoiceUrl = res.data.info[0]?.invoice;
+                          const invoiceUrl = res.data?.invoice;
                           if (!invoiceUrl) return;
                           const subject = encodeURIComponent(
                             `Invoice #${order.order_id}`,
@@ -851,14 +848,11 @@ const ReceivePurchaseOrder = () => {
                             pendingProductIds.length > 0
                               ? `&productIds=${pendingProductIds.join(",")}`
                               : "";
-                          await api.post(
+                          const res = await api.post(
                             `purchase-orders/invoice?company_id=${user.company_id}&id=${order?.id}&type=pending${productIdsQuery}`,
                           );
-                          const res = await api.get(
-                            `purchase-orders/get?company_id=${user.company_id}&id=${order?.id}`,
-                          );
                           if (!res.data?.IsSuccess) return;
-                          const invoiceUrl = res.data.info[0]?.invoice;
+                          const invoiceUrl = res.data?.invoice;
                           if (!invoiceUrl) return;
                           const subject = encodeURIComponent(
                             `Invoice #${order.order_id}`,
@@ -918,14 +912,11 @@ const ReceivePurchaseOrder = () => {
                             pendingProductIds.length > 0
                               ? `&productIds=${pendingProductIds.join(",")}`
                               : "";
-                          await api.post(
+                          const res = await api.post(
                             `purchase-orders/invoice?company_id=${user.company_id}&id=${order?.id}&type=pending${productIdsQuery}`,
                           );
-                          const res = await api.get(
-                            `purchase-orders/get?company_id=${user.company_id}&id=${order?.id}`,
-                          );
                           if (!res.data?.IsSuccess) return;
-                          const invoiceUrl = res.data.info[0]?.invoice;
+                          const invoiceUrl = res.data?.invoice;
                           if (!invoiceUrl) {
                             toast.error("Invoice not generated yet.");
                             return;
@@ -1215,16 +1206,12 @@ const ReceivePurchaseOrder = () => {
                       e.stopPropagation();
 
                       try {
-                        await api.post(
-                          `purchase-orders/invoice?company_id=${user.company_id}&id=${order?.id}`,
-                        );
-
-                        const res = await api.get(
-                          `purchase-orders/get?company_id=${user.company_id}&id=${order?.id}`,
+                        const res = await api.post(
+                          `purchase-orders/invoice?company_id=${user.company_id}&id=${order?.id}&type=cancel`,
                         );
 
                         if (res.data.IsSuccess) {
-                          const invoiceUrl = res.data.info[0]?.invoice;
+                          const invoiceUrl = res.data.invoice;
 
                           if (!invoiceUrl) {
                             return;

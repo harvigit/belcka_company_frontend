@@ -160,16 +160,12 @@ const CancelOrder: React.FC<Props> = ({ open, onClose, companyId, id }) => {
                     try {
                       setLoading(true);
 
-                      await api.post(
+                      const res = await api.post(
                         `purchase-orders/invoice?company_id=${companyId}&id=${id}&type=cancel`,
                       );
 
-                      const res = await api.get(
-                        `purchase-orders/get?company_id=${companyId}&id=${id}`,
-                      );
-
                       if (res.data.IsSuccess) {
-                        const invoiceUrl = res.data.info[0]?.invoice;
+                        const invoiceUrl = res.data.invoice;
 
                         if (!invoiceUrl) return;
 
