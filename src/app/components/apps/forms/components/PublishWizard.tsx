@@ -35,9 +35,32 @@ import {
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
-import {PublishOption, PublishSettings, PublishWizardState} from '../common';
+import {PublishUsersOption, PublishTeamsOption, PublishSettings, PublishWizardState} from '../common';
 import {initialsFor, normalizeTeamOptions, normalizeUserOptions, toggleOption} from '../common/formBuilderUtils';
 import {useSession} from 'next-auth/react';
+
+const DEFAULT_SETTINGS: PublishSettings = {
+    publishMode: 'now',
+    publishDate: '',
+    publishTime: '',
+    notifyUsers: false,
+    notificationMessage: '',
+    showOnFeed: false,
+    feedBy: 'app',
+    sendReminder: false,
+    reminderDate: '',
+    reminderTime: '',
+    scheduleRemoval: false,
+    removalDate: '',
+    removalTime: '',
+};
+
+const normalizeState = (state: PublishWizardState | undefined | null): PublishWizardState => ({
+    selectedTeams: state?.selectedTeams ?? [],
+    selectedUsers: state?.selectedUsers ?? [],
+    groupAssignmentMode: state?.groupAssignmentMode ?? 'dynamic',
+    settings: state?.settings ? {...DEFAULT_SETTINGS, ...state.settings} : DEFAULT_SETTINGS,
+});
 
 const SlideUp = React.forwardRef(function SlideUp(
     props: TransitionProps & { children: React.ReactElement },
@@ -93,14 +116,14 @@ const StepIndicator = ({step}: { step: number }) => {
     );
 };
 
-const SelectableListDialog = ({open, title, searchPlaceholder, options, selected, onClose, onChange}: {
+const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selected, onClose, onChange}: {
     open: boolean;
     title: string;
     searchPlaceholder: string;
-    options: PublishOption[];
-    selected: PublishOption[];
+    users: PublishUsersOption[];
+    selected: PublishUsersOption[];
     onClose: () => void;
-    onChange: (next: PublishOption[]) => void;
+    onChange: (next: PublishUsersOption[]) => void;
 }) => {
     const [search, setSearch] = useState('');
 
@@ -108,13 +131,18 @@ const SelectableListDialog = ({open, title, searchPlaceholder, options, selected
         if (open) setSearch('');
     }, [open]);
 
-    const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return options;
-        return options.filter((option) => option.name.toLowerCase().includes(q));
-    }, [options, search]);
+    const safeOptions = users ?? [];
+    const safeSelected = selected ?? [];
 
-    const allSelected = options.length > 0 && selected.length === options.length;
+    const filtered = useMemo(() => {
+
+        console.log(safeOptions, 'safeOptionssafeOptionssafeOptionssafeOptionssafeOptions')
+        const q = search.trim().toLowerCase();
+        if (!q) return safeOptions;
+        return safeOptions.filter((option) => option.name.toLowerCase().includes(q));
+    }, [safeOptions, search]);
+
+    const allSelected = safeOptions.length > 0 && safeSelected.length === safeOptions.length;
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -134,13 +162,15 @@ const SelectableListDialog = ({open, title, searchPlaceholder, options, selected
                         <Checkbox
                             size="small"
                             checked={allSelected}
-                            indeterminate={selected.length > 0 && !allSelected}
-                            onChange={() => onChange(allSelected ? [] : options)}
+                            indeterminate={safeSelected.length > 0 && !allSelected}
+                            onChange={() => onChange(allSelected ? [] : safeOptions)}
                         />
                         <Typography fontSize={14}>Select all</Typography>
                     </Stack>
                     {filtered.map((option) => {
-                        const checked = selected.some((item) => item.id === option.id);
+
+                        console.log(option, 'optionoptionoptionoptionoption')
+                        const checked = safeSelected.some((item) => item.id === option.id);
                         return (
                             <Stack
                                 key={option.id}
@@ -154,11 +184,98 @@ const SelectableListDialog = ({open, title, searchPlaceholder, options, selected
                                 <Checkbox
                                     size="small"
                                     checked={checked}
-                                    onChange={() => onChange(toggleOption(selected, option))}
+                                    onChange={() => onChange(toggleOption(safeSelected, option))}
                                 />
-                                <Avatar src={option.image || undefined} sx={{width: 26, height: 26, fontSize: 11}}>
+                                <Avatar
+                                    src={option.user_thumb_image || undefined}
+                                    sx={{width: 26, height: 26, fontSize: 11}}
+                                >
                                     {initialsFor(option.name)}
                                 </Avatar>
+                                <Typography fontSize={14}>{option.name}</Typography>
+                            </Stack>
+                        );
+                    })}
+                    {filtered.length === 0 && (
+                        <Typography color="text.secondary" fontSize={13} py={2} textAlign="center">
+                            No records found.
+                        </Typography>
+                    )}
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Done</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+const SelectableTeamsListDialog = ({open, title, searchPlaceholder, teams, selected, onClose, onChange}: {
+    open: boolean;
+    title: string;
+    searchPlaceholder: string;
+    teams: PublishTeamsOption[];
+    selected: PublishTeamsOption[];
+    onClose: () => void;
+    onChange: (next: PublishTeamsOption[]) => void;
+}) => {
+    const [search, setSearch] = useState('');
+
+    useEffect(() => {
+        if (open) setSearch('');
+    }, [open]);
+
+    const safeOptions = teams ?? [];
+    const safeSelected = selected ?? [];
+
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return safeOptions;
+        return safeOptions.filter((option) => option.name.toLowerCase().includes(q));
+    }, [safeOptions, search]);
+
+    const allSelected = safeOptions.length > 0 && safeSelected.length === safeOptions.length;
+
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogContent>
+                <CustomTextField
+                    value={search}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)}
+                    placeholder={searchPlaceholder}
+                    fullWidth
+                    InputProps={{
+                        endAdornment: <InputAdornment position="end"><IconScan size={16}/></InputAdornment>,
+                    }}
+                />
+                <Stack spacing={0.5} mt={1.5} sx={{maxHeight: 360, overflow: 'auto'}}>
+                    <Stack direction="row" alignItems="center" spacing={1} px={0.5}>
+                        <Checkbox
+                            size="small"
+                            checked={allSelected}
+                            indeterminate={safeSelected.length > 0 && !allSelected}
+                            onChange={() => onChange(allSelected ? [] : safeOptions)}
+                        />
+                        <Typography fontSize={14}>Select all</Typography>
+                    </Stack>
+                    {filtered.map((option) => {
+                        const checked = safeSelected.some((item) => item.id === option.id);
+                        return (
+                            <Stack
+                                key={option.id}
+                                direction="row"
+                                alignItems="center"
+                                spacing={1}
+                                px={0.5}
+                                py={0.75}
+                                sx={{borderRadius: 1, '&:hover': {bgcolor: 'action.hover'}}}
+                            >
+                                <Checkbox
+                                    size="small"
+                                    checked={checked}
+                                    onChange={() => onChange(toggleOption(safeSelected, option))}
+                                />
                                 <Typography fontSize={14}>{option.name}</Typography>
                             </Stack>
                         );
@@ -180,7 +297,7 @@ const SelectableListDialog = ({open, title, searchPlaceholder, options, selected
 const PublishWizard = ({
                            open,
                            saving,
-                           state,
+                           state: stateProp,
                            onChange,
                            onBackToEditor,
                            onConfirm,
@@ -195,10 +312,13 @@ const PublishWizard = ({
     const session = useSession();
     const authUser = session.data?.user as any;
     const [step, setStep] = useState(1);
-    const [users, setUsers] = useState<PublishOption[]>([]);
-    const [groups, setGroups] = useState<PublishOption[]>([]);
+    const [users, setUsers] = useState<PublishUsersOption[]>([]);
+    const [teams, setTeams] = useState<PublishTeamsOption[]>([]);
     const [userDialogOpen, setUserDialogOpen] = useState(false);
-    const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+    const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+
+    // Normalize state to ensure arrays are always defined
+    const state = useMemo(() => normalizeState(stateProp), [stateProp]);
 
     useEffect(() => {
         if (!open) return;
@@ -214,22 +334,27 @@ const PublishWizard = ({
                     api.get('user/get-user-lists'),
                     api.get('team/get-team-member-list'),
                 ]);
-                setUsers(normalizeUserOptions(usersRes.data?.info));
-                setGroups(normalizeTeamOptions(teamsRes.data?.info));
+                setUsers(normalizeUserOptions(usersRes.data?.info) ?? []);
+                setTeams(normalizeTeamOptions(teamsRes.data?.info) ?? []);
             } catch (error) {
+                // silently fail; UI remains functional with empty lists
             }
         };
 
         fetchResources();
     }, [open]);
 
-    const selectedGroupMemberCount = useMemo(() => state.selectedGroups.reduce((sum, group) => {
-        const currentGroup = groups.find((item) => item.id === group.id);
-        return sum + Number(currentGroup?.memberCount ?? group.memberCount ?? 0);
-    }, 0), [groups, state.selectedGroups]);
-    const totalAssignees = state.selectedUsers.length + selectedGroupMemberCount;
-    const selectedTargetCount = state.selectedUsers.length + state.selectedGroups.length;
+    const selectedTeamMemberCount = useMemo(() =>
+            state.selectedTeams.reduce((sum, team) => {
+                const currentTeam = teams.find((item) => item.id === team.id);
+                return sum + Number(currentTeam?.memberCount ?? team.memberCount ?? 0);
+            }, 0),
+        [teams, state.selectedTeams]);
+
+    const totalAssignees = state.selectedUsers.length + selectedTeamMemberCount;
+    const selectedTargetCount = state.selectedUsers.length + state.selectedTeams.length;
     const canContinue = step !== 1 || selectedTargetCount > 0;
+
     const feedByOptions = useMemo(() => {
         const fullName = `${authUser?.first_name || authUser?.firstName || ''} ${authUser?.last_name || authUser?.lastName || ''}`.trim();
         return [
@@ -242,13 +367,13 @@ const PublishWizard = ({
         onChange({...state, settings: {...state.settings, ...updates}});
     };
 
-    const chipList = (items: PublishOption[], onRemove: (id: string) => void) => (
+    const chipList = (items: PublishUsersOption[] | undefined, onRemove: (id: string) => void) => (
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {items.map((item) => (
+            {(items ?? []).map((item) => (
                 <Chip
                     key={item.id}
                     label={item.name}
-                    avatar={<Avatar src={item.image || undefined}>{initialsFor(item.name)}</Avatar>}
+                    avatar={<Avatar src={item.user_thumb_image || undefined}>{initialsFor(item.name)}</Avatar>}
                     onDelete={() => onRemove(item.id)}
                     sx={{bgcolor: '#eaf5ff'}}
                 />
@@ -260,23 +385,23 @@ const PublishWizard = ({
         <Box sx={{width: '100%', maxWidth: 630}}>
             <Stack textAlign="center" spacing={1} mb={4}>
                 <Typography fontWeight={700} fontSize={20}>Select assignees</Typography>
-                <Typography color="text.secondary">You can select groups, specific users, or both</Typography>
+                <Typography color="text.secondary">You can select teams, specific users, or both</Typography>
             </Stack>
             <Paper elevation={0}
                    sx={{border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden'}}>
                 <Stack spacing={2.5} p={3}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography fontWeight={700}>Smart groups</Typography>
+                        <Typography fontWeight={700}>Smart teams</Typography>
                         <Button variant="outlined" endIcon={<IconChevronDown size={16}/>}
-                                onClick={() => setGroupDialogOpen(true)}>
-                            Select groups
+                                onClick={() => setTeamDialogOpen(true)}>
+                            Select teams
                         </Button>
                     </Stack>
-                    {chipList(state.selectedGroups, (id) => onChange({
+                    {chipList(state.selectedTeams, (id) => onChange({
                         ...state,
-                        selectedGroups: state.selectedGroups.filter((group) => group.id !== id),
+                        selectedTeams: state.selectedTeams.filter((team) => team.id !== id),
                     }))}
-                    {state.selectedGroups.length > 0 && (
+                    {state.selectedTeams.length > 0 && (
                         <RadioGroup
                             value={state.groupAssignmentMode}
                             onChange={(event) => onChange({
@@ -284,14 +409,20 @@ const PublishWizard = ({
                                 groupAssignmentMode: event.target.value as 'dynamic' | 'fixed'
                             })}
                         >
-                            <FormControlLabel value="dynamic" control={<Radio size="small"/>}
-                                              label={<><strong>Dynamic</strong> <Typography component="span"
-                                                                                            color="text.secondary">Current
-                                                  and future group members</Typography></>}/>
-                            <FormControlLabel value="fixed" control={<Radio size="small"/>}
-                                              label={<><strong>Fixed</strong> <Typography component="span"
-                                                                                          color="text.secondary">Only
-                                                  current group members</Typography></>}/>
+                            <FormControlLabel
+                                value="dynamic" control={<Radio size="small"/>}
+                                label={<>
+                                    <strong>Dynamic</strong>
+                                    <Typography component="span" color="text.secondary">Current and future team members</Typography>
+                                </>}
+                            />
+                            <FormControlLabel
+                                value="fixed" control={<Radio size="small"/>}
+                                label={<>
+                                    <strong>Fixed</strong>
+                                    <Typography component="span" color="text.secondary">Only current team members</Typography>
+                                </>}
+                            />
                         </RadioGroup>
                     )}
                 </Stack>
@@ -299,11 +430,15 @@ const PublishWizard = ({
                 <Stack spacing={2.5} p={3}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Typography fontWeight={700}>Specific users</Typography>
-                        <Button variant="outlined" endIcon={<IconChevronDown size={16}/>}
-                                onClick={() => setUserDialogOpen(true)}>
+                        <Button
+                            variant="outlined" 
+                            endIcon={<IconChevronDown size={16}/>}
+                            onClick={() => setUserDialogOpen(true)}
+                        >
                             Select Users
                         </Button>
                     </Stack>
+                    
                     {chipList(state.selectedUsers, (id) => onChange({
                         ...state,
                         selectedUsers: state.selectedUsers.filter((user) => user.id !== id),
@@ -315,7 +450,7 @@ const PublishWizard = ({
                     <Typography fontSize={26} fontWeight={800}>{totalAssignees}</Typography>
                     <Box>
                         <Typography fontWeight={700}>Total assignees</Typography>
-                        {state.groupAssignmentMode === 'dynamic' && state.selectedGroups.length > 0 && (
+                        {state.groupAssignmentMode === 'dynamic' && state.selectedTeams.length > 0 && (
                             <Typography color="text.secondary" fontSize={13}>The current number may change when Dynamic
                                 is selected</Typography>
                         )}
@@ -510,9 +645,9 @@ const PublishWizard = ({
             <Stack direction="row" spacing={1} alignItems="stretch">
                 <Stack spacing={1}>
                     <Paper elevation={0} sx={{px: 2, py: 1.5, bgcolor: '#f5f6f7', borderRadius: 2, textAlign: 'left'}}>
-                        <Typography fontWeight={700}>{state.selectedGroups.length} Smart groups</Typography>
+                        <Typography fontWeight={700}>{state.selectedTeams.length} Smart teams</Typography>
                         <Typography color="text.secondary" fontSize={12}>
-                            {state.groupAssignmentMode === 'dynamic' ? 'Dynamic' : 'Fixed'} group assignment
+                            {state.groupAssignmentMode === 'dynamic' ? 'Dynamic' : 'Fixed'} team assignment
                         </Typography>
                     </Paper>
                     <Paper elevation={0} sx={{px: 2, py: 1.5, bgcolor: '#f5f6f7', borderRadius: 2, textAlign: 'left'}}>
@@ -624,20 +759,22 @@ const PublishWizard = ({
                     )}
                 </Box>
             </Box>
-            <SelectableListDialog
-                open={groupDialogOpen}
-                title="Select groups"
-                searchPlaceholder="Search groups"
-                options={groups}
-                selected={state.selectedGroups}
-                onClose={() => setGroupDialogOpen(false)}
-                onChange={(next) => onChange({...state, selectedGroups: next})}
+
+            <SelectableTeamsListDialog
+                open={teamDialogOpen}
+                title="Select teams"
+                searchPlaceholder="Search teams"
+                teams={teams}
+                selected={state.selectedTeams}
+                onClose={() => setTeamDialogOpen(false)}
+                onChange={(next) => onChange({...state, selectedTeams: next})}
             />
-            <SelectableListDialog
+
+            <SelectableUsersListDialog
                 open={userDialogOpen}
                 title="Select users"
                 searchPlaceholder="Search users"
-                options={users}
+                users={users}
                 selected={state.selectedUsers}
                 onClose={() => setUserDialogOpen(false)}
                 onChange={(next) => onChange({...state, selectedUsers: next})}

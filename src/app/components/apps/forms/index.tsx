@@ -62,7 +62,7 @@ const getUserName = (user?: { first_name?: string; last_name?: string; email?: s
 
 const getAssignedToLabel = (assignedTo?: string | null) => {
     if (!assignedTo) return 'Everyone';
-    return assignedTo;
+    return assignedTo.replace(/\bgroups\b/gi, (match) => match.charAt(0) === 'G' ? 'Teams' : 'teams');
 };
 
 const getApiErrorMessage = (err: unknown, fallback: string) => {
@@ -77,7 +77,6 @@ const getApiErrorMessage = (err: unknown, fallback: string) => {
 const Index = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
     const [forms, setForms] = useState<FormRecord[]>([]);
     const [search, setSearch] = useState('');
@@ -96,8 +95,8 @@ const Index = () => {
     /* ── Data fetching ── */
     const fetchForms = useCallback(async () => {
         try {
-            const res = await api.get('forms', { params: { search } });
-            setForms(res.data.info?.data || []);
+            const res = await api.get('forms/list');
+            setForms(res.data.info || []);
         } catch (err) {
             console.error('Failed to fetch forms', err);
         }
@@ -344,12 +343,12 @@ const Index = () => {
                                     </TableCell>
                                     <TableCell>Name</TableCell>
                                     <TableCell>Status</TableCell>
-                                    {!isTablet && <TableCell>Entries</TableCell>}
-                                    {!isTablet && <TableCell>Views</TableCell>}
-                                    {!isMobile && <TableCell>Assigned to</TableCell>}
+                                    <TableCell>Entries</TableCell>
+                                    <TableCell>Views</TableCell>
+                                    <TableCell>Assigned to</TableCell>
                                     <TableCell>Created by</TableCell>
-                                    {!isTablet && <TableCell>Administrated by</TableCell>}
-                                    {!isMobile && <TableCell>Date Created</TableCell>}
+                                    <TableCell>Administrated by</TableCell>
+                                    <TableCell>Date Created</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -391,14 +390,14 @@ const Index = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell>{statusChip(form.status)}</TableCell>
-                                        {!isTablet && <TableCell>{form.entries}</TableCell>}
-                                        {!isTablet && <TableCell>{form.views}</TableCell>}
-                                        {!isMobile && <TableCell>{getAssignedToLabel(form.assigned_to ?? form.assignedTo)}</TableCell>}
+                                       <TableCell>{form.entries}</TableCell>
+                                       <TableCell>{form.views}</TableCell>
+                                       <TableCell>{getAssignedToLabel(form.assigned_to ?? form.assignedTo)}</TableCell>
                                         <TableCell>
                                             <Stack direction="row" spacing={1} alignItems="center">
                                                 <Avatar
-                                                    src={form.createdBy?.image || undefined}
-                                                    sx={{ width: 28, height: 28, fontSize: 12 }}
+                                                    src={form.createdBy?.createdBy_thumb_image || undefined}
+                                                    sx={{width: 36, height: 36}}
                                                 >
                                                     {getName(form).charAt(0)}
                                                 </Avatar>
@@ -409,37 +408,38 @@ const Index = () => {
                                                 )}
                                             </Stack>
                                         </TableCell>
-                                        {!isTablet && (
-                                            <TableCell>
-                                                <Stack direction="row" justifyContent="flex-start">
-                                                    <AvatarGroup
-                                                        max={5}
-                                                        sx={{
-                                                            justifyContent: 'flex-end',
-                                                            '& .MuiAvatar-root': {
-                                                                width: 26,
-                                                                height: 26,
-                                                                fontSize: 11,
-                                                                borderColor: '#fff',
-                                                            },
-                                                        }}
-                                                    >
-                                                        {(form.administrators?.length ? form.administrators : form.createdBy ? [form.createdBy] : []).map((admin) => (
-                                                            <Tooltip key={admin.id} title={getUserName(admin)}>
-                                                                <Avatar src={admin.image || undefined}>
-                                                                    {getUserName(admin).charAt(0)}
-                                                                </Avatar>
-                                                            </Tooltip>
-                                                        ))}
-                                                    </AvatarGroup>
-                                                </Stack>
-                                            </TableCell>
-                                        )}
-                                        {!isMobile && (
-                                            <TableCell>
-                                                {dayjs(form.createdAt).format('DD/MM/YYYY')}
-                                            </TableCell>
-                                        )}
+                                        
+                                        <TableCell>
+                                            <Stack direction="row" justifyContent="flex-start">
+                                                <AvatarGroup
+                                                    max={5}
+                                                    sx={{
+                                                        justifyContent: 'flex-end',
+                                                        '& .MuiAvatar-root': {
+                                                            width: 26,
+                                                            height: 26,
+                                                            fontSize: 11,
+                                                            borderColor: '#fff',
+                                                        },
+                                                    }}
+                                                >
+                                                    {(form.administrators?.length ? form.administrators : form.createdBy ? [form.createdBy] : []).map((admin) => (
+                                                        <Tooltip key={admin.id} title={getUserName(admin)}>
+                                                            <Avatar 
+                                                                src={(admin as any).admin_thumb_image || (admin as any).createdBy_thumb_image || undefined}
+                                                                sx={{width: 36, height: 36}}
+                                                            >
+                                                                {getUserName(admin).charAt(0)}
+                                                            </Avatar>
+                                                        </Tooltip>
+                                                    ))}
+                                                </AvatarGroup>
+                                            </Stack>
+                                        </TableCell>
+                                    
+                                        <TableCell>
+                                            {dayjs(form.createdAt).format('DD/MM/YYYY')}
+                                        </TableCell>
                                     </TableRow>
                                 ))}
 

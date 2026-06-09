@@ -42,7 +42,7 @@ const fieldToDraft = (field: FormField): FieldDraft => ({
 });
 
 const createDefaultPublishWizardState = (): PublishWizardState => ({
-    selectedGroups: [],
+    selectedTeams: [],
     selectedUsers: [],
     groupAssignmentMode: 'dynamic',
     settings: {
@@ -80,11 +80,15 @@ const normalizePublishSettings = (settings: Record<string, any> | null | undefin
 });
 
 const normalizePublishTargetState = (parsed: Record<string, any>, defaults: PublishWizardState): PublishWizardState => ({
-    selectedGroups: Array.isArray(parsed.selected_groups)
-        ? parsed.selected_groups
-        : Array.isArray(parsed.selectedGroups)
-            ? parsed.selectedGroups
-            : defaults.selectedGroups,
+    selectedTeams: Array.isArray(parsed.selected_teams)
+        ? parsed.selected_teams
+        : Array.isArray(parsed.selectedTeams)
+            ? parsed.selectedTeams
+            : Array.isArray(parsed.selected_groups)
+                ? parsed.selected_groups
+                : Array.isArray(parsed.selectedGroups)
+                    ? parsed.selectedGroups
+                    : defaults.selectedTeams,
     selectedUsers: Array.isArray(parsed.selected_users)
         ? parsed.selected_users
         : Array.isArray(parsed.selectedUsers)
@@ -133,10 +137,11 @@ const normalizeUserOptions = (data: any): PublishOption[] => {
         .map((user: any) => {
             const id = user.id ?? user.user_id;
             const name = user.name || user.user_name || `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            
             return id && name ? {
                 id: String(id),
                 name,
-                image: user.image || user.user_image || user.user_thumb_image || null,
+                user_thumb_image: user.user_image || user.user_thumb_image || null,
             } : null;
         })
         .filter(Boolean) as PublishOption[];
@@ -160,7 +165,7 @@ const toggleOption = (current: PublishOption[], option: PublishOption) =>
         : [...current, option];
 
 const buildPublishTargetPayload = (state: PublishWizardState) => ({
-    selected_groups: state.selectedGroups,
+    selected_teams: state.selectedTeams,
     selected_users: state.selectedUsers,
     group_assignment_mode: state.groupAssignmentMode,
     settings: {

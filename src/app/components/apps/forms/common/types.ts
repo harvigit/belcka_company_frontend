@@ -54,14 +54,14 @@ export type FormRecord = {
         first_name: string;
         last_name: string;
         email?: string;
-        image?: string | null;
+        createdBy_thumb_image?: string | null;
     };
     administrators?: {
+        admin_thumb_image?: string | null;
         id: number;
         first_name: string;
         last_name: string;
         email?: string;
-        image?: string | null;
     }[];
 };
 
@@ -101,12 +101,20 @@ export type FieldDraft = {
     conditions: FormFieldCondition[];
 };
 
-export type PublishOption = {
+export type PublishUsersOption = {
     id: string;
     name: string;
-    image?: string | null;
+    user_thumb_image?: string | null;
     memberCount?: number;
 };
+
+export type PublishTeamsOption = {
+    memberCount?: number;
+    id: string;
+    name: string;
+};
+
+export type PublishOption = PublishUsersOption | PublishTeamsOption;
 
 export type PublishSettings = {
     publishMode: 'now' | 'schedule';
@@ -125,8 +133,8 @@ export type PublishSettings = {
 };
 
 export type PublishWizardState = {
-    selectedGroups: PublishOption[];
-    selectedUsers: PublishOption[];
+    selectedTeams: PublishTeamsOption[];
+    selectedUsers: PublishUsersOption[];
     groupAssignmentMode: 'dynamic' | 'fixed';
     settings: PublishSettings;
 };

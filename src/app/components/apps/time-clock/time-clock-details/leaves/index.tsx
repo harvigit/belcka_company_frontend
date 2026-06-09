@@ -475,22 +475,14 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                                         const routeFn = REQUEST_ROUTE_MAP['Leave'];
                                         if (routeFn) {
                                             const formattedDate = work.start_date
-                                                ? format(
-                                                    parse(work.start_date, 'dd/MM/yyyy', new Date()),
-                                                    'yyyy-MM-dd',
-                                                )
+                                                ? format(parse(work.start_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
                                                 : undefined;
 
                                             const formattedEndDate = work.end_date
-                                                ? format(
-                                                    parse(work.end_date, 'dd/MM/yyyy', new Date()),
-                                                    'yyyy-MM-dd',
-                                                )
+                                                ? format(parse(work.end_date, 'dd/MM/yyyy', new Date()), 'yyyy-MM-dd')
                                                 : undefined;
 
-                                            router.push(
-                                                routeFn(work.user_id, formattedDate, formattedEndDate),
-                                            );
+                                            router.push(routeFn(work.user_id, formattedDate, formattedEndDate));
                                             onClose();
                                         }
                                     }}
@@ -549,38 +541,35 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                                             {work.leave_type}
                                         </Typography>
                                     </Box>
+                                    
                                     <Box display={'flex'} gap={1} mt={1}>
                                         <Avatar
                                             src={work.user_image}
                                             alt={work.user_name}
                                             sx={{width: 36, height: 36}}
                                         />
-                                        <Box
-                                            display={'flex'}
-                                            justifyContent={'space-between'}
-                                            width={'100%'}
-                                        >
+                                        
+                                        <Box display={'flex'} justifyContent={'space-between'} width={'100%'}>
                                             <Box>
                                                 <Typography variant="h1" fontSize={'16px !important'}>
                                                     {work.user_name}
                                                 </Typography>
+                                                
                                                 <Typography>
                                                     {work.start_date
                                                         ? `Date: ${capitalize(work.start_date)} ${
                                                             work.is_allday_leave ? `- ${work.end_date}` : ''
-                                                        }`
-                                                        : ''}
+                                                        }` : ''}
                                                 </Typography>
+                                                
                                                 <Typography>
                                                     {work.start_time
                                                         ? `Time: ${capitalize(work.start_time)} ${
-                                                            !work.is_allday_leave
-                                                                ? `- ${work.end_time}`
-                                                                : ''
-                                                        }`
-                                                        : ''}
+                                                            !work.is_allday_leave ? `- ${work.end_time}` : ''
+                                                        }` : ''}
                                                 </Typography>
                                             </Box>
+                                            
                                             {work.request_status !== 0 && (
                                                 <Box justifyContent={'flex-end'}>
                                                     <Typography
@@ -603,6 +592,7 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                                             )}
                                         </Box>
                                     </Box>
+                                    
                                     {work.manager_note && (
                                         <Box
                                             display={'flex'}
@@ -775,7 +765,6 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                         ))}
 
                         {calendarDays.map((day) => {
-                            
                             const dayLeaves = leavesForDate(day);
                             const selected = isSameDay(day, selectedCalendarDate);
                             const inMonth = isSameMonth(day, calendarMonth);
@@ -795,8 +784,7 @@ export default function LeaveLists({open, onClose, queryParams}: Props) {
                                         borderRight: '1px solid #edf2f7',
                                         borderBottom: '1px solid #edf2f7',
                                         cursor: 'pointer',
-                                        backgroundColor: selected ? '#e8f1ff'
-                                            : inSelectedRange ? 'rgba(232, 241, 255, 0.46)' : 'rgba(255,255,255,0.72)',
+                                        backgroundColor: selected ? '#e8f1ff' : inSelectedRange ? 'rgba(232, 241, 255, 0.46)' : 'rgba(255,255,255,0.72)',
                                         opacity: inMonth ? 1 : 0.42,
                                         boxShadow: selected ? 'inset 0 0 0 2px #0b63ce' : 'none',
                                         overflow: 'hidden',

@@ -104,15 +104,15 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
         setSaving(true);
         try {
             const publishTarget = buildPublishTargetPayload(publishWizardState);
-            const currentGroupMemberCount = publishWizardState.selectedGroups.reduce(
-                (sum, group) => sum + Number(group.memberCount || 0),
+            const currentTeamMemberCount = publishWizardState.selectedTeams.reduce(
+                (sum, team) => sum + Number(team.memberCount || 0),
                 0,
             );
-            const currentAssigneeCount = currentGroupMemberCount + publishWizardState.selectedUsers.length;
+            const currentAssigneeCount = currentTeamMemberCount + publishWizardState.selectedUsers.length;
             const payload = {
                 name: name.trim(),
                 status: 'DRAFT',
-                assigned_to: `${publishWizardState.selectedGroups.length} groups, ${publishWizardState.selectedUsers.length} users (${currentAssigneeCount} current assignees)`,
+                assigned_to: `${publishWizardState.selectedTeams.length} teams, ${publishWizardState.selectedUsers.length} users (${currentAssigneeCount} current assignees)`,
                 fields,
                 publish_target: publishTarget,
             };

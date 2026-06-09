@@ -97,11 +97,9 @@ const TemplateLibraryDialog = ({open, onClose, onScratch, onSelected}: Props) =>
                         <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} mb={2}>
                             <CustomTextField
                                 select
-                                size="small"
-                                label="Category"
                                 value={category}
                                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => setCategory(event.target.value)}
-                                sx={{minWidth: 150}}
+                                sx={{minWidth: {xs: '100%', sm: 260}}}
                             >
                                 {categories.map((item) => (
                                     <MenuItem key={item} value={item}>
@@ -109,12 +107,21 @@ const TemplateLibraryDialog = ({open, onClose, onScratch, onSelected}: Props) =>
                                     </MenuItem>
                                 ))}
                             </CustomTextField>
+                           
                             <CustomTextField
-                                size="small"
-                                placeholder="Search templates"
+                                className="custom_font"
                                 value={search}
                                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)}
                                 fullWidth
+                                variant="outlined"
+                                placeholder="Search templates"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        height: 44,
+                                        borderRadius: 1.5,
+                                        bgcolor: '#fff',
+                                    },
+                                }}
                             />
                         </Stack>
                         <List disablePadding>
