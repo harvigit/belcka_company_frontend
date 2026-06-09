@@ -31,6 +31,11 @@ import {
     IconWifi,
     IconX,
 } from '@tabler/icons-react';
+import {
+    GoogleMap,
+    MarkerF,
+    useJsApiLoader,
+} from '@react-google-maps/api';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import CustomTextField from '../../forms/theme-elements/CustomTextField';
@@ -296,7 +301,13 @@ const LocationMapPreview = ({location, onRefresh}: {
 }) => {
     const latitude = String(location.latitude);
     const longitude = String(location.longitude);
-    const mapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(`${latitude},${longitude}`)}&z=16&output=embed`;
+    const numericLatitude = Number(location.latitude);
+    const numericLongitude = Number(location.longitude);
+    const hasValidCoordinates = Number.isFinite(numericLatitude) && Number.isFinite(numericLongitude);
+    const position = hasValidCoordinates ? {lat: numericLatitude, lng: numericLongitude} : null;
+    const {isLoaded: isMapLoaded, loadError: mapLoadError} = useJsApiLoader({
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '',
+    });
 
     return (
     <Box
@@ -325,25 +336,31 @@ const LocationMapPreview = ({location, onRefresh}: {
                 </IconButton>
             )}
         </Stack>
-        <Box
-            component="iframe"
-            src={mapSrc}
-            title={`Google map ${latitude}, ${longitude}`}
-            loading="lazy"
-            allowFullScreen
-            referrerPolicy="no-referrer-when-downgrade"
-            sx={{
-                display: 'block',
-                width: '100%',
-                height: 180,
-                borderTop: '1px solid #E5E7EB',
-                borderLeft: 0,
-                borderRight: 0,
-                borderBottom: 0,
-                pointerEvents: 'auto',
-                touchAction: 'auto',
-            }}
-        />
+        <Box sx={{height: 180, borderTop: '1px solid #E5E7EB', touchAction: 'none'}}>
+            {position && isMapLoaded && !mapLoadError ? (
+                <GoogleMap
+                    mapContainerStyle={{width: '100%', height: '100%'}}
+                    center={position}
+                    zoom={16}
+                    options={{
+                        clickableIcons: false,
+                        fullscreenControl: false,
+                        gestureHandling: 'greedy',
+                        mapTypeControl: false,
+                        streetViewControl: false,
+                        zoomControl: true,
+                    }}
+                >
+                    <MarkerF position={position} />
+                </GoogleMap>
+            ) : (
+                <Stack alignItems="center" justifyContent="center" sx={{height: '100%', px: 2}}>
+                    <Typography sx={{fontSize: 11, color: '#9CA3AF', textAlign: 'center'}}>
+                        {position ? 'Map is loading...' : 'Location coordinates are not valid.'}
+                    </Typography>
+                </Stack>
+            )}
+        </Box>
     </Box>
     );
 };
@@ -592,6 +609,7 @@ const PreviewField = ({
     const [locationError, setLocationError] = useState('');
     const [isRecordingAudio, setIsRecordingAudio] = useState(false);
     const [audioError, setAudioError] = useState('');
+    const currentLocationRequestedRef = useRef(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const audioStreamRef = useRef<MediaStream | null>(null);
@@ -686,6 +704,14 @@ const PreviewField = ({
             },
         );
     };
+
+    useEffect(() => {
+        if (field.type !== 'Location' || field.locationSelectBy === 'manual') return;
+        if (currentLocationRequestedRef.current) return;
+
+        currentLocationRequestedRef.current = true;
+        captureCurrentLocation();
+    }, [field.id, field.locationSelectBy, field.type]);
 
     const stopAudioStream = () => {
         audioStreamRef.current?.getTracks().forEach((track) => track.stop());

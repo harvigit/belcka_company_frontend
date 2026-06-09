@@ -297,7 +297,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                                     />
                                 }
                             />
-	                        </Box>
+                        </Box>
 
 	                        {/* Right: mobile preview */}
                         <Box
@@ -335,13 +335,13 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                         justifyContent="flex-end"
                         alignItems={{sm: 'center'}}
                     >
-                        <Button
-                            color="inherit"
-                            startIcon={<IconSettings size={17}/>}
-                            sx={{borderRadius: 1.5, color: '#111827', fontWeight: 700, width: {xs: '100%', sm: 'auto'}}}
-                        >
-                            Settings
-                        </Button>
+                        {/*<Button*/}
+                        {/*    color="inherit"*/}
+                        {/*    startIcon={<IconSettings size={17}/>}*/}
+                        {/*    sx={{borderRadius: 1.5, color: '#111827', fontWeight: 700, width: {xs: '100%', sm: 'auto'}}}*/}
+                        {/*>*/}
+                        {/*    Settings*/}
+                        {/*</Button>*/}
                         
                         <Button
                             variant="outlined"

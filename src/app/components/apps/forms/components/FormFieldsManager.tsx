@@ -7,7 +7,7 @@ import {DragDropContext, Draggable, Droppable, DropResult} from '@hello-pangea/d
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {emptyDraftForType, FieldDraft, FormField, FormFieldCondition, iconForType} from '../common';
 import {fieldToDraft} from '../common/formBuilderUtils';
-import {fieldConditions, fieldDisplayLabel} from '../formUtils';
+import {fieldConditions, fieldDisplayLabel, getFormulaExpressionError} from '../formUtils';
 import AddFieldPopover from './AddFieldPopover';
 import FieldSettingsDialog from './FieldSettingsDialog';
 
@@ -33,6 +33,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
     const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
     const [fieldDraft, setFieldDraft] = useState<FieldDraft>(emptyDraftForType(''));
     const [fieldQuestionError, setFieldQuestionError] = useState('');
+    const [fieldFormulaError, setFieldFormulaError] = useState('');
 
     const mapFieldTree = (source: FormField[], matcher: (field: FormField) => boolean, updater: (field: FormField) => FormField): FormField[] => source.map((field) => {
         if (matcher(field)) return updater(field);
@@ -98,6 +99,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setGroupingFieldIds([]);
         setFieldDraft(emptyDraftForType(''));
         setFieldQuestionError('');
+        setFieldFormulaError('');
     };
 
     const selectFieldType = (type: string) => {
@@ -106,6 +108,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setGroupingFieldIds([]);
         setFieldDraft(emptyDraftForType(type));
         setFieldQuestionError('');
+        setFieldFormulaError('');
         setAnchorEl(null);
     };
 
@@ -116,6 +119,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setGroupingFieldIds([]);
         setFieldDraft(fieldToDraft(field));
         setFieldQuestionError('');
+        setFieldFormulaError('');
     };
 
     const duplicateField = (field: FormField) => {
@@ -133,6 +137,18 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         if (activeFieldType !== 'Description' && !fieldDraft.label.trim()) {
             setFieldQuestionError('Please enter\'s the question.');
             return;
+        }
+        if (activeFieldType === 'Formula') {
+            const formulaNumberFields = fields.filter((field) => field.id !== editingFieldId && field.type === 'Number');
+            if (!fieldDraft.formulaExpression.trim()) {
+                setFieldFormulaError('Your field needs a formula');
+                return;
+            }
+            const formulaError = getFormulaExpressionError(fieldDraft.formulaExpression, formulaNumberFields);
+            if (formulaError) {
+                setFieldFormulaError(formulaError);
+                return;
+            }
         }
 
         const label = fieldDraft.label.trim();
@@ -191,6 +207,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setFieldTargetGroupId(null);
         setFieldDraft(emptyDraftForType('Group'));
         setFieldQuestionError('');
+        setFieldFormulaError('');
         setBulkActionAnchorEl(null);
     };
 
@@ -333,7 +350,22 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                 <MenuItem onClick={() => { if (activeGroupMenuId) setFields((cur) => { const ungroup = (source: FormField[]): FormField[] => source.flatMap((field) => field.id === activeGroupMenuId ? field.fields || [] : field.fields?.length ? [{...field, fields: ungroup(field.fields)}] : [field]); return ungroup(cur); }); setActiveGroupMenuId(null); setGroupMenuAnchorEl(null); }}>Ungroup</MenuItem>
                 <MenuItem onClick={() => { if (activeGroupMenuId) removeField(activeGroupMenuId); setActiveGroupMenuId(null); setGroupMenuAnchorEl(null); }} sx={{color: 'error.main'}}>Delete group</MenuItem>
             </Menu>
-            <FieldSettingsDialog open={Boolean(activeFieldType)} type={activeFieldType} draft={fieldDraft} availableFields={fields.filter((field) => field.id !== editingFieldId)} questionError={fieldQuestionError} onChange={(nextDraft) => { setFieldDraft(nextDraft); if (nextDraft.label.trim()) setFieldQuestionError(''); }} onClose={closeFieldDialog} onConfirm={confirmField}/>
+            <FieldSettingsDialog
+                open={Boolean(activeFieldType)}
+                type={activeFieldType}
+                draft={fieldDraft}
+                availableFields={fields.filter((field) => field.id !== editingFieldId)}
+                questionError={fieldQuestionError}
+                formulaError={fieldFormulaError}
+                onChange={(nextDraft) => {
+                    const formulaChanged = nextDraft.formulaExpression !== fieldDraft.formulaExpression;
+                    setFieldDraft(nextDraft);
+                    if (nextDraft.label.trim()) setFieldQuestionError('');
+                    if (formulaChanged) setFieldFormulaError('');
+                }}
+                onClose={closeFieldDialog}
+                onConfirm={confirmField}
+            />
             <Divider/>
 
             <Box sx={{flex: 1, overflow: 'auto', px: {xs: 2, sm: 3}, py: 2, bgcolor: '#fff'}}>

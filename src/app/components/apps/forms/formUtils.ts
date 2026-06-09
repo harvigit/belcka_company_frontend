@@ -13,6 +13,54 @@ export const fieldDisplayLabel = (field: FormField) => {
     return text || field.type;
 };
 
+const isFormulaTokenChar = (value: string) => /[a-zA-Z0-9_]/.test(value);
+
+const replaceFormulaFieldLabels = (expression: string, fieldLabels: string[]) => {
+    let nextExpression = '';
+    let index = 0;
+
+    while (index < expression.length) {
+        const matchedLabel = fieldLabels.find((label) => {
+            if (!expression.startsWith(label, index)) return false;
+
+            const previousChar = expression[index - 1] || '';
+            const nextChar = expression[index + label.length] || '';
+            const startsWithTokenChar = isFormulaTokenChar(label[0] || '');
+            const endsWithTokenChar = isFormulaTokenChar(label[label.length - 1] || '');
+
+            return (!startsWithTokenChar || !previousChar || !isFormulaTokenChar(previousChar))
+                && (!endsWithTokenChar || !nextChar || !isFormulaTokenChar(nextChar));
+        });
+
+        if (matchedLabel) {
+            nextExpression += '1';
+            index += matchedLabel.length;
+            continue;
+        }
+
+        nextExpression += expression[index];
+        index += 1;
+    }
+
+    return nextExpression;
+};
+
+export const getFormulaExpressionError = (expression: string, numberFields: FormField[]) => {
+    const formula = expression.trim();
+    if (!formula) return '';
+
+    const fieldLabels = numberFields
+        .map((field) => fieldDisplayLabel(field).trim())
+        .filter(Boolean)
+        .sort((a, b) => b.length - a.length);
+
+    const expressionWithoutFields = replaceFormulaFieldLabels(formula, fieldLabels);
+
+    return /^[0-9+\-*/().\s]+$/.test(expressionWithoutFields)
+        ? ''
+        : "Formula isn't a valid one";
+};
+
 export const fieldConditions = (field: FormField): FormFieldCondition[] => {
     if (Array.isArray(field.conditions) && field.conditions.length) {
         return field.conditions.map((condition, index) => ({

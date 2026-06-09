@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
     Box,
     Button,
@@ -12,6 +12,7 @@ import {
     Divider,
     FormControlLabel,
     IconButton,
+    Menu,
     MenuItem,
     Paper,
     Radio,
@@ -22,7 +23,9 @@ import {
     Typography,
 } from '@mui/material';
 import {
+    IconChevronDown,
     IconGripVertical,
+    IconHash,
     IconHelpCircle,
     IconMinus,
     IconPencil,
@@ -44,7 +47,7 @@ import {
     optionFieldTypes,
     placeholderForType,
 } from '../common';
-import {fieldDisplayLabel} from '../formUtils';
+import {fieldDisplayLabel, getFormulaExpressionError} from '../formUtils';
 import DescriptionEditorBox from './DescriptionEditorBox';
 
 type FieldSettingsDialogProps = {
@@ -53,9 +56,68 @@ type FieldSettingsDialogProps = {
     draft: FieldDraft;
     availableFields: FormField[];
     questionError: string;
+    formulaError: string;
     onChange: (draft: FieldDraft) => void;
     onClose: () => void;
     onConfirm: () => void;
+};
+
+type FormulaExpressionPart = {
+    type: 'field' | 'text';
+    value: string;
+};
+
+const isFormulaLabelBoundaryChar = (value: string) => !/[a-zA-Z0-9_]/.test(value);
+
+const tokenizeFormulaExpression = (expression: string, fields: FormField[]): FormulaExpressionPart[] => {
+    const labels = fields
+        .map((field) => fieldDisplayLabel(field).trim())
+        .filter(Boolean)
+        .sort((a, b) => b.length - a.length);
+    const parts: FormulaExpressionPart[] = [];
+    let buffer = '';
+    let index = 0;
+
+    const flushText = () => {
+        if (!buffer) return;
+        parts.push({type: 'text', value: buffer});
+        buffer = '';
+    };
+
+    while (index < expression.length) {
+        const matchedLabel = labels.find((label) => {
+            if (!expression.startsWith(label, index)) return false;
+
+            const previousChar = expression[index - 1] || '';
+            const nextChar = expression[index + label.length] || '';
+
+            return (!previousChar || isFormulaLabelBoundaryChar(previousChar))
+                && (!nextChar || isFormulaLabelBoundaryChar(nextChar));
+        });
+
+        if (matchedLabel) {
+            flushText();
+            parts.push({type: 'field', value: matchedLabel});
+            index += matchedLabel.length;
+            continue;
+        }
+
+        buffer += expression[index];
+        index += 1;
+    }
+
+    flushText();
+    return parts;
+};
+
+const serializeFormulaEditor = (editor: HTMLDivElement | null) => {
+    if (!editor) return '';
+
+    return Array.from(editor.childNodes).map((node) => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node instanceof HTMLElement && node.dataset.formulaField) return node.dataset.formulaField;
+        return node.textContent || '';
+    }).join('');
 };
 
 const FieldSettingsDialog = ({
@@ -64,6 +126,7 @@ const FieldSettingsDialog = ({
                                  draft,
                                  availableFields,
                                  questionError,
+                                 formulaError,
                                  onChange,
                                  onClose,
                                  onConfirm
@@ -86,6 +149,14 @@ const FieldSettingsDialog = ({
     const isSimpleOptionField = isOptionField && !isImageSelection;
     const canAddCondition = availableFields.length > 0;
     const formulaNumberFields = availableFields.filter((field) => field.type === 'Number');
+    const formulaExpressionError = isFormula
+        ? formulaError || (draft.formulaExpression.trim()
+            ? getFormulaExpressionError(draft.formulaExpression, formulaNumberFields)
+            : '')
+        : '';
+    const [formulaFieldAnchorEl, setFormulaFieldAnchorEl] = useState<null | HTMLElement>(null);
+    const formulaEditorRef = useRef<HTMLDivElement | null>(null);
+    const formulaSelectionRef = useRef<Range | null>(null);
     const [isConditionEditorOpen, setIsConditionEditorOpen] = useState(false);
     const [conditionDrafts, setConditionDrafts] = useState<FormFieldCondition[]>([]);
     const usedConditionFieldIds = conditionDrafts.map((condition) => condition.fieldId).filter(Boolean);
@@ -100,7 +171,25 @@ const FieldSettingsDialog = ({
         }));
         setConditionDrafts(normalizedConditions);
         setIsConditionEditorOpen(false);
+        setFormulaFieldAnchorEl(null);
     }, [open]);
+
+    useEffect(() => {
+        if (!isFormula) return;
+
+        const editor = formulaEditorRef.current;
+        if (!editor || serializeFormulaEditor(editor) === draft.formulaExpression) return;
+
+        editor.replaceChildren();
+        tokenizeFormulaExpression(draft.formulaExpression, formulaNumberFields).forEach((part) => {
+            if (part.type === 'text') {
+                editor.appendChild(document.createTextNode(part.value));
+                return;
+            }
+
+            editor.appendChild(createFormulaFieldToken(part.value));
+        });
+    }, [isFormula, draft.formulaExpression, formulaNumberFields]);
 
     const normalizeConditions = (conditions: FormFieldCondition[]) => (
         conditions
@@ -130,6 +219,97 @@ const FieldSettingsDialog = ({
 
     const setDraftValue = <K extends keyof FieldDraft>(key: K, value: FieldDraft[K]) => {
         onChange({...draft, [key]: value});
+    };
+
+    const createFormulaFieldToken = (label: string) => {
+        const token = document.createElement('span');
+        token.contentEditable = 'false';
+        token.dataset.formulaField = label;
+        token.textContent = label;
+        token.style.display = 'inline-flex';
+        token.style.alignItems = 'center';
+        token.style.minHeight = '30px';
+        token.style.padding = '0 10px';
+        token.style.margin = '0 2px';
+        token.style.borderRadius = '6px';
+        token.style.backgroundColor = '#EEF7FF';
+        token.style.color = '#123044';
+        token.style.fontSize = '14px';
+        token.style.lineHeight = '30px';
+        token.style.verticalAlign = 'middle';
+        token.style.userSelect = 'none';
+        return token;
+    };
+
+    const saveFormulaSelection = () => {
+        const editor = formulaEditorRef.current;
+        const selection = window.getSelection();
+
+        if (!editor || !selection || selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        if (editor.contains(container) || editor === container) {
+            formulaSelectionRef.current = range.cloneRange();
+        }
+    };
+
+    const focusFormulaEditorAtEnd = () => {
+        const editor = formulaEditorRef.current;
+        if (!editor) return;
+
+        editor.focus();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        formulaSelectionRef.current = range.cloneRange();
+    };
+
+    const emitFormulaEditorChange = () => {
+        setDraftValue('formulaExpression', serializeFormulaEditor(formulaEditorRef.current));
+    };
+
+    const addFormulaField = (field: FormField) => {
+        const nextLabel = fieldDisplayLabel(field);
+        const editor = formulaEditorRef.current;
+        if (!editor) {
+            const spacer = draft.formulaExpression && !/\s$/.test(draft.formulaExpression) ? ' ' : '';
+            setDraftValue('formulaExpression', `${draft.formulaExpression}${spacer}${nextLabel}`);
+            setFormulaFieldAnchorEl(null);
+            return;
+        }
+
+        editor.focus();
+
+        const selection = window.getSelection();
+        const range = formulaSelectionRef.current || document.createRange();
+        if (!formulaSelectionRef.current) {
+            range.selectNodeContents(editor);
+            range.collapse(false);
+        }
+
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        const token = createFormulaFieldToken(nextLabel);
+        const caretNode = document.createTextNode('');
+        range.deleteContents();
+        range.insertNode(caretNode);
+        range.insertNode(token);
+
+        const nextRange = document.createRange();
+        nextRange.setStartAfter(caretNode);
+        nextRange.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(nextRange);
+        formulaSelectionRef.current = nextRange.cloneRange();
+
+        emitFormulaEditorChange();
+        setFormulaFieldAnchorEl(null);
     };
 
     const updateOption = (index: number, value: string) => {
@@ -572,7 +752,6 @@ const FieldSettingsDialog = ({
                                                 borderColor: 'divider',
                                             }}
                                         >
-                                            {iconForType('Rating')}
                                             <Typography fontSize={14}>{draft.ratingStarCount}</Typography>
                                         </Stack>
                                         <IconButton
@@ -782,65 +961,129 @@ const FieldSettingsDialog = ({
                             <Box>
                                 <Typography fontWeight={700} fontSize={14}>
                                     Formula builder
+                                    <Box component="span" sx={{color: '#8A99A8', display: 'inline-flex', ml: 0.5, verticalAlign: 'middle'}}>
+                                        <IconHelpCircle size={15}/>
+                                    </Box>
                                 </Typography>
                                 <Typography color="text.secondary" fontSize={13}>
-                                    Add number fields and operators. The result is read-only and updates automatically
-                                    in the form preview.
+                                    Start by adding or typing a field name.
+                                </Typography>
+                                <Typography color="text.secondary" fontSize={13}>
+                                    Use operators, fields, and numbers as needed.
                                 </Typography>
                             </Box>
                             <Box
                                 sx={{
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1,
-                                    overflow: 'hidden',
+                                    overflow: 'visible',
                                 }}
                             >
                                 <Stack
-                                    direction={{xs: 'column', sm: 'row'}}
-                                    justifyContent="space-between"
-                                    alignItems={{sm: 'center'}}
-                                    spacing={1}
-                                    sx={{bgcolor: 'action.hover', px: 1.5, py: 1}}
+                                    direction="row"
+                                    justifyContent="flex-end"
+                                    alignItems="center"
+                                    sx={{
+                                        minHeight: 38,
+                                        px: 1.5,
+                                        borderRadius: '10px 10px 0 0',
+                                    }}
                                 >
-                                    <Typography color="text.secondary" fontSize={13}>
-                                        Number fields
-                                    </Typography>
-                                    <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                                        {formulaNumberFields.length ? formulaNumberFields.map((field) => (
-                                            <Chip
+                                    <Button
+                                        size="small"
+                                        endIcon={<IconChevronDown size={15}/>}
+                                        onClick={(event) => setFormulaFieldAnchorEl(event.currentTarget)}
+                                        disabled={!formulaNumberFields.length}
+                                        sx={{
+                                            color: '#0B8CFF',
+                                            textTransform: 'none',
+                                        }}
+                                    >
+                                        Add field
+                                    </Button>
+                                    <Menu
+                                        anchorEl={formulaFieldAnchorEl}
+                                        open={Boolean(formulaFieldAnchorEl)}
+                                        onClose={() => setFormulaFieldAnchorEl(null)}
+                                        PaperProps={{
+                                            sx: {
+                                                mt: 0.5,
+                                                minWidth: 92,
+                                                borderRadius: 2,
+                                                boxShadow: '0 16px 34px rgba(15, 23, 42, 0.14)',
+                                                overflow: 'hidden',
+                                            },
+                                        }}
+                                    >
+                                        {formulaNumberFields.map((field) => (
+                                            <MenuItem
                                                 key={field.id}
-                                                size="small"
-                                                label={fieldDisplayLabel(field)}
-                                                onClick={() => setDraftValue(
-                                                    'formulaExpression',
-                                                    `${draft.formulaExpression}${draft.formulaExpression ? ' ' : ''}${fieldDisplayLabel(field)}`,
-                                                )}
-                                                sx={{bgcolor: '#fff'}}
-                                            />
-                                        )) : (
-                                            <Typography color="text.disabled" fontSize={13}>
-                                                Add a Number field first
-                                            </Typography>
-                                        )}
-                                    </Stack>
+                                                onClick={() => addFormulaField(field)}
+                                                sx={{gap: 1, py: 1, fontSize: 14}}
+                                            >
+                                                <IconHash size={20}/>
+                                                {fieldDisplayLabel(field)}
+                                            </MenuItem>
+                                        ))}
+                                    </Menu>
                                 </Stack>
 
-                                <CustomTextField
-                                    value={draft.formulaExpression}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                        const nextValue = e.target.value.replace(/[^0-9a-zA-Z_+\-*/().\s]/g, '');
-                                        setDraftValue('formulaExpression', nextValue);
+                                <Box
+                                    ref={formulaEditorRef}
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    role="textbox"
+                                    aria-multiline="true"
+                                    data-placeholder={formulaNumberFields.length ? 'e.g. (Field name 1 + Field name 2)/ Field name 3' : 'Add a Number field first'}
+                                    onInput={() => {
+                                        emitFormulaEditorChange();
+                                        saveFormulaSelection();
                                     }}
-                                    placeholder="e.g. Number 1 + Number 2"
-                                    multiline
-                                    minRows={4}
-                                    fullWidth
-                                    variant="standard"
-                                    InputProps={{disableUnderline: true}}
-                                    sx={{px: 2, py: 1}}
+                                    onKeyUp={saveFormulaSelection}
+                                    onMouseUp={saveFormulaSelection}
+                                    onFocus={saveFormulaSelection}
+                                    onBlur={saveFormulaSelection}
+                                    onClick={() => {
+                                        if (!serializeFormulaEditor(formulaEditorRef.current)) focusFormulaEditorAtEnd();
+                                    }}
+                                    sx={{
+                                        minHeight: 106,
+                                        bgcolor: '#fff',
+                                        border: '1px solid',
+                                        borderColor: formulaExpressionError ? '#ff3b47' : 'divider',
+                                        borderRadius: '8px',
+                                        px: 2,
+                                        py: 1.25,
+                                        fontSize: 14,
+                                        lineHeight: '30px',
+                                        outline: 'none',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                        '&:focus': {
+                                            borderColor: formulaExpressionError ? '#ff3b47' : '#0B8CFF',
+                                        },
+                                        '&:empty:before': {
+                                            content: 'attr(data-placeholder)',
+                                            color: '#8A99A8',
+                                            pointerEvents: 'none',
+                                        },
+                                    }}
                                 />
+                                {formulaExpressionError && (
+                                    <Typography
+                                        fontSize={13}
+                                        sx={{
+                                            color: '#ff3b47',
+                                            mt: 0.75,
+                                        }}
+                                    >
+                                        {formulaExpressionError}
+                                    </Typography>
+                                )}
                             </Box>
+                            {!formulaNumberFields.length && (
+                                <Typography color="text.disabled" fontSize={13}>
+                                    Add a Number field before building a formula.
+                                </Typography>
+                            )}
                         </>
                     )}
 

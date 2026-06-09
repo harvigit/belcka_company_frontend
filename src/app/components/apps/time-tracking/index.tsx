@@ -1063,7 +1063,7 @@ const TimeTracking: React.FC<Props> = () => {
         libraries: GOOGLE_MAP_LIBRARIES,
     });
 
-    const { data, setData, fetchTimeClockData, userHasRatePermission, payrollCycle, fetchPayrollCycle, headerDetail } = useTimeClockData(userId);
+    const { data, setData, fetchTimeClockData, payrollCycle, fetchPayrollCycle, headerDetail } = useTimeClockData(userId);
     const { editingWorklogs, savingWorklogs, setSavingWorklogs, startEditingField, cancelEditingField, updateEditingField } = useEditingState();
 
     // ── Toast ──
@@ -1101,9 +1101,9 @@ const TimeTracking: React.FC<Props> = () => {
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
-            ...Object.fromEntries(AMOUNT_COLUMNS.map((col) => [col, userHasRatePermission])),
+            ...Object.fromEntries(AMOUNT_COLUMNS.map((col) => [col, true])),
         }));
-    }, [userHasRatePermission]);
+    }, []);
 
     useEffect(() => {
         if (clockInfo.user_is_working) {
@@ -1764,12 +1764,10 @@ const TimeTracking: React.FC<Props> = () => {
                                             Total Payable
                                         </Typography>
                                     </Box>
-                                    {userHasRatePermission && (
-                                        <IconButton size="small" onClick={() => setShowPayableAmounts(!showPayableAmounts)}
-                                                    sx={{ padding: '4px', color: '#1b5e20', '&:hover': { backgroundColor: 'rgba(27,94,32,0.08)' } }}>
-                                            {showPayableAmounts ? <IconEye size={18} /> : <IconEyeOff size={18} />}
-                                        </IconButton>
-                                    )}
+                                    <IconButton size="small" onClick={() => setShowPayableAmounts(!showPayableAmounts)}
+                                                sx={{ padding: '4px', color: '#1b5e20', '&:hover': { backgroundColor: 'rgba(27,94,32,0.08)' } }}>
+                                        {showPayableAmounts ? <IconEye size={18} /> : <IconEyeOff size={18} />}
+                                    </IconButton>
                                 </Box>
                                 {todayLoading || !currency ? <Skeleton variant="text" height={44} width={120} /> : (
                                     <Typography sx={{
@@ -1778,9 +1776,7 @@ const TimeTracking: React.FC<Props> = () => {
                                         letterSpacing: showPayableAmounts ? 'normal' : '3px',
                                         fontFamily: showPayableAmounts ? 'inherit' : 'monospace',
                                     }}>
-                                        {userHasRatePermission
-                                            ? showPayableAmounts ? `${currency}${clockInfo.weekly_payable_amount}` : '••••••'
-                                            : '0.00'}
+                                        {showPayableAmounts ? `${currency}${clockInfo.weekly_payable_amount}` : '••••••'}
                                     </Typography>
                                 )}
                             </CardContent>
@@ -1876,7 +1872,7 @@ const TimeTracking: React.FC<Props> = () => {
                                 anchorEl={anchorEl}
                                 handlePopoverOpen={handlePopoverOpen}
                                 handlePopoverClose={handlePopoverClose}
-                                userHasRatePermission={userHasRatePermission}
+                                userHasRatePermission
                                 amountColumns={AMOUNT_COLUMNS as unknown as string[]}
                                 onAddExpense={() => setAddExpenseSidebar(true)}
                                 onAddWorklog={() => setAddWorklogSidebar(true)}
