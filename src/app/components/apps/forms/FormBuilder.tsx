@@ -62,8 +62,17 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
 
     const isExisting = useMemo(() => Boolean(formId), [formId]);
 
+    const closeEditor = () => {
+        setPublishWizardOpen(false);
+        onClose();
+    };
+
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            setPublishWizardOpen(false);
+            return;
+        }
+
         setName('');
         setFormNameError('');
         setFieldsError('');
@@ -119,7 +128,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
 
             const savedId = res.data.info?.id || formId;
             if (savedId) onSaved?.(savedId);
-            onClose();
+            closeEditor();
         } catch (err) {
             toast.error((err as any)?.response?.data?.message || 'Failed to save form');
         } finally {
@@ -175,7 +184,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
         <>
             <Dialog
                 open={open}
-                onClose={onClose}
+                onClose={closeEditor}
                 TransitionComponent={SlideUp}
                 maxWidth={false}
                 fullWidth
@@ -222,7 +231,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                         <Typography fontWeight={700} fontSize={{xs: 15, sm: 17}}>
                             Form editor
                         </Typography>
-                        <IconButton onClick={onClose} size="small" edge="end">
+                        <IconButton onClick={closeEditor} size="small" edge="end">
                             <IconX size={20}/>
                         </IconButton>
                     </Stack>
