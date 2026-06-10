@@ -20,6 +20,7 @@ import {
     IconCalendar,
     IconChevronDown,
     IconClock,
+    IconDownload,
     IconFile,
     IconMapPin,
     IconMicrophone,
@@ -88,12 +89,47 @@ const FieldShell = ({field, error, children}: {
 );
 
 type GroupFormField = FormField & { fields?: FormField[] };
+type MediaPreviewType = 'image' | 'video';
+
+const IMAGE_UPLOAD_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
+const VIDEO_UPLOAD_EXTENSIONS = ['mp4', 'm4v', 'mkv', 'webm'];
+const IMAGE_UPLOAD_ACCEPT = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.heic',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+].join(',');
+const VIDEO_UPLOAD_ACCEPT = [
+    '.mp4',
+    '.m4v',
+    '.mkv',
+    '.webm',
+    'video/mp4',
+    'video/x-m4v',
+    'video/x-matroska',
+    'video/webm',
+].join(',');
 
 const groupChildFields = (field: FormField): FormField[] => {
     const groupField = field as GroupFormField;
 
     return Array.isArray(groupField.fields) ? groupField.fields : [];
 };
+
+const getFileExtension = (fileName: string) => {
+    const extension = fileName.split('.').pop();
+    return extension ? extension.toLowerCase() : '';
+};
+
+const isAllowedImageFile = (file: File) => IMAGE_UPLOAD_EXTENSIONS.includes(getFileExtension(file.name));
+
+const isAllowedVideoFile = (file: File) => VIDEO_UPLOAD_EXTENSIONS.includes(getFileExtension(file.name));
 
 const OptionButton = ({label, selected, multiple, image, onClick}: {
     label: string;
@@ -246,6 +282,242 @@ const UploadResultRow = ({file, onRemove}: {
     </Stack>
 );
 
+const MediaPreviewGrid = ({files, mediaType, onRemove}: {
+    files: FilePreview[];
+    mediaType: MediaPreviewType;
+    onRemove: (index: number) => void;
+}) => {
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const activeFile = activeIndex === null ? null : files[activeIndex];
+    const activeMediaUrl = activeFile?.preview || activeFile?.url || '';
+    const mediaLabel = mediaType === 'video' ? 'video' : 'image';
+
+    const downloadActiveMedia = () => {
+        if (!activeFile || !activeMediaUrl) return;
+
+        const link = document.createElement('a');
+        link.href = activeMediaUrl;
+        link.download = activeFile.name || `uploaded-${mediaLabel}-${(activeIndex ?? 0) + 1}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    useEffect(() => {
+        if (activeIndex !== null && !files[activeIndex]) {
+            setActiveIndex(null);
+        }
+    }, [activeIndex, files]);
+
+    if (!files.length) return null;
+
+    return (
+        <>
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: 0.75,
+                }}
+            >
+                {files.map((file, index) => {
+                    const mediaUrl = file.preview || file.url;
+
+                    if (!mediaUrl) {
+                        return (
+                            <UploadResultRow
+                                key={`${file.name}-${index}`}
+                                file={file}
+                                onRemove={() => onRemove(index)}
+                            />
+                        );
+                    }
+
+                    return (
+                        <Box
+                            key={`${file.name}-${index}`}
+                            sx={{
+                                position: 'relative',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                bgcolor: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                aspectRatio: '1 / 1',
+                            }}
+                        >
+                            <Box
+                                component="button"
+                                type="button"
+                                onClick={() => setActiveIndex(index)}
+                                sx={{
+                                    border: 0,
+                                    p: 0,
+                                    m: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    bgcolor: 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'block',
+                                }}
+                            >
+                                {mediaType === 'video' ? (
+                                    <Box
+                                        component="video"
+                                        src={mediaUrl}
+                                        muted
+                                        preload="metadata"
+                                        sx={{
+                                            width: '100%',
+                                            height: '100%',
+                                            display: 'block',
+                                            objectFit: 'cover',
+                                            pointerEvents: 'none',
+                                        }}
+                                    />
+                                ) : (
+                                    <Box
+                                        component="img"
+                                        src={mediaUrl}
+                                        alt={file.name || `Uploaded image ${index + 1}`}
+                                        sx={{
+                                            width: '100%',
+                                            height: '100%',
+                                            display: 'block',
+                                            objectFit: 'cover',
+                                        }}
+                                    />
+                                )}
+                            </Box>
+                            <Box
+                                component="button"
+                                type="button"
+                                aria-label={`Remove uploaded ${mediaLabel}`}
+                                onClick={() => onRemove(index)}
+                                sx={{
+                                    position: 'absolute',
+                                    top: 3,
+                                    right: 3,
+                                    width: 18,
+                                    height: 18,
+                                    border: 0,
+                                    borderRadius: '50%',
+                                    bgcolor: 'rgba(17, 24, 39, 0.72)',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    p: 0,
+                                    lineHeight: '18px',
+                                    fontSize: 14,
+                                }}
+                            >
+                                ×
+                            </Box>
+                        </Box>
+                    );
+                })}
+            </Box>
+
+            <Dialog
+                open={Boolean(activeFile)}
+                onClose={() => setActiveIndex(null)}
+                fullScreen
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'rgba(0, 0, 0, 0.78)',
+                    },
+                }}
+            >
+                <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{
+                        minHeight: 52,
+                        px: 1.25,
+                        bgcolor: 'rgba(17, 24, 39, 0.92)',
+                        color: '#fff',
+                    }}
+                >
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<IconDownload size={16} />}
+                        onClick={downloadActiveMedia}
+                        sx={{
+                            color: '#fff',
+                            borderColor: 'rgba(255,255,255,0.6)',
+                            textTransform: 'none',
+                            fontSize: 12,
+                            '&:hover': {
+                                borderColor: '#fff',
+                                bgcolor: 'rgba(255,255,255,0.08)',
+                            },
+                        }}
+                    >
+                        Download {mediaLabel}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => setActiveIndex(null)}
+                        sx={{
+                            bgcolor: 'rgba(17, 24, 39, 0.88)',
+                            color: '#fff',
+                            borderRadius: '999px',
+                            textTransform: 'none',
+                            boxShadow: 'none',
+                            '&:hover': {
+                                bgcolor: 'rgba(17, 24, 39, 1)',
+                                boxShadow: 'none',
+                            },
+                        }}
+                    >
+                        Close
+                    </Button>
+                </Stack>
+
+                <Stack
+                    alignItems="center"
+                    justifyContent="center"
+                    sx={{
+                        flex: 1,
+                        minHeight: 0,
+                        p: 2,
+                    }}
+                >
+                    {activeMediaUrl && mediaType === 'video' && (
+                        <Box
+                            component="video"
+                            src={activeMediaUrl}
+                            controls
+                            autoPlay
+                            sx={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                bgcolor: '#000',
+                                boxShadow: '0 16px 44px rgba(0,0,0,0.35)',
+                            }}
+                        />
+                    )}
+                    {activeMediaUrl && mediaType === 'image' && (
+                        <Box
+                            component="img"
+                            src={activeMediaUrl}
+                            alt={activeFile?.name || 'Uploaded image'}
+                            sx={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain',
+                                bgcolor: '#fff',
+                                boxShadow: '0 16px 44px rgba(0,0,0,0.35)',
+                            }}
+                        />
+                    )}
+                </Stack>
+            </Dialog>
+        </>
+    );
+};
+
 const UploadButton = ({label, icon, accept, multiple, onFiles}: {
     label: string;
     icon: React.ReactNode;
@@ -276,7 +548,16 @@ const UploadButton = ({label, icon, accept, multiple, onFiles}: {
         }}
     >
         <PillActionButton icon={icon} label={label} />
-        <input hidden type="file" accept={accept} multiple={multiple} onChange={(event) => onFiles(event.target.files)} />
+        <input
+            hidden
+            type="file"
+            accept={accept}
+            multiple={multiple}
+            onChange={(event) => {
+                onFiles(event.target.files);
+                event.target.value = '';
+            }}
+        />
     </Button>
 );
 
@@ -643,7 +924,18 @@ const PreviewField = ({
     });
 
     const handleFilesChange = async (files: FileList | null) => {
-        const selectedFiles = Array.from(files || []);
+        const selectedFiles = Array.from(files || []).filter((file) => {
+            if (field.type === 'Scanner' || field.type === 'Image upload') {
+                return isAllowedImageFile(file);
+            }
+
+            if (field.type === 'Video upload') {
+                return isAllowedVideoFile(file);
+            }
+
+            return true;
+        });
+
         if (!selectedFiles.length) return;
 
         const previews = await Promise.all(selectedFiles.map(buildFilePreview));
@@ -1237,22 +1529,35 @@ const PreviewField = ({
                     : 'Upload a file';
             const accept =
                 field.type === 'Image upload'
-                    ? 'image/*'
+                    ? IMAGE_UPLOAD_ACCEPT
                     : field.type === 'Video upload'
-                        ? 'video/*'
+                        ? VIDEO_UPLOAD_ACCEPT
                         : undefined;
             const icon = field.type === 'Video upload'
                 ? <IconVideo size={17} />
                 : field.type === 'File upload'
                     ? <IconFile size={17} />
                     : <IconCamera size={17} />;
+            const mediaPreviewType: MediaPreviewType | null = field.type === 'Image upload'
+                ? 'image'
+                : field.type === 'Video upload'
+                    ? 'video'
+                    : null;
 
             return (
                 <FieldShell field={field} error={error}>
                     <Stack spacing={0.75}>
-                        {fileValues.map((file, index) => (
-                            <UploadResultRow key={`${file.name}-${index}`} file={file} onRemove={() => removeUpload(index)} />
-                        ))}
+                        {mediaPreviewType ? (
+                            <MediaPreviewGrid
+                                files={fileValues}
+                                mediaType={mediaPreviewType}
+                                onRemove={removeUpload}
+                            />
+                        ) : (
+                            fileValues.map((file, index) => (
+                                <UploadResultRow key={`${file.name}-${index}`} file={file} onRemove={() => removeUpload(index)} />
+                            ))
+                        )}
                         {(field.allowMultipleUploads || fileValues.length === 0) && (
                             <UploadButton
                                 label={label}
@@ -1439,14 +1744,12 @@ const PreviewField = ({
             return (
                 <FieldShell field={field} error={error}>
                     <Stack spacing={0.75}>
-                        {fileValues.map((file, index) => (
-                            <UploadResultRow key={`${file.name}-${index}`} file={file} onRemove={() => removeUpload(index)} />
-                        ))}
+                        <MediaPreviewGrid files={fileValues} mediaType="image" onRemove={removeUpload} />
                         {(field.allowMultipleUploads || fileValues.length === 0) && (
                             <UploadButton
                                 label={fileValues.length ? 'Scan more files' : 'Scan'}
                                 icon={<IconScan size={17} />}
-                                accept="image/*"
+                                accept={IMAGE_UPLOAD_ACCEPT}
                                 multiple={field.allowMultipleUploads}
                                 onFiles={handleFilesChange}
                             />
