@@ -33,6 +33,7 @@ import IOSSwitch from "@/app/components/common/IOSSwitch";
 import CreateCategory from "../../categories/create";
 import toast from "react-hot-toast";
 import CreateSupplier from "../../suppliers/create";
+import ToolCategoriesDrawer from "../../tools/categories";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 
@@ -49,6 +50,7 @@ export interface ProductFormData {
   supplier_id?: number | null;
   barcode_text?: string;
   category_ids?: string;
+  tool_category_ids?: string;
   model_id?: number | null;
   manufacturer_id?: number | null;
   pack_off_qty?: string;
@@ -230,6 +232,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         supplier_code: "",
         supplier_id: null,
         category_ids: "",
+        tool_category_ids: "",
         model_id: null,
         manufacturer_id: null,
         pack_off_qty: "",
@@ -275,6 +278,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         supplier_code: product.supplier_code ?? "",
         supplier_id: product.supplier_id ?? null,
         category_ids: product.category_ids ?? "",
+        tool_category_ids: product.tool_category_ids ?? "",
         model_id: product?.model_id ?? null,
         manufacturer_id: product?.manufacturer_id ?? null,
         pack_off_qty: product.pack_off_qty ?? "",
@@ -302,7 +306,10 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         product.barcode_text ? product.barcode_text.split(",") : [""],
       );
 
-      if (product.category_ids) {
+      if (storeId && product.tool_category_ids) {
+        const ids = product.tool_category_ids.split(",").map(Number);
+        setSelectedCategories(categories.filter((c) => ids.includes(c.id)));
+      } else if (!storeId && product.category_ids) {
         const ids = product.category_ids.split(",").map(Number);
         setSelectedCategories(categories.filter((c) => ids.includes(c.id)));
       }
@@ -353,8 +360,10 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
       const payload = {
         ...categoryFormData,
       };
+      
+      const endpoint = storeId ? "tool-categories/create" : "categories/create";
 
-      const result = await api.post("categories/create", payload, {
+      const result = await api.post(endpoint, payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (result.data.IsSuccess == true) {
@@ -417,20 +426,19 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
     try {
       let url = `get-inventory-resources?company_id=${companyId}`;
 
-      if (isCategory !== undefined) {
-        url += `&is_tool_category=${isCategory}`;
-      }
-
       if (isEdit && product) {
         url = `get-inventory-resources?company_id=${companyId}&product_id=${productId}`;
-        if (isCategory !== undefined) {
-          url += `&is_tool_category=${isCategory}`;
-        }
       }
       const res = await api.get(url);
       if (res.data) {
         setSuppliers(res.data.suppliers);
-        setCategories(res.data.categories);
+        
+        if (storeId || isCategory) {
+          setCategories(res.data.tool_categories || []);
+        } else {
+          setCategories(res.data.categories || []);
+        }
+        
         setWeights(res.data.weight_units);
         setLengths(res.data.length_units);
         setPackOffs(res.data.pack_off_units);
@@ -491,11 +499,20 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
   };
 
   useEffect(() => {
-    setFormData((p) => ({
-      ...p,
-      category_ids: selectedCategories.map((c) => c.id).join(","),
-    }));
-  }, [selectedCategories]);
+    if (storeId) {
+      setFormData((p) => ({
+        ...p,
+        tool_category_ids: selectedCategories.map((c) => c.id).join(","),
+        category_ids: "",
+      }));
+    } else {
+      setFormData((p) => ({
+        ...p,
+        category_ids: selectedCategories.map((c) => c.id).join(","),
+        tool_category_ids: "",
+      }));
+    }
+  }, [selectedCategories, storeId]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
@@ -1865,15 +1882,24 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         </Box>
 
         {/* Add category */}
-        <CreateCategory
-          open={openCategoryModal}
-          onClose={() => setOpenCategoryModal(false)}
-          formData={categoryFormData}
-          setFormData={setCategoryFormData}
-          handleSubmit={handleCategorySubmit}
-          isSaving={isSaving}
-          companyId={companyId ?? null}
-        />
+        {storeId ? (
+          <ToolCategoriesDrawer
+            open={openCategoryModal}
+            onClose={() => setOpenCategoryModal(false)}
+            companyId={companyId ?? null}
+            onWorkUpdated={fetchResources}
+          />
+        ) : (
+          <CreateCategory
+            open={openCategoryModal}
+            onClose={() => setOpenCategoryModal(false)}
+            formData={categoryFormData}
+            setFormData={setCategoryFormData}
+            handleSubmit={handleCategorySubmit}
+            isSaving={isSaving}
+            companyId={companyId ?? null}
+          />
+        )}
 
         {/* Add supplier */}
         <CreateSupplier

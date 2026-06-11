@@ -1,6 +1,15 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Drawer, Box, IconButton, Typography, CircularProgress, Tooltip, Grid, Button } from "@mui/material";
+import {
+  Drawer,
+  Box,
+  IconButton,
+  Typography,
+  CircularProgress,
+  Tooltip,
+  Grid,
+  Button,
+} from "@mui/material";
 import { IconX, IconArrowLeft } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import dayjs from "dayjs";
@@ -11,7 +20,11 @@ interface ProductHistoryProps {
   productId: number | null;
 }
 
-const ProductHistory: React.FC<ProductHistoryProps> = ({ open, onClose, productId }) => {
+const ProductHistory: React.FC<ProductHistoryProps> = ({
+  open,
+  onClose,
+  productId,
+}) => {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState<number>(1);
@@ -29,7 +42,9 @@ const ProductHistory: React.FC<ProductHistoryProps> = ({ open, onClose, productI
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`product-tools/history?product_id=${productId}`);
+      const res = await api.get(
+        `product-tools/history?product_id=${productId}`,
+      );
       if (res.data?.IsSuccess) {
         setHistory(res.data.info || []);
       }
@@ -114,12 +129,15 @@ const ProductHistory: React.FC<ProductHistoryProps> = ({ open, onClose, productI
                   {paginatedFeeds.map((addr, index) => {
                     let color = "#0066ffff";
 
-                    if (addr.module === "product_trades" || addr.request_type === 129) {
+                    if (
+                      addr.module === "product_trades" ||
+                      addr.request_type === 129
+                    ) {
                       color = "#FF7F00";
                     }
 
-                    const userName =  addr.user_name || "System";
-                    const formattedDate = addr.date|| "-";
+                    const userName = addr.user_name || "System";
+                    const formattedDate = addr.date || "-";
                     const typeName = addr.type_name || "Activity";
 
                     return (
@@ -140,7 +158,7 @@ const ProductHistory: React.FC<ProductHistoryProps> = ({ open, onClose, productI
                           borderRadius: "25px",
                           boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
                           border: "1px solid rgb(240 240 240)",
-                          bgcolor: "#fff"
+                          bgcolor: "#fff",
                         }}
                       >
                         <Box
@@ -162,35 +180,25 @@ const ProductHistory: React.FC<ProductHistoryProps> = ({ open, onClose, productI
                             {typeName}
                           </Typography>
                         </Box>
-                        <Box
-                          display="initial"
-                          width="100%"
-                          textAlign="start"
-                        >
+                        <Box display="initial" width="100%" textAlign="start">
                           <Typography
                             fontSize="14px"
                             className="multi-ellipsis"
-                            sx={{ mt: 1 }}
                           >
                             <b>{userName}:</b>{" "}
-                            <Tooltip
-                              placement="top"
-                              title={addr.message}
-                              arrow
-                            >
+                            <Tooltip placement="top" title={addr.message} arrow>
                               <span>{addr.message}</span>
                             </Tooltip>
                           </Typography>
-                          <p
+                          <Typography
                             style={{
                               fontSize: "12px",
                               textAlign: "end",
                               color: "GrayText",
-                              margin: "8px 3px 3px 3px",
                             }}
                           >
                             {formattedDate}
-                          </p>
+                          </Typography>
                         </Box>
                       </Box>
                     );

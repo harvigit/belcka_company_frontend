@@ -38,6 +38,7 @@ interface CreateCategoryProps {
   setFormData: React.Dispatch<React.SetStateAction<CategoryFormData>>;
   handleSubmit: (e: React.FormEvent) => void;
   isSaving: boolean;
+  isToolCategory?: boolean;
 }
 
 const CreateCategory: React.FC<CreateCategoryProps> = ({
@@ -48,6 +49,7 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
   handleSubmit,
   isSaving,
   companyId,
+  isToolCategory,
 }) => {
   const [units, setUnits] = useState<any[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
@@ -142,7 +144,11 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get(`categories/get?company_id=${companyId}`);
+      const url = isToolCategory 
+        ? `tool-categories/get?company_id=${companyId}`
+        : `categories/get?company_id=${companyId}`;
+      
+      const res = await api.get(url);
       if (res.data) setUnits(res.data.info);
     } catch (err) {
       console.error("Failed to fetch units", err);
@@ -171,7 +177,7 @@ const CreateCategory: React.FC<CreateCategoryProps> = ({
               <ArrowBackIcon />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
-              Add Category
+              {isToolCategory ? "Add Tool Category" : "Add Category"}
             </Typography>
           </Box>
 

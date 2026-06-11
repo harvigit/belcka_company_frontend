@@ -80,6 +80,7 @@ import PurchaseOrderHistory from "../history";
 import TermsAndConditions from "../terms-conditions";
 import { IconHelp } from "@tabler/icons-react";
 import CancelOrder from "../cancel-orders";
+import OtherProductsDrawer from "../other-products";
 
 dayjs.extend(customParseFormat);
 
@@ -138,6 +139,7 @@ const PurchaseOrderList = () => {
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [openOtherProductsDrawer, setOpenOtherProductsDrawer] = useState(false);
   const [openConditionDrawer, setOpenConditionDrawer] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -713,7 +715,8 @@ const PurchaseOrderList = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -1357,7 +1360,8 @@ Team Belcka
                 item.purchase_orders.length <= 0 &&
                 !item.purchase_orders.some(
                   (cancel: any) => cancel.cancel_orders,
-                )
+                ) &&
+                item.status !== 4
               }
               onClick={(e) => {
                 e.stopPropagation();
@@ -1367,7 +1371,7 @@ Team Belcka
               <IconShoppingCartCancel size={18} />
             </IconButton>
 
-            {item.status !== 5 && (
+            {item.status !== 5 && item.status !== 4 &&(
               <Button
                 href={`/apps/receive-orders/${item.id}`}
                 onClick={(e) => e.stopPropagation()}
@@ -2051,6 +2055,29 @@ Team Belcka
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
+                    setOpenOtherProductsDrawer(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconPlus width={18} />
+                  </ListItemIcon>
+                  Add Products
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
                     setArchivePurchaseList(true);
                   }}
                   style={{
@@ -2155,6 +2182,12 @@ Team Belcka
           companyId={user.company_id ?? null}
           id={selectedId}
         />
+
+        <OtherProductsDrawer
+          open={openOtherProductsDrawer}
+          onClose={() => setOpenOtherProductsDrawer(false)}
+          companyId={user.company_id ?? null}
+        />
         <Box
           sx={{
             flex: 1,
@@ -2190,7 +2223,9 @@ Team Belcka
                               right: 0,
                               backgroundColor: "background.paper",
                               zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
                             }),
                           }}
                         >
@@ -2283,7 +2318,9 @@ Team Belcka
                                 right: 0,
                                 backgroundColor: "background.paper",
                                 zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
+                                boxShadow: isScrollable
+                                  ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                  : "none",
                               }),
                             }}
                             onClick={() => {

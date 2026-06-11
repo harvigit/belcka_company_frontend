@@ -189,7 +189,7 @@ const ReceivePurchaseOrder = () => {
       setFetchOrders(true);
 
       const res = await api.get(
-        `purchase-orders/detail?company_id=${user.company_id}&id=${orderId}`,
+        `purchase-orders/detail?company_id=${user.company_id}&id=${orderId}&is_web=true`,
       );
       const data = res.data.info;
 

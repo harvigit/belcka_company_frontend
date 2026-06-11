@@ -77,6 +77,7 @@ import ArchiveTools from "../archive";
 import ProductView from "../../products/view";
 import ToolCategoriesDrawer from "../categories";
 import ProductHistory from "../product-history";
+import { IconKeyframes } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -423,6 +424,8 @@ const ToolsList = () => {
         item.price?.toLowerCase().includes(search) ||
         item.supplier_code?.toLowerCase().includes(search) ||
         item.product_trades?.toLowerCase().includes(search) ||
+        item.product_categories?.toLowerCase().includes(search) ||
+        item.stock_status?.toLowerCase().includes(search) ||
         item.supplier_name?.toLowerCase().includes(search);
 
       return matchesSearch;
@@ -1344,7 +1347,7 @@ const ToolsList = () => {
                   }}
                 >
                   <ListItemIcon>
-                    <IconNotes width={18} />
+                    <IconKeyframes width={18} />
                   </ListItemIcon>
                   Categories
                 </Link>

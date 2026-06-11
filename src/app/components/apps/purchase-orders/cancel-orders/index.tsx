@@ -34,7 +34,7 @@ const CancelOrder: React.FC<Props> = ({ open, onClose, companyId, id }) => {
     setLoading(true);
     try {
       const res = await api.get(
-        `purchase-orders/detail?company_id=${companyId}&id=${id}`,
+        `purchase-orders/detail?company_id=${companyId}&id=${id}&is_web=true`,
       );
       if (res.data?.IsSuccess) {
         setProduct(res.data.info || null);
