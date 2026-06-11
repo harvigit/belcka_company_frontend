@@ -699,7 +699,15 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                 px={{xs: 2, sm: 3}} 
                 py={{xs: 1.5, sm: 2}} 
                 flexShrink={0}
-                sx={{bgcolor: '#fff'}}
+                sx={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 5,
+                    bgcolor: '#fff',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    boxShadow: '0 8px 18px rgba(15, 23, 42, 0.06)',
+                }}
             >
                 {formNameInput}
                 <Stack 

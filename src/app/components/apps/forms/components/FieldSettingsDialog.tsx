@@ -159,6 +159,7 @@ const FieldSettingsDialog = ({
     const formulaSelectionRef = useRef<Range | null>(null);
     const [isConditionEditorOpen, setIsConditionEditorOpen] = useState(false);
     const [conditionDrafts, setConditionDrafts] = useState<FormFieldCondition[]>([]);
+    const [rangeError, setRangeError] = useState('');
     const usedConditionFieldIds = conditionDrafts.map((condition) => condition.fieldId).filter(Boolean);
     const canAddMoreConditions = canAddCondition && conditionDrafts.length < availableFields.length;
 
@@ -172,6 +173,7 @@ const FieldSettingsDialog = ({
         setConditionDrafts(normalizedConditions);
         setIsConditionEditorOpen(false);
         setFormulaFieldAnchorEl(null);
+        setRangeError('');
     }, [open]);
 
     useEffect(() => {
@@ -218,7 +220,18 @@ const FieldSettingsDialog = ({
     };
 
     const setDraftValue = <K extends keyof FieldDraft>(key: K, value: FieldDraft[K]) => {
+        if (key === 'minValue' || key === 'maxValue') setRangeError('');
         onChange({...draft, [key]: value});
+    };
+
+    const handleConfirm = () => {
+        if (isNumbersSlider && Number(draft.minValue) > Number(draft.maxValue)) {
+            setRangeError('Minimum value cannot be greater than maximum value.');
+            return;
+        }
+
+        setRangeError('');
+        onConfirm();
     };
 
     const createFormulaFieldToken = (label: string) => {
@@ -688,7 +701,9 @@ const FieldSettingsDialog = ({
                                     type="number"
                                     value={draft.minValue}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraftValue('minValue', Number(e.target.value))}
+                                    onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.select()}
                                     variant="outlined"
+                                    error={Boolean(rangeError)}
                                     sx={{width: 90}}
                                 />
                                 <Typography fontSize={14} color="text.secondary">to</Typography>
@@ -697,10 +712,17 @@ const FieldSettingsDialog = ({
                                     type="number"
                                     value={draft.maxValue}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraftValue('maxValue', Number(e.target.value))}
+                                    onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.select()}
                                     variant="outlined"
+                                    error={Boolean(rangeError)}
                                     sx={{width: 90}}
                                 />
                             </Stack>
+                            {rangeError && (
+                                <Typography fontSize={12} color="error.main" mt={0.75}>
+                                    {rangeError}
+                                </Typography>
+                            )}
                         </>
                     )}
 
@@ -1542,7 +1564,7 @@ const FieldSettingsDialog = ({
                         Cancel
                     </Button>
                 )}
-                <Button variant="contained" onClick={onConfirm} sx={{borderRadius: 5}}>
+                <Button variant="contained" onClick={handleConfirm} sx={{borderRadius: 5}}>
                     Confirm
                 </Button>
             </DialogActions>

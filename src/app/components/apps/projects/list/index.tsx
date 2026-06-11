@@ -1900,6 +1900,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
             <EditProject
               open={projectEditOpen}
               onClose={() => setProjectEditOpen(false)}
+              onBudgetSaved={fetchProjects}
               formData={editFormData}
               setFormData={setEditFormData}
               project={editingProject}

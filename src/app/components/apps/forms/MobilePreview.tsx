@@ -1411,8 +1411,9 @@ const PreviewField = ({
         case 'Numbers slider':
             {
                 const min = typeof field.minValue === 'number' ? field.minValue : 0;
-                const max = typeof field.maxValue === 'number' && field.maxValue > min ? field.maxValue : 100;
-                const currentValue = typeof value === 'number' ? value : min;
+                const max = typeof field.maxValue === 'number' ? field.maxValue : 100;
+                const rawValue = typeof value === 'number' ? value : min;
+                const currentValue = Math.min(max, Math.max(min, rawValue));
 
                 return (
                     <FieldShell field={field} error={error}>

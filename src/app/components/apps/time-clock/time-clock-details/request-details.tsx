@@ -395,14 +395,12 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         return { defaultStart, defaultEnd };
     }, [today]);
 
-    const pendingRequestsCount = useMemo(() =>
-            requestList.filter(req => req.status === PENDING_STATUS).length,
-        [requestList]
+    const pendingRequestsCount = useMemo(() => 
+        requestList.filter(req => req.status === PENDING_STATUS).length, [requestList]
     );
 
     const pendingRequests = useMemo(() =>
-            requestList.filter(req => req.status === PENDING_STATUS),
-        [requestList]
+        requestList.filter(req => req.status === PENDING_STATUS), [requestList]
     );
 
     // Memoized callbacks
