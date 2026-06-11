@@ -345,8 +345,8 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                             sx={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                minHeight: {xs: 'auto', md: 'calc(100dvh - 190px)'},
-                                maxHeight: {xs: 'none', md: 'calc(100dvh - 190px)'},
+                                minHeight: 0,
+                                height: '100%',
                                 overflow: 'hidden',
                             }}
                         >
@@ -388,7 +388,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                                 alignItems: 'center',
                                 minHeight: 0,
                                 height: '100%',
-                                overflow: 'visible',
+                                overflow: 'auto',
                                 bgcolor: '#fff',
                                 p: {xs: 0, md: 2, xl: 3},
                             }}
