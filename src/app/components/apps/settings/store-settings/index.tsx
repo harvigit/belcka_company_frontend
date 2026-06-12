@@ -298,10 +298,17 @@ export default function StoreSettings() {
             />
           </Box>
         ) : (
-          <Box pb={4}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+              pb: 4,
+            }}
+          >
             {/* Render Assigned Teams */}
             {filteredTeamsData.map((teamSection) => (
-              <Box key={teamSection.team_id} mb={3}>
+              <Box key={teamSection.team_id}>
                 {/* Stunning Section Header */}
                 <Box
                   mb={1.5}

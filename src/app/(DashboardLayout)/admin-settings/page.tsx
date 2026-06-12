@@ -11,7 +11,6 @@ import {
     IconUsers,
     IconSquarePercentage,
     IconUsersMinus,
-    IconBuildingStore,
     IconFileAlert,
     IconUserCog
 } from '@tabler/icons-react';
@@ -24,16 +23,10 @@ import { User } from 'next-auth';
 import TradeList from '@/app/components/apps/settings/company-trades/list';
 import HistoryList from '@/app/components/apps/settings/history';
 import { IconCategoryPlus } from '@tabler/icons-react';
-import { IconBasket } from '@tabler/icons-react';
 import TradeCategoryList from '@/app/components/apps/trade-categories/list';
-import UnitList from '@/app/components/apps/units/list';
-import StockHistoryList from '@/app/components/apps/settings/history/stock-history';
 import ClientList from '@/app/components/apps/clients/list';
 import AnalyticsScore from '@/app/components/apps/analytics/score-settings';
 import RemoveUsers from '@/app/components/apps/settings/remove-users/list';
-import { IconCoinPound } from '@tabler/icons-react';
-import TeamPricing from '@/app/components/apps/team-pricing/index';
-import StoreSettings from '@/app/components/apps/settings/store-settings';
 import RequestAction from '@/app/components/apps/settings/request-action/list';
 import UserSettings from '@/app/components/apps/settings/user-settings';
 
@@ -134,58 +127,44 @@ const AdminSetting = () => {
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
-                                        icon={<IconCoinPound size="20" />}
-                                        label="Team Pricing"
-                                        {...a11yProps(4)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
                                         icon={<IconUsers size="20" />}
                                         label="Clients"
-                                        {...a11yProps(5)}
+                                        {...a11yProps(9)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUsersMinus size="20" />}
                                         label="Remove Users"
-                                        {...a11yProps(6)}
+                                        {...a11yProps(10)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconFileAlert size="20" />}
                                         label="Request Approvel"
-                                        {...a11yProps(7)}
-                                    />
-                                    <Tab
-                                        className="admin-settings"
-                                        iconPosition="start"
-                                        icon={<IconBuildingStore size="20" />}
-                                        label="Store Setting"
-                                        {...a11yProps(8)}
+                                        {...a11yProps(11)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconExclamationCircle size="20" />}
                                         label="History"
-                                        {...a11yProps(9)}
+                                        {...a11yProps(12)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconSquarePercentage size="20" />}
                                         label="Analytics Score"
-                                        {...a11yProps(10)}
+                                        {...a11yProps(13)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUserCog size="20" />}
                                         label="Users Setting"
-                                        {...a11yProps(11)}
+                                        {...a11yProps(14)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -211,28 +190,22 @@ const AdminSetting = () => {
                             <TabPanel value={value} index={3}>
                                 <TradeCategoryList />
                             </TabPanel>
-                            <TabPanel value={value} index={4}>
-                                <TeamPricing />
-                            </TabPanel>
-                            <TabPanel value={value} index={5}>
+                            <TabPanel value={value} index={9}>
                                 <ClientList />
                             </TabPanel>
-                            <TabPanel value={value} index={6}>
+                            <TabPanel value={value} index={10}>
                                 <RemoveUsers />
                             </TabPanel>
-                            <TabPanel value={value} index={7}>
+                            <TabPanel value={value} index={11}>
                                 <RequestAction />
                             </TabPanel>
-                            <TabPanel value={value} index={8}>
-                                <StoreSettings />
-                            </TabPanel>
-                            <TabPanel value={value} index={9}>
+                            <TabPanel value={value} index={12}>
                                 <HistoryList />
                             </TabPanel>
-                            <TabPanel value={value} index={10}>
+                            <TabPanel value={value} index={13}>
                                 <AnalyticsScore />
                             </TabPanel>
-                            <TabPanel value={value} index={11}>
+                            <TabPanel value={value} index={14}>
                                 <UserSettings />
                             </TabPanel>
                         </BlankCard>

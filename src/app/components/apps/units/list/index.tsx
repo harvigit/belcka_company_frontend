@@ -28,7 +28,6 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
-  Drawer,
 } from "@mui/material";
 import {
   flexRender,
@@ -64,16 +63,9 @@ import SkeletonLoader from "@/app/components/SkeletonLoader";
 import CreateUnit from "../create";
 import EditUnit from "../edit";
 import { IconEye } from "@tabler/icons-react";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-
 dayjs.extend(customParseFormat);
 
-interface Props {
-  openDrawer: boolean;
-  onClose: () => void;
-}
-
-const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
+const UnitList: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchUnit, setFetchUnit] = useState<boolean>(true);
@@ -209,7 +201,6 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
     setEditDrawerOpen(true);
   }, []);
 
-  
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -217,18 +208,23 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -401,49 +397,25 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
   }));
 
   return (
-    <Drawer
-      anchor="bottom"
-      open={openDrawer}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: 0,
-          height: "95vh",
-          boxShadow: "none",
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12,
-          overflow: "hidden",
-        },
+    <Box
+      sx={{
+        height: "calc(100vh - 100px)",
+        display: "flex",
+        flexDirection: "column",
+        p: 2,
       }}
     >
-      {/* Header */}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent={"space-between"}
-        ml={-2}
-        mb={1}
-        p={2}
-        pb={0}
-      >
-        <Box display={"flex"} alignItems={"center"}>
-          <IconButton onClick={onClose}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" fontWeight={700}>
-            Units
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose}>
-          <IconX />
-        </IconButton>
-      </Box>
+      <Typography variant="h4" fontWeight={700} mb={1}>
+        Units
+      </Typography>
 
       <Box
         sx={{
-          height: "calc(100vh - 100px)",
           display: "flex",
           flexDirection: "column",
+          flex: 1,
+          boxShadow: 8,
+
         }}
       >
         {/* Render the search and table */}
@@ -455,7 +427,7 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 1, sm: 2, md: 4 }}
         >
-          <Grid display="flex" gap={1} alignItems={"center"}>
+          <Grid display="flex" gap={1} alignItems={"center"} pt={1}>
             <TextField
               id="search"
               type="text"
@@ -693,14 +665,17 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
                                 : header.column.id === "select"
                                   ? 30
                                   : "auto",
-                          
+
                             ...(header.column.id === "actions" && {
                               position: "sticky",
                               right: 0,
                               backgroundColor: "background.paper",
                               zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
                         >
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
@@ -780,14 +755,21 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}>
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            padding: "10px",
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -884,7 +866,7 @@ const UnitList: React.FC<Props> = ({ openDrawer, onClose }) => {
           </Box>
         </Stack>
       </Box>
-    </Drawer>
+    </Box>
   );
 };
 

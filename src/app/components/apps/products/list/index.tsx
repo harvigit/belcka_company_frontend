@@ -56,6 +56,7 @@ import {
   IconSearch,
   IconTrash,
   IconX,
+  IconSettings,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -79,13 +80,13 @@ import { useDropzone } from "react-dropzone";
 import ProductView from "../view";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ProductHistory from "../history";
-import UnitList from "../../units/list";
 import { IconLayersIntersect } from "@tabler/icons-react";
 import SetList from "../sets/list";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ManagePriceDrawer from "../manage-price";
 import IOSSwitch from "@/app/components/common/IOSSwitch";
 import HireOrderHistory from "../hire-history";
+import Settings from "../settings";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -162,6 +163,7 @@ const ProductList = () => {
   const [currency, setCurrency] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [settingOpen, setSettingOpen] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     id: 0,
     company_id: user?.company_id,
@@ -173,7 +175,6 @@ const ProductList = () => {
     status: true,
     qty: 0,
   });
-  const [unitDrawerOpen, setUnitDrawerOpen] = useState(false);
   const [productSetOpen, setProductSetOpen] = useState(false);
   const [hireHistoryDrawer, setHireHistoryDrawer] = useState(false);
   const [openModel, setOpenModel] = useState(false);
@@ -2230,6 +2231,15 @@ const ProductList = () => {
             >
               <IconEye />
             </IconButton>
+            <Tooltip title="Settings">
+              <IconButton
+                color="primary"
+                onClick={() => setSettingOpen(true)}
+                sx={{ ml: 1 }}
+              >
+                <IconSettings width={18} />
+              </IconButton>
+            </Tooltip>
             <Popover
               open={Boolean(anchorEl2)}
               anchorEl={anchorEl2}
@@ -2599,29 +2609,6 @@ const ProductList = () => {
                   Archived Product list
                 </Link>
               </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <Link
-                  color="body1"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setUnitDrawerOpen(true);
-                  }}
-                  style={{
-                    width: "100%",
-                    color: "#11142D",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }}
-                >
-                  <ListItemIcon>
-                    <IconBasket width={18} />
-                  </ListItemIcon>
-                  Units
-                </Link>
-              </MenuItem>
             </Menu>
 
             {/* Filter Dialog */}
@@ -2769,11 +2756,6 @@ const ProductList = () => {
         <ProductHistory
           open={openDrawer}
           onClose={() => setOpenDrawer(false)}
-        />
-
-        <UnitList
-          openDrawer={unitDrawerOpen}
-          onClose={() => setUnitDrawerOpen(false)}
         />
 
         <SetList
@@ -3028,6 +3010,10 @@ const ProductList = () => {
             </Stack>
           </Box>
         </Stack>
+        <Settings
+          settingOpen={settingOpen}
+          onClose={() => setSettingOpen(false)}
+        />
       </Box>
     </PermissionGuard>
   );

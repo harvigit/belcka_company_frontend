@@ -57,6 +57,8 @@ const AdjustStock: React.FC<Props> = ({
   const [users, setUsers] = useState<any[]>([]);
   const [mode, setMode] = useState<"note" | "user">("note");
   const [products, setProducts] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<any[]>([]);
   const [productId, setProductId] = useState("");
   const [product, setProduct] = useState<any>([]);
   const [fetching, setFetching] = useState(false);
@@ -112,6 +114,35 @@ const AdjustStock: React.FC<Props> = ({
       setPackOffUnit(editData.pack_off_unit || "");
     }
   }, [open]);
+
+  const fetchExpenseResources = async () => {
+    try {
+      const res = await api.get("/expense/get-resources");
+      if (res.data) {
+        setProjects(res.data.projects || []);
+        setAddresses(res.data.addresses || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchExpenseResources();
+    }
+  }, [open]);
+
+  const filteredAddresses = React.useMemo(() => {
+    if (!formData.project_id) return [];
+    return addresses.filter(
+      (addr) => addr.project_id === Number(formData.project_id),
+    );
+  }, [addresses, formData.project_id]);
+
+  useEffect(() => {
+    setFormData((prev: any) => ({ ...prev, address_id: null }));
+  }, [formData.project_id, setFormData]);
 
   const fetchProducts = async () => {
     if (!productId || fetching) return;
@@ -225,6 +256,8 @@ const AdjustStock: React.FC<Props> = ({
         price: editData?.price,
         mode: "edit",
         is_sub_qty: isSubQty ? 1 : 0,
+        project_id: formData.project_id || null,
+        address_id: formData.address_id || null,
       };
 
       if (isSubQty) {
@@ -419,6 +452,46 @@ const AdjustStock: React.FC<Props> = ({
               )}
             </Button>
           </Box>
+        </Box>
+
+        <Divider />
+
+        {/* PROJECT / ADDRESS */}
+        <Box p={3}>
+          <Typography variant="body2" fontWeight={600} mb={1}>
+            Project
+          </Typography>
+          <Autocomplete
+            fullWidth
+            size="small"
+            options={projects}
+            value={projects.find((t: any) => t.id === formData.project_id) ?? null}
+            onChange={(e, val) =>
+              setFormData((prev: any) => ({ ...prev, project_id: val?.id || null }))
+            }
+            getOptionLabel={(option) => option.name || ""}
+            renderInput={(params) => (
+              <CustomTextField {...params} placeholder="Select Project" />
+            )}
+            sx={{ mb: 2 }}
+          />
+
+          <Typography variant="body2" fontWeight={600} mb={1}>
+            Address
+          </Typography>
+          <Autocomplete
+            fullWidth
+            size="small"
+            options={filteredAddresses}
+            value={filteredAddresses.find((t: any) => t.id === formData.address_id) ?? null}
+            onChange={(e, val) =>
+              setFormData((prev: any) => ({ ...prev, address_id: val?.id || null }))
+            }
+            getOptionLabel={(option) => option.name || ""}
+            renderInput={(params) => (
+              <CustomTextField {...params} placeholder="Select Address" />
+            )}
+          />
         </Box>
 
         <Divider />

@@ -37,6 +37,7 @@ export interface StoreConflict {
     total_amount: string;
     currency: string;
     message: string;
+    max_limit: string;
 }
 
 // Helpers
@@ -159,10 +160,10 @@ const StoreDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#fff' }}>
             <DrawerHeader
-                title={conflict.product_short_name}
+                title={conflict.store_name}
                 subtitle={conflict.store_name}
                 onClose={onClose}
-                badge={<LabelPill label="Amount Exceeded" color="#0E7490" bg="#ECFEFF" border="#A5F3FC" />}
+                badge={<LabelPill label="Amount Limit Exceeded" color="#0E7490" bg="#ECFEFF" border="#A5F3FC" />}
             />
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
                 <Typography sx={{
@@ -185,9 +186,9 @@ const StoreDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved 
                 {/* Stats grid */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, mb: 2 }}>
                     {[
-                        { label: 'QTY', value: String(conflict.current_qty), color: '#111827' },
-                        { label: 'UNIT PRICE', value: `${conflict.currency}${conflict.price}`, color: '#111827' },
+                        // { label: 'QTY', value: String(conflict.current_qty), color: '#111827' },
                         { label: 'TOTAL', value: `${conflict.currency}${conflict.total_amount}`, color: '#DC2626' },
+                        { label: 'Max Limit', value: `${conflict.currency}${conflict.max_limit}`, color: '#111827' },
                     ].map(({ label, value, color }) => (
                         <Box key={label} sx={{
                             p: 1.25, borderRadius: '8px', bgcolor: '#F9FAFB',
@@ -210,10 +211,10 @@ const StoreDetailPanel = React.memo(({ conflict, isLoading, onClose, onResolved 
                         fontSize: '0.68rem', color: '#9CA3AF', fontWeight: 700, mb: 0.75,
                         textTransform: 'uppercase', letterSpacing: '0.05em',
                     }}>
-                        Product Details
+                        Store Details
                     </Typography>
                     {[
-                        { label: 'Product', value: conflict.product_short_name },
+                        // { label: 'Product', value: conflict.product_short_name },
                         { label: 'Store', value: conflict.store_name },
                         { label: 'Conflict Type', value: conflict.conflict_type === 'stock_amount_exceeded' ? 'Amount Threshold Exceeded' : 'Quantity Exceeded' },
                     ].map(({ label, value }) => (
