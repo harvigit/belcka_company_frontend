@@ -41,9 +41,9 @@ import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import PermissionGuard from '@/app/auth/PermissionGuard';
-import AddFormDialog from './AddFormDialog';
-import TemplateLibraryDialog from './TemplateLibraryDialog';
-import FormBuilder from './FormBuilder';
+import AddFormDialogComponent from './AddFormDialog';
+import TemplateLibraryDialogComponent from './TemplateLibraryDialog';
+import FormBuilderComponent from './FormBuilder';
 import { FormRecord, FormTemplate } from './common';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
@@ -727,7 +727,7 @@ const Index = () => {
 
             {/* ── Dialogs / Drawer ── */}
 
-            <AddFormDialog
+            <AddFormDialogComponent
                 open={addOpen}
                 onClose={() => setAddOpen(false)}
                 onScratch={openNewFormEditor}
@@ -737,14 +737,14 @@ const Index = () => {
                 }}
             />
 
-            <TemplateLibraryDialog
+            <TemplateLibraryDialogComponent
                 open={templateOpen}
                 onClose={() => setTemplateOpen(false)}
                 onScratch={openNewFormEditor}
                 onSelected={openTemplateFormEditor}
             />
 
-            <FormBuilder
+            <FormBuilderComponent
                 open={editorOpen}
                 onClose={() => setEditorOpen(false)}
                 formId={editingFormId}
