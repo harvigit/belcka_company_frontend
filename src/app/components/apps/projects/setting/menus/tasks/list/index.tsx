@@ -43,6 +43,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconEye,
+  IconFilter,
   IconNotes,
   IconSearch,
   IconTrash,
@@ -53,34 +54,58 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
 import { IconDotsVertical } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import CreateTask from "../create";
+import ArchiveTask from "../archive";
 import { IconEdit } from "@tabler/icons-react";
-import CreateLocation from "../create";
-import EditLocation from "../edit";
-import ArchiveLocation from "../archive";
+import EditTask from "../edit";
+import { AxiosResponse } from "axios";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 
 dayjs.extend(customParseFormat);
 
-export type LocationList = {
+export interface TradeList {
   id: number;
   name: string;
-  company_name?: string;
+  trade_id: number;
+}
+
+export type TaskList = {
+  id: number;
+  name: string;
+  trade_id?: number;
+  trade_name?: string;
+  duration: string;
+  repeatable_job: boolean;
+  is_pricework: boolean;
+  rate: string;
+  units: string;
+};
+
+export type UserList = {
+  id: number;
+  name: string;
 };
 
 const TablePagination = () => {
-  const [data, setData] = useState<LocationList[]>([]);
+  const [data, setData] = useState<TaskList[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [fetchLocation, setFetchLocation] = useState<boolean>(true);
+  const [fetchTask, setFetchTask] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  const [filters, setFilters] = useState({
+    team: "",
+  });
+
+  const [tempFilters, setTempFilters] = useState(filters);
   const [open, setOpen] = useState(false);
 
   const session = useSession();
@@ -89,6 +114,7 @@ const TablePagination = () => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [trade, setTrade] = useState<TradeList[]>([]);
   const [usersToDelete, setUsersToDelete] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -102,7 +128,13 @@ const TablePagination = () => {
   const [formData, setFormData] = useState<any>({
     id: 0,
     name: "",
+    trade_id: "",
     company_id: id.company_id,
+    duration: 0,
+    rate: 0,
+    units: "",
+    is_pricework: false,
+    repeatable_job: false,
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -113,30 +145,48 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  const fetchLocations = async () => {
-    setFetchLocation(true);
+  const fetchTasks = async () => {
+    setFetchTask(true);
     try {
-      const res = await api.get(
-        `company-locations/get?company_id=${id.company_id}`,
-      );
+      const res = await api.get(`type-works/get?company_id=${id.company_id}`);
       if (res.data) {
         setData(res.data.info);
         setarchiveDrawerOpen(false);
       }
     } catch (err) {
-      console.error("Failed to fetch location", err);
+      console.error("Failed to fetch trades", err);
     }
-    setFetchLocation(false);
+    setFetchTask(false);
   };
 
   useEffect(() => {
-    fetchLocations();
+    fetchTasks();
   }, [api]);
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res: AxiosResponse<any> = await api.get(
+          `get-company-resources?flag=tradeList&company_id=${id.company_id}`,
+        );
+        if (res.data) setTrade(res.data.info);
+      } catch (err) {
+        console.error("Failed to fetch trades", err);
+      }
+    };
+    fetchTrades();
+  }, [id.company_id]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
       name: "",
+      trade_id: null,
       company_id: id.company_id,
+      duration: 0,
+      rate: 0,
+      units: "",
+      is_pricework: false,
+      repeatable_job: false,
     });
     setDrawerOpen(true);
   };
@@ -147,16 +197,24 @@ const TablePagination = () => {
     try {
       const payload = {
         ...formData,
+        repeatable_job: formData.is_pricework ? false : true,
+        units: formData.is_pricework ? formData.units : null,
+        duration: Number(formData.duration),
+        rate: Number(formData.rate),
       };
 
-      const result = await api.post("company-locations/create", payload);
+      const result = await api.post("type-works/create", payload);
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
           id: 0,
           name: "",
+          trade_id: 0,
+          is_pricework: 0,
+          units: "",
+          repeatable_job: 0,
         });
-        fetchLocations();
+        fetchTasks();
         setDrawerOpen(false);
       } else {
         toast.error(result.data.message);
@@ -168,21 +226,36 @@ const TablePagination = () => {
     }
   };
 
-  const editLocation = async (e: React.FormEvent) => {
+  const editTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+
+    if (formData.is_pricework && !formData.rate) {
+      toast.error("Please add rate!");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
+        repeatable_job: formData.is_pricework ? false : true,
+        duration: Number(formData.duration),
+        rate: formData.is_pricework ? Number(formData.rate) : 0,
+        units: formData.is_pricework ? formData.units : null,
       };
 
-      const result = await api.put("company-locations/update", payload);
+      const result = await api.put("type-works/update", payload);
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
           name: "",
+          trade_id: 0,
+          is_pricework: false,
+          units: "",
+          repeatable_job: false,
         });
-        fetchLocations();
+        fetchTasks();
         setEditDrawerOpen(false);
       } else {
         toast.error(result.data.message);
@@ -194,17 +267,28 @@ const TablePagination = () => {
     }
   };
 
+  const uniqueTrades = useMemo(
+    () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
+    [trade],
+  );
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      if (filters.team == "All") return data;
+      const matchesTeam = filters.team
+        ? item.trade_name === filters.team
+        : true;
+
       const search = searchTerm.toLowerCase();
 
       const matchesSearch =
         item.name?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search);
+        item.trade_name?.toLowerCase().includes(search) ||
+        item.duration?.toLowerCase().includes(search);
 
-      return matchesSearch;
+      return matchesTeam && matchesSearch;
     });
-  }, [data, searchTerm]);
+  }, [data, filters, searchTerm]);
 
   // UseCallback to memoize these functions
   const handleEdit = useCallback((id: number) => {
@@ -238,7 +322,7 @@ const TablePagination = () => {
     };
   }, []);
 
-  const columnHelper = createColumnHelper<LocationList>();
+  const columnHelper = createColumnHelper<TaskList>();
   const columns = [
     {
       id: "select",
@@ -319,8 +403,6 @@ const TablePagination = () => {
       enableSorting: true,
       cell: ({ row }) => {
         const item = row.original;
-        const isChecked = selectedRowIds.has(item.id);
-        const showCheckbox = isChecked || hoveredRow === item.id;
 
         return (
           <Stack direction="row" alignItems="center" spacing={1}>
@@ -334,12 +416,81 @@ const TablePagination = () => {
                 textOverflow: "ellipsis",
                 lineHeight: 1.15,
                 wordBreak: "break-word",
-                maxWidth: 300,
+                maxWidth: 250,
               }}
             >
               {item.name ?? "-"}
             </Typography>
           </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.trade_name, {
+      id: "tradeName",
+      header: () => "Trade",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.repeatable_job, {
+      id: "repeatableJob",
+      header: () => "Type",
+      cell: (info) => {
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Box>
+              <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+                {info.getValue() ?? "-"}
+              </Typography>
+            </Box>
+          </Stack>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.duration, {
+      id: "duration",
+      header: () => "Duration",
+      cell: (info) => {
+        return (
+          <Typography
+            className="f-14"
+            color="textPrimary"
+            fontWeight={500}
+            sx={{ px: 1.5 }}
+          >
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.rate, {
+      id: "rate",
+      header: () => "Rate",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {info.getValue() ?? "-"}
+          </Typography>
+        );
+      },
+    }),
+
+    columnHelper.accessor((row) => row?.units, {
+      id: "units",
+      header: () => "Units",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {info.getValue() ?? "-"}
+          </Typography>
         );
       },
     }),
@@ -397,10 +548,11 @@ const TablePagination = () => {
   return (
     <Box
       sx={{
-        height: "calc(100vh - 100px)",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
       }}
+      mt={2}
     >
       {/* Render the search and table */}
       <Stack
@@ -430,6 +582,85 @@ const TablePagination = () => {
               },
             }}
           />
+          <Button variant="contained" onClick={() => setOpen(true)}>
+            <IconFilter width={18} />
+          </Button>
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle
+              sx={{ m: 0, position: "relative", overflow: "visible" }}
+            >
+              Filters
+              <IconButton
+                aria-label="close"
+                onClick={() => setOpen(false)}
+                size="large"
+                sx={{
+                  position: "absolute",
+                  right: 12,
+                  top: 8,
+                  color: (theme) => theme.palette.grey[900],
+                  backgroundColor: "transparent",
+                  zIndex: 10,
+                  width: 50,
+                  height: 50,
+                }}
+              >
+                <IconX size={40} style={{ width: 40, height: 40 }} />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <Stack spacing={2} mt={1}>
+                <TextField
+                  select
+                  label="Trade"
+                  value={tempFilters.team}
+                  onChange={(e) =>
+                    setTempFilters({ ...tempFilters, team: e.target.value })
+                  }
+                  fullWidth
+                >
+                  <MenuItem value="All">All</MenuItem>
+                  {uniqueTrades.map((trade, i) => (
+                    <MenuItem key={i} value={trade}>
+                      {trade}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Stack>
+            </DialogContent>
+
+            <DialogActions>
+              <Button
+                onClick={() => {
+                  setTempFilters({
+                    team: "",
+                  });
+                  setFilters({
+                    team: "",
+                  });
+                  setOpen(false);
+                }}
+                color="inherit"
+              >
+                Clear
+              </Button>
+
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setFilters(tempFilters);
+                  setOpen(false);
+                }}
+              >
+                Apply
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Grid>
         <Stack
           mb={2}
@@ -512,8 +743,8 @@ const TablePagination = () => {
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogContent>
               <Typography color="textSecondary">
-                Are you sure you want to archive {usersToDelete.length} location
-                {usersToDelete.length > 1 ? "s" : ""} from the locations?
+                Are you sure you want to archive {usersToDelete.length} template
+                {usersToDelete.length > 1 ? "s" : ""} from the templates?
               </Typography>
             </DialogContent>
             <DialogActions>
@@ -528,17 +759,17 @@ const TablePagination = () => {
                 onClick={async () => {
                   try {
                     const payload = {
-                      location_ids: usersToDelete.join(","),
+                      work_ids: usersToDelete.join(","),
                     };
                     const response = await api.post(
-                      "company-locations/archive",
+                      "type-works/archive-works",
                       payload,
                     );
                     toast.success(response.data.message);
                     setSelectedRowIds(new Set());
-                    await fetchLocations();
+                    await fetchTasks();
                   } catch (error) {
-                    toast.error("Failed to remove works");
+                    // toast.error("Failed to remove works");
                   } finally {
                     setConfirmOpen(false);
                   }
@@ -591,7 +822,7 @@ const TablePagination = () => {
                 <ListItemIcon>
                   <IconPlus width={18} />
                 </ListItemIcon>
-                Add Location
+                Add Template
               </Link>
             </MenuItem>
             <MenuItem onClick={handleClose}>
@@ -621,32 +852,35 @@ const TablePagination = () => {
         </Stack>
       </Stack>
       <Divider />
-      {/* Add location */}
-      <CreateLocation
+      {/* Add task */}
+      <CreateTask
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         formData={formData}
         setFormData={setFormData}
         handleSubmit={handleSubmit}
+        trade={trade}
         isSaving={isSaving}
       />
 
       {/* Edit task */}
-      <EditLocation
+      <EditTask
+        key={selectedTaskId}
         open={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         id={selectedTaskId}
         formData={formData}
         setFormData={setFormData}
-        EditLocation={editLocation}
+        EditTask={editTask}
+        trade={trade}
         isSaving={isSaving}
       />
 
       {/* Archive task list */}
-      <ArchiveLocation
+      <ArchiveTask
         open={archiveDrawerOpen}
         onClose={() => setarchiveDrawerOpen(false)}
-        onWorkUpdated={fetchLocations}
+        onWorkUpdated={fetchTasks}
       />
 
       <Box
@@ -733,7 +967,7 @@ const TablePagination = () => {
               ))}
             </TableHead>
             <TableBody>
-              {fetchLocation ? (
+              {fetchTask ? (
                 <SkeletonLoader
                   columns={simpleColumns}
                   rowCount={simpleColumns.length}
@@ -789,7 +1023,6 @@ const TablePagination = () => {
         {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
-
       <Stack
         gap={1}
         pr={3}
@@ -820,9 +1053,9 @@ const TablePagination = () => {
             </Typography>
             <Typography
               color="textSecondary"
+              className="f-14"
               fontWeight={600}
               ml={1}
-              className="f-14"
             >
               {table.getState().pagination.pageIndex + 1} of{" "}
               {table.getPageCount()}

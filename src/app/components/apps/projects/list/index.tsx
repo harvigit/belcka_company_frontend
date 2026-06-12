@@ -7,49 +7,49 @@ import React, {
   useState,
 } from "react";
 import {
-  Typography,
-  Box,
-  Grid,
-  Button,
-  Divider,
-  IconButton,
-  Stack,
-  TextField,
-  InputAdornment,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-  Dialog,
-  Tabs,
-  Tab,
-  Drawer,
-  Autocomplete,
-  CircularProgress,
-  ListItem,
-  ListItemButton,
-  List,
-  MenuItem,
-  Menu,
-  ListItemIcon,
-  Popover,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-} from "@mui/material";
+    Typography,
+    Box,
+    Grid,
+    Button,
+    Divider,
+    IconButton,
+    Stack,
+    TextField,
+    InputAdornment,
+    DialogActions,
+    DialogTitle,
+    DialogContent,
+    Dialog,
+    Tabs,
+    Tab,
+    Drawer,
+    Autocomplete,
+    CircularProgress,
+    ListItem,
+    ListItemButton,
+    List,
+    MenuItem,
+    Menu,
+    ListItemIcon,
+    Popover,
+    FormGroup,
+    FormControlLabel,
+    Checkbox, Tooltip,
+} from '@mui/material';
 import {
-  IconChartPie,
-  IconChevronRight,
-  IconDotsVertical,
-  IconFilter,
-  IconPencil,
-  IconPlus,
-  IconSearch,
-  IconX,
-  IconArrowLeft,
-  IconTrash,
-  IconLocation,
-  IconEye,
-} from "@tabler/icons-react";
+    IconChartPie,
+    IconChevronRight,
+    IconDotsVertical,
+    IconFilter,
+    IconPencil,
+    IconPlus,
+    IconSearch,
+    IconX,
+    IconArrowLeft,
+    IconTrash,
+    IconLocation,
+    IconEye, IconSettings,
+} from '@tabler/icons-react';
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useSession } from "next-auth/react";
@@ -84,6 +84,7 @@ import { IconNotes } from "@tabler/icons-react";
 import { IconDatabase } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { Chip } from "@mui/material";
+import Setting from '@/app/components/apps/projects/setting';
 
 dayjs.extend(customParseFormat);
 
@@ -246,7 +247,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [selectAll, setSelectAll] = useState(false);
   const [openFilter, setOpenFilter] = useState(false);
 
-  // For create
+    const [settingOpen, setSettingOpen] = useState(false);
+
+    // For create
   const initialCreateState: ProjectFormData = {
     name: "",
     address: "",
@@ -288,6 +291,19 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
+
+    const handleSettingOpen = () => {
+        setSettingOpen(true);
+    };
+
+    const handleSettingClose = async () => {
+        setSettingOpen(false);
+
+        try {
+            
+        } catch (error) {
+        }
+    };
 
   const handleClose = () => {
     setAnchorEl(null);
@@ -1039,6 +1055,15 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   Archive
                 </Button>
               )}
+
+                <Tooltip title="Settings">
+                    <IconButton onClick={handleSettingOpen} color="primary" size="small">
+                        <IconSettings size={20} />
+                    </IconButton>
+                </Tooltip>
+
+                <Setting settingOpen={settingOpen} onClose={handleSettingClose} />
+                
               <IconButton
                 onClick={handlePopoverOpen}
                 sx={{ ml: 1 }}

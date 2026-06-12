@@ -9,35 +9,15 @@ import {
 } from "@mui/material";
 import {
     IconSettings,
-    IconCalendarWeek,
-    IconTiltShift,
-    IconCoinPound,
-    IconMapPinCog,
-    IconUserCog,
-    IconDoorExit,
-    IconCalendarOff,
-    IconCategoryPlus,
+    IconNotebook,
+    IconMap,
 } from '@tabler/icons-react';
-import GeneralSetting from './menus/general';
-import ShiftLists from './menus/shift/index';
-import Payroll from './menus/payroll';
-import RateSetting from "./menus/rate-setting";
-import PenaltySettings from "./menus/penalty-setting";
-import BookkeeperSetting from "./menus/bookkeeper-setting";
-import LeaveList from './menus/leaves/list';
-import HolidayList from './menus/holidays/list';
-import CategoryList from './menus/expense-categories/list';
+import CreateWork from './menus/tasks/list';
+import LocationList from './menus/locations/list';
 
 const menuItems = [
-    { icon: <IconSettings size={18} />, label: "General" },
-    { icon: <IconTiltShift size={18} />, label: "Shift" },
-    { icon: <IconCalendarWeek size={18} />, label: "Payroll" },
-    { icon: <IconCoinPound size={18} />, label: "Rate Settings" },
-    { icon: <IconMapPinCog size={18} />, label: "Penalty Setting" },
-    { icon: <IconUserCog size={18} />, label: "Bookkeeper Setting" },
-    { icon: <IconDoorExit size={18} />, label: "Leaves" },
-    { icon: <IconCalendarOff size={18} />, label: "Holidays" },
-    { icon: <IconCategoryPlus size={18} />, label: "Expense Category" },
+    { icon: <IconNotebook size={18} />, label: "Templates" },
+    { icon: <IconMap size={18} />, label: "Locations" },
 ];
 
 interface SettingsProps {
@@ -45,8 +25,8 @@ interface SettingsProps {
     onClose: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
-    const [activeMenuItem, setActiveMenuItem] = useState<string>("General");
+const Index: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
+    const [activeMenuItem, setActiveMenuItem] = useState<string>("Templates");
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
     const handleMenuItemClick = (label: string) => {
@@ -152,36 +132,12 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
                             overflow: "hidden",
                         }}
                     >
-                        {activeMenuItem === "General" && (
-                            <GeneralSetting onSaveSuccess={handleSaveSuccess} />
+                        {activeMenuItem === "Templates" && (
+                            <CreateWork />
                         )}
-                        {activeMenuItem === "Leaves" && (
-                            <LeaveList />
+                        {activeMenuItem === "Locations" && (
+                            <LocationList />
                         )}
-                        {activeMenuItem === "Holidays" && (
-                            <HolidayList />
-                        )}
-                        {activeMenuItem === "Shift" && (
-                            <ShiftLists />
-                        )}
-                        {activeMenuItem === "Payroll" && (
-                            <Payroll />
-                        )}
-                        {activeMenuItem === "Expense Category" && (
-                            <CategoryList />
-                        )}
-                        {activeMenuItem === "Rate Settings" && (
-                            <RateSetting />
-                        )}
-                        {activeMenuItem === "Penalty Setting" && (
-                            <PenaltySettings />
-                        )}
-                        {activeMenuItem === "Bookkeeper Setting" && (
-                            <BookkeeperSetting onSaveSuccess={handleSaveSuccess}/>
-                        )}
-                        {/* {activeMenuItem === 'Geolocation' && (
-                            <Geofence onSaveSuccess={handleSaveSuccess} />
-                        )} */}
                     </Box>
                 </Box>
             </Drawer>
@@ -197,4 +153,4 @@ const Settings: React.FC<SettingsProps> = ({ settingOpen, onClose }) => {
     );
 };
 
-export default Settings;
+export default Index;

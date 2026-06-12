@@ -2059,6 +2059,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     user_id={user_id}
                     currency={currency}
                     allUsers={allUsers}
+                    startDate={startDate}
+                    endDate={endDate}
                     onClose={closeRequestList}
                     onUserChange={onUserChange}
                 />

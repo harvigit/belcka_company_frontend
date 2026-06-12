@@ -80,6 +80,8 @@ interface RequestDetailsProps {
     user_id: any;
     currency: string;
     allUsers: TimeClock[];
+    startDate?: Date | null;
+    endDate?: Date | null;
     onClose: () => void;
     onUserChange?: (user: TimeClock) => void;
 }
@@ -366,7 +368,7 @@ const RequestCard = React.memo<{
 
 RequestCard.displayName = 'RequestCard';
 
-const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_id, onClose }) => {
+const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_id, startDate, endDate, onClose }) => {
     // State management
     const [requestList, setRequestList] = useState<RequestItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -402,6 +404,26 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
     const pendingRequests = useMemo(() =>
         requestList.filter(req => req.status === PENDING_STATUS), [requestList]
     );
+
+    const selectedDateRange = useMemo(() => {
+        if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+            return { start: startDate, end: endDate };
+        }
+
+        if (timeClock?.start_date && timeClock?.end_date) {
+            const start = new Date(timeClock.start_date);
+            const end = new Date(timeClock.end_date);
+
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                return { start, end };
+            }
+        }
+
+        return {
+            start: defaultDateRange.defaultStart,
+            end: defaultDateRange.defaultEnd,
+        };
+    }, [defaultDateRange.defaultEnd, defaultDateRange.defaultStart, endDate, startDate, timeClock?.end_date, timeClock?.start_date]);
 
     // Memoized callbacks
     const showAlert = useCallback((message: string, severity: AlertState['severity'] = 'success') => {
@@ -443,8 +465,8 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         try {
             setLoading(true);
 
-            const startDateToUse = start || defaultDateRange.defaultStart;
-            const endDateToUse = end || defaultDateRange.defaultEnd;
+            const startDateToUse = start || selectedDateRange.start;
+            const endDateToUse = end || selectedDateRange.end;
 
             const params: Record<string, string> = {
                 user_id: user_id?.toString() || '',
@@ -484,7 +506,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         } finally {
             setLoading(false);
         }
-    }, [defaultDateRange, user_id, showAlert]);
+    }, [selectedDateRange, user_id, showAlert]);
 
     const handleSingleRequest = useCallback(
         async (requestId: number, action: 'approve' | 'reject', comment?: string) => {
@@ -511,14 +533,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
 
                     await delay(1500);
 
-                    if (timeClock?.start_date && timeClock?.end_date) {
-                        await fetchRequests(
-                            new Date(timeClock.start_date),
-                            new Date(timeClock.end_date)
-                        );
-                    } else {
-                        await fetchRequests();
-                    }
+                    await fetchRequests(selectedDateRange.start, selectedDateRange.end);
                 } else {
                     showAlert(response.data.message || `Error ${action}ing request`, 'error');
                 }
@@ -532,7 +547,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
                 });
             }
         },
-        [fetchRequests, showAlert, timeClock, user_id]
+        [fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]
     );
 
     const handleBulkAction = useCallback(async (action: 'approve' | 'reject', reason?: string) => {
@@ -565,14 +580,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
 
                 await delay(2000);
 
-                if (timeClock?.start_date && timeClock?.end_date) {
-                    await fetchRequests(
-                        new Date(timeClock.start_date),
-                        new Date(timeClock.end_date)
-                    );
-                } else {
-                    await fetchRequests();
-                }
+                await fetchRequests(selectedDateRange.start, selectedDateRange.end);
             } else {
                 showAlert(response.data.message || `Error ${action}ing all requests`, 'error');
             }
@@ -581,7 +589,7 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
         } finally {
             setLoading(false);
         }
-    }, [pendingRequests, fetchRequests, showAlert, timeClock, user_id]);
+    }, [pendingRequests, fetchRequests, selectedDateRange.end, selectedDateRange.start, showAlert, user_id]);
 
     const handleApproveRequest = useCallback((requestId: number) => {
         return handleSingleRequest(requestId, 'approve');
@@ -654,15 +662,10 @@ const RequestDetails: React.FC<RequestDetailsProps> = ({  open, timeClock, user_
 
     // Effects
     useEffect(() => {
-        if (open && timeClock?.start_date && timeClock?.end_date) {
-            const start = new Date(timeClock.start_date);
-            const end = new Date(timeClock.end_date);
-
-            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                fetchRequests(start, end);
-            }
+        if (open) {
+            fetchRequests(selectedDateRange.start, selectedDateRange.end);
         }
-    }, [open, timeClock?.start_date, timeClock?.end_date, user_id, fetchRequests]);
+    }, [open, selectedDateRange.end, selectedDateRange.start, user_id, fetchRequests]);
 
     // Early return if not open
     if (!open) return null;

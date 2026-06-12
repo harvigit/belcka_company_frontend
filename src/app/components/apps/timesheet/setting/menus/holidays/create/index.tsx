@@ -120,7 +120,6 @@ const AddHoliday = ({ open, onClose, onWorkUpdated }: Props) => {
                                         selected={startDate}
                                         onSelect={(date) => {
                                             setStartDate(date);
-                                            // Reset end date if it's before the new start date
                                             if (endDate && date && endDate < date) {
                                                 setEndDate(undefined);
                                             }
