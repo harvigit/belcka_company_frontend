@@ -316,7 +316,7 @@ const HolidayList = () => {
     }));
 
     return (
-        <Box sx={{height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column'}}>
+        <Box sx={{height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column'}} mt={2}>
             {/* Toolbar */}
             <Stack
                 mr={2} ml={2} mb={2}

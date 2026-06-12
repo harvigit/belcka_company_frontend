@@ -1,5 +1,5 @@
-"use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+'use client';
+import React, {useEffect, useState, useMemo, useCallback} from 'react';
 import {
     TableContainer,
     Table,
@@ -28,7 +28,7 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox,
-} from "@mui/material";
+} from '@mui/material';
 import {
     flexRender,
     getCoreRowModel,
@@ -38,7 +38,7 @@ import {
     useReactTable,
     createColumnHelper,
     SortingState,
-} from "@tanstack/react-table";
+} from '@tanstack/react-table';
 import {
     IconChevronLeft,
     IconChevronRight,
@@ -46,25 +46,25 @@ import {
     IconNotes,
     IconSearch,
     IconTrash,
-} from "@tabler/icons-react";
-import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
-import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat";
-import Link from "next/link";
-import { IconDotsVertical } from "@tabler/icons-react";
-import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { IconPlus } from "@tabler/icons-react";
-import toast from "react-hot-toast";
-import { useSession } from "next-auth/react";
-import { User } from "next-auth";
-import { IconEdit } from "@tabler/icons-react";
-import CreateExpenseCategory from "../create";
-import EditExpenseCategory from "../edit";
-import ArchiveExpenseCategory from "../archive";
-import Image from "next/image";
-import SkeletonLoader from "@/app/components/SkeletonLoader";
-import IOSSwitch from "@/app/components/common/IOSSwitch";
+} from '@tabler/icons-react';
+import api from '@/utils/axios';
+import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import Link from 'next/link';
+import {IconDotsVertical} from '@tabler/icons-react';
+import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
+import {IconPlus} from '@tabler/icons-react';
+import toast from 'react-hot-toast';
+import {useSession} from 'next-auth/react';
+import {User} from 'next-auth';
+import {IconEdit} from '@tabler/icons-react';
+import CreateExpenseCategory from '../create';
+import EditExpenseCategory from '../edit';
+import ArchiveExpenseCategory from '../archive';
+import Image from 'next/image';
+import SkeletonLoader from '@/app/components/SkeletonLoader';
+import IOSSwitch from '@/app/components/common/IOSSwitch';
 
 dayjs.extend(customParseFormat);
 
@@ -80,7 +80,7 @@ const TablePagination = () => {
     const [columnFilters, setColumnFilters] = useState<any>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [fetchCategory, setFetchCategory] = useState<boolean>(true);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm, setSearchTerm] = useState('');
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [sorting, setSorting] = useState<SortingState>([]);
     const [open, setOpen] = useState(false);
@@ -98,14 +98,14 @@ const TablePagination = () => {
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
     const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState('');
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
     const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
 
     const [formData, setFormData] = useState<any>({
         id: 0,
-        name: "",
+        name: '',
         company_id: company?.company_id,
         is_transport_category: false,
     });
@@ -129,7 +129,7 @@ const TablePagination = () => {
                 setarchiveDrawerOpen(false);
             }
         } catch (err) {
-            console.error("Failed to fetch expense categories", err);
+            console.error('Failed to fetch expense categories', err);
         }
         setFetchCategory(false);
     };
@@ -140,7 +140,7 @@ const TablePagination = () => {
 
     const handleOpenCreateDrawer = () => {
         setFormData({
-            name: "",
+            name: '',
             company_id: company?.company_id,
             is_transport_category: false,
         });
@@ -155,12 +155,12 @@ const TablePagination = () => {
                 ...formData,
             };
 
-            const result = await api.post("expense-categories/create", payload);
+            const result = await api.post('expense-categories/create', payload);
             if (result.data.IsSuccess == true) {
                 toast.success(result.data.message);
                 setFormData({
                     id: 0,
-                    name: "",
+                    name: '',
                     company_id: company?.company_id,
                     is_transport_category: false,
                 });
@@ -168,7 +168,7 @@ const TablePagination = () => {
                 setDrawerOpen(false);
             }
         } catch (error) {
-            console.log(error, "error");
+            console.log(error, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -182,12 +182,12 @@ const TablePagination = () => {
                 ...formData,
             };
 
-            const result = await api.put("expense-categories/update", payload);
+            const result = await api.put('expense-categories/update', payload);
             if (result.data.IsSuccess == true) {
                 toast.success(result.data.message);
                 setFormData({
                     id: 0,
-                    name: "",
+                    name: '',
                     company_id: company?.company_id,
                     is_transport_category: false,
                 });
@@ -197,7 +197,7 @@ const TablePagination = () => {
                 toast.error(result.data.message);
             }
         } catch (error) {
-            console.log(error, "error");
+            console.log(error, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -215,16 +215,16 @@ const TablePagination = () => {
                 company_id: company?.company_id,
             };
 
-            const result = await api.post("expense-categories/toggle-change", payload);
+            const result = await api.post('expense-categories/toggle-change', payload);
 
             if (result.data.IsSuccess === true) {
-                toast.success("Transport category status updated successfully");
+                toast.success('Transport category status updated successfully');
                 fetchExpenseCategories();
             } else {
-                toast.error(result.data.message || "Failed to update");
+                toast.error(result.data.message || 'Failed to update');
             }
         } catch (error) {
-            toast.error("Failed to update transport status");
+            toast.error('Failed to update transport status');
         } finally {
             setTogglingIds((prev) => {
                 const newSet = new Set(prev);
@@ -250,7 +250,7 @@ const TablePagination = () => {
     const handleEdit = useCallback((id: number) => {
         setFormData({
             id: id,
-            name: "",
+            name: '',
             company_id: company?.company_id || 0,
             is_transport_category: false,
         });
@@ -258,37 +258,37 @@ const TablePagination = () => {
         setEditDrawerOpen(true);
     }, [company?.company_id]);
 
-    
-  const tableContainerRef = React.useRef<HTMLDivElement>(null);
-  const [isScrollable, setIsScrollable] = React.useState(false);
 
-  React.useEffect(() => {
-    const checkScroll = () => {
-      if (tableContainerRef.current) {
-        setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
-        );
-      }
-    };
-    checkScroll();
-    window.addEventListener("resize", checkScroll);
-    
-    const observer = new MutationObserver(checkScroll);
-    if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
-    }
-    
-    return () => {
-      window.removeEventListener("resize", checkScroll);
-      observer.disconnect();
-    };
-  }, []);
+    const tableContainerRef = React.useRef<HTMLDivElement>(null);
+    const [isScrollable, setIsScrollable] = React.useState(false);
 
-  const columnHelper = createColumnHelper<ExpenseCategoryList>();
+    React.useEffect(() => {
+        const checkScroll = () => {
+            if (tableContainerRef.current) {
+                setIsScrollable(
+                    tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+                );
+            }
+        };
+        checkScroll();
+        window.addEventListener('resize', checkScroll);
+
+        const observer = new MutationObserver(checkScroll);
+        if (tableContainerRef.current) {
+            observer.observe(tableContainerRef.current, {childList: true, subtree: true, characterData: true});
+        }
+
+        return () => {
+            window.removeEventListener('resize', checkScroll);
+            observer.disconnect();
+        };
+    }, []);
+
+    const columnHelper = createColumnHelper<ExpenseCategoryList>();
     const columns = [
         {
-            id: "select",
-            header: ({ table }: any) => (
+            id: 'select',
+            header: ({table}: any) => (
                 <Stack direction="row" alignItems="center">
                     <CustomCheckbox
                         className="header-checkbox"
@@ -315,7 +315,7 @@ const TablePagination = () => {
                     />
                 </Stack>
             ),
-            cell: ({ row }: any) => {
+            cell: ({row}: any) => {
                 const item = row.original;
                 const isChecked = selectedRowIds.has(item.id);
                 const isHovered = hoveredRow === item.id;
@@ -327,7 +327,7 @@ const TablePagination = () => {
                         alignItems="center"
                         onMouseEnter={() => setHoveredRow(item.id)}
                         onMouseLeave={() => setHoveredRow(null)}
-                        sx={{ pl: 1 }}
+                        sx={{pl: 1}}
                     >
                         <CustomCheckbox
                             checked={isChecked}
@@ -345,16 +345,16 @@ const TablePagination = () => {
                             }}
                             sx={{
                                 opacity: showCheckbox ? 1 : 0,
-                                pointerEvents: showCheckbox ? "auto" : "none",
-                                transition: "opacity 0.2s ease",
+                                pointerEvents: showCheckbox ? 'auto' : 'none',
+                                transition: 'opacity 0.2s ease',
                             }}
                         />
                     </Stack>
                 );
             },
         },
-        columnHelper.accessor("name", {
-            id: "name",
+        columnHelper.accessor('name', {
+            id: 'name',
             header: () => (
                 <Stack direction="row" alignItems="center" spacing={4}>
                     <Typography variant="subtitle2" fontWeight="inherit">
@@ -363,19 +363,19 @@ const TablePagination = () => {
                 </Stack>
             ),
             enableSorting: true,
-            cell: ({ row }) => {
+            cell: ({row}) => {
                 const item = row.original;
 
                 return (
                     <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography className="f-14">{item.name ?? "-"}</Typography>
+                        <Typography className="f-14">{item.name ?? '-'}</Typography>
                     </Stack>
                 );
             },
         }),
 
-        columnHelper.accessor("is_transport_category", {
-            id: "is_transport_category",
+        columnHelper.accessor('is_transport_category', {
+            id: 'is_transport_category',
             header: () => (
                 <Stack direction="row" alignItems="center" spacing={4}>
                     <Typography variant="subtitle2" fontWeight="inherit">
@@ -384,7 +384,7 @@ const TablePagination = () => {
                 </Stack>
             ),
             enableSorting: true,
-            cell: ({ row }) => {
+            cell: ({row}) => {
                 const item = row.original;
                 const isToggling = togglingIds.has(item.id);
 
@@ -408,15 +408,15 @@ const TablePagination = () => {
         }),
 
         columnHelper.display({
-            id: "actions",
-            header: "Actions",
-            cell: ({ row }) => {
+            id: 'actions',
+            header: 'Actions',
+            cell: ({row}) => {
                 const item = row.original;
                 return (
                     <Stack direction="row" spacing={1}>
                         <Tooltip title="Edit">
                             <IconButton onClick={() => handleEdit(item.id)} color="primary">
-                                <IconEdit size={18} />
+                                <IconEdit size={18}/>
                             </IconButton>
                         </Tooltip>
                     </Stack>
@@ -432,7 +432,7 @@ const TablePagination = () => {
     const table = useReactTable({
         data: filteredData,
         columns,
-        state: { columnFilters, sorting },
+        state: {columnFilters, sorting},
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
@@ -452,17 +452,18 @@ const TablePagination = () => {
     }, [searchTerm, table]);
 
     const simpleColumns = columns.map((column) => ({
-        name: column.id ?? "Unnamed Column",
-        width: "auto",
+        name: column.id ?? 'Unnamed Column',
+        width: 'auto',
     }));
 
     return (
         <Box
             sx={{
-                height: "calc(100vh - 100px)",
-                display: "flex",
-                flexDirection: "column",
+                height: 'calc(100vh - 100px)',
+                display: 'flex',
+                flexDirection: 'column',
             }}
+            mt={2}
         >
             {/* Render the search and table */}
             <Stack
@@ -470,10 +471,10 @@ const TablePagination = () => {
                 ml={2}
                 mb={2}
                 justifyContent="space-between"
-                direction={{ xs: "column", sm: "row" }}
-                spacing={{ xs: 1, sm: 2, md: 4 }}
+                direction={{xs: 'column', sm: 'row'}}
+                spacing={{xs: 1, sm: 2, md: 4}}
             >
-                <Grid display="flex" gap={1} alignItems={"center"}>
+                <Grid display="flex" gap={1} alignItems={'center'}>
                     <TextField
                         id="search"
                         type="text"
@@ -486,7 +487,7 @@ const TablePagination = () => {
                             input: {
                                 endAdornment: (
                                     <InputAdornment position="end">
-                                        <IconSearch size={"16"} />
+                                        <IconSearch size={'16'}/>
                                     </InputAdornment>
                                 ),
                             },
@@ -496,14 +497,14 @@ const TablePagination = () => {
                 <Stack
                     mb={2}
                     justifyContent="end"
-                    direction={{ xs: "column", sm: "row" }}
+                    direction={{xs: 'column', sm: 'row'}}
                 >
                     {selectedRowIds.size > 0 && (
                         <Button
                             variant="outlined"
                             color="error"
-                            startIcon={<IconTrash width={18} />}
-                            sx={{ marginRight: "5px" }}
+                            startIcon={<IconTrash width={18}/>}
+                            sx={{marginRight: '5px'}}
                             onClick={() => {
                                 const selectedIds = Array.from(selectedRowIds);
                                 setUsersToDelete(selectedIds);
@@ -515,18 +516,18 @@ const TablePagination = () => {
                     )}
                     <IconButton
                         onClick={handlePopoverOpen}
-                        sx={{ ml: 1 }}
+                        sx={{ml: 1}}
                         color="primary"
                     >
-                        <IconEye />
+                        <IconEye/>
                     </IconButton>
                     <Popover
                         open={Boolean(anchorEl2)}
                         anchorEl={anchorEl2}
                         onClose={handlePopoverClose}
-                        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                        transformOrigin={{ vertical: "top", horizontal: "right" }}
-                        PaperProps={{ sx: { width: 220, p: 1, borderRadius: 2 } }}
+                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                        transformOrigin={{vertical: 'top', horizontal: 'right'}}
+                        PaperProps={{sx: {width: 220, p: 1, borderRadius: 2}}}
                     >
                         <TextField
                             size="small"
@@ -534,13 +535,13 @@ const TablePagination = () => {
                             fullWidth
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            sx={{ mb: 1 }}
+                            sx={{mb: 1}}
                         />
                         <FormGroup>
                             {table
                                 .getAllLeafColumns()
                                 .filter((col: any) => {
-                                    const excludedColumns = ["conflicts", "select"];
+                                    const excludedColumns = ['conflicts', 'select'];
                                     if (excludedColumns.includes(col.id)) return false;
 
                                     return col.id.toLowerCase().includes(search.toLowerCase());
@@ -552,17 +553,17 @@ const TablePagination = () => {
                                             <Checkbox
                                                 checked={col.getIsVisible()}
                                                 onChange={col.getToggleVisibilityHandler()}
-                                                disabled={col.id === "conflicts"}
+                                                disabled={col.id === 'conflicts'}
                                             />
                                         }
-                                        sx={{ textTransform: "none" }}
+                                        sx={{textTransform: 'none'}}
                                         label={
                                             col.columnDef.meta?.label ||
-                                            (typeof col.columnDef.header === "string" &&
-                                                col.columnDef.header.trim() !== ""
+                                            (typeof col.columnDef.header === 'string' &&
+                                            col.columnDef.header.trim() !== ''
                                                 ? col.columnDef.header
                                                 : col.id
-                                                    .replace(/([A-Z])/g, " $1")
+                                                    .replace(/([A-Z])/g, ' $1')
                                                     .replace(/^./, (str: string) => str.toUpperCase())
                                                     .trim())
                                         }
@@ -576,7 +577,7 @@ const TablePagination = () => {
                             <Typography color="textSecondary">
                                 Are you sure you want to archive {usersToDelete.length} expense
                                 category
-                                {usersToDelete.length > 1 ? "s" : ""} from the expense
+                                {usersToDelete.length > 1 ? 's' : ''} from the expense
                                 categories?
                             </Typography>
                         </DialogContent>
@@ -592,17 +593,17 @@ const TablePagination = () => {
                                 onClick={async () => {
                                     try {
                                         const payload = {
-                                            ex_category_ids: usersToDelete.join(","),
+                                            ex_category_ids: usersToDelete.join(','),
                                         };
                                         const response = await api.post(
-                                            "expense-categories/archive",
+                                            'expense-categories/archive',
                                             payload
                                         );
                                         toast.success(response.data.message);
                                         setSelectedRowIds(new Set());
                                         await fetchExpenseCategories();
                                     } catch (error) {
-                                        toast.error("Failed to remove works");
+                                        toast.error('Failed to remove works');
                                     } finally {
                                         setConfirmOpen(false);
                                     }
@@ -615,14 +616,14 @@ const TablePagination = () => {
                         </DialogActions>
                     </Dialog>
                     <IconButton
-                        sx={{ margin: "0px" }}
+                        sx={{margin: '0px'}}
                         id="basic-button"
-                        aria-controls={openMenu ? "basic-menu" : undefined}
+                        aria-controls={openMenu ? 'basic-menu' : undefined}
                         aria-haspopup="true"
-                        aria-expanded={openMenu ? "true" : undefined}
+                        aria-expanded={openMenu ? 'true' : undefined}
                         onClick={handleClick}
                     >
-                        <IconDotsVertical width={18} />
+                        <IconDotsVertical width={18}/>
                     </IconButton>
                     <Menu
                         id="basic-menu"
@@ -631,7 +632,7 @@ const TablePagination = () => {
                         onClose={handleClose}
                         slotProps={{
                             list: {
-                                "aria-labelledby": "basic-button",
+                                'aria-labelledby': 'basic-button',
                             },
                         }}
                     >
@@ -644,16 +645,16 @@ const TablePagination = () => {
                                     handleOpenCreateDrawer();
                                 }}
                                 style={{
-                                    width: "100%",
-                                    color: "#11142D",
-                                    textTransform: "none",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyItems: "center",
+                                    width: '100%',
+                                    color: '#11142D',
+                                    textTransform: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyItems: 'center',
                                 }}
                             >
                                 <ListItemIcon>
-                                    <IconPlus width={18} />
+                                    <IconPlus width={18}/>
                                 </ListItemIcon>
                                 Add Expense Category
                             </Link>
@@ -667,16 +668,16 @@ const TablePagination = () => {
                                     setarchiveDrawerOpen(true);
                                 }}
                                 style={{
-                                    width: "100%",
-                                    color: "#11142D",
-                                    textTransform: "none",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyItems: "center",
+                                    width: '100%',
+                                    color: '#11142D',
+                                    textTransform: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyItems: 'center',
                                 }}
                             >
                                 <ListItemIcon>
-                                    <IconNotes width={18} />
+                                    <IconNotes width={18}/>
                                 </ListItemIcon>
                                 Archived List
                             </Link>
@@ -685,7 +686,7 @@ const TablePagination = () => {
                 </Stack>
             </Stack>
 
-            <Divider />
+            <Divider/>
 
             <CreateExpenseCategory
                 open={drawerOpen}
@@ -716,7 +717,7 @@ const TablePagination = () => {
                 sx={{
                     flex: 1,
                     minHeight: 0,
-                    overflow: "auto",
+                    overflow: 'auto',
                 }}
             >
                 <TableContainer ref={tableContainerRef}>
@@ -726,7 +727,7 @@ const TablePagination = () => {
                                 <TableRow key={headerGroup.id}>
                                     {headerGroup.headers.map((header) => {
                                         const isActive = header.column.getIsSorted();
-                                        const isAsc = header.column.getIsSorted() === "asc";
+                                        const isAsc = header.column.getIsSorted() === 'asc';
                                         const isSortable = header.column.getCanSort();
 
                                         return (
@@ -734,34 +735,35 @@ const TablePagination = () => {
                                                 key={header.id}
                                                 align="center"
                                                 sx={{
-                                                    paddingTop: "10px",
-                                                    paddingBottom: "10px",
+                                                    paddingTop: '10px',
+                                                    paddingBottom: '10px',
                                                     width:
-                                                        header.column.id === "actions"
+                                                        header.column.id === 'actions'
                                                             ? 120
-                                                            : header.column.id === "select"
+                                                            : header.column.id === 'select'
                                                                 ? 30
-                                                                : "auto",
-                                                
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+                                                                : 'auto',
+
+                                                    ...(header.column.id === 'actions' && {
+                                                        position: 'sticky',
+                                                        right: 0,
+                                                        backgroundColor: 'background.paper',
+                                                        zIndex: 3,
+                                                        boxShadow: isScrollable ? '-2px 0 4px -2px rgba(0,0,0,0.1)' : 'none',
+                                                    }),
+                                                }}
                                             >
                                                 <Box
                                                     onClick={header.column.getToggleSortingHandler()}
                                                     p={0}
                                                     sx={{
-                                                        cursor: isSortable ? "pointer" : "default",
-                                                        border: "2px solid transparent",
-                                                        borderRadius: "6px",
-                                                        display: "flex",
-                                                        justifyContent: "flex-start",
-                                                        "&:hover": { color: "#888" },
-                                                        "&:hover .hoverIcon": { opacity: 1 },
+                                                        cursor: isSortable ? 'pointer' : 'default',
+                                                        border: '2px solid transparent',
+                                                        borderRadius: '6px',
+                                                        display: 'flex',
+                                                        justifyContent: 'flex-start',
+                                                        '&:hover': {color: '#888'},
+                                                        '&:hover .hoverIcon': {opacity: 1},
                                                     }}
                                                 >
                                                     <Typography variant="subtitle2">
@@ -776,16 +778,16 @@ const TablePagination = () => {
                                                             className="hoverIcon"
                                                             ml={0.5}
                                                             sx={{
-                                                                transition: "opacity 0.2s",
+                                                                transition: 'opacity 0.2s',
                                                                 opacity: isActive ? 1 : 0,
-                                                                fontSize: "0.9rem",
-                                                                color: isActive ? "#000" : "#888",
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                justifyContent: "space-between",
+                                                                fontSize: '0.9rem',
+                                                                color: isActive ? '#000' : '#888',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
                                                             }}
                                                         >
-                                                            {isActive ? (isAsc ? "↑" : "↓") : "↑"}
+                                                            {isActive ? (isAsc ? '↑' : '↓') : '↑'}
                                                         </Box>
                                                     )}
                                                 </Box>
@@ -806,18 +808,18 @@ const TablePagination = () => {
                                     <TableCell colSpan={columns.length}>
                                         <Box
                                             sx={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                height: "calc(50vh - 100px)",
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: 'calc(50vh - 100px)',
                                             }}
                                         >
                                             <Image
                                                 src="/images/no-data.png"
                                                 alt="No data"
                                                 style={{
-                                                    maxWidth: "100%",
-                                                    maxHeight: "100%",
+                                                    maxWidth: '100%',
+                                                    maxHeight: '100%',
                                                 }}
                                                 width={200}
                                                 height={200}
@@ -827,16 +829,18 @@ const TablePagination = () => {
                                 </TableRow>
                             ) : (
                                 table.getRowModel().rows.map((row) => (
-                                    <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
+                                    <TableRow key={row.id} hover sx={{cursor: 'pointer'}}>
                                         {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id} sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}>
+                                            <TableCell key={cell.id} sx={{
+                                                padding: '10px',
+                                                ...(cell.column.id === 'actions' && {
+                                                    position: 'sticky',
+                                                    right: 0,
+                                                    backgroundColor: 'background.paper',
+                                                    zIndex: 1,
+                                                    boxShadow: isScrollable ? '-2px 0 4px -2px rgba(0,0,0,0.1)' : 'none',
+                                                }),
+                                            }}>
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext()
@@ -849,9 +853,9 @@ const TablePagination = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
-                {data.length ? <Divider /> : <></>}
+                {data.length ? <Divider/> : <></>}
             </Box>
-            <Divider />
+            <Divider/>
 
             <Stack
                 gap={1}
@@ -860,7 +864,7 @@ const TablePagination = () => {
                 pl={3}
                 pb={2}
                 alignItems="center"
-                direction={{ xs: "column", sm: "row" }}
+                direction={{xs: 'column', sm: 'row'}}
                 justifyContent="space-between"
             >
                 <Box display="flex" alignItems="center" gap={1}>
@@ -871,8 +875,8 @@ const TablePagination = () => {
                 <Box
                     sx={{
                         display: {
-                            xs: "block",
-                            sm: "flex",
+                            xs: 'block',
+                            sm: 'flex',
                         },
                     }}
                     alignItems="center"
@@ -887,16 +891,16 @@ const TablePagination = () => {
                             fontWeight={600}
                             ml={1}
                         >
-                            {table.getState().pagination.pageIndex + 1} of{" "}
+                            {table.getState().pagination.pageIndex + 1} of{' '}
                             {table.getPageCount()}
                         </Typography>
-                        <Typography color="textSecondary" ml={"3px"} className="f-14">
-                            {" "}
-                            | Entries :{" "}
+                        <Typography color="textSecondary" ml={'3px'} className="f-14">
+                            {' '}
+                            | Entries :{' '}
                         </Typography>
                     </Stack>
                     <Stack
-                        ml={"5px"}
+                        ml={'5px'}
                         direction="row"
                         alignItems="center"
                         color="textSecondary"
@@ -916,19 +920,19 @@ const TablePagination = () => {
                         </CustomSelect>
                         <IconButton
                             size="small"
-                            sx={{ width: "30px" }}
+                            sx={{width: '30px'}}
                             onClick={() => table.previousPage()}
                             disabled={!table.getCanPreviousPage()}
                         >
-                            <IconChevronLeft />
+                            <IconChevronLeft/>
                         </IconButton>
                         <IconButton
                             size="small"
-                            sx={{ width: "30px" }}
+                            sx={{width: '30px'}}
                             onClick={() => table.nextPage()}
                             disabled={!table.getCanNextPage()}
                         >
-                            <IconChevronRight />
+                            <IconChevronRight/>
                         </IconButton>
                     </Stack>
                 </Box>

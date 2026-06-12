@@ -396,6 +396,7 @@ const TablePagination = () => {
                 display: 'flex',
                 flexDirection: 'column',
             }}
+            mt={2}
         >
             {/* Render the search and table */}
             <Stack
@@ -545,7 +546,7 @@ const TablePagination = () => {
                             </Button>
                         </DialogActions>
                     </Dialog>
-                    
+
                     <IconButton
                         onClick={handleSettingOpen}
                         color="primary"
@@ -555,7 +556,7 @@ const TablePagination = () => {
                     </IconButton>
 
                     <LeaveSetting open={settingOpen} onClose={handleSettingClose}/>
-                    
+
                     <IconButton
                         sx={{margin: '0px'}}
                         id="basic-button"
