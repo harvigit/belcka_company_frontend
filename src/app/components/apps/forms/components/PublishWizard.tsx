@@ -54,6 +54,7 @@ const DEFAULT_SETTINGS: PublishSettings = {
     removalDate: '',
     removalTime: '',
 };
+const EMPTY_DISABLED_USER_IDS = new Set<string>();
 
 const normalizeState = (state: PublishWizardState | undefined | null): PublishWizardState => ({
     selectedTeams: state?.selectedTeams ?? [],
@@ -116,12 +117,13 @@ const StepIndicator = ({step}: { step: number }) => {
     );
 };
 
-const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selected, onClose, onChange}: {
+const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selected, disabledUserIds, onClose, onChange}: {
     open: boolean;
     title: string;
     searchPlaceholder: string;
     users: PublishUsersOption[];
     selected: PublishUsersOption[];
+    disabledUserIds?: Set<string>;
     onClose: () => void;
     onChange: (next: PublishUsersOption[]) => void;
 }) => {
@@ -131,18 +133,37 @@ const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selec
         if (open) setSearch('');
     }, [open]);
 
-    const safeOptions = users ?? [];
+    const safeOptions = useMemo(() => users ?? [], [users]);
     const safeSelected = selected ?? [];
+    const safeDisabledUserIds = useMemo(
+        () => disabledUserIds ?? EMPTY_DISABLED_USER_IDS,
+        [disabledUserIds],
+    );
+    const selectableOptions = useMemo(
+        () => safeOptions.filter((option) => !safeDisabledUserIds.has(option.id)),
+        [safeDisabledUserIds, safeOptions],
+    );
 
     const filtered = useMemo(() => {
-
-        console.log(safeOptions, 'safeOptionssafeOptionssafeOptionssafeOptionssafeOptions')
         const q = search.trim().toLowerCase();
         if (!q) return safeOptions;
         return safeOptions.filter((option) => option.name.toLowerCase().includes(q));
     }, [safeOptions, search]);
 
-    const allSelected = safeOptions.length > 0 && safeSelected.length === safeOptions.length;
+    const allSelected = selectableOptions.length > 0 && selectableOptions.every((option) =>
+        safeSelected.some((item) => item.id === option.id),
+    );
+    const someSelected = selectableOptions.some((option) => safeSelected.some((item) => item.id === option.id));
+    const toggleAll = () => {
+        if (allSelected) {
+            onChange(safeSelected.filter((selectedUser) => safeDisabledUserIds.has(selectedUser.id)));
+            return;
+        }
+
+        const selectedById = new Map(safeSelected.map((selectedUser) => [selectedUser.id, selectedUser]));
+        selectableOptions.forEach((option) => selectedById.set(option.id, option));
+        onChange(Array.from(selectedById.values()).filter((option) => !safeDisabledUserIds.has(option.id)));
+    };
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -162,15 +183,15 @@ const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selec
                         <Checkbox
                             size="small"
                             checked={allSelected}
-                            indeterminate={safeSelected.length > 0 && !allSelected}
-                            onChange={() => onChange(allSelected ? [] : safeOptions)}
+                            indeterminate={someSelected && !allSelected}
+                            disabled={selectableOptions.length === 0}
+                            onChange={toggleAll}
                         />
                         <Typography fontSize={14}>Select all</Typography>
                     </Stack>
                     {filtered.map((option) => {
-
-                        console.log(option, 'optionoptionoptionoptionoption')
                         const checked = safeSelected.some((item) => item.id === option.id);
+                        const disabled = safeDisabledUserIds.has(option.id);
                         return (
                             <Stack
                                 key={option.id}
@@ -179,11 +200,16 @@ const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selec
                                 spacing={1}
                                 px={0.5}
                                 py={0.75}
-                                sx={{borderRadius: 1, '&:hover': {bgcolor: 'action.hover'}}}
+                                sx={{
+                                    borderRadius: 1,
+                                    opacity: disabled ? 0.55 : 1,
+                                    '&:hover': {bgcolor: disabled ? 'transparent' : 'action.hover'},
+                                }}
                             >
                                 <Checkbox
                                     size="small"
                                     checked={checked}
+                                    disabled={disabled}
                                     onChange={() => onChange(toggleOption(safeSelected, option))}
                                 />
                                 <Avatar
@@ -225,7 +251,7 @@ const SelectableTeamsListDialog = ({open, title, searchPlaceholder, teams, selec
         if (open) setSearch('');
     }, [open]);
 
-    const safeOptions = teams ?? [];
+    const safeOptions = useMemo(() => teams ?? [], [teams]);
     const safeSelected = selected ?? [];
 
     const filtered = useMemo(() => {
@@ -350,6 +376,15 @@ const PublishWizard = ({
                 return sum + Number(currentTeam?.memberCount ?? team.memberCount ?? 0);
             }, 0),
         [teams, state.selectedTeams]);
+    const selectedTeamUserIds = useMemo(() => {
+        const userIds = new Set<string>();
+        state.selectedTeams.forEach((team) => {
+            const currentTeam = teams.find((item) => item.id === team.id);
+            const teamUserIds = currentTeam?.userIds ?? team.userIds ?? [];
+            teamUserIds.forEach((userId) => userIds.add(String(userId)));
+        });
+        return userIds;
+    }, [teams, state.selectedTeams]);
 
     const totalAssignees = state.selectedUsers.length + selectedTeamMemberCount;
     const selectedTargetCount = state.selectedUsers.length + state.selectedTeams.length;
@@ -365,6 +400,21 @@ const PublishWizard = ({
 
     const updateSettings = (updates: Partial<PublishSettings>) => {
         onChange({...state, settings: {...state.settings, ...updates}});
+    };
+
+    const updateSelectedTeams = (nextTeams: PublishTeamsOption[]) => {
+        const nextTeamUserIds = new Set<string>();
+        nextTeams.forEach((team) => {
+            const currentTeam = teams.find((item) => item.id === team.id);
+            const teamUserIds = currentTeam?.userIds ?? team.userIds ?? [];
+            teamUserIds.forEach((userId) => nextTeamUserIds.add(String(userId)));
+        });
+
+        onChange({
+            ...state,
+            selectedTeams: nextTeams,
+            selectedUsers: state.selectedUsers.filter((user) => !nextTeamUserIds.has(user.id)),
+        });
     };
 
     const chipList = (items: PublishUsersOption[] | undefined, onRemove: (id: string) => void) => (
@@ -391,10 +441,10 @@ const PublishWizard = ({
                    sx={{border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden'}}>
                 <Stack spacing={2.5} p={3}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography fontWeight={700}>Smart teams</Typography>
+                        <Typography fontWeight={700}>Smart Teams</Typography>
                         <Button variant="outlined" endIcon={<IconChevronDown size={16}/>}
                                 onClick={() => setTeamDialogOpen(true)}>
-                            Select teams
+                            Select Teams
                         </Button>
                     </Stack>
                     {chipList(state.selectedTeams, (id) => onChange({
@@ -429,7 +479,7 @@ const PublishWizard = ({
                 <Divider/>
                 <Stack spacing={2.5} p={3}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography fontWeight={700}>Specific users</Typography>
+                        <Typography fontWeight={700}>Specific Users</Typography>
                         <Button
                             variant="outlined" 
                             endIcon={<IconChevronDown size={16}/>}
@@ -762,22 +812,26 @@ const PublishWizard = ({
 
             <SelectableTeamsListDialog
                 open={teamDialogOpen}
-                title="Select teams"
+                title="Select Teams"
                 searchPlaceholder="Search teams"
                 teams={teams}
                 selected={state.selectedTeams}
                 onClose={() => setTeamDialogOpen(false)}
-                onChange={(next) => onChange({...state, selectedTeams: next})}
+                onChange={updateSelectedTeams}
             />
 
             <SelectableUsersListDialog
                 open={userDialogOpen}
-                title="Select users"
+                title="Select Users"
                 searchPlaceholder="Search users"
                 users={users}
                 selected={state.selectedUsers}
+                disabledUserIds={selectedTeamUserIds}
                 onClose={() => setUserDialogOpen(false)}
-                onChange={(next) => onChange({...state, selectedUsers: next})}
+                onChange={(next) => onChange({
+                    ...state,
+                    selectedUsers: next.filter((user) => !selectedTeamUserIds.has(user.id)),
+                })}
             />
         </Dialog>
     );

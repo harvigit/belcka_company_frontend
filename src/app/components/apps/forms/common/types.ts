@@ -112,6 +112,7 @@ export type PublishTeamsOption = {
     memberCount?: number;
     id: string;
     name: string;
+    userIds?: string[];
 };
 
 export type PublishOption = PublishUsersOption | PublishTeamsOption;

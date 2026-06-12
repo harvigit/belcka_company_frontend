@@ -153,8 +153,22 @@ const normalizeTeamOptions = (data: any): PublishOption[] => {
         .map((team: any) => {
             const id = team.id ?? team.team_id;
             const name = team.title || team.name || team.team_name;
-            const memberCount = Number(team.team_member_count ?? team.member_count ?? (Array.isArray(team.team_members) ? team.team_members.length : 0));
-            return id && name ? {id: String(id), name, memberCount: Number.isFinite(memberCount) ? memberCount : 0} : null;
+            const memberUsers = Array.isArray(team.users)
+                ? team.users
+                : Array.isArray(team.team_members)
+                    ? team.team_members
+                    : [];
+            const userIds = memberUsers
+                .map((user: any) => user?.id ?? user?.user_id)
+                .filter((userId: unknown) => userId !== undefined && userId !== null)
+                .map(String);
+            const memberCount = Number(team.team_member_count ?? team.member_count ?? userIds.length);
+            return id && name ? {
+                id: String(id),
+                name,
+                memberCount: Number.isFinite(memberCount) ? memberCount : 0,
+                userIds,
+            } : null;
         })
         .filter(Boolean) as PublishOption[];
 };
