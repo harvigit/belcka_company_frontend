@@ -155,7 +155,7 @@ const BuyerDashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const res = await api.get(`get-modules?company_id=${user.company_id}`);
+      const res = await api.get(`get-modules?company_id=${user.company_id}&is_web=true`);
       if (res.data) {
         setProjects(res.data.projects);
         setAddresses(res.data.addresses);
