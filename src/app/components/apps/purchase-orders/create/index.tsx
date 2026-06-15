@@ -63,7 +63,7 @@ interface Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
 
-  handleSubmit: (e: React.FormEvent) => void;
+  handleSubmit: (e: React.FormEvent, is_draft?: boolean) => void;
   isSaving: boolean;
   ids?: { id: number; qty: number; supplier_id: number }[];
   mode?: "create" | "edit";
@@ -146,6 +146,16 @@ const PurchaseOrder: React.FC<Props> = ({
 
     setProducts(mappedProducts);
   }, [ids, editData, allProducts]);
+  const parseDateForInput = (dateStr: string) => {
+    if (!dateStr) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    const parts = dateStr.split(/[/-]/);
+    if (parts.length === 3 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    return dateStr;
+  };
+
 
   useEffect(() => {
     if (!open) return;
@@ -177,7 +187,7 @@ const PurchaseOrder: React.FC<Props> = ({
         note: editData.note,
         ref: editData.ref,
         date: editData.date,
-        expected_delivery_date: editData.expected_delivery_date,
+        expected_delivery_date: parseDateForInput(editData.expected_delivery_date),
         total_amount: editData.total_amount,
         tax: editData.tax,
         status: editData.status,
@@ -659,36 +669,59 @@ const PurchaseOrder: React.FC<Props> = ({
       <Box
         sx={{
           display: "flex",
-          justifyContent: "start",
-          gap: 2,
-          p: 2,
-          mt: "auto",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <Button
-          color="primary"
-          variant="contained"
-          size="large"
-          type="submit"
-          onClick={handleSubmit}
-          disabled={isSaving || isDisable}
-          sx={{ borderRadius: 3, width: "8%" }}
-        >
-          {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
-        </Button>
-        <Button
-          color="inherit"
-          onClick={onClose}
-          variant="contained"
-          size="large"
+        <Box
           sx={{
-            backgroundColor: "transparent",
-            borderRadius: 3,
-            color: "GrayText",
+            display: "flex",
+            justifyContent: "start",
+            gap: 2,
+            p: 2,
+            mt: "auto",
+            width: "100%",
           }}
         >
-          Close
-        </Button>
+          <Button
+            color="primary"
+            variant="contained"
+            size="large"
+            type="submit"
+            onClick={(e) => handleSubmit(e, false)}
+            disabled={isSaving || isDisable}
+            sx={{ borderRadius: 3, width: "8%" }}
+          >
+            {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
+          </Button>
+
+          <Button
+            color="inherit"
+            onClick={onClose}
+            variant="contained"
+            size="large"
+            sx={{
+              backgroundColor: "transparent",
+              borderRadius: 3,
+              color: "GrayText",
+            }}
+          >
+            Close
+          </Button>
+        </Box>
+        {mode !== "edit" && (
+          <Button
+            color="error"
+            variant="contained"
+            size="large"
+            type="submit"
+            onClick={(e) => handleSubmit(e, true)}
+            disabled={isSaving || isDisable}
+            sx={{ borderRadius: 3, width: "8%", mr: 2 }}
+          >
+            {isSaving ? "Saving..." : "Save as Draft"}
+          </Button>
+        )}
       </Box>
     </Drawer>
   );

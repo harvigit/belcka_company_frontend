@@ -129,42 +129,42 @@ const AdminSetting = () => {
                                         iconPosition="start"
                                         icon={<IconUsers size="20" />}
                                         label="Clients"
-                                        {...a11yProps(9)}
+                                        {...a11yProps(4)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUsersMinus size="20" />}
                                         label="Remove Users"
-                                        {...a11yProps(10)}
+                                        {...a11yProps(5)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconFileAlert size="20" />}
                                         label="Request Approvel"
-                                        {...a11yProps(11)}
+                                        {...a11yProps(6)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconExclamationCircle size="20" />}
                                         label="History"
-                                        {...a11yProps(12)}
+                                        {...a11yProps(7)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconSquarePercentage size="20" />}
                                         label="Analytics Score"
-                                        {...a11yProps(13)}
+                                        {...a11yProps(8)}
                                     />
                                     <Tab
                                         className="admin-settings"
                                         iconPosition="start"
                                         icon={<IconUserCog size="20" />}
                                         label="Users Setting"
-                                        {...a11yProps(14)}
+                                        {...a11yProps(9)}
                                     />
                                 </Tabs>
                             </Stack>
@@ -190,22 +190,22 @@ const AdminSetting = () => {
                             <TabPanel value={value} index={3}>
                                 <TradeCategoryList />
                             </TabPanel>
-                            <TabPanel value={value} index={9}>
+                            <TabPanel value={value} index={4}>
                                 <ClientList />
                             </TabPanel>
-                            <TabPanel value={value} index={10}>
+                            <TabPanel value={value} index={5}>
                                 <RemoveUsers />
                             </TabPanel>
-                            <TabPanel value={value} index={11}>
+                            <TabPanel value={value} index={6}>
                                 <RequestAction />
                             </TabPanel>
-                            <TabPanel value={value} index={12}>
+                            <TabPanel value={value} index={7}>
                                 <HistoryList />
                             </TabPanel>
-                            <TabPanel value={value} index={13}>
+                            <TabPanel value={value} index={8}>
                                 <AnalyticsScore />
                             </TabPanel>
-                            <TabPanel value={value} index={14}>
+                            <TabPanel value={value} index={9}>
                                 <UserSettings />
                             </TabPanel>
                         </BlankCard>

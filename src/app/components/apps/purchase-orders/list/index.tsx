@@ -50,6 +50,7 @@ import {
   IconEye,
   IconFileSignal,
   IconFilter,
+  IconMenuOrder,
   IconNotes,
   IconSearch,
   IconShare,
@@ -76,6 +77,7 @@ import PurchaseOrder from "../create";
 import { DayPicker } from "react-day-picker";
 import { styled } from "@mui/material/styles";
 import ArchivePurchaseOrder from "../archive";
+import DraftPurchaseOrder from "../drafts";
 import PurchaseOrderHistory from "../history";
 import TermsAndConditions from "../terms-conditions";
 import { IconHelp } from "@tabler/icons-react";
@@ -151,6 +153,7 @@ const PurchaseOrderList = () => {
   );
   const [archivePurchaseList, setArchivePurchaseList] =
     useState<boolean>(false);
+  const [draftPurchaseList, setDraftPurchaseList] = useState<boolean>(false);
 
   const [email, setEmail] = useState("");
 
@@ -269,14 +272,15 @@ const PurchaseOrderList = () => {
     setDrawerOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, is_draft = false) => {
     e.preventDefault();
     setIsSaving(true);
 
     try {
       const payload = new FormData();
+      const submissionData = { ...formData, is_draft };
 
-      Object.entries(formData).forEach(([key, value]) => {
+      Object.entries(submissionData).forEach(([key, value]) => {
         if (key === "product_data") {
           payload.append(key, JSON.stringify(value));
         } else {
@@ -284,7 +288,7 @@ const PurchaseOrderList = () => {
         }
       });
 
-      const result = await api.post("purchase-orders/create", formData);
+      const result = await api.post("purchase-orders/create", submissionData);
 
       if (result.data.IsSuccess) {
         toast.success(result.data.message);
@@ -298,20 +302,21 @@ const PurchaseOrderList = () => {
     }
   };
 
-  const editOrder = async (e: React.FormEvent) => {
+  const editOrder = async (e: React.FormEvent, is_draft = false) => {
     e.preventDefault();
     setIsSaving(true);
     try {
       const payload = new FormData();
+      const submissionData = { ...formData, is_draft };
 
-      Object.entries(formData).forEach(([key, value]) => {
+      Object.entries(submissionData).forEach(([key, value]) => {
         if (key === "product_data") {
           payload.append(key, JSON.stringify(value));
         } else {
           payload.append(key, String(value ?? ""));
         }
       });
-      const result = await api.post("purchase-orders/update", formData);
+      const result = await api.post("purchase-orders/update", submissionData);
       if (result.data.IsSuccess == true) {
         toast.success(result.data.message);
         setFormData({
@@ -2101,6 +2106,29 @@ Team Belcka
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
+                    setDraftPurchaseList(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#11142D",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <ListItemIcon>
+                    <IconMenuOrder width={18} />
+                  </ListItemIcon>
+                  Draft Purchase Orders
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Link
+                  color="body1"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
                     setOpenConditionDrawer(true);
                   }}
                   style={{
@@ -2163,6 +2191,14 @@ Team Belcka
           companyId={Number(user.company_id)}
           onClose={() => setArchivePurchaseList(false)}
           onWorkUpdated={fetchOrders}
+        />
+
+        <DraftPurchaseOrder
+          open={draftPurchaseList}
+          companyId={Number(user.company_id)}
+          onClose={() => setDraftPurchaseList(false)}
+          onWorkUpdated={fetchOrders}
+          onEditOrder={handleEdit}
         />
 
         <PurchaseOrderHistory
