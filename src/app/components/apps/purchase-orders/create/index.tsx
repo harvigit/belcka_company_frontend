@@ -156,7 +156,6 @@ const PurchaseOrder: React.FC<Props> = ({
     return dateStr;
   };
 
-
   useEffect(() => {
     if (!open) return;
 
@@ -187,7 +186,9 @@ const PurchaseOrder: React.FC<Props> = ({
         note: editData.note,
         ref: editData.ref,
         date: editData.date,
-        expected_delivery_date: parseDateForInput(editData.expected_delivery_date),
+        expected_delivery_date: parseDateForInput(
+          editData.expected_delivery_date,
+        ),
         total_amount: editData.total_amount,
         tax: editData.tax,
         status: editData.status,
@@ -671,6 +672,10 @@ const PurchaseOrder: React.FC<Props> = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+          p: 2,
+          mt: "auto",
         }}
       >
         <Box
@@ -678,9 +683,7 @@ const PurchaseOrder: React.FC<Props> = ({
             display: "flex",
             justifyContent: "start",
             gap: 2,
-            p: 2,
-            mt: "auto",
-            width: "100%",
+            flexWrap: "wrap",
           }}
         >
           <Button
@@ -690,7 +693,7 @@ const PurchaseOrder: React.FC<Props> = ({
             type="submit"
             onClick={(e) => handleSubmit(e, false)}
             disabled={isSaving || isDisable}
-            sx={{ borderRadius: 3, width: "8%" }}
+            sx={{ borderRadius: 3, minWidth: 100 }}
           >
             {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
           </Button>
@@ -704,23 +707,31 @@ const PurchaseOrder: React.FC<Props> = ({
               backgroundColor: "transparent",
               borderRadius: 3,
               color: "GrayText",
+              minWidth: 100,
             }}
           >
             Close
           </Button>
         </Box>
         {mode !== "edit" && (
-          <Button
-            color="error"
-            variant="contained"
-            size="large"
-            type="submit"
-            onClick={(e) => handleSubmit(e, true)}
-            disabled={isSaving || isDisable}
-            sx={{ borderRadius: 3, width: "8%", mr: 2 }}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "end",
+            }}
           >
-            {isSaving ? "Saving..." : "Save as Draft"}
-          </Button>
+            <Button
+              color="error"
+              variant="contained"
+              size="large"
+              type="submit"
+              onClick={(e) => handleSubmit(e, true)}
+              disabled={isSaving || isDisable}
+              sx={{ borderRadius: 3 }}
+            >
+              {isSaving ? "Saving..." : "Save as Draft"}
+            </Button>
+          </Box>
         )}
       </Box>
     </Drawer>
