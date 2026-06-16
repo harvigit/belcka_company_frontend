@@ -9,6 +9,7 @@ import {
     Dialog,
     DialogActions,
     DialogContent,
+    Drawer,
     Divider,
     FormControlLabel,
     IconButton,
@@ -23,6 +24,7 @@ import {
     Typography,
 } from '@mui/material';
 import {
+    IconArrowLeft,
     IconChevronDown,
     IconGripVertical,
     IconHash,
@@ -57,6 +59,8 @@ type FieldSettingsDialogProps = {
     availableFields: FormField[];
     questionError: string;
     formulaError: string;
+    optionErrors: string[];
+    optionImageErrors: string[];
     onChange: (draft: FieldDraft) => void;
     onClose: () => void;
     onConfirm: () => void;
@@ -127,10 +131,12 @@ const FieldSettingsDialog = ({
                                  availableFields,
                                  questionError,
                                  formulaError,
+                                 optionErrors,
+                                 optionImageErrors,
                                  onChange,
                                  onClose,
                                  onConfirm
-                             }: FieldSettingsDialogProps) => {
+}: FieldSettingsDialogProps) => {
     const isOptionField = Boolean(type && optionFieldTypes.includes(type));
     const isDescription = type === 'Description';
     const isFormula = type === 'Formula';
@@ -155,6 +161,12 @@ const FieldSettingsDialog = ({
             : '')
         : '';
     const [formulaFieldAnchorEl, setFormulaFieldAnchorEl] = useState<null | HTMLElement>(null);
+    const [optionSortAnchorEl, setOptionSortAnchorEl] = useState<null | HTMLElement>(null);
+    const optionSortMode = draft.optionSortMode === 'az' ? 'az' : 'custom';
+    const [optionImportOpen, setOptionImportOpen] = useState(false);
+    const [optionImportText, setOptionImportText] = useState('');
+    const [optionImportConfirmOpen, setOptionImportConfirmOpen] = useState(false);
+    const [optionImportMode, setOptionImportMode] = useState<'append' | 'replace'>('append');
     const formulaEditorRef = useRef<HTMLDivElement | null>(null);
     const formulaSelectionRef = useRef<Range | null>(null);
     const [isConditionEditorOpen, setIsConditionEditorOpen] = useState(false);
@@ -173,6 +185,11 @@ const FieldSettingsDialog = ({
         setConditionDrafts(normalizedConditions);
         setIsConditionEditorOpen(false);
         setFormulaFieldAnchorEl(null);
+        setOptionSortAnchorEl(null);
+        setOptionImportOpen(false);
+        setOptionImportText('');
+        setOptionImportConfirmOpen(false);
+        setOptionImportMode('append');
         setRangeError('');
     }, [open]);
 
@@ -345,9 +362,118 @@ const FieldSettingsDialog = ({
     const addOption = () => {
         onChange({
             ...draft,
-            options: [...draft.options, 'Item'],
+            options: [...draft.options, ''],
             optionImages: type === 'Image selection' ? [...draft.optionImages, ''] : draft.optionImages,
         });
+    };
+
+    const filledOptions = draft.options.map((item) => item.trim()).filter(Boolean);
+    const canExportOptions = filledOptions.length > 0;
+    const importedOptions = optionImportText
+        .split(/\r?\n/)
+        .flatMap((line) => line.split('\t'))
+        .map((item) => item.trim())
+        .filter(Boolean);
+    const canImportOptions = importedOptions.length > 0;
+
+    const sortOptionEntries = (entries: {item: string; image: string}[]) => (
+        [...entries].sort((a, b) => a.item.trim().localeCompare(b.item.trim(), undefined, {
+            sensitivity: 'base',
+            numeric: true,
+        }))
+    );
+
+    const applyOptionSort = (mode: 'custom' | 'az') => {
+        setOptionSortAnchorEl(null);
+
+        const optionEntries = draft.options.map((item, index) => ({item, image: draft.optionImages[index] || ''}));
+        const nextOptionEntries = mode === 'az' ? sortOptionEntries(optionEntries) : optionEntries;
+
+        onChange({
+            ...draft,
+            optionSortMode: mode,
+            options: nextOptionEntries.map(({item}) => item),
+            optionImages: type === 'Image selection'
+                ? nextOptionEntries.map(({image}) => image)
+                : draft.optionImages,
+        });
+    };
+
+    const escapeExcelHtml = (value: string) => value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const exportOptions = () => {
+        if (!canExportOptions) return;
+
+        const rows = filledOptions
+            .map((item) => `<tr><td style='mso-number-format:"\\@";' >${escapeExcelHtml(item)}</td></tr>`)
+            .join('');
+        const html = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8" /><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table><colgroups><col style="width: 120px"></col></colgroups><thead><tr><th >text</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+        const blob = new Blob([html], {type: 'application/vnd.ms-excel;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'options.xls';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const closeImportDrawer = () => {
+        setOptionImportOpen(false);
+        setOptionImportText('');
+        setOptionImportConfirmOpen(false);
+        setOptionImportMode('append');
+    };
+
+    const applyImportedOptions = (mode: 'append' | 'replace') => {
+        if (!canImportOptions) return;
+
+        const importedOptionEntries = importedOptions.map((item) => ({item, image: ''}));
+        const currentOptionEntries = draft.options.map((item, index) => ({item, image: draft.optionImages[index] || ''}));
+        let importIndex = 0;
+        const mergedOptionEntries = mode === 'replace'
+            ? importedOptionEntries
+            : [
+                ...currentOptionEntries.map((entry) => {
+                    if (entry.item.trim() || importIndex >= importedOptionEntries.length) return entry;
+
+                    const importedEntry = importedOptionEntries[importIndex];
+                    importIndex += 1;
+                    return importedEntry;
+                }),
+                ...importedOptionEntries.slice(importIndex),
+            ];
+        const nextEntries = optionSortMode === 'az'
+            ? sortOptionEntries(mergedOptionEntries)
+            : mergedOptionEntries;
+        const nextOptionImages = type === 'Image selection'
+            ? nextEntries.map(({image}) => image)
+            : draft.optionImages;
+
+        onChange({
+            ...draft,
+            options: nextEntries.map(({item}) => item),
+            optionImages: nextOptionImages,
+        });
+        closeImportDrawer();
+    };
+
+    const importOptions = () => {
+        if (!canImportOptions) return;
+
+        if (filledOptions.length > 0) {
+            setOptionImportOpen(false);
+            setOptionImportConfirmOpen(true);
+            return;
+        }
+
+        applyImportedOptions('append');
     };
 
     const updateOptionImage = (index: number, value: string) => {
@@ -811,24 +937,21 @@ const FieldSettingsDialog = ({
                                         Recommended image size: 1035X510 pixels
                                     </Typography>
                                 </Stack>
-                                <Stack direction="row" spacing={2}>
-                                    <Typography color="primary.main" fontSize={13}>
-                                        Sort - Custom
-                                    </Typography>
-                                    <Typography color="text.disabled" fontSize={13}>
-                                        Export
-                                    </Typography>
-                                    <Typography color="primary.main" fontSize={13}>
-                                        Import
-                                    </Typography>
-                                </Stack>
                             </Stack>
                             <Stack spacing={1}>
                                 {draft.options.map((item, index) => {
                                     const image = draft.optionImages[index] || '';
+                                    const optionError = optionErrors[index] || '';
+                                    const imageError = optionImageErrors[index] || '';
 
                                     return (
-                                        <Stack key={index} direction="row" spacing={1} alignItems="center">
+                                        <Stack
+                                            key={index}
+                                            direction="row"
+                                            spacing={1}
+                                            alignItems="center"
+                                            sx={{mb: optionError || imageError ? 2.25 : 0}}
+                                        >
                                             <Box sx={{color: 'text.disabled', display: 'flex'}}>
                                                 <IconGripVertical size={18}/>
                                             </Box>
@@ -839,60 +962,159 @@ const FieldSettingsDialog = ({
                                                 sx={{
                                                     flex: 1,
                                                     border: '1px solid',
-                                                    borderColor: 'divider',
+                                                    borderColor: optionError ? '#FF5A5F' : 'divider',
                                                     borderRadius: 2,
                                                     p: 1,
                                                 }}
                                             >
-                                                <CustomTextField
-                                                    className="custom_font"
-                                                    value={item}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOption(index, e.target.value)}
-                                                    placeholder="Add option..."
-                                                    variant="standard"
-                                                    fullWidth
-                                                    InputProps={{disableUnderline: true}}
-                                                    sx={{alignSelf: 'center'}}
-                                                />
-                                                <Button
-                                                    component="label"
-                                                    variant="outlined"
-                                                    sx={{
-                                                        width: {xs: '100%', sm: 126},
-                                                        minHeight: 64,
-                                                        flexShrink: 0,
-                                                        borderRadius: 1.5,
-                                                        borderColor: 'divider',
-                                                        color: image ? 'primary.main' : 'text.secondary',
-                                                        textTransform: 'none',
-                                                        overflow: 'hidden',
-                                                    }}
-                                                >
-                                                    {image ? (
-                                                        <Box
-                                                            component="img"
-                                                            src={image}
-                                                            alt={item || 'Option image'}
-                                                            sx={{
-                                                                width: '100%',
-                                                                height: 56,
-                                                                objectFit: 'cover',
-                                                                borderRadius: 1
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <Stack alignItems="center" spacing={0.5}>
-                                                            <IconPhoto size={18}/>
-                                                            <Typography fontSize={11}>Upload an image</Typography>
-                                                        </Stack>
-                                                    )}
-                                                    <input
-                                                        hidden
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => uploadOptionImage(index, e.target.files?.[0])}
+                                                <Box sx={{position: 'relative', flex: 1, minWidth: 0, alignSelf: 'center'}}>
+                                                    <CustomTextField
+                                                        className="custom_font"
+                                                        value={item}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOption(index, e.target.value)}
+                                                        placeholder="Add option..."
+                                                        variant="standard"
+                                                        fullWidth
+                                                        error={Boolean(optionError)}
+                                                        InputProps={{disableUnderline: true}}
                                                     />
-                                                </Button>
+                                                    {optionError && (
+                                                        <>
+                                                            <Box
+                                                                sx={{
+                                                                    position: 'absolute',
+                                                                    top: '50%',
+                                                                    right: 8,
+                                                                    width: 6,
+                                                                    height: 6,
+                                                                    borderRadius: '50%',
+                                                                    bgcolor: '#FF5A5F',
+                                                                    transform: 'translateY(-50%)',
+                                                                    zIndex: 2,
+                                                                }}
+                                                            />
+                                                            <Box
+                                                                sx={{
+                                                                    position: 'absolute',
+                                                                    top: 'calc(100% + 14px)',
+                                                                    left: 8,
+                                                                    bgcolor: '#FF5A5F',
+                                                                    color: '#fff',
+                                                                    borderRadius: 0.75,
+                                                                    px: 1,
+                                                                    py: 0.45,
+                                                                    fontSize: 12,
+                                                                    lineHeight: 1.2,
+                                                                    whiteSpace: 'nowrap',
+                                                                    zIndex: 3,
+                                                                    boxShadow: '0 8px 18px rgba(255, 90, 95, 0.25)',
+                                                                    '&:before': {
+                                                                        content: '""',
+                                                                        position: 'absolute',
+                                                                        left: 16,
+                                                                        top: -5,
+                                                                        width: 0,
+                                                                        height: 0,
+                                                                        borderLeft: '5px solid transparent',
+                                                                        borderRight: '5px solid transparent',
+                                                                        borderBottom: '5px solid #FF5A5F',
+                                                                    },
+                                                                }}
+                                                            >
+                                                                {optionError}
+                                                            </Box>
+                                                        </>
+                                                    )}
+                                                </Box>
+                                                <Box sx={{position: 'relative', width: {xs: '100%', sm: 126}, flexShrink: 0}}>
+                                                    <Button
+                                                        component="label"
+                                                        variant="outlined"
+                                                        sx={{
+                                                            width: '100%',
+                                                            minHeight: 64,
+                                                            borderRadius: 1.5,
+                                                            borderColor: imageError ? '#FF5A5F' : 'divider',
+                                                            color: image ? 'primary.main' : 'text.secondary',
+                                                            textTransform: 'none',
+                                                            overflow: 'hidden',
+                                                        }}
+                                                    >
+                                                        {image ? (
+                                                            <Box
+                                                                component="img"
+                                                                src={image}
+                                                                alt={item || 'Option image'}
+                                                                sx={{
+                                                                    width: '100%',
+                                                                    height: 56,
+                                                                    objectFit: 'cover',
+                                                                    borderRadius: 1
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <Stack alignItems="center" spacing={0.5}>
+                                                                <IconPhoto size={18}/>
+                                                                <Typography fontSize={11}>Upload an image</Typography>
+                                                            </Stack>
+                                                        )}
+                                                        <input
+                                                            hidden
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => uploadOptionImage(index, e.target.files?.[0])}
+                                                        />
+                                                    </Button>
+                                                    {imageError && (
+                                                        <>
+                                                            <Box
+                                                                sx={{
+                                                                    position: 'absolute',
+                                                                    top: '50%',
+                                                                    right: 10,
+                                                                    width: 6,
+                                                                    height: 6,
+                                                                    borderRadius: '50%',
+                                                                    bgcolor: '#FF5A5F',
+                                                                    transform: 'translateY(-50%)',
+                                                                    zIndex: 2,
+                                                                }}
+                                                            />
+                                                            <Box
+                                                                sx={{
+                                                                    position: 'absolute',
+                                                                    top: 'calc(100% + 6px)',
+                                                                    left: '50%',
+                                                                    transform: 'translateX(-50%)',
+                                                                    bgcolor: '#FF5A5F',
+                                                                    color: '#fff',
+                                                                    borderRadius: 0.75,
+                                                                    px: 1,
+                                                                    py: 0.45,
+                                                                    fontSize: 12,
+                                                                    lineHeight: 1.2,
+                                                                    whiteSpace: 'nowrap',
+                                                                    zIndex: 3,
+                                                                    boxShadow: '0 8px 18px rgba(255, 90, 95, 0.25)',
+                                                                    '&:before': {
+                                                                        content: '""',
+                                                                        position: 'absolute',
+                                                                        left: '50%',
+                                                                        top: -5,
+                                                                        transform: 'translateX(-50%)',
+                                                                        width: 0,
+                                                                        height: 0,
+                                                                        borderLeft: '5px solid transparent',
+                                                                        borderRight: '5px solid transparent',
+                                                                        borderBottom: '5px solid #FF5A5F',
+                                                                    },
+                                                                }}
+                                                            >
+                                                                {imageError}
+                                                            </Box>
+                                                        </>
+                                                    )}
+                                                </Box>
                                             </Stack>
                                             <IconButton
                                                 size="small"
@@ -926,33 +1148,148 @@ const FieldSettingsDialog = ({
                                 <Typography fontWeight={700} fontSize={14}>
                                     Items
                                 </Typography>
-                                <Stack direction="row" spacing={2}>
-                                    <Typography color="primary.main" fontSize={13}>
-                                        Sort - Custom
-                                    </Typography>
-                                    <Typography color="text.disabled" fontSize={13}>
+                                <Stack direction="row" spacing={2} alignItems="center">
+                                    <Button
+                                        size="small"
+                                        endIcon={<IconChevronDown size={14}/>}
+                                        onClick={(event) => setOptionSortAnchorEl(event.currentTarget)}
+                                        sx={{
+                                            minWidth: 0,
+                                            p: 0,
+                                            color: 'primary.main',
+                                            fontSize: 13,
+                                            fontWeight: 400,
+                                            textTransform: 'none',
+                                            '& .MuiButton-endIcon': {ml: 0.25},
+                                        }}
+                                    >
+                                        Sort - {optionSortMode === 'az' ? 'A - Z' : 'Custom'}
+                                    </Button>
+                                    <Menu
+                                        anchorEl={optionSortAnchorEl}
+                                        open={Boolean(optionSortAnchorEl)}
+                                        onClose={() => setOptionSortAnchorEl(null)}
+                                        PaperProps={{
+                                            sx: {
+                                                mt: 0.75,
+                                                minWidth: 100,
+                                                borderRadius: 1,
+                                                boxShadow: '0 12px 28px rgba(15, 23, 42, 0.14)',
+                                            },
+                                        }}
+                                    >
+                                        <MenuItem onClick={() => applyOptionSort('custom')}>
+                                            Custom
+                                        </MenuItem>
+                                        <MenuItem onClick={() => applyOptionSort('az')}>
+                                            A - Z
+                                        </MenuItem>
+                                    </Menu>
+                                    <Button
+                                        size="small"
+                                        onClick={exportOptions}
+                                        disabled={!canExportOptions}
+                                        sx={{
+                                            minWidth: 0,
+                                            p: 0,
+                                            color: canExportOptions ? 'primary.main' : 'text.disabled',
+                                            fontSize: 13,
+                                            fontWeight: 400,
+                                            textTransform: 'none',
+                                        }}
+                                    >
                                         Export
-                                    </Typography>
-                                    <Typography color="primary.main" fontSize={13}>
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        onClick={() => setOptionImportOpen(true)}
+                                        sx={{
+                                            minWidth: 0,
+                                            p: 0,
+                                            color: 'primary.main',
+                                            fontSize: 13,
+                                            fontWeight: 400,
+                                            textTransform: 'none',
+                                        }}
+                                    >
                                         Import
-                                    </Typography>
+                                    </Button>
                                 </Stack>
                             </Stack>
                             <Stack spacing={1}>
-                                {draft.options.map((item, index) => (
-                                    <Stack key={index} direction="row" spacing={1} alignItems="center">
+                                {draft.options.map((item, index) => {
+                                    const optionError = optionErrors[index] || '';
+
+                                    return (
+                                    <Stack
+                                        key={index}
+                                        direction="row"
+                                        spacing={1}
+                                        alignItems="center"
+                                        sx={{mb: optionError ? 2.25 : 0}}
+                                    >
                                         <Box sx={{color: 'text.disabled', display: 'flex'}}>
                                             <IconGripVertical size={18}/>
                                         </Box>
 
-                                        <CustomTextField
-                                            className="custom_font"
-                                            value={item}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOption(index, e.target.value)}
-                                            placeholder="Item"
-                                            variant="outlined"
-                                            fullWidth
-                                        />
+                                        <Box sx={{position: 'relative', flex: 1, minWidth: 0}}>
+                                            <CustomTextField
+                                                className="custom_font"
+                                                value={item}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOption(index, e.target.value)}
+                                                placeholder="Item"
+                                                variant="outlined"
+                                                fullWidth
+                                                error={Boolean(optionError)}
+                                            />
+                                            {optionError && (
+                                                <>
+                                                    <Box
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: '50%',
+                                                            right: 10,
+                                                            width: 6,
+                                                            height: 6,
+                                                            borderRadius: '50%',
+                                                            bgcolor: '#FF5A5F',
+                                                            transform: 'translateY(-50%)',
+                                                            zIndex: 2,
+                                                        }}
+                                                    />
+                                                    <Box
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 'calc(100% + 6px)',
+                                                            right: 16,
+                                                            bgcolor: '#FF5A5F',
+                                                            color: '#fff',
+                                                            borderRadius: 0.75,
+                                                            px: 1,
+                                                            py: 0.45,
+                                                            fontSize: 12,
+                                                            lineHeight: 1.2,
+                                                            whiteSpace: 'nowrap',
+                                                            zIndex: 3,
+                                                            boxShadow: '0 8px 18px rgba(255, 90, 95, 0.25)',
+                                                            '&:before': {
+                                                                content: '""',
+                                                                position: 'absolute',
+                                                                right: 16,
+                                                                top: -5,
+                                                                width: 0,
+                                                                height: 0,
+                                                                borderLeft: '5px solid transparent',
+                                                                borderRight: '5px solid transparent',
+                                                                borderBottom: '5px solid #FF5A5F',
+                                                            },
+                                                        }}
+                                                    >
+                                                        {optionError}
+                                                    </Box>
+                                                </>
+                                            )}
+                                        </Box>
                                         <IconButton
                                             size="small"
                                             onClick={() => removeOption(index)}
@@ -961,7 +1298,8 @@ const FieldSettingsDialog = ({
                                             <IconTrash size={16}/>
                                         </IconButton>
                                     </Stack>
-                                ))}
+                                    );
+                                })}
                             </Stack>
                             <Box>
                                 <Button
@@ -1568,6 +1906,283 @@ const FieldSettingsDialog = ({
                     Confirm
                 </Button>
             </DialogActions>
+
+            <Drawer
+                anchor="right"
+                open={optionImportOpen}
+                onClose={closeImportDrawer}
+                PaperProps={{
+                    sx: {
+                        width: {xs: '100%', sm: 520},
+                        maxWidth: '100vw',
+                    },
+                }}
+                sx={{
+                    zIndex: (theme) => theme.zIndex.modal + 2,
+                }}
+            >
+                <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#fff'}}>
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        sx={{
+                            minHeight: 80,
+                            px: 3,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            position: 'relative',
+                        }}
+                    >
+                        <IconButton
+                            onClick={closeImportDrawer}
+                            sx={{color: '#1F2937'}}
+                        >
+                            <IconArrowLeft size={24}/>
+                        </IconButton>
+                        <Typography
+                            fontSize={18}
+                            fontWeight={500}
+                            color="#123044"
+                            sx={{position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none'}}
+                        >
+                            Import Items
+                        </Typography>
+                    </Stack>
+
+                    <Box sx={{flex: 1, overflowY: 'auto', px: 3.5, py: 3}}>
+                        <Box
+                            sx={{
+                                bgcolor: '#F5F5F5',
+                                borderRadius: 0.75,
+                                px: 2,
+                                pt: 2.25,
+                                pb: 2,
+                                mb: 3,
+                            }}
+                        >
+                            <Typography textAlign="center" fontSize={14} color="#123044" lineHeight={1.35} mb={2}>
+                                Copy from any spreadsheet or list, and paste below<br/>
+                                to add a list with multiple items
+                            </Typography>
+                            <Stack direction="row" alignItems="center" justifyContent="center" spacing={2}>
+                                <Box
+                                    sx={{
+                                        width: 190,
+                                        height: 106,
+                                        borderRadius: 1,
+                                        bgcolor: '#fff',
+                                        boxShadow: '0 8px 18px rgba(15, 23, 42, 0.10)',
+                                        display: 'grid',
+                                        gridTemplateColumns: '64px 1fr 1fr',
+                                        gap: 0.5,
+                                        p: 1,
+                                        position: 'relative',
+                                    }}
+                                >
+                                    {[0, 1, 2].map((col) => (
+                                        <Stack
+                                            key={col}
+                                            spacing={1}
+                                            sx={{
+                                                bgcolor: col === 0 ? '#D8EEF9' : 'transparent',
+                                                borderRadius: 0.5,
+                                                p: 0.5,
+                                            }}
+                                        >
+                                            {[0, 1, 2, 3].map((row) => (
+                                                <Box
+                                                    key={row}
+                                                    sx={{
+                                                        height: 7,
+                                                        borderRadius: 2,
+                                                        bgcolor: col === 0 ? '#9FC6D8' : '#E1E1E1',
+                                                    }}
+                                                />
+                                            ))}
+                                        </Stack>
+                                    ))}
+                                    <Paper
+                                        elevation={4}
+                                        sx={{
+                                            position: 'absolute',
+                                            left: 40,
+                                            top: 42,
+                                            px: 1,
+                                            py: 0.75,
+                                            borderRadius: 0.75,
+                                        }}
+                                    >
+                                        <Typography fontSize={10}>Copy</Typography>
+                                        <Typography fontSize={10}>Paste</Typography>
+                                    </Paper>
+                                </Box>
+                                <Typography color="#6B7280" fontSize={30}>›</Typography>
+                                <Box
+                                    sx={{
+                                        width: 190,
+                                        height: 96,
+                                        borderRadius: 1,
+                                        bgcolor: '#fff',
+                                        boxShadow: '0 8px 18px rgba(15, 23, 42, 0.10)',
+                                        p: 1.5,
+                                        position: 'relative',
+                                    }}
+                                >
+                                    <Box sx={{height: '100%', border: '1px solid #E5E7EB', borderRadius: 1, p: 1}}>
+                                        <Typography fontSize={9} color="#B8B8B8">Paste list here</Typography>
+                                    </Box>
+                                    <Paper
+                                        elevation={4}
+                                        sx={{
+                                            position: 'absolute',
+                                            right: 28,
+                                            top: 38,
+                                            px: 1,
+                                            py: 0.75,
+                                            borderRadius: 0.75,
+                                        }}
+                                    >
+                                        <Typography fontSize={10}>Copy</Typography>
+                                        <Typography fontSize={10}>Paste</Typography>
+                                    </Paper>
+                                </Box>
+                            </Stack>
+                        </Box>
+
+                        <Typography textAlign="center" fontSize={14} color="#123044" mb={1.25}>
+                            Paste copied items below
+                        </Typography>
+                        <CustomTextField
+                            value={optionImportText}
+                            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setOptionImportText(event.target.value)}
+                            placeholder="Paste items here"
+                            multiline
+                            minRows={9}
+                            fullWidth
+                            sx={{
+                                '& .MuiInputBase-root': {
+                                    alignItems: 'flex-start',
+                                    borderRadius: 1,
+                                },
+                            }}
+                        />
+                        <Typography textAlign="center" fontSize={14} color="text.secondary" mt={1.25}>
+                            {importedOptions.length} item{importedOptions.length === 1 ? '' : 's'} will be added to the list
+                        </Typography>
+                    </Box>
+
+                    <Stack
+                        direction="row"
+                        spacing={3}
+                        alignItems="center"
+                        sx={{
+                            px: 3,
+                            py: 2,
+                            borderTop: '1px solid',
+                            borderColor: 'divider',
+                        }}
+                    >
+                        <Button
+                            variant="outlined"
+                            onClick={importOptions}
+                            disabled={!canImportOptions}
+                            sx={{borderRadius: 5, textTransform: 'none'}}
+                        >
+                            Import items
+                        </Button>
+                        <Button
+                            onClick={closeImportDrawer}
+                            sx={{color: '#123044', textTransform: 'none'}}
+                        >
+                            Cancel import
+                        </Button>
+                    </Stack>
+                </Box>
+            </Drawer>
+
+            <Dialog
+                open={optionImportConfirmOpen}
+                onClose={() => setOptionImportConfirmOpen(false)}
+                maxWidth={false}
+                PaperProps={{
+                    sx: {
+                        width: {xs: 'calc(100% - 32px)', sm: 364},
+                        borderRadius: 0,
+                        boxShadow: '0 16px 34px rgba(15, 23, 42, 0.24)',
+                        m: 0,
+                    },
+                }}
+                sx={{
+                    zIndex: (theme) => theme.zIndex.modal + 3,
+                }}
+            >
+                <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="center"
+                    sx={{
+                        minHeight: 62,
+                        px: 2,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        position: 'relative',
+                    }}
+                >
+                    <Typography fontSize={18} color="text.secondary">
+                        Import items
+                    </Typography>
+                    <IconButton
+                        size="small"
+                        onClick={() => setOptionImportConfirmOpen(false)}
+                        sx={{position: 'absolute', right: 10, top: 12, color: 'text.secondary'}}
+                    >
+                        <IconX size={20}/>
+                    </IconButton>
+                </Stack>
+
+                <Box sx={{px: 3, pt: 2.5, pb: 2}}>
+                    <Typography fontSize={15} fontWeight={800} color="#123044" lineHeight={1.45} mb={1.75}>
+                        There are {filledOptions.length} item{filledOptions.length === 1 ? '' : 's'} in this list already.<br/>
+                        What would you like to do with those items?
+                    </Typography>
+                    <RadioGroup
+                        value={optionImportMode}
+                        onChange={(event) => setOptionImportMode(event.target.value as 'append' | 'replace')}
+                        sx={{gap: 1}}
+                    >
+                        <FormControlLabel
+                            value="append"
+                            control={<Radio size="small"/>}
+                            label={
+                                <Typography fontSize={14} color="#123044" lineHeight={1.35}>
+                                    Keep existing items and add the imported items
+                                </Typography>
+                            }
+                            sx={{alignItems: 'flex-start', m: 0}}
+                        />
+                        <FormControlLabel
+                            value="replace"
+                            control={<Radio size="small"/>}
+                            label={
+                                <Typography fontSize={14} color="#123044" lineHeight={1.35}>
+                                    Remove existing items and replace them with the imported items
+                                </Typography>
+                            }
+                            sx={{alignItems: 'flex-start', m: 0}}
+                        />
+                    </RadioGroup>
+                </Box>
+
+                <DialogActions sx={{px: 2, py: 1.25, borderTop: '1px solid', borderColor: 'divider'}}>
+                    <Button
+                        variant="contained"
+                        onClick={() => applyImportedOptions(optionImportMode)}
+                        sx={{borderRadius: 5, textTransform: 'none'}}
+                    >
+                        Confirm
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Dialog>
     );
 };

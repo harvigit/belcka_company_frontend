@@ -29,6 +29,7 @@ import {
     IconBell,
     IconCalendar,
     IconChevronDown,
+    IconHandStop,
     IconMicrophone,
     IconScan,
     IconX,
@@ -342,6 +343,7 @@ const PublishWizard = ({
     const [teams, setTeams] = useState<PublishTeamsOption[]>([]);
     const [userDialogOpen, setUserDialogOpen] = useState(false);
     const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+    const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
     // Normalize state to ensure arrays are always defined
     const state = useMemo(() => normalizeState(stateProp), [stateProp]);
@@ -349,6 +351,7 @@ const PublishWizard = ({
     useEffect(() => {
         if (!open) return;
         setStep(1);
+        setCloseConfirmOpen(false);
     }, [open]);
 
     useEffect(() => {
@@ -415,6 +418,16 @@ const PublishWizard = ({
             selectedTeams: nextTeams,
             selectedUsers: state.selectedUsers.filter((user) => !nextTeamUserIds.has(user.id)),
         });
+    };
+
+    const requestClose = () => {
+        if (saving) return;
+        setCloseConfirmOpen(true);
+    };
+
+    const discardPublishSettings = () => {
+        setCloseConfirmOpen(false);
+        onBackToEditor();
     };
 
     const chipList = (items: PublishUsersOption[] | undefined, onRemove: (id: string) => void) => (
@@ -729,7 +742,7 @@ const PublishWizard = ({
     return (
         <Dialog
             open={open}
-            onClose={step === 1 ? onBackToEditor : undefined}
+            onClose={requestClose}
             fullScreen
             TransitionComponent={SlideUp}
             PaperProps={{
@@ -762,7 +775,8 @@ const PublishWizard = ({
                     <Typography
                         fontWeight={600}>{step === 1 ? 'Publish By' : step === 2 ? 'Settings' : 'Summary'}</Typography>
                     <IconButton
-                        onClick={onBackToEditor}
+                        onClick={requestClose}
+                        disabled={saving}
                         size="small"
                         sx={{position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)'}}
                     >
@@ -833,6 +847,76 @@ const PublishWizard = ({
                     selectedUsers: next.filter((user) => !selectedTeamUserIds.has(user.id)),
                 })}
             />
+
+            <Dialog
+                open={closeConfirmOpen}
+                onClose={() => !saving && setCloseConfirmOpen(false)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2,
+                        p: {xs: 2, sm: 3},
+                    },
+                }}
+            >
+                <IconButton
+                    aria-label="close"
+                    onClick={() => setCloseConfirmOpen(false)}
+                    disabled={saving}
+                    sx={{
+                        position: 'absolute',
+                        right: 12,
+                        top: 12,
+                        color: 'text.secondary',
+                    }}
+                >
+                    <IconX size={18}/>
+                </IconButton>
+                <DialogContent sx={{textAlign: 'center', px: {xs: 1, sm: 2}, pt: 2.5, pb: 0}}>
+                    <Box
+                        sx={{
+                            width: 72,
+                            height: 72,
+                            borderRadius: '50%',
+                            bgcolor: '#fff1e5',
+                            color: '#ff8a1f',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mx: 'auto',
+                            mb: 2.5,
+                        }}
+                    >
+                        <IconHandStop size={36}/>
+                    </Box>
+                    <Typography fontWeight={800} fontSize={20} mb={1.25}>
+                        Are you sure?
+                    </Typography>
+                    <Typography color="text.secondary" fontWeight={500} sx={{maxWidth: 360, mx: 'auto'}}>
+                        Publish settings are not saved yet. You can discard them or continue editing.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{justifyContent: 'center', gap: 1, px: 0, pt: 3, pb: 0}}>
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={discardPublishSettings}
+                        disabled={saving}
+                        sx={{borderRadius: 999, px: 2}}
+                    >
+                        Discard
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => setCloseConfirmOpen(false)}
+                        disabled={saving}
+                        sx={{borderRadius: 999, px: 2.5, bgcolor: '#1294f6', '&:hover': {bgcolor: '#0B84DC'}}}
+                    >
+                        Continue editing
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Dialog>
     );
 };

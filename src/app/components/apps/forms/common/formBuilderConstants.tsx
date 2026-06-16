@@ -92,6 +92,7 @@ export const emptyDraftForType = (type: string): FieldDraft => ({
     required: false,
     options: optionFieldTypes.includes(type) || type === 'Yes/No' ? ['', ''] : [],
     optionImages: type === 'Image selection' ? ['', ''] : [],
+    optionSortMode: 'custom',
     minValue: 0,
     maxValue: 0,
     ratingStarCount: 5,

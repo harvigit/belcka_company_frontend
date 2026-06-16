@@ -16,6 +16,7 @@ export type FormField = {
     required?: boolean;
     options?: string[];
     optionImages?: string[];
+    optionSortMode?: 'custom' | 'az';
     minValue?: number;
     maxValue?: number;
     ratingStarCount?: number;
@@ -79,6 +80,7 @@ export type FieldDraft = {
     required: boolean;
     options: string[];
     optionImages: string[];
+    optionSortMode: 'custom' | 'az';
     minValue: number;
     maxValue: number;
     ratingStarCount: number;

@@ -62,10 +62,12 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
     const [savingTemplate, setSavingTemplate] = useState(false);
     const [publishWizardOpen, setPublishWizardOpen] = useState(false);
     const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+    const [savedFormId, setSavedFormId] = useState<string | undefined>(formId);
     const [initialDraftSignature, setInitialDraftSignature] = useState('');
     const [publishWizardState, setPublishWizardState] = useState<PublishWizardState>(createDefaultPublishWizardState);
 
-    const isExisting = useMemo(() => Boolean(formId), [formId]);
+    const activeFormId = savedFormId || formId;
+    const isExisting = useMemo(() => Boolean(activeFormId), [activeFormId]);
     const draftSignature = useMemo(() => JSON.stringify({
         name: name.trim(),
         fields,
@@ -104,6 +106,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
         setFormNameError('');
         setFieldsError('');
         setFields([]);
+        setSavedFormId(formId);
         setCloseConfirmOpen(false);
         setInitialDraftSignature(JSON.stringify({name: '', fields: []}));
         setPublishWizardState(createDefaultPublishWizardState());
@@ -134,7 +137,13 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
         fetchForm();
     }, [open, formId, initialTemplate]);
 
-    const buildFormPayload = (draftName = name.trim(), status: 'DRAFT' | 'PUBLISHED' | 'SCHEDULED' = 'DRAFT') => {
+    const buildDraftPayload = (draftName = name.trim()) => ({
+        name: draftName,
+        status: 'DRAFT',
+        fields,
+    });
+
+    const buildPublishPayload = (draftName = name.trim(), status: 'PUBLISHED' | 'SCHEDULED') => {
         const publishTarget = buildPublishTargetPayload(publishWizardState);
         const currentTeamMemberCount = publishWizardState.selectedTeams.reduce(
             (sum, team) => sum + Number(team.memberCount || 0),
@@ -143,30 +152,47 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
         const currentAssigneeCount = currentTeamMemberCount + publishWizardState.selectedUsers.length;
 
         return {
+            form_id: activeFormId,
             name: draftName,
             status,
             assigned_to: `${publishWizardState.selectedTeams.length} teams, ${publishWizardState.selectedUsers.length} users (${currentAssigneeCount} current assignees)`,
-            fields,
             publish_target: publishTarget,
         };
     };
 
-    const saveDraft = async ({closeAfterSave = false} = {}) => {
+    const getSavedFormId = (res: any) => res.data.info?.id || res.data.info?.form_id || res.data.form?.id || res.data.id || activeFormId;
+
+    const saveDraft = async ({
+        closeAfterSave = false,
+        openPublishAfterSave = false,
+        requireFields = false,
+    } = {}) => {
         if (!name.trim()) {
             setFormNameError('Please enter\'s the form name.');
             return;
         }
 
+        if (requireFields && fields.length === 0) {
+            setFieldsError('Add at least one field');
+            return;
+        }
+
+        setFormNameError('');
+        setFieldsError('');
         setSaving(true);
         
         try {
-            const payload = buildFormPayload();
-            const res = isExisting ? await api.put(`forms/${formId}`, payload) : await api.post('forms/store', payload);
+            const payload = buildDraftPayload();
+            const res = isExisting ? await api.post(`forms/edit/${activeFormId}`, payload) : await api.post('forms/store', payload);
 
             toast.success(res.data.message || 'Draft saved');
 
-            const savedId = res.data.info?.id || formId;
-            if (savedId) onSaved?.(savedId);
+            const savedId = getSavedFormId(res);
+            if (savedId) {
+                const normalizedSavedId = String(savedId);
+                setSavedFormId(normalizedSavedId);
+                onSaved?.(normalizedSavedId);
+            }
 
             setInitialDraftSignature(JSON.stringify({
                 name: payload.name.trim(),
@@ -175,6 +201,11 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
 
             if (closeAfterSave) {
                 closeEditor(true);
+                return;
+            }
+
+            if (openPublishAfterSave) {
+                setPublishWizardOpen(true);
             }
         } catch (err) {
             toast.error((err as any)?.response?.data?.message || 'Failed to save draft');
@@ -192,15 +223,24 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
 
         setSaving(true);
         try {
-            const status = publishWizardState.settings.publishMode === 'schedule' ? 'SCHEDULED' : 'PUBLISHED';
-            const payload = buildFormPayload(name.trim(), status);
+            if (!activeFormId) {
+                toast.error('Please save the form before publishing.');
+                return;
+            }
 
-            const res = isExisting ? await api.put(`forms/${formId}`, payload) : await api.post('forms/store', payload);
+            const status = publishWizardState.settings.publishMode === 'schedule' ? 'SCHEDULED' : 'PUBLISHED';
+            const payload = buildPublishPayload(name.trim(), status);
+
+            const res = await api.post('forms/publish/store', payload);
 
             toast.success(res.data.message || 'Form saved');
 
-            const savedId = res.data.info?.id || formId;
-            if (savedId) onSaved?.(savedId);
+            const savedId = getSavedFormId(res);
+            if (savedId) {
+                const normalizedSavedId = String(savedId);
+                setSavedFormId(normalizedSavedId);
+                onSaved?.(normalizedSavedId);
+            }
             closeEditor(true);
         } catch (err) {
             toast.error((err as any)?.response?.data?.message || 'Failed to save form');
@@ -237,26 +277,12 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
         }
     };
 
-    const openPublishWizard = () => {
-        if (!name.trim()) {
-            setFormNameError('Please enter\'s the form name.');
-            return;
-        }
-
-        if (fields.length === 0) {
-            setFieldsError('Add at least one field');
-            return;
-        }
-
-        setFormNameError('');
-        setFieldsError('');
-        setPublishWizardOpen(true);
-    };
+    const saveDraftAndOpenPublishWizard = () => saveDraft({openPublishAfterSave: true, requireFields: true});
 
     return (
         <>
             <Dialog
-                open={open}
+                open={open && !publishWizardOpen}
                 onClose={requestCloseEditor}
                 TransitionComponent={SlideUp}
                 maxWidth={false}
@@ -442,7 +468,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                         
                         <Button
                             variant="contained"
-                            onClick={openPublishWizard}
+                            onClick={saveDraftAndOpenPublishWizard}
                             disabled={saving}
                             sx={{
                                 borderRadius: 1.5,
@@ -464,7 +490,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                 saving={saving}
                 state={publishWizardState}
                 onChange={setPublishWizardState}
-                onBackToEditor={() => setPublishWizardOpen(false)}
+                onBackToEditor={() => closeEditor(true)}
                 onConfirm={saveForm}
             />
             <Dialog

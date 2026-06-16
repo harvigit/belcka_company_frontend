@@ -57,6 +57,8 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
     const [fieldDraft, setFieldDraft] = useState<FieldDraft>(emptyDraftForType(''));
     const [fieldQuestionError, setFieldQuestionError] = useState('');
     const [fieldFormulaError, setFieldFormulaError] = useState('');
+    const [fieldOptionErrors, setFieldOptionErrors] = useState<string[]>([]);
+    const [fieldOptionImageErrors, setFieldOptionImageErrors] = useState<string[]>([]);
 
     const mapFieldTree = (source: FormField[], matcher: (field: FormField) => boolean, updater: (field: FormField) => FormField): FormField[] => source.map((field) => {
         if (matcher(field)) return updater(field);
@@ -126,6 +128,8 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setFieldDraft(emptyDraftForType(''));
         setFieldQuestionError('');
         setFieldFormulaError('');
+        setFieldOptionErrors([]);
+        setFieldOptionImageErrors([]);
     };
 
     const selectFieldType = (type: string) => {
@@ -135,6 +139,8 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setFieldDraft(emptyDraftForType(type));
         setFieldQuestionError('');
         setFieldFormulaError('');
+        setFieldOptionErrors([]);
+        setFieldOptionImageErrors([]);
         setAnchorEl(null);
     };
 
@@ -146,6 +152,8 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setFieldDraft(fieldToDraft(field));
         setFieldQuestionError('');
         setFieldFormulaError('');
+        setFieldOptionErrors([]);
+        setFieldOptionImageErrors([]);
     };
 
     const duplicateField = (field: FormField) => {
@@ -156,6 +164,27 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
             fields: item.fields?.map(duplicateWithNewIds),
         });
         setFields((cur) => insertFieldAfterInTree(cur, field.id, duplicateWithNewIds(field)));
+    };
+
+    const validateOptionItems = () => {
+        if (activeFieldType !== 'Dropdown' && activeFieldType !== 'Image selection') return true;
+
+        const normalizedOptions = fieldDraft.options.map((item) => item.trim().toLowerCase());
+        const duplicateTitles = new Set(
+            normalizedOptions.filter((item, index) => item && normalizedOptions.indexOf(item) !== index),
+        );
+        const nextOptionErrors = normalizedOptions.map((item) => {
+            if (!item) return 'Not filled yet';
+            if (duplicateTitles.has(item)) return "There's an existing option in this list with the same title";
+            return '';
+        });
+        const nextOptionImageErrors = activeFieldType === 'Image selection'
+            ? fieldDraft.options.map((_, index) => fieldDraft.optionImages[index] ? '' : 'Upload an image')
+            : [];
+
+        setFieldOptionErrors(nextOptionErrors);
+        setFieldOptionImageErrors(nextOptionImageErrors);
+        return !nextOptionErrors.some(Boolean) && !nextOptionImageErrors.some(Boolean);
     };
 
     const confirmField = () => {
@@ -176,6 +205,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                 return;
             }
         }
+        if (!validateOptionItems()) return;
 
         const label = fieldDraft.label.trim();
         const description = fieldDraft.description.trim();
@@ -189,6 +219,9 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
             required: fieldDraft.required,
             
             ...(options.length ? {options} : {}),
+            ...(options.length && (activeFieldType === 'Dropdown' || activeFieldType === 'Image selection') ? {
+                optionSortMode: fieldDraft.optionSortMode,
+            } : {}),
             
             ...(activeFieldType === 'Image selection' && optionImages.some(Boolean) ? {optionImages} : {}),
             
@@ -286,6 +319,8 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setFieldDraft(emptyDraftForType('Group'));
         setFieldQuestionError('');
         setFieldFormulaError('');
+        setFieldOptionErrors([]);
+        setFieldOptionImageErrors([]);
         setBulkActionAnchorEl(null);
     };
 
@@ -850,11 +885,17 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                 availableFields={fields.filter((field) => field.id !== editingFieldId)}
                 questionError={fieldQuestionError}
                 formulaError={fieldFormulaError}
+                optionErrors={fieldOptionErrors}
+                optionImageErrors={fieldOptionImageErrors}
                 onChange={(nextDraft) => {
                     const formulaChanged = nextDraft.formulaExpression !== fieldDraft.formulaExpression;
+                    const optionsChanged = nextDraft.options !== fieldDraft.options;
+                    const optionImagesChanged = nextDraft.optionImages !== fieldDraft.optionImages;
                     setFieldDraft(nextDraft);
                     if (nextDraft.label.trim()) setFieldQuestionError('');
                     if (formulaChanged) setFieldFormulaError('');
+                    if (optionsChanged) setFieldOptionErrors([]);
+                    if (optionImagesChanged) setFieldOptionImageErrors([]);
                 }}
                 onClose={closeFieldDialog}
                 onConfirm={confirmField}
