@@ -672,12 +672,29 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
                 </Typography>
                 <Autocomplete
                   options={addableProducts}
+                  filterOptions={(options, { inputValue }) => {
+                    const search = inputValue.toLowerCase().trim();
+
+                    return options.filter((option) =>
+                      [
+                        option.uuid,
+                        option.name,
+                        option.short_name,
+                        option.supplier_code,
+                        option.supplier_name,
+                      ]
+                        .filter(Boolean)
+                        .some((field) =>
+                          String(field).toLowerCase().includes(search),
+                        ),
+                    );
+                  }}
                   value={addProduct}
                   onChange={(_, v) => {
                     setAddProduct(v);
                     setAddPrice(v ? String(v.price ?? "") : "");
                   }}
-                  getOptionLabel={(o) => o.short_name}
+                  getOptionLabel={(o) => o.short_name || ""}
                   isOptionEqualToValue={(o, v) => o.id === v.id}
                   renderInput={(params) => (
                     <CustomTextField

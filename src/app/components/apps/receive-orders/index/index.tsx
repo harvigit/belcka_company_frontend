@@ -1611,59 +1611,101 @@ const ReceivePurchaseOrder = () => {
             {filteredProducts?.map((item) => (
               <Box
                 key={item.product_id}
-                alignItems="stretch"
                 display="flex"
+                alignItems="flex-start"
                 gap={2}
                 p={2}
-                pb={0}
-                mb={2}
                 border="1px solid #ddd"
                 borderRadius={2}
                 bgcolor="#fff"
               >
-                <CustomCheckbox
-                  checked={selectedRowIds.has(item.product_id)}
-                  disabled={item.maxReceiveNow <= 0}
-                  onChange={(e) => {
-                    setSelectedRowIds((prev) => {
-                      const updated = new Set(prev);
-                      if (e.target.checked) {
-                        updated.add(item.product_id);
-                      } else {
-                        updated.delete(item.product_id);
-                      }
-                      return updated;
-                    });
+                {/* Checkbox */}
+                <Box pt={3}>
+                  <CustomCheckbox
+                    checked={selectedRowIds.has(item.product_id)}
+                    disabled={item.maxReceiveNow <= 0}
+                    onChange={(e) => {
+                      setSelectedRowIds((prev) => {
+                        const updated = new Set(prev);
+
+                        if (e.target.checked) {
+                          updated.add(item.product_id);
+                        } else {
+                          updated.delete(item.product_id);
+                        }
+
+                        return updated;
+                      });
+                    }}
+                  />
+                </Box>
+
+                {/* Product Image */}
+                <Box
+                  sx={{
+                    width: 60,
+                    height: 60,
+                    flexShrink: 0,
+                    mt: 1,
                   }}
-                />
-                <Box>
+                >
                   <img
                     src={item.image_url || "/images/products/product.svg"}
                     alt="Product"
                     style={{
-                      height: 50,
-                      width: 50,
+                      width: "100%",
+                      height: "100%",
                       objectFit: "cover",
                       borderRadius: 8,
                     }}
                   />
                 </Box>
-                <Box flex={1} minWidth={0} alignItems={"center"}>
-                  <Stack mt={2} spacing={1}>
-                    <Typography variant="body2" fontWeight={600}>
-                      {item.name ? item.name : item.short_name}
-                      <Chip label={item?.uuid} size="small" sx={{ ml: 1 }} />
-                    </Typography>
-                    <Typography variant="body2">
-                      Supplier Code: {item?.supplier_code}
-                    </Typography>
-                  </Stack>
 
-                  <Box display="flex" alignItems="start" gap={1}>
-                    <Box display={"flex"} alignItems={"center"}>
+                {/* Product Info + Qty */}
+                <Box
+                  flex={1}
+                  minWidth={0}
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="flex-start"
+                  gap={2}
+                >
+                  {/* Product Details */}
+                  <Box flex={1} minWidth={0}>
+                    <Typography
+                      variant="body1"
+                      fontWeight={600}
+                      sx={{
+                        lineHeight: 1.4,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {item.name || item.short_name}
+                    </Typography>
+
+                    <Chip
+                      label={item?.uuid}
+                      size="small"
+                      sx={{
+                        mt: 0.5,
+                        mb: 1,
+                      }}
+                    />
+
+                    <Typography variant="body2" color="text.secondary">
+                      Supplier Code: {item?.supplier_code || "-"}
+                    </Typography>
+
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      flexWrap="wrap"
+                      gap={1}
+                    >
                       <Typography variant="caption" color="text.secondary">
                         Received: {item?.delivered_qty}
                       </Typography>
+
                       <IconButton
                         size="small"
                         onClick={() => {
@@ -1673,66 +1715,81 @@ const ReceivePurchaseOrder = () => {
                       >
                         <IconHistory size={16} />
                       </IconButton>
+
+                      {item?.cancelled_qty > 0 && (
+                        <Typography variant="caption" color="error">
+                          Cancelled: {item?.cancelled_qty}
+                        </Typography>
+                      )}
                     </Box>
-                    {item?.cancelled_qty > 0 && (
-                      <Typography variant="caption" color="error" mt={"10px"}>
-                        Cancelled: {item?.cancelled_qty}
-                      </Typography>
-                    )}
                   </Box>
-                </Box>
 
-                <Box display="flex" alignItems="stretch" gap={1}>
-                  <Typography
-                    variant="h6"
-                    fontWeight={500}
-                    color="primary"
-                    className="f-14"
-                    mt={1}
+                  {/* Qty Section */}
+                  <Box
+                    display="flex"
+                    alignItems="flex-start"
+                    gap={1}
+                    flexShrink={0}
                   >
-                    {item?.ordered_qty}
-                  </Typography>
-                  <TextField
-                    className="f-14"
-                    disabled={item.maxReceiveNow <= 0}
-                    size="small"
-                    value={item?.receive_now}
-                    inputProps={{
-                      style: {
+                    <Typography
+                      variant="h6"
+                      fontWeight={600}
+                      color="primary"
+                      sx={{
+                        minWidth: 24,
                         textAlign: "center",
-                        fontWeight: 600,
-                        padding: "6px 8px",
-                      },
-                    }}
-                    sx={{ width: 50 }}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (!/^\d*$/.test(value)) return;
-                      const num = Number(value || 0);
+                        mt: 0.5,
+                      }}
+                    >
+                      {item?.ordered_qty}
+                    </Typography>
 
-                      if (num > item.maxReceiveNow) return;
+                    <TextField
+                      size="small"
+                      disabled={item.maxReceiveNow <= 0}
+                      value={item?.receive_now}
+                      sx={{
+                        width: 65,
+                        "& .MuiInputBase-input": {
+                          textAlign: "center",
+                          fontWeight: 600,
+                          py: 1,
+                        },
+                      }}
+                      onChange={(e) => {
+                        const value = e.target.value;
 
-                      setProducts((prev) =>
-                        prev.map((p) => {
-                          if (p.product_id !== item.product_id) return p;
-                          return {
-                            ...p,
-                            receive_now: Math.max(0, num),
-                          };
-                        }),
-                      );
+                        if (!/^\d*$/.test(value)) return;
 
-                      setSelectedRowIds((prev) => {
-                        const updated = new Set(prev);
-                        if (num === 0) {
-                          updated.delete(item.product_id);
-                        } else {
-                          updated.add(item.product_id);
-                        }
-                        return updated;
-                      });
-                    }}
-                  />
+                        const num = Number(value || 0);
+
+                        if (num > item.maxReceiveNow) return;
+
+                        setProducts((prev) =>
+                          prev.map((p) =>
+                            p.product_id === item.product_id
+                              ? {
+                                  ...p,
+                                  receive_now: num,
+                                }
+                              : p,
+                          ),
+                        );
+
+                        setSelectedRowIds((prev) => {
+                          const updated = new Set(prev);
+
+                          if (num === 0) {
+                            updated.delete(item.product_id);
+                          } else {
+                            updated.add(item.product_id);
+                          }
+
+                          return updated;
+                        });
+                      }}
+                    />
+                  </Box>
                 </Box>
               </Box>
             ))}

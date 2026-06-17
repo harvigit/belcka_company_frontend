@@ -274,7 +274,7 @@ const ToolsList = () => {
         `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
       );
       if (res.data?.info) setTrades(res.data.info);
-    } catch (err) { }
+    } catch (err) {}
   };
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -661,7 +661,7 @@ const ToolsList = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
           tableContainerRef.current.scrollWidth >
-          tableContainerRef.current.clientWidth,
+            tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -1561,7 +1561,7 @@ const ToolsList = () => {
               )}
               {/* Action buttons */}
               <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
-                {/* <Link
+                <Link
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
@@ -1578,7 +1578,7 @@ const ToolsList = () => {
                 >
                   <FileDownload />
                   Download Sample File
-                </Link> */}
+                </Link>
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Button
                     variant="contained"
@@ -1670,14 +1670,14 @@ const ToolsList = () => {
                           : col.columnDef.meta?.label
                             ? col.columnDef.meta.label
                             : typeof col.columnDef.header === "string" &&
-                              col.columnDef.header.trim() !== ""
+                                col.columnDef.header.trim() !== ""
                               ? col.columnDef.header
                               : col.id
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (str: string) =>
-                                  str.toUpperCase(),
-                                )
-                                .trim()
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str: string) =>
+                                    str.toUpperCase(),
+                                  )
+                                  .trim()
                       }
                     />
                   ))}
@@ -2047,7 +2047,7 @@ const ToolsList = () => {
                             setUsersDialogOpen(false);
                             fetchProducts();
                           }
-                        } catch (err: any) { }
+                        } catch (err: any) {}
                       }}
                     >
                       Assign
