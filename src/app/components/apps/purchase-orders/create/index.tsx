@@ -85,7 +85,6 @@ const PurchaseOrder: React.FC<Props> = ({
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
-  const [orderId, setOrderId] = useState<number>(0);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const TAX_PERCENT = 20;
@@ -162,7 +161,6 @@ const PurchaseOrder: React.FC<Props> = ({
     if (mode === "edit" && editData) {
       fetchResources(true);
 
-      setOrderId(editData.order_id);
       setCurrency(editData.currency);
 
       const supplierIdsFromPO = [
@@ -241,10 +239,8 @@ const PurchaseOrder: React.FC<Props> = ({
     setStores(res.data.stores);
 
     if (!isEdit) {
-      setOrderId(res.data.orderId);
       setFormData((prev: any) => ({
         ...prev,
-        order_id: res.data.orderId,
       }));
       setProducts([]);
     }

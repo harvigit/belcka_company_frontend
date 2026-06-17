@@ -286,7 +286,6 @@ const AddressesList = ({
           tasks: [],
         });
       } else {
-        toast.error(result.data.message);
         setLoading(false);
       }
     } catch (error) {

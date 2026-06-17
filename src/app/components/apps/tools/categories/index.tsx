@@ -265,7 +265,7 @@ const ToolCategoriesDrawer: React.FC<ToolCategoriesDrawerProps> = ({
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <Button onClick={() => setOpenDialog(false)} color="error">Cancel</Button>
           <Button
             onClick={handleAddEdit}
             variant="contained"

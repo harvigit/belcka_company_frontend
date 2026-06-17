@@ -163,8 +163,8 @@ const EditCategory: React.FC<EditCategoryProps> = ({
           status: data.status,
         });
 
-        if (data.image_url) {
-          setPreview(data.image_url);
+        if (data.thumb_url) {
+          setPreview(data.thumb_url);
         }
       }
     } catch (err) {

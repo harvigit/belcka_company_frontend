@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 import CloseIcon from "@mui/icons-material/Close";
 import { Grid } from "@mui/system";
 import Image from "next/image";
+import { IconArrowLeft } from "@tabler/icons-react";
 
 interface HireHistoryProps {
   open: boolean;
@@ -158,9 +159,14 @@ const HireHistory: React.FC<HireHistoryProps> = ({
           display="flex"
           justifyContent="space-between"
           textAlign={"center"}
-          px={1}
+          alignItems={"center"}
         >
-          <Typography fontWeight={600}>Hire</Typography>
+          <Box display={"flex"} alignItems={"center"}>
+            <IconButton onClick={onClose}>
+              <IconArrowLeft />
+            </IconButton>
+            <Typography fontWeight={600}>Hire</Typography>
+          </Box>
           <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>

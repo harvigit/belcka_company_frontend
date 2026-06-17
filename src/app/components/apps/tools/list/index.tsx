@@ -30,6 +30,9 @@ import {
   Checkbox,
   Autocomplete,
   Select,
+  Modal,
+  LinearProgress,
+  CircularProgress,
 } from "@mui/material";
 import {
   flexRender,
@@ -52,6 +55,7 @@ import {
   IconTrash,
   IconX,
   IconInfoCircle,
+  IconFileImport,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
 import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
@@ -78,6 +82,10 @@ import ProductView from "../../products/view";
 import ToolCategoriesDrawer from "../categories";
 import ProductHistory from "../product-history";
 import { IconKeyframes } from "@tabler/icons-react";
+import { useDropzone } from "react-dropzone";
+import { FileDownload } from "@mui/icons-material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import Cookies from "js-cookie";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -128,6 +136,8 @@ const ToolsList = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
+  const storedStore = Cookies.get(`tools_store_${user.id}_${user.company_id}`);
+  const activeStore = storedStore ? JSON.parse(storedStore) : null;
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -144,6 +154,7 @@ const ToolsList = () => {
     null,
   );
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
+  const [storeAnchorEl, setStoreAnchorEl] = useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [openPreview, setOpenPreview] = useState(false);
@@ -151,6 +162,7 @@ const ToolsList = () => {
   const [rowTrades, setRowTrades] = useState<Record<string, any[]>>({});
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editingStoreId, setEditingStoreId] = useState<string | null>(null);
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
   const [openTradeModal, setOpenTradeModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -166,6 +178,18 @@ const ToolsList = () => {
   const [draftCategories, setDraftCategories] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
 
+  const [openModel, setOpenModel] = useState(false);
+  const [file, setFile] = useState<any | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [isImport, setIsImport] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [storeId, setStoreId] = useState<number | null>(null);
+
+  const [openImageManager, setOpenImageManager] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [newMainImage, setNewMainImage] = useState<File | null>(null);
+
   const [formData, setFormData] = useState<any>({
     id: 0,
     company_id: user?.company_id,
@@ -177,6 +201,72 @@ const ToolsList = () => {
     status: true,
   });
 
+  const onDropMainImage = (acceptedFiles: File[]) => {
+    if (acceptedFiles[0]) setNewMainImage(acceptedFiles[0]);
+  };
+
+  const { getRootProps: getImageRootProps, getInputProps: getImageInputProps } =
+    useDropzone({
+      accept: { "image/*": [".jpg", ".jpeg", ".png", ".webp"] },
+      maxFiles: 1,
+      onDrop: onDropMainImage,
+    });
+
+  // Paste support
+  useEffect(() => {
+    if (!openImageManager) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image")) {
+          const f = items[i].getAsFile();
+          if (f) {
+            setNewMainImage(f);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [openImageManager]);
+
+  const handleSaveMainImage = async () => {
+    if (!selectedRow || !newMainImage) return;
+    setIsSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("id", String(selectedRow.product_id ?? selectedRow.id));
+      fd.append("image", newMainImage);
+      const res = await api.post("products/new-images", fd, {
+        headers: { "Content-Type": undefined },
+      });
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        const newUrl =
+          res.data.data?.image_url ||
+          res.data.image_url ||
+          URL.createObjectURL(newMainImage);
+        setData((prev: any[]) =>
+          prev.map((p) =>
+            p.product_id === selectedRow.product_id || p.id === selectedRow.id
+              ? { ...p, image_url: newUrl }
+              : p,
+          ),
+        );
+        setOpenImageManager(false);
+        setNewMainImage(null);
+      } else {
+        toast.error(res.data.message);
+      }
+    } catch (err) {
+      console.error("Image upload failed", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // trades
   const fetchTrades = async () => {
     try {
@@ -184,7 +274,7 @@ const ToolsList = () => {
         `get-company-resources?flag=tradeList&company_id=${user.company_id}`,
       );
       if (res.data?.info) setTrades(res.data.info);
-    } catch (err) {}
+    } catch (err) { }
   };
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -192,6 +282,14 @@ const ToolsList = () => {
   };
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleStoreOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setStoreAnchorEl(event.currentTarget);
+  };
+
+  const handleStoreClose = () => {
+    setStoreAnchorEl(null);
   };
 
   const onClose = () => {
@@ -210,12 +308,42 @@ const ToolsList = () => {
     setOpenCategoryModal(false);
   };
 
+  const handleStoreChange = (storeId: number) => {
+    const selectedStore = stores.find((s) => s.id === storeId);
+    if (!selectedStore || !user?.id) return;
+
+    Cookies.set(
+      `tools_store_${user.id}_${user.company_id}`,
+      JSON.stringify({
+        id: selectedStore.id,
+        name: selectedStore.name,
+      }),
+      { expires: 365 },
+    );
+
+    setStoreId(selectedStore.id);
+
+    fetchProducts();
+
+    setStoreAnchorEl(null);
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    if (storedStore) {
+      const store = JSON.parse(storedStore);
+      setStoreId(store.id);
+    }
+  }, [user, stores]);
+
   // Fetch data
   const fetchProducts = async (restorePage?: number) => {
     setFetchProduct(true);
     try {
+      const storeFilter = activeStore?.id ? `&store_id=${activeStore.id}` : "";
       const res = await api.get(
-        `product-tools/get?company_id=${user.company_id}&is_web=true`,
+        `product-tools/get?company_id=${user.company_id}&is_web=true${storeFilter}`,
       );
       if (res.data) {
         setData(res.data.info);
@@ -233,9 +361,99 @@ const ToolsList = () => {
   };
 
   useEffect(() => {
-    fetchProducts();
+    if (activeStore?.id) {
+      fetchProducts();
+    }
     fetchTrades();
   }, []);
+
+  const handleModelOpen = () => {
+    setPreview(null);
+    setFile(null);
+    setOpenModel(true);
+  };
+  const handleModelClose = () => setOpenModel(false);
+
+  const handleFileChange = (acceptedFiles: File[]) => {
+    const selectedFile = acceptedFiles[0];
+    setFile(selectedFile);
+    setPreview(selectedFile.name);
+  };
+
+  const downloadSampleFile = () => {
+    const link = document.createElement("a");
+    link.href = "/files/tools_export.xlsx";
+    link.download = "sample-file.xlsx";
+    link.click();
+  };
+
+  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
+    useDropzone({
+      accept: {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx",
+        ],
+        "application/vnd.ms-excel": [".xls"],
+      },
+      onDrop: handleFileChange,
+    });
+
+  const importTools = async () => {
+    if (!activeStore?.id) {
+      toast.error("Please select a store first");
+      return;
+    }
+    if (!file) {
+      toast.error("Please select a file");
+      return;
+    }
+
+    setIsImport(true);
+    setUploadProgress(0);
+    setIsProcessing(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("company_id", String(user?.company_id));
+      formData.append("store_id", String(activeStore.id));
+
+      const res = await api.post("product-tools/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
+
+            setUploadProgress(percent);
+
+            if (percent === 100) {
+              setIsProcessing(true);
+            }
+          }
+        },
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchProducts();
+        setTimeout(() => {
+          handleModelClose();
+          setUploadProgress(0);
+          setIsProcessing(false);
+        }, 1000);
+      } else {
+        toast.error(res.data.message || "Failed to import excel!");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Import failed");
+    } finally {
+      setIsImport(false);
+    }
+  };
 
   // add product
   const handleSubmit = async (
@@ -363,6 +581,7 @@ const ToolsList = () => {
   const handleEditTrades = (item: any) => {
     setEditingRowId(item.id);
     setEditingProductId(item.product_id);
+    setEditingStoreId(item.store_id);
 
     const selectedIds = item.trade_ids
       ? item.trade_ids.split(",").map((id: string) => Number(id))
@@ -377,12 +596,14 @@ const ToolsList = () => {
     id: string,
     productId: string,
     selected: any[],
+    storeId: string | null,
   ) => {
     try {
       const payload = {
         id: Number(id),
         company_id: Number(user.company_id),
         product_id: Number(productId),
+        store_id: storeId ? Number(storeId) : undefined,
         trade_ids: selected.map((c) => c.id).join(","),
       };
       const res = await api.post("product-tools/manage-tools", payload);
@@ -432,7 +653,6 @@ const ToolsList = () => {
     });
   }, [data, searchTerm]);
 
-  
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -440,18 +660,23 @@ const ToolsList = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+          tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -579,6 +804,19 @@ const ToolsList = () => {
                 setOpenPreview(true);
               }}
             />
+            <Tooltip title="Upload primary image">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedRow(item);
+                  setNewMainImage(null);
+                  setOpenImageManager(true);
+                }}
+              >
+                <AddCircleOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Stack>
         );
       },
@@ -617,9 +855,9 @@ const ToolsList = () => {
                   "&:hover": { color: "#1976d2" },
                 }}
               >
-                {item.short_name ? item.short_name : "-"}
+                {item.short_name ? item.short_name : ""}
                 <Typography color="textSecondary" className="f-14">
-                  {item.name}
+                  {item.name ? item.name : ""}
                 </Typography>
               </Typography>
             </Tooltip>
@@ -846,10 +1084,13 @@ const ToolsList = () => {
               </IconButton>
             </Tooltip>
             <Tooltip title="History">
-              <IconButton onClick={() => {
-                setSelectedTaskId(item.product_id);
-                setProductHistoryDrawer(true);
-              }} color="primary">
+              <IconButton
+                onClick={() => {
+                  setSelectedTaskId(item.product_id);
+                  setProductHistoryDrawer(true);
+                }}
+                color="primary"
+              >
                 <IconClock size={18} />
               </IconButton>
             </Tooltip>
@@ -898,6 +1139,45 @@ const ToolsList = () => {
 
   return (
     <PermissionGuard permission="Tools">
+      <Dialog open={!activeStore?.id} disableEscapeKeyDown>
+        <DialogTitle>Select Store</DialogTitle>
+        <DialogContent sx={{ minWidth: 300 }}>
+          <Typography variant="body2" mb={2}>
+            Please select a store to view its tools.
+          </Typography>
+          <Select
+            fullWidth
+            size="small"
+            displayEmpty
+            value={""}
+            onChange={(e) => {
+              const storeId = Number(e.target.value);
+              const store = stores.find((s) => s.id === storeId);
+              if (store) {
+                Cookies.set(
+                  `tools_store_${user.id}_${user.company_id}`,
+                  JSON.stringify({
+                    id: store.id,
+                    name: store.name,
+                  }),
+                  { expires: 365 },
+                );
+                setStoreId(store.id);
+                window.location.reload();
+              }
+            }}
+          >
+            <MenuItem value="" disabled>
+              Select Store
+            </MenuItem>
+            {stores.map((store) => (
+              <MenuItem key={store.id} value={store.id}>
+                {store.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </DialogContent>
+      </Dialog>
       <Box
         sx={{
           height: "calc(100vh - 100px)",
@@ -939,6 +1219,7 @@ const ToolsList = () => {
                     editingRowId,
                     editingProductId,
                     rowTrades[editingRowId],
+                    editingStoreId,
                   );
                 }
                 setOpenTradeModal(false);
@@ -1006,6 +1287,71 @@ const ToolsList = () => {
               color="primary"
             >
               Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Primary Image Upload Dialog */}
+        <Dialog
+          open={openImageManager}
+          onClose={() => {
+            setOpenImageManager(false);
+            setNewMainImage(null);
+          }}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Upload Primary Image</DialogTitle>
+          <DialogContent>
+            <div
+              {...getImageRootProps()}
+              style={{
+                border: "2px dashed #1976d2",
+                borderRadius: 8,
+                padding: 40,
+                textAlign: "center",
+                cursor: "pointer",
+                marginBottom: 20,
+                backgroundColor: newMainImage ? "#e8f4ff" : undefined,
+              }}
+            >
+              <input {...getImageInputProps()} />
+              <Typography>
+                {newMainImage
+                  ? `Selected: ${newMainImage.name}`
+                  : "Drag & drop, click to browse, or paste (Ctrl+V) an image"}
+              </Typography>
+            </div>
+            {newMainImage && (
+              <Box textAlign="center">
+                <img
+                  src={URL.createObjectURL(newMainImage)}
+                  alt="preview"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: 200,
+                    objectFit: "contain",
+                    borderRadius: 8,
+                  }}
+                />
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setOpenImageManager(false);
+                setNewMainImage(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSaveMainImage}
+              disabled={isSaving || !newMainImage}
+            >
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1089,7 +1435,171 @@ const ToolsList = () => {
                 },
               }}
             />
+            <Button
+              variant="contained"
+              startIcon={<IconFileImport width={18} />}
+              onClick={handleModelOpen}
+            >
+              Import
+            </Button>
+            <>
+              <Typography
+                color="primary"
+                fontWeight={500}
+                sx={{ cursor: "pointer" }}
+                onClick={handleStoreOpen}
+              >
+                {stores.find((s) => s.id === storeId)?.name || "Select Store"}
+              </Typography>
+
+              <Menu
+                anchorEl={storeAnchorEl}
+                open={Boolean(storeAnchorEl)}
+                onClose={handleStoreClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                transformOrigin={{ vertical: "top", horizontal: "left" }}
+              >
+                {stores.map((s) => (
+                  <MenuItem key={s.id} onClick={() => handleStoreChange(s.id)}>
+                    {s.name}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
           </Grid>
+
+          {/* Modal for File Upload */}
+          <Modal
+            open={openModel}
+            onClose={handleModelClose}
+            disableEscapeKeyDown
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                bgcolor: "background.paper",
+                p: 3,
+                borderRadius: 2,
+                boxShadow: 24,
+                width: 400,
+              }}
+            >
+              <DialogTitle sx={{ p: 0 }}>
+                <Typography color="GrayText" fontWeight={700}>
+                  Upload Your File
+                </Typography>
+                <IconButton
+                  onClick={() => handleModelClose()}
+                  sx={{
+                    position: "absolute",
+                    right: 8,
+                    top: 10,
+                    backgroundColor: "transparent",
+                  }}
+                >
+                  <IconX size={40} />
+                </IconButton>
+              </DialogTitle>
+
+              <Box
+                {...getExcelRootProps()}
+                sx={{
+                  width: 350,
+                  height: 100,
+                  mt: 2,
+                  border: "2px dashed",
+                  borderColor: "primary.main",
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  position: "relative",
+                  overflow: "hidden",
+                  "&:hover": {
+                    backgroundColor: "primary.light",
+                  },
+                }}
+              >
+                <input {...getExcelInputProps()} accept=".xls,.xlsx" />
+                {preview ? (
+                  preview
+                ) : (
+                  <Typography fontSize="12px" color="primary.main">
+                    Click or Drag File
+                  </Typography>
+                )}
+              </Box>
+              <Typography fontSize="12px" color="text.secondary">
+                Upload Excel File
+              </Typography>
+              {isImport && (
+                <Box sx={{ mt: 2 }}>
+                  {!isProcessing ? (
+                    <>
+                      <Typography variant="body2" mb={1}>
+                        Uploading... {uploadProgress}%
+                      </Typography>
+                      <LinearProgress
+                        variant="determinate"
+                        value={uploadProgress}
+                        sx={{ height: 8, borderRadius: 5 }}
+                      />
+                    </>
+                  ) : (
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CircularProgress size={18} />
+                      <Typography variant="body2">
+                        Processing file...
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              {/* Action buttons */}
+              <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
+                {/* <Link
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    downloadSampleFile();
+                  }}
+                  style={{
+                    width: "100%",
+                    color: "#1e4db7",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }}
+                >
+                  <FileDownload />
+                  Download Sample File
+                </Link> */}
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    disabled={isImport}
+                    onClick={(e: any) => {
+                      importTools();
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={handleModelClose}
+                    color="error"
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          </Modal>
 
           <Stack
             mb={2}
@@ -1160,14 +1670,14 @@ const ToolsList = () => {
                           : col.columnDef.meta?.label
                             ? col.columnDef.meta.label
                             : typeof col.columnDef.header === "string" &&
-                                col.columnDef.header.trim() !== ""
+                              col.columnDef.header.trim() !== ""
                               ? col.columnDef.header
                               : col.id
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (str: string) =>
-                                    str.toUpperCase(),
-                                  )
-                                  .trim()
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (str: string) =>
+                                  str.toUpperCase(),
+                                )
+                                .trim()
                       }
                     />
                   ))}
@@ -1510,7 +2020,7 @@ const ToolsList = () => {
                   <Box key={item.id} display="flex" alignItems="center" gap={2}>
                     <Image
                       src={item.image_url || "/images/users/user.svg"}
-                      alt={item.name}
+                      alt={item.name?.[0]?.toUpperCase()}
                       width={40}
                       height={40}
                       style={{ borderRadius: "50%" }}
@@ -1537,7 +2047,7 @@ const ToolsList = () => {
                             setUsersDialogOpen(false);
                             fetchProducts();
                           }
-                        } catch (err: any) {}
+                        } catch (err: any) { }
                       }}
                     >
                       Assign
@@ -1621,14 +2131,17 @@ const ToolsList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ? 100 : "auto",
-                          
+
                             ...(header.column.id === "actions" && {
                               position: "sticky",
                               right: 0,
                               backgroundColor: "background.paper",
                               zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
                         >
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
@@ -1718,18 +2231,20 @@ const ToolsList = () => {
                       >
                         {row.getVisibleCells().map((cell) => {
                           return (
-                            <TableCell 
-      key={cell.id}
-      sx={{
-        ...(cell.column.id === "actions" && {
-          position: "sticky",
-          right: 0,
-          backgroundColor: "background.paper",
-          zIndex: 1,
-          boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-        }),
-      }}
-    >
+                            <TableCell
+                              key={cell.id}
+                              sx={{
+                                ...(cell.column.id === "actions" && {
+                                  position: "sticky",
+                                  right: 0,
+                                  backgroundColor: "background.paper",
+                                  zIndex: 1,
+                                  boxShadow: isScrollable
+                                    ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                    : "none",
+                                }),
+                              }}
+                            >
                               {flexRender(
                                 cell.column.columnDef.cell,
                                 cell.getContext(),

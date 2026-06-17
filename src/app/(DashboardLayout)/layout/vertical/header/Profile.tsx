@@ -114,52 +114,76 @@ const Profile = () => {
           },
         }}
       >
-        <Typography variant="h4">User Profile</Typography>
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Typography variant="h4" mb={1}>
+          User Profile
+        </Typography>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "center", sm: "flex-start" }}
+          textAlign={{ xs: "center", sm: "left" }}
+        >
           <Avatar
             src={user?.user_image || "/default-avatar.png"}
             alt={user?.first_name || "User"}
-            sx={{ width: 95, height: 95 }}
+            sx={{
+              width: { xs: 70, sm: 85 },
+              height: { xs: 70, sm: 85 },
+            }}
           />
-          <Box>
+
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               variant="h4"
-              color="textPrimary"
-              className="f-14"
               sx={{
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 3,
+                WebkitLineClamp: 2,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                lineHeight: 1.25,
-                maxWidth: 180,
                 wordBreak: "break-word",
               }}
             >
               {user?.first_name} {user?.last_name}
             </Typography>
+
             <Typography
-              variant="h6"
-              color="textSecondary"
-              sx={{ textTransform: "capitalize" }}
+              variant="body1"
+              color="text.secondary"
+              sx={{
+                textTransform: "capitalize",
+                mt: 0.5,
+              }}
             >
               {user?.trade_name ?? user?.user_role}
             </Typography>
 
-            {user?.email ? (
-              <Typography
-                variant="subtitle2"
-                color="textSecondary"
+            {user?.email && (
+              <Box
                 display="flex"
                 alignItems="center"
-                gap={1}
-                flexWrap={"wrap"}
+                sx={{
+                  mt: 1,
+                  color: "text.secondary",
+                }}
               >
-                <IconMail width="18" height="18" />
-                {user?.email}
-              </Typography>
-            ) : null}
+                <IconMail size={18} />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    flexWrap: "wrap",
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {user.email}
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Stack>
 

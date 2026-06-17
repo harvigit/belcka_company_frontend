@@ -131,7 +131,7 @@ const AddEditTool: React.FC<AddEditToolProps> = ({
     }
 
     if (selectedIds.length === 0) {
-      toast.error("Please select at least one project");
+      toast.error("Please select at least one trade");
       return;
     }
 

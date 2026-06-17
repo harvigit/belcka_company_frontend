@@ -99,7 +99,7 @@ interface CategoryFormData {
 
 interface TableRow {
   id: number;
-  image_url?: string;
+  thumb_url?: string;
   images?: string[];
   [key: string]: any;
 }
@@ -188,16 +188,16 @@ const CategoryList = () => {
     if (!selectedRow) return;
 
     const existingImages = [
-      selectedRow.image_url
-        ? { id: 0, image_url: selectedRow.image_url }
+      selectedRow.thumb_url
+        ? { id: 0, thumb_url: selectedRow.thumb_url }
         : null,
       ...(selectedRow.product_images || []),
     ]
-      .filter((img): img is { id: number; image_url: string } => !!img)
+      .filter((img): img is { id: number; thumb_url: string } => !!img)
       .map((img) => ({
         id: img.id,
-        url: img.image_url,
-        isMain: img.image_url === selectedRow.image_url,
+        url: img.thumb_url,
+        isMain: img.thumb_url === selectedRow.thumb_url,
       }));
 
     setUploadedImages(existingImages);
@@ -500,7 +500,7 @@ const CategoryList = () => {
       },
     },
 
-    columnHelper.accessor("image_url", {
+    columnHelper.accessor("thumb_url", {
       id: "image",
       header: () => (
         <Stack direction="row" alignItems="center">
@@ -517,14 +517,14 @@ const CategoryList = () => {
         return (
           <Stack direction="row" alignItems="center">
             <Image
-              src={item.image_url || image}
+              src={item.thumb_url || image}
               style={{ cursor: "pointer" }}
               alt="Category"
               width={50}
               height={50}
               onClick={(e) => {
                 e.stopPropagation();
-                setPreviewImage(item.image_url || image);
+                setPreviewImage(item.thumb_url || image);
                 setOpenPreview(true);
               }}
             />
@@ -954,7 +954,6 @@ const CategoryList = () => {
                       setSelectedRowIds(new Set());
                       await fetchCategories();
                     } catch (error) {
-                      toast.error("Failed to remove categories");
                     } finally {
                       setConfirmOpen(false);
                     }

@@ -160,7 +160,7 @@ const ProductView: React.FC<ProductViewProps> = ({
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" fontWeight={700}>
-            {product?.short_name || "-"}
+            {product?.short_name || product?.name || "-"}
           </Typography>
         </Box>
       </Box>

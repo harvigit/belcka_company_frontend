@@ -216,9 +216,7 @@ const TablePagination = () => {
         });
         fetchTasks();
         setDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
-      }
+      } 
     } catch (error) {
       console.log(error, "error");
     } finally {
@@ -257,8 +255,6 @@ const TablePagination = () => {
         });
         fetchTasks();
         setEditDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
       }
     } catch (error) {
       console.log(error, "error");

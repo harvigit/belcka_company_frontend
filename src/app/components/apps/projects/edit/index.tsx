@@ -166,6 +166,7 @@ const EditProject: React.FC<EditProjectProps> = ({
   const [team, setTeam] = useState<Team[]>([]);
   const [geofence, setGeofence] = useState<Geofence[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [currency, setCurrency] = useState("");
   
   const [budgetSettings, setBudgetSettings] = useState<BudgetSettingRow[]>([...createDefaultBudgetSettings()]);
   const [savedBudgetSettings, setSavedBudgetSettings] = useState<BudgetSettingRow[]>(createDefaultBudgetSettings());
@@ -181,7 +182,7 @@ const EditProject: React.FC<EditProjectProps> = ({
     0
   );
   const formatCurrency = (value: number) =>
-    `$${Number.isFinite(value) ? value.toLocaleString() : "0"}`;
+    `${currency}${Number.isFinite(value) ? value.toLocaleString() : "0"}`;
 
   const fetchBudgetSettings = async () => {
     if (!project?.id) {
@@ -195,6 +196,9 @@ const EditProject: React.FC<EditProjectProps> = ({
       setIsBudgetLoading(true);
       const res = await api.get(`project/get-budget-settings?project_id=${project.id}`);
       const nextSettings = normalizeBudgetSettings(res.data?.info || []);
+      if(res.data.IsSuccess) {
+        setCurrency(res.data.currency);
+      }
       setBudgetSettings(nextSettings);
       setSavedBudgetSettings(nextSettings);
     } catch (error) {

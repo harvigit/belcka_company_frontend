@@ -306,7 +306,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         product.barcode_text ? product.barcode_text.split(",") : [""],
       );
 
-      if (storeId && product.tool_category_ids) {
+      if ((storeId || isCategory) && product.tool_category_ids) {
         const ids = product.tool_category_ids.split(",").map(Number);
         setSelectedCategories(categories.filter((c) => ids.includes(c.id)));
       } else if (!storeId && product.category_ids) {
@@ -360,7 +360,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
       const payload = {
         ...categoryFormData,
       };
-      
+
       const endpoint = storeId ? "tool-categories/create" : "categories/create";
 
       const result = await api.post(endpoint, payload, {
@@ -432,13 +432,13 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
       const res = await api.get(url);
       if (res.data) {
         setSuppliers(res.data.suppliers);
-        
+
         if (storeId || isCategory) {
           setCategories(res.data.tool_categories || []);
         } else {
           setCategories(res.data.categories || []);
         }
-        
+        console.log(storeId, isCategory, "isCategory");
         setWeights(res.data.weight_units);
         setLengths(res.data.length_units);
         setPackOffs(res.data.pack_off_units);
@@ -1882,7 +1882,7 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         </Box>
 
         {/* Add category */}
-        {storeId ? (
+        {storeId || isCategory ? (
           <ToolCategoriesDrawer
             open={openCategoryModal}
             onClose={() => setOpenCategoryModal(false)}

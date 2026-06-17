@@ -25,6 +25,7 @@ import {
   MenuItem,
   Divider,
   Tooltip,
+  Chip,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
@@ -131,7 +132,7 @@ const ReceivePurchaseOrder = () => {
   const [receiveDate, setReceiveDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
-
+  const [search, setSearch] = useState("");
   const DropzoneComponent = ({ item, setProducts }: any) => {
     const onDrop = useCallback((acceptedFiles: any) => {
       const filesWithPreview = acceptedFiles.map((file: any) =>
@@ -240,6 +241,17 @@ const ReceivePurchaseOrder = () => {
       fetchOrder();
     }
   }, [open, orderId]);
+
+  const filteredProducts = products.filter((item) => {
+    const searchText = search.toLowerCase();
+
+    return (
+      item.name?.toLowerCase().includes(searchText) ||
+      item.short_name?.toLowerCase().includes(searchText) ||
+      item.supplier_code?.toLowerCase().includes(searchText) ||
+      item.uuid?.toLowerCase().includes(searchText)
+    );
+  });
 
   const supplierIdsFromPO = [
     ...new Set(order?.purchase_orders.map((po: any) => po.supplier_name)),
@@ -1533,6 +1545,19 @@ const ReceivePurchaseOrder = () => {
               Order ID: {order?.order_id || ""}
             </Typography>
           </Box>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            inputProps={{
+              style: {
+                textAlign: "left",
+              },
+            }}
+            sx={{ mb: 2 }}
+          />
 
           <Box
             mb={2}
@@ -1583,7 +1608,7 @@ const ReceivePurchaseOrder = () => {
           </Box>
 
           <Stack spacing={2}>
-            {products?.map((item) => (
+            {filteredProducts?.map((item) => (
               <Box
                 key={item.product_id}
                 alignItems="stretch"
@@ -1624,19 +1649,15 @@ const ReceivePurchaseOrder = () => {
                   />
                 </Box>
                 <Box flex={1} minWidth={0} alignItems={"center"}>
-                  <Tooltip title={item.name ? item.name : item.short_name}>
-                    <Typography
-                      variant="subtitle1"
-                      className="f-14"
-                      noWrap
-                      sx={{ lineHeight: 1.3, fontWeight: 600, mb: 0.5 }}
-                    >
+                  <Stack mt={2} spacing={1}>
+                    <Typography variant="body2" fontWeight={600}>
                       {item.name ? item.name : item.short_name}
+                      <Chip label={item?.uuid} size="small" sx={{ ml: 1 }} />
                     </Typography>
-                  </Tooltip>
-                  <Typography variant="body2" color="text.secondary" noWrap>
-                    {item?.uuid}
-                  </Typography>
+                    <Typography variant="body2">
+                      Supplier Code: {item?.supplier_code}
+                    </Typography>
+                  </Stack>
 
                   <Box display="flex" alignItems="start" gap={1}>
                     <Box display={"flex"} alignItems={"center"}>

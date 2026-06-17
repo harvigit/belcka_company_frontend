@@ -977,7 +977,6 @@ const ClientList = () => {
                 setSelectedRowIds(new Set());
                 await fetchClients();
               } catch (error) {
-                toast.error("Failed to archive client");
               } finally {
                 setOpenDialog(false);
               }

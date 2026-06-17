@@ -45,6 +45,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
   const [galleryPreview, setGalleryPreview] = useState<GalleryImage[]>([]);
   const [product, setProduct] = useState<any>([]);
   const [fetching, setFetching] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [openPreview, setOpenPreview] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -56,7 +57,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
     removedImageIds: number[],
   ) => {
     e.preventDefault();
-
+    setLoading(true);
     try {
       const formPayload = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
@@ -110,12 +111,11 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
           qty: 0,
         });
         setEditDrawerOpen(false);
-      } else {
-        toast.error(result.data.message);
       }
     } catch (error) {
       console.log(error, "error");
     } finally {
+      setLoading(false);
     }
   };
 
@@ -210,7 +210,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
                   wordBreak: "break-word",
                 }}
               >
-                {product?.short_name || "-"}
+                {product?.short_name || product?.name || "-"}
               </Typography>
             </Grid>
 
@@ -476,7 +476,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
         productId={productId}
         setFormData={setFormData}
         handleSubmit={editSupplier}
-        isSaving={isSaving}
+        isSaving={loading}
         companyId={companyId ?? null}
         isCategory={isCategory}
       />
