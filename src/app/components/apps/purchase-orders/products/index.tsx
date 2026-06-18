@@ -1662,15 +1662,14 @@ const PurchaseProductList: React.FC<Props> = ({
           </Stack>
           <Box
             display={"flex"}
-            alignItems="flex-end"
-            justifyContent={"end"}
-            width={"25%"}
+            alignItems="center"
+            gap={2}
+            justifyItems={"flex-end"}
           >
             <Button
               variant="contained"
               color="error"
-              className="drawer_buttons"
-              sx={{ borderRadius: 3, marginRight: "10px" }}
+              sx={{ borderRadius: 3 }}
               disabled={selectedRowIds.size === 0 || !isSameSupplierSelected}
               onClick={handleDirectSaveAsDraft}
             >
@@ -1679,8 +1678,7 @@ const PurchaseProductList: React.FC<Props> = ({
             <Button
               variant="contained"
               color="primary"
-              className="drawer_buttons"
-              sx={{ borderRadius: 3, marginRight: "5px" }}
+              sx={{ borderRadius: 3, width: "100px" }}
               disabled={selectedRowIds.size === 0 || !isSameSupplierSelected}
               onClick={() => {
                 if (hasMultipleSuppliers) {
