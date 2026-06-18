@@ -10,6 +10,9 @@ import {
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import Cookies from "js-cookie";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 interface ProductTradesProps {
   companyId: number | null;
@@ -24,6 +27,10 @@ const ProductTrades: React.FC<ProductTradesProps> = ({
   const [product, setProducts] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
+  const session = useSession();
+  const user = session.data?.user as User & { company_id?: number | null };
+  const storedStore = Cookies.get(`tools_store_${user.id}_${user.company_id}`);
+  const activeStore = storedStore ? JSON.parse(storedStore) : null;
 
   // Fetch all trades for the company
   const fetchTrades = async () => {
@@ -42,7 +49,7 @@ const ProductTrades: React.FC<ProductTradesProps> = ({
     try {
       if (!productId) return;
       const res = await api.get(
-        `product-tools/get?company_id=${companyId}&product_id=${productId}`,
+        `product-tools/get?company_id=${companyId}&product_id=${productId}&is_web=true`,
       );
       if (res.data?.info?.length) {
         setProducts(res.data.info);
@@ -85,6 +92,7 @@ const ProductTrades: React.FC<ProductTradesProps> = ({
         company_id: Number(companyId),
         product_id: Number(productId),
         trade_ids: selectedIds.join(","),
+        store_id: activeStore.id,
       };
 
       const res = await api.post("product-tools/manage-tools", payload);

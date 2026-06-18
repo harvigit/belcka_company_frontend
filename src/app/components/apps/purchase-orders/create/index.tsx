@@ -30,6 +30,8 @@ import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox
 import api from "@/utils/axios";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
+import Cookies from "js-cookie";
 
 interface Product {
   id: number;
@@ -90,6 +92,8 @@ const PurchaseOrder: React.FC<Props> = ({
   const TAX_PERCENT = 20;
   const [currency, setCurrency] = useState("");
   const [isDisable, setIsDisable] = useState<boolean>(false);
+  const session = useSession();
+  const user: any = session.data?.user;
 
   useEffect(() => {
     if (allProducts.length === 0) return;
@@ -245,6 +249,25 @@ const PurchaseOrder: React.FC<Props> = ({
       setProducts([]);
     }
   };
+
+  useEffect(() => {
+    if (!open) return;
+    if (stores.length > 0 && !formData.store_id) {
+      if (user?.id && user?.company_id) {
+        const storedStoreStr = Cookies.get(
+          `user_store_${user.id}_${user.company_id}`,
+        );
+        if (storedStoreStr) {
+          try {
+            const parsed = JSON.parse(storedStoreStr);
+            setFormData((prev: any) => ({ ...prev, store_id: parsed.id }));
+          } catch (e) {
+            console.error("Failed to parse store cookie:", e);
+          }
+        }
+      }
+    }
+  }, [stores, user, open]);
 
   const updateProductData = useCallback((id: number, value: any) => {
     setProducts((prev) =>
@@ -691,7 +714,7 @@ const PurchaseOrder: React.FC<Props> = ({
             disabled={isSaving || isDisable}
             sx={{ borderRadius: 3, minWidth: 100 }}
           >
-            {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
+            {mode === "edit" ? "Update" : "Save"}
           </Button>
 
           <Button
@@ -725,7 +748,7 @@ const PurchaseOrder: React.FC<Props> = ({
               disabled={isSaving || isDisable}
               sx={{ borderRadius: 3 }}
             >
-              {isSaving ? "Saving..." : "Save as Draft"}
+              Save as Draft
             </Button>
           </Box>
         )}

@@ -306,6 +306,7 @@ const ToolsList = () => {
 
   const handleTradeClose = () => {
     setOpenCategoryModal(false);
+    setOpenTradeModal(false);
   };
 
   const handleStoreChange = (storeId: number) => {

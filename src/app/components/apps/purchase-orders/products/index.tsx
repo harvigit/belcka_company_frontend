@@ -59,6 +59,7 @@ import { IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
+import Cookies from "js-cookie";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
 import PurchaseOrder from "../create";
@@ -84,6 +85,7 @@ interface Props {
   ids?: { id: number; qty: number }[];
   mode?: "create" | "edit";
   editData?: any;
+  onDraftSaved?: () => void;
 }
 const PurchaseProductList: React.FC<Props> = ({
   open,
@@ -92,6 +94,7 @@ const PurchaseProductList: React.FC<Props> = ({
   setFormData,
   handleSubmit,
   isSaving,
+  onDraftSaved,
 }) => {
   const [data, setData] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any>([]);
@@ -233,11 +236,7 @@ const PurchaseProductList: React.FC<Props> = ({
     setFetchStore(true);
 
     try {
-      let url = `purchase-orders/orders?company_id=${user.company_id}`;
-
-      if (showAll) {
-        url += `&is_all_product=true`;
-      }
+      let url = `purchase-orders/orders?company_id=${user.company_id}&is_all_product=true`;
 
       const res = await api.get(url);
 
@@ -375,15 +374,24 @@ const PurchaseProductList: React.FC<Props> = ({
         }));
     }, [data, selectedRowIds]);
 
-    const supplierNames = [...new Set(selectedProductsWithQty.map((p) => p.supplier_name || ''))];
+    const supplierNames = [
+      ...new Set(selectedProductsWithQty.map((p) => p.supplier_name || "")),
+    ];
     const isSameSupplierSelected = selectedProductsWithQty.length > 0;
     const hasMultipleSuppliers = supplierNames.length > 1;
 
-    return { selectedProductsWithQty, isSameSupplierSelected, hasMultipleSuppliers };
+    return {
+      selectedProductsWithQty,
+      isSameSupplierSelected,
+      hasMultipleSuppliers,
+    };
   };
 
-  const { selectedProductsWithQty, isSameSupplierSelected, hasMultipleSuppliers } =
-    useSelectedProducts(data, selectedRowIds);
+  const {
+    selectedProductsWithQty,
+    isSameSupplierSelected,
+    hasMultipleSuppliers,
+  } = useSelectedProducts(data, selectedRowIds);
 
   const selectedRowCount = selectedRowIds.size;
 
@@ -401,6 +409,81 @@ const PurchaseProductList: React.FC<Props> = ({
     }
   };
 
+  const generateOrderId = (length = 6) => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "";
+
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    return result;
+  };
+
+  const handleDirectSaveAsDraft = async () => {
+    if (hasMultipleSuppliers) {
+      toast.error("All selected products must belong to the same supplier!");
+      return;
+    }
+
+    if (selectedProductsWithQty.length === 0) {
+      toast.error("Please select at least one product with quantity.");
+      return;
+    }
+
+    let store_id = null;
+    if (user?.id && user?.company_id) {
+      const storedStoreStr = Cookies.get(
+        `user_store_${user.id}_${user.company_id}`,
+      );
+      if (storedStoreStr) {
+        try {
+          const parsed = JSON.parse(storedStoreStr);
+          store_id = parsed.id;
+        } catch (err) {
+          console.error("Failed to parse store cookie:", err);
+        }
+      }
+    }
+
+    const supplier_id = selectedProductsWithQty[0]?.supplier_id || null;
+
+    const product_data = selectedProductsWithQty.map((sp) => {
+      const product = data.find((p) => p.id === sp.id);
+      return {
+        product_id: sp.id,
+        qty: sp.qty,
+        price: product?.price || 0,
+      };
+    });
+    const order_id = generateOrderId();
+    const submissionData = {
+      company_id: user?.company_id,
+      store_id: store_id,
+      order_id,
+      supplier_id: supplier_id,
+      product_data: product_data,
+      is_draft: true,
+      checked_product: false,
+    };
+
+    try {
+      const result = await api.post("purchase-orders/create", submissionData);
+      if (result.data.IsSuccess) {
+        toast.success(result.data.message);
+        setSelectedRowIds(new Set());
+        onClose();
+        if (onDraftSaved) {
+          onDraftSaved();
+        }
+      } else {
+        toast.error(result.data.message || "Failed to save draft");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to save draft");
+    }
+  };
+
   const columnHelper = createColumnHelper<any>();
   const columns = [
     {
@@ -412,11 +495,11 @@ const PurchaseProductList: React.FC<Props> = ({
             checked={
               selectedRowIds.size > 0 &&
               finalFilteredData.length > 0 &&
-              finalFilteredData.every(row => selectedRowIds.has(row.id))
+              finalFilteredData.every((row) => selectedRowIds.has(row.id))
             }
             indeterminate={
-              finalFilteredData.some(row => selectedRowIds.has(row.id)) &&
-              !finalFilteredData.every(row => selectedRowIds.has(row.id))
+              finalFilteredData.some((row) => selectedRowIds.has(row.id)) &&
+              !finalFilteredData.every((row) => selectedRowIds.has(row.id))
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
@@ -426,15 +509,15 @@ const PurchaseProductList: React.FC<Props> = ({
 
               if (isChecked) {
                 const newSelected = new Set(selectedRowIds);
-                finalFilteredData.forEach(row => newSelected.add(row.id));
+                finalFilteredData.forEach((row) => newSelected.add(row.id));
                 setSelectedRowIds(newSelected);
               } else {
                 const newSelected = new Set(selectedRowIds);
-                finalFilteredData.forEach(row => newSelected.delete(row.id));
+                finalFilteredData.forEach((row) => newSelected.delete(row.id));
                 setSelectedRowIds(newSelected);
-                
+
                 const newDeselected = new Set(manuallyDeselected);
-                finalFilteredData.forEach(row => newDeselected.add(row.id));
+                finalFilteredData.forEach((row) => newDeselected.add(row.id));
                 setManuallyDeselected(newDeselected);
               }
             }}
@@ -1144,7 +1227,7 @@ const PurchaseProductList: React.FC<Props> = ({
             justifyContent="end"
             direction={{ xs: "column", sm: "row" }}
           >
-            <Box display="flex" alignItems="center">
+            {/* <Box display="flex" alignItems="center">
               <FormControlLabel
                 label="All Products"
                 control={
@@ -1164,7 +1247,7 @@ const PurchaseProductList: React.FC<Props> = ({
                   />
                 }
               />
-            </Box>
+            </Box> */}
 
             <Button
               variant="contained"
@@ -1585,13 +1668,25 @@ const PurchaseProductList: React.FC<Props> = ({
           >
             <Button
               variant="contained"
+              color="error"
+              className="drawer_buttons"
+              sx={{ borderRadius: 3, marginRight: "10px" }}
+              disabled={selectedRowIds.size === 0 || !isSameSupplierSelected}
+              onClick={handleDirectSaveAsDraft}
+            >
+              Save as Draft
+            </Button>
+            <Button
+              variant="contained"
               color="primary"
               className="drawer_buttons"
               sx={{ borderRadius: 3, marginRight: "5px" }}
               disabled={selectedRowIds.size === 0 || !isSameSupplierSelected}
               onClick={() => {
                 if (hasMultipleSuppliers) {
-                  toast.error("All selected products must belong to the same supplier!");
+                  toast.error(
+                    "All selected products must belong to the same supplier!",
+                  );
                   return;
                 }
                 handleOpenCreateDrawer();

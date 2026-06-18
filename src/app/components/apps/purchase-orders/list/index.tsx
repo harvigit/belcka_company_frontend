@@ -695,7 +695,13 @@ const PurchaseOrderList = () => {
           .includes(search) ||
         String(item.ref ?? "")
           .toLowerCase()
-          .includes(search);
+          .includes(search) ||
+        (item.purchase_orders?.some((po: any) =>
+          [po.supplier_code]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(search)),
+        ) ??
+          false);
 
       return matchesSearch && matchStatus;
     });
@@ -1376,7 +1382,7 @@ Team Belcka
               <IconShoppingCartCancel size={18} />
             </IconButton>
 
-            {item.status !== 5 && item.status !== 4 &&(
+            {item.status !== 5 && item.status !== 4 && (
               <Button
                 href={`/apps/receive-orders/${item.id}`}
                 onClick={(e) => e.stopPropagation()}
@@ -2183,6 +2189,7 @@ Team Belcka
           isSaving={isSaving}
           companyId={user.company_id ?? null}
           mode="create"
+          onDraftSaved={fetchOrders}
         />
 
         {/* Archive Product List */}

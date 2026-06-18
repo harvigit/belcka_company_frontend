@@ -438,7 +438,6 @@ const ProductAddEdit: React.FC<ProductAddEditProps> = ({
         } else {
           setCategories(res.data.categories || []);
         }
-        console.log(storeId, isCategory, "isCategory");
         setWeights(res.data.weight_units);
         setLengths(res.data.length_units);
         setPackOffs(res.data.pack_off_units);

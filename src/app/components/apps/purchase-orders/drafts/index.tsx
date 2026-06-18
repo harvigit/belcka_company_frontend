@@ -30,6 +30,8 @@ import toast from "react-hot-toast";
 import Image from "next/image";
 import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
+import { useSession } from "next-auth/react";
+import Cookies from "js-cookie";
 
 interface DraftPurchaseOrderProps {
   open: boolean;
@@ -82,6 +84,9 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
+  const session = useSession();
+  const user: any = session.data?.user;
+
   const fetchDrafts = useCallback(async () => {
     if (!companyId) return;
     try {
@@ -110,6 +115,25 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
       console.error("Failed to fetch resources", err);
     }
   }, [companyId]);
+
+  useEffect(() => {
+    if (!editOpen) return;
+    if (stores.length > 0 && !formData.store_id) {
+      if (user?.id && user?.company_id) {
+        const storedStoreStr = Cookies.get(
+          `user_store_${user.id}_${user.company_id}`,
+        );
+        if (storedStoreStr) {
+          try {
+            const parsed = JSON.parse(storedStoreStr);
+            setFormData((prev: any) => ({ ...prev, store_id: parsed.id }));
+          } catch (e) {
+            console.error("Failed to parse store cookie:", e);
+          }
+        }
+      }
+    }
+  }, [stores, user, editOpen]);
 
   // Existing supplier IDs from current products
   const existingSupplierIds = useMemo(() => {
@@ -601,7 +625,7 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
 
           {/* Row 2: Store | Note */}
           <Grid container spacing={2} mb={2} alignItems="flex-start">
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Store
@@ -624,7 +648,7 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
                 />
               </Box>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <Box className="form_inputs">
                 <Typography variant="body2" gutterBottom>
                   Note
@@ -640,6 +664,7 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
                 />
               </Box>
             </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}></Grid>
           </Grid>
 
           {/* Add item section */}
@@ -932,7 +957,7 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
               disabled={isSaving}
               sx={{ borderRadius: 3, minWidth: 120 }}
             >
-              {isSaving ? "Saving..." : "Create Order"}
+              Create Order
             </Button>
             <Button
               color="inherit"
@@ -956,7 +981,7 @@ const DraftPurchaseOrder: React.FC<DraftPurchaseOrderProps> = ({
             disabled={isSaving}
             sx={{ borderRadius: 3 }}
           >
-            {isSaving ? "Saving..." : "Update Draft"}
+            Update Draft
           </Button>
         </Box>
       </Drawer>
