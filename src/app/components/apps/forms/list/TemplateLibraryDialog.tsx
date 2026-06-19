@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import {IconChevronRight, IconX} from '@tabler/icons-react';
 import api from '@/utils/axios';
-import {FormTemplate} from './common';
+import {FormTemplate} from '../types';
 import MobilePreview from './MobilePreview';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 

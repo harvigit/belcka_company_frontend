@@ -36,8 +36,9 @@ import {
 } from '@tabler/icons-react';
 import api from '@/utils/axios';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
-import {PublishUsersOption, PublishTeamsOption, PublishSettings, PublishWizardState} from '../common';
-import {initialsFor, normalizeTeamOptions, normalizeUserOptions, toggleOption} from '../common/formBuilderUtils';
+import {PublishUsersOption, PublishTeamsOption, PublishSettings, PublishWizardState} from '../../types';
+import FormUserIdentity from '../../common/FormUserIdentity';
+import {initialsFor, normalizeTeamOptions, normalizeUserOptions, toggleOption} from '../../common/formBuilderUtils';
 import {useSession} from 'next-auth/react';
 
 const DEFAULT_SETTINGS: PublishSettings = {
@@ -134,6 +135,7 @@ const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selec
         if (open) setSearch('');
     }, [open]);
 
+    
     const safeOptions = useMemo(() => users ?? [], [users]);
     const safeSelected = selected ?? [];
     const safeDisabledUserIds = useMemo(
@@ -213,16 +215,17 @@ const SelectableUsersListDialog = ({open, title, searchPlaceholder, users, selec
                                     disabled={disabled}
                                     onChange={() => onChange(toggleOption(safeSelected, option))}
                                 />
-                                <Avatar
-                                    src={option.user_thumb_image || undefined}
-                                    sx={{width: 26, height: 26, fontSize: 11}}
-                                >
-                                    {initialsFor(option.name)}
-                                </Avatar>
-                                <Typography fontSize={14}>{option.name}</Typography>
+                                <FormUserIdentity
+                                    user={{
+                                        name: option.name,
+                                        user_image: option.user_image || option.user_thumb_image,
+                                        trade_name: option.trade_name,
+                                    }}
+                                />
                             </Stack>
                         );
                     })}
+                    
                     {filtered.length === 0 && (
                         <Typography color="text.secondary" fontSize={13} py={2} textAlign="center">
                             No records found.
@@ -322,22 +325,25 @@ const SelectableTeamsListDialog = ({open, title, searchPlaceholder, teams, selec
 };
 
 const PublishWizard = ({
-                           open,
-                           saving,
-                           state: stateProp,
-                           onChange,
-                           onBackToEditor,
-                           onConfirm,
-                       }: {
+   open,
+   saving,
+   state: stateProp,
+   initialStep = 1,
+   onChange,
+   onBackToEditor,
+   onConfirm
+}: {
     open: boolean;
     saving: boolean;
     state: PublishWizardState;
+    initialStep?: 1 | 2 | 3;
     onChange: (next: PublishWizardState) => void;
     onBackToEditor: () => void;
     onConfirm: () => void;
 }) => {
     const session = useSession();
     const authUser = session.data?.user as any;
+    
     const [step, setStep] = useState(1);
     const [users, setUsers] = useState<PublishUsersOption[]>([]);
     const [teams, setTeams] = useState<PublishTeamsOption[]>([]);
@@ -345,49 +351,48 @@ const PublishWizard = ({
     const [teamDialogOpen, setTeamDialogOpen] = useState(false);
     const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
-    // Normalize state to ensure arrays are always defined
     const state = useMemo(() => normalizeState(stateProp), [stateProp]);
-
+    
     useEffect(() => {
         if (!open) return;
-        setStep(1);
+        setStep(initialStep);
         setCloseConfirmOpen(false);
-    }, [open]);
+    }, [initialStep, open]);
 
     useEffect(() => {
         if (!open) return;
 
         const fetchResources = async () => {
             try {
-                const [usersRes, teamsRes] = await Promise.all([
-                    api.get('user/get-user-lists'),
-                    api.get('team/get-team-member-list'),
-                ]);
+                const usersRes = await api.get('user/get-user-lists');
+                const teamsRes = await  api.get('team/get-team-member-list');
+                
                 setUsers(normalizeUserOptions(usersRes.data?.info) ?? []);
                 setTeams(normalizeTeamOptions(teamsRes.data?.info) ?? []);
-            } catch (error) {
-                // silently fail; UI remains functional with empty lists
-            }
+            } catch (error) {}
         };
 
         fetchResources();
     }, [open]);
 
-    const selectedTeamMemberCount = useMemo(() =>
-            state.selectedTeams.reduce((sum, team) => {
+    const selectedTeamMemberCount = 
+        useMemo(() => state.selectedTeams.reduce((sum, team) => {
                 const currentTeam = teams.find((item) => item.id === team.id);
+                
                 return sum + Number(currentTeam?.memberCount ?? team.memberCount ?? 0);
-            }, 0),
-        [teams, state.selectedTeams]);
-    const selectedTeamUserIds = useMemo(() => {
-        const userIds = new Set<string>();
-        state.selectedTeams.forEach((team) => {
-            const currentTeam = teams.find((item) => item.id === team.id);
-            const teamUserIds = currentTeam?.userIds ?? team.userIds ?? [];
-            teamUserIds.forEach((userId) => userIds.add(String(userId)));
-        });
-        return userIds;
-    }, [teams, state.selectedTeams]);
+            }, 0
+        ),[teams, state.selectedTeams]);
+    
+    const selectedTeamUserIds = 
+        useMemo(() => {
+            const userIds = new Set<string>();
+            state.selectedTeams.forEach((team) => {
+                const currentTeam = teams.find((item) => item.id === team.id);
+                const teamUserIds = currentTeam?.userIds ?? team.userIds ?? [];
+                teamUserIds.forEach((userId) => userIds.add(String(userId)));
+            });
+            return userIds;
+        }, [teams, state.selectedTeams]);
 
     const totalAssignees = state.selectedUsers.length + selectedTeamMemberCount;
     const selectedTargetCount = state.selectedUsers.length + state.selectedTeams.length;
@@ -413,6 +418,7 @@ const PublishWizard = ({
             teamUserIds.forEach((userId) => nextTeamUserIds.add(String(userId)));
         });
 
+
         onChange({
             ...state,
             selectedTeams: nextTeams,
@@ -430,18 +436,27 @@ const PublishWizard = ({
         onBackToEditor();
     };
 
-    const chipList = (items: PublishUsersOption[] | undefined, onRemove: (id: string) => void) => (
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {(items ?? []).map((item) => (
-                <Chip
-                    key={item.id}
-                    label={item.name}
-                    avatar={<Avatar src={item.user_thumb_image || undefined}>{initialsFor(item.name)}</Avatar>}
-                    onDelete={() => onRemove(item.id)}
-                    sx={{bgcolor: '#eaf5ff'}}
-                />
-            ))}
-        </Stack>
+    const chipList = (
+        items: PublishUsersOption[] | undefined,
+        onRemove: (id: string) => void
+    ) => (
+        <>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {(items ?? []).map((item) => (
+                    <Chip
+                        key={item.id}
+                        label={`${item.name}${item.trade_name ? ` - ${item.trade_name}` : ''}`}
+                        avatar={
+                            <Avatar src={(item.user_image || item.user_thumb_image) ?? undefined}>
+                                {initialsFor(item.name)}
+                            </Avatar>
+                        }
+                        onDelete={() => onRemove(item.id)}
+                        sx={{ bgcolor: '#eaf5ff' }}
+                    />
+                ))}
+            </Stack>
+        </>
     );
 
     const renderAssignees = () => (
@@ -450,6 +465,7 @@ const PublishWizard = ({
                 <Typography fontWeight={700} fontSize={20}>Select assignees</Typography>
                 <Typography color="text.secondary">You can select teams, specific users, or both</Typography>
             </Stack>
+            
             <Paper elevation={0}
                    sx={{border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden'}}>
                 <Stack spacing={2.5} p={3}>
@@ -460,10 +476,12 @@ const PublishWizard = ({
                             Select Teams
                         </Button>
                     </Stack>
+                    
                     {chipList(state.selectedTeams, (id) => onChange({
                         ...state,
                         selectedTeams: state.selectedTeams.filter((team) => team.id !== id),
                     }))}
+                    
                     {state.selectedTeams.length > 0 && (
                         <RadioGroup
                             value={state.groupAssignmentMode}
@@ -489,7 +507,9 @@ const PublishWizard = ({
                         </RadioGroup>
                     )}
                 </Stack>
+                
                 <Divider/>
+                
                 <Stack spacing={2.5} p={3}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Typography fontWeight={700}>Specific Users</Typography>
@@ -508,6 +528,7 @@ const PublishWizard = ({
                     }))}
                 </Stack>
             </Paper>
+            
             <Paper elevation={0} sx={{mt: 2, p: 3, borderRadius: 3, bgcolor: '#f5f6f7'}}>
                 <Stack direction="row" spacing={2} alignItems="center">
                     <Typography fontSize={26} fontWeight={800}>{totalAssignees}</Typography>
@@ -539,28 +560,41 @@ const PublishWizard = ({
                 }}>
                     <IconArrowForwardUp size={22}/>
                 </Box>
+                
                 <Stack spacing={1.5} flex={1}>
                     <RadioGroup
                         row
                         value={state.settings.publishMode}
-                        onChange={(event) => updateSettings({publishMode: event.target.value as 'now' | 'schedule'})}
+                        onChange={(event) => 
+                            updateSettings({publishMode: event.target.value as 'now' | 'schedule'})
+                        }
                     >
                         <FormControlLabel value="now" control={<Radio size="small"/>} label="Publish now"/>
                         <FormControlLabel value="schedule" control={<Radio size="small"/>} label="Schedule Publish"/>
                     </RadioGroup>
+                    
                     {state.settings.publishMode === 'schedule' && (
                         <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} alignItems={{sm: 'center'}}>
                             <Typography>Publish on:</Typography>
-                            <CustomTextField type="date" value={state.settings.publishDate}
-                                             onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({publishDate: event.target.value})}/>
+                            <CustomTextField 
+                                type="date" 
+                                value={state.settings.publishDate}
+                                
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({publishDate: event.target.value})}
+                            />
                             <Typography>At:</Typography>
-                            <CustomTextField type="time" value={state.settings.publishTime}
-                                             onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({publishTime: event.target.value})}/>
+                            <CustomTextField 
+                                type="time"
+                                value={state.settings.publishTime}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({publishTime: event.target.value})}
+                            />
                         </Stack>
                     )}
                 </Stack>
             </Stack>
+            
             <Divider/>
+            
             <Stack direction="row" spacing={2.5} alignItems="flex-start" py={2.25}>
                 <Box sx={{
                     width: 42,
@@ -575,6 +609,7 @@ const PublishWizard = ({
                 }}>
                     <IconBell size={22}/>
                 </Box>
+                
                 <Stack spacing={1} flex={1}>
                     <FormControlLabel
                         control={<Checkbox checked={state.settings.notifyUsers}
@@ -589,7 +624,9 @@ const PublishWizard = ({
                     />
                 </Stack>
             </Stack>
+            
             <Divider/>
+            
             <Stack direction="row" spacing={2.5} alignItems="flex-start" py={2.25}>
                 <Box sx={{
                     width: 42,
@@ -604,12 +641,18 @@ const PublishWizard = ({
                 }}>
                     <IconMicrophone size={22}/>
                 </Box>
+                
                 <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} alignItems={{sm: 'center'}} flex={1}>
                     <FormControlLabel
-                        control={<Checkbox checked={state.settings.showOnFeed}
-                                           onChange={(event) => updateSettings({showOnFeed: event.target.checked})}/>}
+                        control={
+                            <Checkbox 
+                                checked={state.settings.showOnFeed} 
+                                onChange={(event) => updateSettings({showOnFeed: event.target.checked})}
+                            />
+                        }
                         label="Show on feed by"
                     />
+                    
                     <CustomTextField
                         select
                         value={state.settings.feedBy || 'app'}
@@ -625,7 +668,9 @@ const PublishWizard = ({
                     </CustomTextField>
                 </Stack>
             </Stack>
+            
             <Divider/>
+            
             <Stack direction="row" spacing={2.5} alignItems="flex-start" py={2.25}>
                 <Box sx={{
                     width: 42,
@@ -640,22 +685,36 @@ const PublishWizard = ({
                 }}>
                     <IconCalendar size={22}/>
                 </Box>
+                
                 <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} alignItems={{sm: 'center'}} flex={1}>
                     <FormControlLabel
-                        control={<Checkbox checked={state.settings.sendReminder}
-                                           onChange={(event) => updateSettings({sendReminder: event.target.checked})}/>}
+                        control={
+                            <Checkbox
+                                checked={state.settings.sendReminder} 
+                                onChange={(event) => updateSettings({sendReminder: event.target.checked})}
+                            />
+                        }
                         label="Send a reminder if user didn't view by"
                     />
-                    <CustomTextField type="date" value={state.settings.reminderDate}
-                                     disabled={!state.settings.sendReminder}
-                                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({reminderDate: event.target.value})}/>
+                    
+                    <CustomTextField 
+                        type="date"
+                        value={state.settings.reminderDate}
+                        disabled={!state.settings.sendReminder}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({reminderDate: event.target.value})}
+                    />
                     <Typography>At:</Typography>
-                    <CustomTextField type="time" value={state.settings.reminderTime}
-                                     disabled={!state.settings.sendReminder}
-                                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({reminderTime: event.target.value})}/>
+                    <CustomTextField 
+                        type="time"
+                        value={state.settings.reminderTime}
+                        disabled={!state.settings.sendReminder}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({reminderTime: event.target.value})}
+                    />
                 </Stack>
             </Stack>
+            
             <Divider/>
+            
             <Stack direction="row" spacing={2.5} alignItems="flex-start" py={2.25}>
                 <Box sx={{
                     width: 42,
@@ -672,17 +731,27 @@ const PublishWizard = ({
                 </Box>
                 <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} alignItems={{sm: 'center'}} flex={1}>
                     <FormControlLabel
-                        control={<Checkbox checked={state.settings.scheduleRemoval}
-                                           onChange={(event) => updateSettings({scheduleRemoval: event.target.checked})}/>}
+                        control={
+                            <Checkbox
+                                checked={state.settings.scheduleRemoval}
+                                onChange={(event) => updateSettings({scheduleRemoval: event.target.checked})}
+                            />
+                        }
                         label="Schedule removal from the app"
                     />
                     {state.settings.scheduleRemoval && (
                         <>
-                            <CustomTextField type="date" value={state.settings.removalDate}
-                                             onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({removalDate: event.target.value})}/>
+                            <CustomTextField 
+                                type="date"
+                                value={state.settings.removalDate}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({removalDate: event.target.value})}
+                            />
                             <Typography>At:</Typography>
-                            <CustomTextField type="time" value={state.settings.removalTime}
-                                             onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({removalTime: event.target.value})}/>
+                            <CustomTextField 
+                                type="time" 
+                                value={state.settings.removalTime}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateSettings({removalTime: event.target.value})}
+                            />
                         </>
                     )}
                 </Stack>
@@ -717,6 +786,7 @@ const PublishWizard = ({
                         <Typography fontWeight={700}>{state.selectedUsers.length} Specific users</Typography>
                     </Paper>
                 </Stack>
+                
                 <Paper elevation={0} sx={{
                     px: 4,
                     py: 2,
@@ -730,6 +800,7 @@ const PublishWizard = ({
                     <Typography>Current assignees</Typography>
                 </Paper>
             </Stack>
+            
             {state.settings.notifyUsers && (
                 <Paper elevation={0} sx={{p: 2, bgcolor: '#f5f6f7', borderRadius: 2, width: '100%', textAlign: 'left'}}>
                     <Typography fontWeight={700}>Notification</Typography>
@@ -783,6 +854,7 @@ const PublishWizard = ({
                         <IconX size={18}/>
                     </IconButton>
                 </Box>
+                
                 <Box sx={{
                     flex: 1,
                     display: 'flex',
@@ -796,6 +868,7 @@ const PublishWizard = ({
                     {step === 2 && renderSettings()}
                     {step === 3 && renderSummary()}
                 </Box>
+                
                 <Box sx={{
                     borderTop: '1px solid',
                     borderColor: 'divider',
@@ -873,6 +946,7 @@ const PublishWizard = ({
                 >
                     <IconX size={18}/>
                 </IconButton>
+                
                 <DialogContent sx={{textAlign: 'center', px: {xs: 1, sm: 2}, pt: 2.5, pb: 0}}>
                     <Box
                         sx={{
@@ -897,6 +971,7 @@ const PublishWizard = ({
                         Publish settings are not saved yet. You can discard them or continue editing.
                     </Typography>
                 </DialogContent>
+                
                 <DialogActions sx={{justifyContent: 'center', gap: 1, px: 0, pt: 3, pb: 0}}>
                     <Button
                         variant="outlined"

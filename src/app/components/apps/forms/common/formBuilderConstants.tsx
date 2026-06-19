@@ -21,7 +21,7 @@ import {
     IconUpload,
     IconVideo,
 } from '@tabler/icons-react';
-import {FieldDraft, FormField} from './types';
+import {FieldDraft, FormField} from '../types';
 
 export type FieldDef = { label: string; icon: React.ReactNode };
 

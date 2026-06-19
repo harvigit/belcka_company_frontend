@@ -20,7 +20,6 @@ import {
     RadioGroup,
     Select,
     Stack,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import {
@@ -36,19 +35,11 @@ import {
     IconTrash,
     IconX,
 } from '@tabler/icons-react';
-import {DragDropContext, Draggable, Droppable, DropResult} from '@hello-pangea/dnd';
 import DescriptionIcon from '@mui/icons-material/Description';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
-import {
-    FieldDraft,
-    FormField,
-    FormFieldCondition,
-    iconForType,
-    optionFieldTypes,
-    placeholderForType,
-} from '../common';
+import {FieldDraft, FormField, FormFieldCondition} from '../../types';
+import {iconForType, optionFieldTypes, placeholderForType} from '../../common/formBuilderConstants';
 import {fieldDisplayLabel, getFormulaExpressionError} from '../formUtils';
 import DescriptionEditorBox from './DescriptionEditorBox';
 
@@ -76,8 +67,8 @@ const isFormulaLabelBoundaryChar = (value: string) => !/[a-zA-Z0-9_]/.test(value
 const tokenizeFormulaExpression = (expression: string, fields: FormField[]): FormulaExpressionPart[] => {
     const labels = fields
         .map((field) => fieldDisplayLabel(field).trim())
-        .filter(Boolean)
-        .sort((a, b) => b.length - a.length);
+        .filter(Boolean).sort((a, b) => b.length - a.length);
+    
     const parts: FormulaExpressionPart[] = [];
     let buffer = '';
     let index = 0;
@@ -137,6 +128,7 @@ const FieldSettingsDialog = ({
                                  onClose,
                                  onConfirm
 }: FieldSettingsDialogProps) => {
+    
     const isOptionField = Boolean(type && optionFieldTypes.includes(type));
     const isDescription = type === 'Description';
     const isFormula = type === 'Formula';
@@ -151,15 +143,16 @@ const FieldSettingsDialog = ({
     const isDate = type === 'Date';
     const isLocation = type === 'Location';
     const isRating = type === 'Rating';
+    
     const canAllowMultipleUploads = isImageUpload || isVideoUpload || isFileUpload || isScanner;
     const isSimpleOptionField = isOptionField && !isImageSelection;
+    
     const canAddCondition = availableFields.length > 0;
     const formulaNumberFields = availableFields.filter((field) => field.type === 'Number');
+    
     const formulaExpressionError = isFormula
-        ? formulaError || (draft.formulaExpression.trim()
-            ? getFormulaExpressionError(draft.formulaExpression, formulaNumberFields)
-            : '')
-        : '';
+        ? formulaError || (draft.formulaExpression.trim() ? getFormulaExpressionError(draft.formulaExpression, formulaNumberFields) : '') : '';
+    
     const [formulaFieldAnchorEl, setFormulaFieldAnchorEl] = useState<null | HTMLElement>(null);
     const [optionSortAnchorEl, setOptionSortAnchorEl] = useState<null | HTMLElement>(null);
     const optionSortMode = draft.optionSortMode === 'az' ? 'az' : 'custom';
@@ -182,6 +175,7 @@ const FieldSettingsDialog = ({
             ...condition,
             joinWith: index === 0 ? 'if' as const : condition.joinWith === 'or' ? 'or' as const : 'and' as const,
         }));
+        
         setConditionDrafts(normalizedConditions);
         setIsConditionEditorOpen(false);
         setFormulaFieldAnchorEl(null);
@@ -191,6 +185,7 @@ const FieldSettingsDialog = ({
         setOptionImportConfirmOpen(false);
         setOptionImportMode('append');
         setRangeError('');
+        
     }, [open]);
 
     useEffect(() => {
@@ -211,8 +206,7 @@ const FieldSettingsDialog = ({
     }, [isFormula, draft.formulaExpression, formulaNumberFields]);
 
     const normalizeConditions = (conditions: FormFieldCondition[]) => (
-        conditions
-            .filter((condition) => condition.fieldId)
+        conditions.filter((condition) => condition.fieldId)
             .map((condition, index) => ({
                 fieldId: condition.fieldId,
                 operator: condition.operator === 'not_empty' ? 'not_empty' as const : 'empty' as const,
@@ -253,6 +247,7 @@ const FieldSettingsDialog = ({
 
     const createFormulaFieldToken = (label: string) => {
         const token = document.createElement('span');
+        
         token.contentEditable = 'false';
         token.dataset.formulaField = label;
         token.textContent = label;
@@ -268,6 +263,7 @@ const FieldSettingsDialog = ({
         token.style.lineHeight = '30px';
         token.style.verticalAlign = 'middle';
         token.style.userSelect = 'none';
+        
         return token;
     };
 
@@ -287,8 +283,8 @@ const FieldSettingsDialog = ({
     const focusFormulaEditorAtEnd = () => {
         const editor = formulaEditorRef.current;
         if (!editor) return;
-
         editor.focus();
+        
         const range = document.createRange();
         range.selectNodeContents(editor);
         range.collapse(false);
@@ -436,6 +432,7 @@ const FieldSettingsDialog = ({
 
         const importedOptionEntries = importedOptions.map((item) => ({item, image: ''}));
         const currentOptionEntries = draft.options.map((item, index) => ({item, image: draft.optionImages[index] || ''}));
+        
         let importIndex = 0;
         const mergedOptionEntries = mode === 'replace'
             ? importedOptionEntries
@@ -449,18 +446,16 @@ const FieldSettingsDialog = ({
                 }),
                 ...importedOptionEntries.slice(importIndex),
             ];
-        const nextEntries = optionSortMode === 'az'
-            ? sortOptionEntries(mergedOptionEntries)
-            : mergedOptionEntries;
-        const nextOptionImages = type === 'Image selection'
-            ? nextEntries.map(({image}) => image)
-            : draft.optionImages;
+        
+        const nextEntries = optionSortMode === 'az' ? sortOptionEntries(mergedOptionEntries) : mergedOptionEntries;
+        const nextOptionImages = type === 'Image selection' ? nextEntries.map(({image}) => image) : draft.optionImages;
 
         onChange({
             ...draft,
             options: nextEntries.map(({item}) => item),
             optionImages: nextOptionImages,
         });
+        
         closeImportDrawer();
     };
 
@@ -484,6 +479,7 @@ const FieldSettingsDialog = ({
 
     const uploadOptionImage = (index: number, file?: File) => {
         if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = () => updateOptionImage(index, String(reader.result));
         reader.readAsDataURL(file);
@@ -492,15 +488,15 @@ const FieldSettingsDialog = ({
     const updateShowOnlyIf = (checked: boolean) => {
         const firstFieldId = availableFields[0]?.id || '';
         const nextConditions = checked
-            ? conditionDrafts.length
-                ? conditionDrafts
-                : firstFieldId
-                    ? [{fieldId: firstFieldId, operator: 'empty' as const, joinWith: 'if' as const}]
-                    : []
+            ? conditionDrafts.length ? conditionDrafts : firstFieldId
+                ? [{fieldId: firstFieldId, operator: 'empty' as const, joinWith: 'if' as const}] : []
             : [];
+        
         setIsConditionEditorOpen(checked && nextConditions.length > 0);
         setConditionDrafts(nextConditions);
+        
         const normalizedNextConditions = normalizeConditions(nextConditions);
+        
         onChange({
             ...draft,
             showOnlyIf: checked && normalizedNextConditions.length > 0,
@@ -596,6 +592,7 @@ const FieldSettingsDialog = ({
                     </Box>
                     <Typography fontSize={14}>{type}</Typography>
                 </Stack>
+                
                 <IconButton
                     size="small"
                     onClick={onClose}
@@ -821,6 +818,7 @@ const FieldSettingsDialog = ({
                             <Typography fontWeight={700} fontSize={14}>
                                 Range of values
                             </Typography>
+                            
                             <Stack direction="row" spacing={1.5} alignItems="center">
                                 <CustomTextField
                                     className="custom_font"
@@ -844,6 +842,7 @@ const FieldSettingsDialog = ({
                                     sx={{width: 90}}
                                 />
                             </Stack>
+                            
                             {rangeError && (
                                 <Typography fontSize={12} color="error.main" mt={0.75}>
                                     {rangeError}
@@ -859,6 +858,7 @@ const FieldSettingsDialog = ({
                                 <Typography fontWeight={700} fontSize={14} mb={1.5}>
                                     Choose number of stars
                                 </Typography>
+                                
                                 <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} alignItems="center">
                                     <CustomTextField
                                         className="custom_font"
@@ -868,6 +868,7 @@ const FieldSettingsDialog = ({
                                         variant="outlined"
                                         fullWidth
                                     />
+                                    
                                     <Stack
                                         direction="row"
                                         alignItems="center"
@@ -911,6 +912,7 @@ const FieldSettingsDialog = ({
                                             <IconPlus size={16}/>
                                         </IconButton>
                                     </Stack>
+                                    
                                     <CustomTextField
                                         className="custom_font"
                                         value={draft.ratingMaxLabel}
@@ -938,6 +940,7 @@ const FieldSettingsDialog = ({
                                     </Typography>
                                 </Stack>
                             </Stack>
+                            
                             <Stack spacing={1}>
                                 {draft.options.map((item, index) => {
                                     const image = draft.optionImages[index] || '';
@@ -955,6 +958,7 @@ const FieldSettingsDialog = ({
                                             <Box sx={{color: 'text.disabled', display: 'flex'}}>
                                                 <IconGripVertical size={18}/>
                                             </Box>
+                                            
                                             <Stack
                                                 direction={{xs: 'column', sm: 'row'}}
                                                 spacing={1}
@@ -993,6 +997,7 @@ const FieldSettingsDialog = ({
                                                                     zIndex: 2,
                                                                 }}
                                                             />
+                                                            
                                                             <Box
                                                                 sx={{
                                                                     position: 'absolute',
@@ -1026,6 +1031,7 @@ const FieldSettingsDialog = ({
                                                         </>
                                                     )}
                                                 </Box>
+                                                
                                                 <Box sx={{position: 'relative', width: {xs: '100%', sm: 126}, flexShrink: 0}}>
                                                     <Button
                                                         component="label"
@@ -1065,6 +1071,7 @@ const FieldSettingsDialog = ({
                                                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => uploadOptionImage(index, e.target.files?.[0])}
                                                         />
                                                     </Button>
+                                                    
                                                     {imageError && (
                                                         <>
                                                             <Box
@@ -1080,6 +1087,7 @@ const FieldSettingsDialog = ({
                                                                     zIndex: 2,
                                                                 }}
                                                             />
+                                                            
                                                             <Box
                                                                 sx={{
                                                                     position: 'absolute',
@@ -1116,6 +1124,7 @@ const FieldSettingsDialog = ({
                                                     )}
                                                 </Box>
                                             </Stack>
+                                            
                                             <IconButton
                                                 size="small"
                                                 onClick={() => removeOption(index)}
@@ -1127,6 +1136,7 @@ const FieldSettingsDialog = ({
                                     );
                                 })}
                             </Stack>
+                            
                             <Box>
                                 <Button
                                     variant="outlined"
@@ -1148,6 +1158,7 @@ const FieldSettingsDialog = ({
                                 <Typography fontWeight={700} fontSize={14}>
                                     Items
                                 </Typography>
+                                
                                 <Stack direction="row" spacing={2} alignItems="center">
                                     <Button
                                         size="small"
@@ -1165,6 +1176,7 @@ const FieldSettingsDialog = ({
                                     >
                                         Sort - {optionSortMode === 'az' ? 'A - Z' : 'Custom'}
                                     </Button>
+                                    
                                     <Menu
                                         anchorEl={optionSortAnchorEl}
                                         open={Boolean(optionSortAnchorEl)}
@@ -1185,6 +1197,7 @@ const FieldSettingsDialog = ({
                                             A - Z
                                         </MenuItem>
                                     </Menu>
+                                    
                                     <Button
                                         size="small"
                                         onClick={exportOptions}
@@ -1200,6 +1213,7 @@ const FieldSettingsDialog = ({
                                     >
                                         Export
                                     </Button>
+                                    
                                     <Button
                                         size="small"
                                         onClick={() => setOptionImportOpen(true)}
@@ -1216,91 +1230,95 @@ const FieldSettingsDialog = ({
                                     </Button>
                                 </Stack>
                             </Stack>
+                            
                             <Stack spacing={1}>
                                 {draft.options.map((item, index) => {
                                     const optionError = optionErrors[index] || '';
 
                                     return (
-                                    <Stack
-                                        key={index}
-                                        direction="row"
-                                        spacing={1}
-                                        alignItems="center"
-                                        sx={{mb: optionError ? 2.25 : 0}}
-                                    >
-                                        <Box sx={{color: 'text.disabled', display: 'flex'}}>
-                                            <IconGripVertical size={18}/>
-                                        </Box>
-
-                                        <Box sx={{position: 'relative', flex: 1, minWidth: 0}}>
-                                            <CustomTextField
-                                                className="custom_font"
-                                                value={item}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOption(index, e.target.value)}
-                                                placeholder="Item"
-                                                variant="outlined"
-                                                fullWidth
-                                                error={Boolean(optionError)}
-                                            />
-                                            {optionError && (
-                                                <>
-                                                    <Box
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            right: 10,
-                                                            width: 6,
-                                                            height: 6,
-                                                            borderRadius: '50%',
-                                                            bgcolor: '#FF5A5F',
-                                                            transform: 'translateY(-50%)',
-                                                            zIndex: 2,
-                                                        }}
-                                                    />
-                                                    <Box
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            top: 'calc(100% + 6px)',
-                                                            right: 16,
-                                                            bgcolor: '#FF5A5F',
-                                                            color: '#fff',
-                                                            borderRadius: 0.75,
-                                                            px: 1,
-                                                            py: 0.45,
-                                                            fontSize: 12,
-                                                            lineHeight: 1.2,
-                                                            whiteSpace: 'nowrap',
-                                                            zIndex: 3,
-                                                            boxShadow: '0 8px 18px rgba(255, 90, 95, 0.25)',
-                                                            '&:before': {
-                                                                content: '""',
-                                                                position: 'absolute',
-                                                                right: 16,
-                                                                top: -5,
-                                                                width: 0,
-                                                                height: 0,
-                                                                borderLeft: '5px solid transparent',
-                                                                borderRight: '5px solid transparent',
-                                                                borderBottom: '5px solid #FF5A5F',
-                                                            },
-                                                        }}
-                                                    >
-                                                        {optionError}
-                                                    </Box>
-                                                </>
-                                            )}
-                                        </Box>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => removeOption(index)}
-                                            disabled={draft.options.length <= 1}
+                                        <Stack
+                                            key={index}
+                                            direction="row"
+                                            spacing={1}
+                                            alignItems="center"
+                                            sx={{mb: optionError ? 2.25 : 0}}
                                         >
-                                            <IconTrash size={16}/>
-                                        </IconButton>
-                                    </Stack>
+                                            <Box sx={{color: 'text.disabled', display: 'flex'}}>
+                                                <IconGripVertical size={18}/>
+                                            </Box>
+    
+                                            <Box sx={{position: 'relative', flex: 1, minWidth: 0}}>
+                                                <CustomTextField
+                                                    className="custom_font"
+                                                    value={item}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOption(index, e.target.value)}
+                                                    placeholder="Item"
+                                                    variant="outlined"
+                                                    fullWidth
+                                                    error={Boolean(optionError)}
+                                                />
+                                                {optionError && (
+                                                    <>
+                                                        <Box
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: '50%',
+                                                                right: 10,
+                                                                width: 6,
+                                                                height: 6,
+                                                                borderRadius: '50%',
+                                                                bgcolor: '#FF5A5F',
+                                                                transform: 'translateY(-50%)',
+                                                                zIndex: 2,
+                                                            }}
+                                                        />
+                                                        
+                                                        <Box
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: 'calc(100% + 6px)',
+                                                                right: 16,
+                                                                bgcolor: '#FF5A5F',
+                                                                color: '#fff',
+                                                                borderRadius: 0.75,
+                                                                px: 1,
+                                                                py: 0.45,
+                                                                fontSize: 12,
+                                                                lineHeight: 1.2,
+                                                                whiteSpace: 'nowrap',
+                                                                zIndex: 3,
+                                                                boxShadow: '0 8px 18px rgba(255, 90, 95, 0.25)',
+                                                                '&:before': {
+                                                                    content: '""',
+                                                                    position: 'absolute',
+                                                                    right: 16,
+                                                                    top: -5,
+                                                                    width: 0,
+                                                                    height: 0,
+                                                                    borderLeft: '5px solid transparent',
+                                                                    borderRight: '5px solid transparent',
+                                                                    borderBottom: '5px solid #FF5A5F',
+                                                                },
+                                                            }}
+                                                        >
+                                                            {optionError}
+                                                        </Box>
+                                                    </>
+                                                )}
+                                            </Box>
+                                            
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => removeOption(index)}
+                                                disabled={draft.options.length <= 1}
+                                            >
+                                                <IconTrash size={16}/>
+                                            </IconButton>
+                                        </Stack>
                                     );
                                 })}
                             </Stack>
+                            
                             <Box>
                                 <Button
                                     variant="outlined"
@@ -1325,6 +1343,7 @@ const FieldSettingsDialog = ({
                                         <IconHelpCircle size={15}/>
                                     </Box>
                                 </Typography>
+                                
                                 <Typography color="text.secondary" fontSize={13}>
                                     Start by adding or typing a field name.
                                 </Typography>
@@ -1359,6 +1378,7 @@ const FieldSettingsDialog = ({
                                     >
                                         Add field
                                     </Button>
+                                    
                                     <Menu
                                         anchorEl={formulaFieldAnchorEl}
                                         open={Boolean(formulaFieldAnchorEl)}
@@ -1392,7 +1412,9 @@ const FieldSettingsDialog = ({
                                     suppressContentEditableWarning
                                     role="textbox"
                                     aria-multiline="true"
-                                    data-placeholder={formulaNumberFields.length ? 'e.g. (Field name 1 + Field name 2)/ Field name 3' : 'Add a Number field first'}
+                                    data-placeholder={formulaNumberFields.length ? 
+                                        'e.g. (Field name 1 + Field name 2)/ Field name 3' : 'Add a Number field first'
+                                    }
                                     onInput={() => {
                                         emitFormulaEditorChange();
                                         saveFormulaSelection();
@@ -1439,6 +1461,7 @@ const FieldSettingsDialog = ({
                                     </Typography>
                                 )}
                             </Box>
+                            
                             {!formulaNumberFields.length && (
                                 <Typography color="text.disabled" fontSize={13}>
                                     Add a Number field before building a formula.
@@ -1463,6 +1486,7 @@ const FieldSettingsDialog = ({
                                         label={<Typography fontSize={14}>Required</Typography>}
                                     />
                                 )}
+                                
                                 {!isLocation && (
                                     <FormControlLabel
                                         control={
@@ -1475,6 +1499,7 @@ const FieldSettingsDialog = ({
                                         label={<Typography fontSize={14}>Location stamp capture</Typography>}
                                     />
                                 )}
+                                
                                 {canAllowMultipleUploads && (
                                     <FormControlLabel
                                         control={
@@ -1487,6 +1512,7 @@ const FieldSettingsDialog = ({
                                         label={<Typography fontSize={14}>Allow multiple uploads</Typography>}
                                     />
                                 )}
+                                
                                 {(isGroup || isOptionField) && (
                                     <FormControlLabel
                                         control={
@@ -1521,6 +1547,7 @@ const FieldSettingsDialog = ({
                                     />
                                 )}
                             </Stack>
+                            
                             {canAddCondition && (
                                 <>
                                     <Divider sx={{my: 1}}/>
@@ -1563,6 +1590,7 @@ const FieldSettingsDialog = ({
                                                 >
                                                     <IconPencil size={16}/>
                                                 </IconButton>
+                                                
                                                 <Stack spacing={1.15} pr={4}>
                                                     {draft.conditions.map((condition, conditionIndex) => {
                                                         
@@ -1592,6 +1620,7 @@ const FieldSettingsDialog = ({
                                                                 }}>
                                                                     {joinLabel}
                                                                 </Typography>
+                                                                
                                                                 <Chip
                                                                     label={(
                                                                         <Stack direction="row" spacing={0.75}
@@ -1621,9 +1650,11 @@ const FieldSettingsDialog = ({
                                                                         '& .MuiChip-label': {px: 1.25, width: '100%'},
                                                                     }}
                                                                 />
+                                                                
                                                                 <Typography sx={{fontSize: 14, color: '#123044'}}>
                                                                     response is
                                                                 </Typography>
+                                                                
                                                                 <Chip
                                                                     label={condition.operator === 'not_empty' ? 'Not Empty' : 'Empty'}
                                                                     sx={{
@@ -1639,6 +1670,7 @@ const FieldSettingsDialog = ({
                                                         );
                                                     })}
                                                 </Stack>
+                                                
                                                 {canAddMoreConditions && (
                                                     <Button
                                                         variant="outlined"
@@ -1657,6 +1689,7 @@ const FieldSettingsDialog = ({
                                                 )}
                                             </Box>
                                         )}
+                                        
                                         {draft.showOnlyIf && !isConditionEditorOpen && draft.conditions.length === 0 && canAddMoreConditions && (
                                             <Box>
                                                 <Button
@@ -1674,6 +1707,7 @@ const FieldSettingsDialog = ({
                                                 </Button>
                                             </Box>
                                         )}
+                                        
                                         {draft.showOnlyIf && isConditionEditorOpen && (
                                             <Box
                                                 sx={{
@@ -1685,11 +1719,13 @@ const FieldSettingsDialog = ({
                                                 }}
                                             >
                                                 <Stack spacing={1}>
-                                                    {conditionDrafts.map((condition, conditionIndex) => {
-                                                        const conditionField = availableFields.find((field) => field.id === condition.fieldId) || availableFields[0];
-                                                        const selectableFields = availableFields.filter((field) => (
-                                                            field.id === condition.fieldId || !usedConditionFieldIds.includes(field.id)
-                                                        ));
+                                                    {
+                                                        conditionDrafts.map((condition, conditionIndex) => {
+                                                        
+                                                            const conditionField = availableFields.find((field) => field.id === condition.fieldId) || availableFields[0];
+                                                            const selectableFields = availableFields.filter((field) => (
+                                                                field.id === condition.fieldId || !usedConditionFieldIds.includes(field.id)
+                                                            ));
 
                                                         return (
                                                             <Box
@@ -1739,6 +1775,7 @@ const FieldSettingsDialog = ({
                                                                             <MenuItem value="or">Or if</MenuItem>
                                                                         </Select>
                                                                     )}
+                                                                    
                                                                     <Select
                                                                         fullWidth
                                                                         size="small"
@@ -1748,11 +1785,12 @@ const FieldSettingsDialog = ({
                                                                             fieldId: String(e.target.value),
                                                                         })}
                                                                         renderValue={(selected) => {
+                                                                            
                                                                             const field = availableFields.find((item) => item.id === selected);
                                                                             const index = availableFields.findIndex((item) => item.id === selected) + 1;
+                                                                            
                                                                             return (
-                                                                                <Stack direction="row" spacing={1}
-                                                                                       alignItems="center">
+                                                                                <Stack direction="row" spacing={1} alignItems="center">
                                                                                     <Box
                                                                                         sx={{
                                                                                             width: 22,
@@ -1770,6 +1808,7 @@ const FieldSettingsDialog = ({
                                                                                     >
                                                                                         {index || 1}
                                                                                     </Box>
+                                                                                    
                                                                                     <Box sx={{
                                                                                         display: 'flex',
                                                                                         color: '#0F2637',
@@ -1777,6 +1816,7 @@ const FieldSettingsDialog = ({
                                                                                     }}>
                                                                                         {field ? iconForType(field.type) : null}
                                                                                     </Box>
+                                                                                    
                                                                                     <Typography
                                                                                         noWrap
                                                                                         fontSize={14}
@@ -1786,6 +1826,7 @@ const FieldSettingsDialog = ({
                                                                                 </Stack>
                                                                             );
                                                                         }}
+                                                                        
                                                                         sx={{
                                                                             bgcolor: '#fff',
                                                                             borderRadius: 1.5,
@@ -1798,6 +1839,7 @@ const FieldSettingsDialog = ({
                                                                             </MenuItem>
                                                                         ))}
                                                                     </Select>
+                                                                    
                                                                     <IconButton
                                                                         size="small"
                                                                         onClick={() => removeCondition(conditionIndex)}
@@ -1827,6 +1869,7 @@ const FieldSettingsDialog = ({
                                                                     <Typography sx={{fontSize: 14, color: '#123044'}}>
                                                                         response is
                                                                     </Typography>
+                                                                    
                                                                     <Select
                                                                         fullWidth
                                                                         size="small"
@@ -1844,47 +1887,53 @@ const FieldSettingsDialog = ({
                                                                         <MenuItem value="empty">Empty</MenuItem>
                                                                         <MenuItem value="not_empty">Not Empty</MenuItem>
                                                                     </Select>
+                                                                    
                                                                     <Box sx={{display: {xs: 'none', sm: 'block'}}}/>
                                                                 </Box>
                                                             </Box>
                                                         );
                                                     })}
                                                 </Stack>
-                                                <Stack direction="row" alignItems="center"
-                                                       justifyContent="space-between" mt={1.5} spacing={1}>
-                                                    {canAddMoreConditions ? (
-                                                        <Button
-                                                            variant="outlined"
-                                                            startIcon={<IconPlus size={16}/>}
-                                                            onClick={addCondition}
-                                                            sx={{
-                                                                borderRadius: 0,
-                                                                borderColor: '#0B8CFF',
-                                                                color: '#0B8CFF',
-                                                                textTransform: 'none'
-                                                            }}
-                                                        >
-                                                            Add Condition
-                                                        </Button>
-                                                    ) : <Box/>}
-                                                    {conditionDrafts.length > 0 && (
-                                                        <Stack direction="row" spacing={1}>
+                                                
+                                                <Stack direction="row" alignItems="center" justifyContent="space-between" mt={1.5} spacing={1}>
+                                                    {
+                                                        canAddMoreConditions ? (
                                                             <Button
                                                                 variant="outlined"
-                                                                onClick={cancelConditions}
-                                                                sx={{borderRadius: 5, textTransform: 'none'}}
+                                                                startIcon={<IconPlus size={16}/>}
+                                                                onClick={addCondition}
+                                                                sx={{
+                                                                    borderRadius: 0,
+                                                                    borderColor: '#0B8CFF',
+                                                                    color: '#0B8CFF',
+                                                                    textTransform: 'none'
+                                                                }}
                                                             >
-                                                                Cancel
+                                                                Add Condition
                                                             </Button>
-                                                            <Button
-                                                                variant="outlined"
-                                                                onClick={saveConditions}
-                                                                sx={{borderRadius: 5, textTransform: 'none'}}
-                                                            >
-                                                                Save condition
-                                                            </Button>
-                                                        </Stack>
-                                                    )}
+                                                        ) : <Box/>
+                                                    }
+                                                    
+                                                    {
+                                                        conditionDrafts.length > 0 && (
+                                                            <Stack direction="row" spacing={1}>
+                                                                <Button
+                                                                    variant="outlined"
+                                                                    onClick={cancelConditions}
+                                                                    sx={{borderRadius: 5, textTransform: 'none'}}
+                                                                >
+                                                                    Cancel
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outlined"
+                                                                    onClick={saveConditions}
+                                                                    sx={{borderRadius: 5, textTransform: 'none'}}
+                                                                >
+                                                                    Save condition
+                                                                </Button>
+                                                            </Stack>
+                                                        )
+                                                    }
                                                 </Stack>
                                             </Box>
                                         )}
@@ -1939,6 +1988,7 @@ const FieldSettingsDialog = ({
                         >
                             <IconArrowLeft size={24}/>
                         </IconButton>
+                        
                         <Typography
                             fontSize={18}
                             fontWeight={500}
@@ -1964,6 +2014,7 @@ const FieldSettingsDialog = ({
                                 Copy from any spreadsheet or list, and paste below<br/>
                                 to add a list with multiple items
                             </Typography>
+                            
                             <Stack direction="row" alignItems="center" justifyContent="center" spacing={2}>
                                 <Box
                                     sx={{
@@ -2001,6 +2052,7 @@ const FieldSettingsDialog = ({
                                             ))}
                                         </Stack>
                                     ))}
+                                    
                                     <Paper
                                         elevation={4}
                                         sx={{
@@ -2016,6 +2068,7 @@ const FieldSettingsDialog = ({
                                         <Typography fontSize={10}>Paste</Typography>
                                     </Paper>
                                 </Box>
+                                
                                 <Typography color="#6B7280" fontSize={30}>›</Typography>
                                 <Box
                                     sx={{
@@ -2031,6 +2084,7 @@ const FieldSettingsDialog = ({
                                     <Box sx={{height: '100%', border: '1px solid #E5E7EB', borderRadius: 1, p: 1}}>
                                         <Typography fontSize={9} color="#B8B8B8">Paste list here</Typography>
                                     </Box>
+                                    
                                     <Paper
                                         elevation={4}
                                         sx={{
@@ -2052,6 +2106,7 @@ const FieldSettingsDialog = ({
                         <Typography textAlign="center" fontSize={14} color="#123044" mb={1.25}>
                             Paste copied items below
                         </Typography>
+                        
                         <CustomTextField
                             value={optionImportText}
                             onChange={(event: React.ChangeEvent<HTMLInputElement>) => setOptionImportText(event.target.value)}
@@ -2066,6 +2121,7 @@ const FieldSettingsDialog = ({
                                 },
                             }}
                         />
+                        
                         <Typography textAlign="center" fontSize={14} color="text.secondary" mt={1.25}>
                             {importedOptions.length} item{importedOptions.length === 1 ? '' : 's'} will be added to the list
                         </Typography>
@@ -2090,6 +2146,7 @@ const FieldSettingsDialog = ({
                         >
                             Import items
                         </Button>
+                        
                         <Button
                             onClick={closeImportDrawer}
                             sx={{color: '#123044', textTransform: 'none'}}
@@ -2131,6 +2188,7 @@ const FieldSettingsDialog = ({
                     <Typography fontSize={18} color="text.secondary">
                         Import items
                     </Typography>
+                    
                     <IconButton
                         size="small"
                         onClick={() => setOptionImportConfirmOpen(false)}
@@ -2145,6 +2203,7 @@ const FieldSettingsDialog = ({
                         There are {filledOptions.length} item{filledOptions.length === 1 ? '' : 's'} in this list already.<br/>
                         What would you like to do with those items?
                     </Typography>
+                    
                     <RadioGroup
                         value={optionImportMode}
                         onChange={(event) => setOptionImportMode(event.target.value as 'append' | 'replace')}
@@ -2160,6 +2219,7 @@ const FieldSettingsDialog = ({
                             }
                             sx={{alignItems: 'flex-start', m: 0}}
                         />
+                        
                         <FormControlLabel
                             value="replace"
                             control={<Radio size="small"/>}

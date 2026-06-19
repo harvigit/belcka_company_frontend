@@ -1,4 +1,4 @@
-import {FormField} from './types';
+import {FormField} from '../types';
 
 export type LocationPreview = {
     source?: 'current' | 'manual';
@@ -34,50 +34,59 @@ export const flattenFormFields = (fields: FormField[]): FormField[] => fields.fl
 ]);
 
 export const getFieldOptions = (field: FormField, fallback: string[] = []) => {
-    const options = Array.isArray(field.options)
-        ? field.options.map((option) => option.trim()).filter(Boolean)
-        : [];
+    const options = Array.isArray(field.options) ? field.options.map((option) => option.trim()).filter(Boolean) : [];
 
     return options.length ? options : fallback;
 };
 
 export const isLocationPreview = (value: PreviewValue): value is LocationPreview => (
-    value !== null
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && 'latitude' in value
-    && 'longitude' in value
+    value !== null && typeof value === 'object' && !Array.isArray(value) && 'latitude' in value && 'longitude' in value
 );
 
 export const isFilePreview = (value: PreviewValue): value is FilePreview => (
-    value !== null
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && 'name' in value
-    && 'url' in value
+    value !== null && typeof value === 'object' && !Array.isArray(value) && 'name' in value && 'url' in value
 );
 
 export const isFilePreviewArray = (value: PreviewValue): value is FilePreview[] => (
     Array.isArray(value) && value.every((item) => isFilePreview(item as PreviewValue))
 );
 
-export const isAudioRecordingPreview = (value: PreviewValue): value is AudioRecordingPreview => isFilePreview(value);
+export const isAudioRecordingPreview = 
+    (value: PreviewValue): value is AudioRecordingPreview => isFilePreview(value);
 
 export const isDateTimePreview = (value: PreviewValue): value is DateTimePreview => (
-    value !== null
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && ('date' in value || 'time' in value)
+    value !== null && typeof value === 'object' && !Array.isArray(value) && ('date' in value || 'time' in value)
 );
 
 export const isEmptyValue = (value: PreviewValue) => {
-    if (value === null || value === undefined) return true;
-    if (typeof value === 'string') return value.trim() === '';
-    if (typeof value === 'number') return false;
-    if (Array.isArray(value)) return value.length === 0;
-    if (isLocationPreview(value)) return !String(value.latitude || '').trim() || !String(value.longitude || '').trim();
-    if (isDateTimePreview(value)) return !value.date && !value.time;
-    if (isFilePreview(value)) return !value.url;
+    if (value === null || value === undefined) {
+        return true;
+    }
+    
+    if (typeof value === 'string') {
+        return value.trim() === '';
+    }
+    
+    if (typeof value === 'number') {
+        return false;
+    }
+    
+    if (Array.isArray(value)) {
+        return value.length === 0;
+    }
+    
+    if (isLocationPreview(value)) {
+        return !String(value.latitude || '').trim() || !String(value.longitude || '').trim();
+    }
+    
+    if (isDateTimePreview(value)) {
+        return !value.date && !value.time;
+    }
+    
+    if (isFilePreview(value)) {
+        return !value.url;
+    }
+    
     return false;
 };
 

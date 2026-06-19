@@ -22,14 +22,14 @@ import {
     IconGripVertical,
     IconPencil,
     IconPlus,
-    IconSettings,
     IconTrash,
     IconX
 } from '@tabler/icons-react';
 import {DragDropContext, Draggable, Droppable, DropResult} from '@hello-pangea/dnd';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import {emptyDraftForType, FieldDraft, FormField, FormFieldCondition, iconForType} from '../common';
-import {fieldToDraft} from '../common/formBuilderUtils';
+import {FieldDraft, FormField, FormFieldCondition} from '../../types';
+import {emptyDraftForType, iconForType} from '../../common/formBuilderConstants';
+import {fieldToDraft} from '../../common/formBuilderUtils';
 import {fieldConditions, fieldDisplayLabel, getFormulaExpressionError} from '../formUtils';
 import AddFieldPopover from './AddFieldPopover';
 import FieldSettingsDialog from './FieldSettingsDialog';
@@ -173,38 +173,47 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         const duplicateTitles = new Set(
             normalizedOptions.filter((item, index) => item && normalizedOptions.indexOf(item) !== index),
         );
+        
         const nextOptionErrors = normalizedOptions.map((item) => {
             if (!item) return 'Not filled yet';
+            
             if (duplicateTitles.has(item)) return "There's an existing option in this list with the same title";
+            
             return '';
         });
+        
         const nextOptionImageErrors = activeFieldType === 'Image selection'
             ? fieldDraft.options.map((_, index) => fieldDraft.optionImages[index] ? '' : 'Upload an image')
             : [];
 
         setFieldOptionErrors(nextOptionErrors);
         setFieldOptionImageErrors(nextOptionImageErrors);
+        
         return !nextOptionErrors.some(Boolean) && !nextOptionImageErrors.some(Boolean);
     };
 
     const confirmField = () => {
         if (!activeFieldType) return;
+        
         if (activeFieldType !== 'Description' && !fieldDraft.label.trim()) {
             setFieldQuestionError('Please enter\'s the question.');
             return;
         }
+        
         if (activeFieldType === 'Formula') {
             const formulaNumberFields = fields.filter((field) => field.id !== editingFieldId && field.type === 'Number');
             if (!fieldDraft.formulaExpression.trim()) {
                 setFieldFormulaError('Your field needs a formula');
                 return;
             }
+            
             const formulaError = getFormulaExpressionError(fieldDraft.formulaExpression, formulaNumberFields);
             if (formulaError) {
                 setFieldFormulaError(formulaError);
                 return;
             }
         }
+        
         if (!validateOptionItems()) return;
 
         const label = fieldDraft.label.trim();
@@ -215,7 +224,9 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
             id: `${activeFieldType.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
             label,
             type: activeFieldType,
+            
             ...(description ? {description} : {}),
+            
             required: fieldDraft.required,
             
             ...(options.length ? {options} : {}),
@@ -335,7 +346,9 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
             const [removed] = nextFields.splice(index, 1);
             return {nextFields, removed};
         }
+        
         let removed: FormField | undefined;
+        
         const nextFields = source.map((field) => {
             if (field.id === containerId) {
                 const nextChildren = [...(field.fields || [])];
@@ -351,6 +364,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
             }
             return field;
         });
+        
         return {nextFields, removed};
     };
 
@@ -377,24 +391,31 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
 
     const onDragEnd = (result: DropResult) => {
         if (!result.destination) return;
+        
         const sourceGroupId = groupIdFromDroppable(result.source.droppableId);
         const destinationGroupId = groupIdFromDroppable(result.destination.droppableId);
+        
         setFields((currentFields) => {
             const {nextFields, removed} = removeFromContainer(currentFields, sourceGroupId, result.source.index);
             if (!removed) return currentFields;
+            
             if (removed.type === 'Group' && destinationGroupId && findFieldInTree([removed], destinationGroupId)) return currentFields;
+            
             return insertIntoContainer(nextFields, destinationGroupId, result.destination!.index, removed);
         });
     };
 
     const renderConditionBadges = (field: FormField) => {
         const conditions = fieldConditions(field) || [];
+        
         if (!field.showOnlyIf || conditions.length === 0) return null;
+        
         return (
             <Stack spacing={0.75} mt={1} pl={{xs: 0, sm: field.type === 'Group' ? 3 : 8}}>
                 {conditions.map((condition: FormFieldCondition, conditionIndex: number) => {
                     const sourceField = findFieldInTree(fields, condition.fieldId);
                     const joinLabel = conditionIndex === 0 ? 'Show only if' : condition.joinWith === 'or' ? 'Or if' : 'And if';
+                    
                     return (
                         <Box key={`${field.id}-${condition.fieldId}-${conditionIndex}`} sx={{
                             display: 'flex',
@@ -502,6 +523,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                 >
                     {iconForType(field.type)}
                 </Box>
+                
                 <Typography 
                     fontSize={14} 
                     color="text.primary"
@@ -568,6 +590,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
 
     const renderGroupField = (field: FormField, index: number, dragHandleProps?: any) => {
         const children = field.fields || [];
+        
         return (
             <Paper elevation={0} sx={{
                 px: {xs: 1.25, sm: 1.5},
@@ -900,6 +923,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                 onClose={closeFieldDialog}
                 onConfirm={confirmField}
             />
+            
             <Divider/>
 
             <Box sx={{flex: 1, overflow: 'auto', px: {xs: 2, sm: 3}, py: 2, bgcolor: '#fff'}}>

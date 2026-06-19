@@ -1,29 +1,26 @@
 'use client';
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { Box, CircularProgress } from '@mui/material';
 import PageContainer from '@/app/components/container/PageContainer';
-import FormBuilder from '@/app/components/apps/forms/FormBuilder';
+import FormDetails from '@/app/components/apps/forms/FormDetails';
 
-const FormEditorPage = () => {
-    const router = useRouter();
+const FormDetailsPage = () => {
     const params = useParams<{ id: string }>();
     const formId = params?.id;
 
-    const closeEditor = () => {
-        router.push('/apps/forms');
-    };
-
     return (
-        <PageContainer title="Form Builder">
-            <FormBuilder
-                open
-                onClose={closeEditor}
-                formId={formId}
-                onSaved={closeEditor}
-            />
+        <PageContainer title="Form Details">
+            {formId ? (
+                <FormDetails formId={formId} />
+            ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+                    <CircularProgress />
+                </Box>
+            )}
         </PageContainer>
     );
 };
 
-export default FormEditorPage;
+export default FormDetailsPage;

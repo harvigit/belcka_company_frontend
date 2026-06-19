@@ -1,6 +1,6 @@
 import React from 'react';
 import {Box, Popover, Stack, Typography} from '@mui/material';
-import {ELEMENT_FIELDS, LAYOUT_FIELDS} from '../common';
+import {ELEMENT_FIELDS, LAYOUT_FIELDS} from '../../common/formBuilderConstants';
 
 type AddFieldPopoverProps = {
     anchorEl: HTMLElement | null;
@@ -44,6 +44,7 @@ const AddFieldPopover = ({anchorEl, onClose, onAdd}: AddFieldPopoverProps) => (
                     >
                         Layout
                     </Typography>
+                    
                     <Stack spacing={0.25}>
                         {LAYOUT_FIELDS.map((f) => (
                             <Stack
@@ -79,6 +80,7 @@ const AddFieldPopover = ({anchorEl, onClose, onAdd}: AddFieldPopoverProps) => (
                     >
                         Elements
                     </Typography>
+                    
                     <Box
                         sx={{
                             display: 'grid',

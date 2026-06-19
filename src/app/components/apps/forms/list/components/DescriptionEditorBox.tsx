@@ -182,8 +182,8 @@ const normalizeHexColor = (value: string, fallback = '#000000') => {
 const ColorPickerField = ({
                               label,
                               value,
-                              onChange,
-                          }: {
+                              onChange
+}: {
     label: string;
     value: string;
     onChange: (value: string) => void;
@@ -226,8 +226,8 @@ const ColorPickerField = ({
 
 const DescriptionEditorBox = ({
                                   value,
-                                  onChange,
-                              }: {
+                                  onChange
+}: {
     value: string;
     onChange: (value: string) => void;
 }) => {
@@ -288,6 +288,7 @@ const DescriptionEditorBox = ({
 
     const getTableContext = React.useCallback(() => {
         if (!editor) return null;
+        
         const {$from} = editor.state.selection;
         let tableDepth = -1;
         let rowDepth = -1;
@@ -337,11 +338,13 @@ const DescriptionEditorBox = ({
                 left: tableRect.left - areaRect.left + editorArea.scrollLeft + tableRect.width / 2,
             });
         };
+        
         const hideTableToolbar = () => setTimeout(updateTableToolbar, 120);
         editor.on('selectionUpdate', updateTableToolbar);
         editor.on('focus', updateTableToolbar);
         editor.on('blur', hideTableToolbar);
         updateTableToolbar();
+        
         return () => {
             editor.off('selectionUpdate', updateTableToolbar);
             editor.off('focus', updateTableToolbar);
@@ -357,11 +360,13 @@ const DescriptionEditorBox = ({
     const createEmptyTableRow = (colCount: number) => {
         const schema = editor?.state.schema;
         if (!schema) return null;
+        
         const cells = [];
         for (let index = 0; index < colCount; index += 1) {
             const cell = createEmptyTableCell();
             if (cell) cells.push(cell);
         }
+        
         return schema.nodes.tableRow.create(null, cells);
     };
 
@@ -386,6 +391,7 @@ const DescriptionEditorBox = ({
         const tableRowsHtml = Array.from({length: rows}, () => (
             `<tr>${Array.from({length: cols}, () => '<td><p></p></td>').join('')}</tr>`
         )).join('');
+        
         editor?.chain().focus().insertContent(`<table>${tableRowsHtml}</table><p></p>`).run();
         setTableAnchorEl(null);
         setTableRows(0);
@@ -593,57 +599,124 @@ const DescriptionEditorBox = ({
                 </Select>
 
                 <ToggleButtonGroup size="small">
-                    <ToggleButton value="bold" selected={editor?.isActive('bold')}
-                                  onClick={() => editor?.chain().focus().toggleBold().run()}>
+                    <ToggleButton 
+                        value="bold" 
+                        selected={editor?.isActive('bold')}
+                        onClick={() => editor?.chain().focus().toggleBold().run()}
+                    >
                         <FormatBoldIcon fontSize="small"/>
                     </ToggleButton>
-                    <ToggleButton value="italic" selected={editor?.isActive('italic')}
-                                  onClick={() => editor?.chain().focus().toggleMark('italic').run()}>
+                    
+                    <ToggleButton 
+                        value="italic" 
+                        selected={editor?.isActive('italic')}
+                        onClick={() => editor?.chain().focus().toggleMark('italic').run()}
+                    >
                         <FormatItalicIcon fontSize="small"/>
                     </ToggleButton>
-                    <ToggleButton value="underline" selected={editor?.isActive('underline')}
-                                  onClick={() => editor?.chain().focus().toggleMark('underline').run()}>
+                    
+                    <ToggleButton 
+                        value="underline" 
+                        selected={editor?.isActive('underline')}
+                        onClick={() => editor?.chain().focus().toggleMark('underline').run()}
+                    >
                         <FormatUnderlinedIcon fontSize="small"/>
                     </ToggleButton>
                 </ToggleButtonGroup>
 
-                <IconButton size="small" onClick={(event) => setTextColorAnchorEl(event.currentTarget)}>
+                <IconButton 
+                    size="small" 
+                    onClick={(event) => setTextColorAnchorEl(event.currentTarget)}
+                >
                     <FormatColorTextIcon fontSize="small"/>
                     <IconChevronDown size={13}/>
                 </IconButton>
-                <IconButton size="small" onClick={(event) => setHighlightAnchorEl(event.currentTarget)}>
+                
+                <IconButton 
+                    size="small" 
+                    onClick={(event) => setHighlightAnchorEl(event.currentTarget)}
+                >
                     <BorderColorIcon fontSize="small"/>
                     <IconChevronDown size={13}/>
                 </IconButton>
 
                 <ToggleButtonGroup size="small">
-                    <ToggleButton value="left" onClick={() => setAlignment('left')}><FormatAlignLeftIcon
-                        fontSize="small"/></ToggleButton>
-                    <ToggleButton value="center" onClick={() => setAlignment('center')}><FormatAlignCenterIcon
-                        fontSize="small"/></ToggleButton>
-                    <ToggleButton value="right" onClick={() => setAlignment('right')}><FormatAlignRightIcon
-                        fontSize="small"/></ToggleButton>
-                    <ToggleButton value="justify" onClick={() => setAlignment('justify')}><FormatAlignJustifyIcon
-                        fontSize="small"/></ToggleButton>
+                    <ToggleButton
+                        value="left"
+                        onClick={() => setAlignment('left')}
+                    >
+                        <FormatAlignLeftIcon fontSize="small"/>
+                    </ToggleButton>
+                    
+                    <ToggleButton
+                        value="center"
+                        onClick={() => setAlignment('center')}
+                    >
+                        <FormatAlignCenterIcon fontSize="small"/>
+                    </ToggleButton>
+                    
+                    <ToggleButton
+                        value="right"
+                        onClick={() => setAlignment('right')}
+                    >
+                        <FormatAlignRightIcon fontSize="small"/>
+                    </ToggleButton>
+                    
+                    <ToggleButton
+                        value="justify"
+                        onClick={() => setAlignment('justify')}
+                    >
+                        <FormatAlignJustifyIcon fontSize="small"/>
+                    </ToggleButton>
                 </ToggleButtonGroup>
 
-                <IconButton size="small" onClick={() => editor?.chain().focus().undo().run()}><UndoIcon
-                    fontSize="small"/></IconButton>
-                <IconButton size="small" onClick={() => editor?.chain().focus().redo().run()}><RedoIcon
-                    fontSize="small"/></IconButton>
-                <IconButton size="small"
-                            onClick={() => editor?.chain().focus().toggleBulletList().run()}><FormatListBulletedIcon
-                    fontSize="small"/></IconButton>
-                <IconButton size="small"
-                            onClick={() => editor?.chain().focus().toggleOrderedList().run()}><FormatListNumberedIcon
-                    fontSize="small"/></IconButton>
-                <IconButton size="small" onClick={openLinkDialog}><LinkIcon fontSize="small"/></IconButton>
-                <IconButton size="small" onClick={() => imageInputRef.current?.click()}><ImageIcon
-                    fontSize="small"/></IconButton>
+                <IconButton 
+                    size="small"
+                    onClick={() => editor?.chain().focus().undo().run()}
+                >
+                    <UndoIcon fontSize="small"/>
+                </IconButton>
+                
+                <IconButton 
+                    size="small"
+                    onClick={() => editor?.chain().focus().redo().run()}
+                >
+                    <RedoIcon fontSize="small"/>
+                </IconButton>
+                
+                <IconButton 
+                    size="small"
+                    onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                >
+                    <FormatListBulletedIcon fontSize="small"/>
+                </IconButton>
+                
+                <IconButton 
+                    size="small"
+                    onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                >
+                    <FormatListNumberedIcon fontSize="small"/>
+                </IconButton>
+                
+                <IconButton 
+                    size="small"
+                    onClick={openLinkDialog}
+                >
+                    <LinkIcon fontSize="small"/>
+                </IconButton>
+                
+                <IconButton 
+                    size="small"
+                    onClick={() => imageInputRef.current?.click()}
+                >
+                    <ImageIcon fontSize="small"/>
+                </IconButton>
+                
                 <IconButton size="small" onClick={(event) => setTableAnchorEl(event.currentTarget)}>
                     <TableChartIcon fontSize="small"/>
                     <IconChevronDown size={13}/>
                 </IconButton>
+                
                 <input ref={imageInputRef} hidden type="file" accept="image/*" onChange={handleImageUpload}/>
             </Toolbar>
 
@@ -687,6 +760,7 @@ const DescriptionEditorBox = ({
                 }}
             >
                 <EditorContent editor={editor}/>
+                
                 {tableToolbarPosition && (
                     <Stack
                         direction="row"
@@ -721,36 +795,43 @@ const DescriptionEditorBox = ({
                                 <TableChartIcon fontSize="small"/>
                             </IconButton>
                         </Tooltip>
+                        
                         <Tooltip title="Delete Table">
                             <IconButton size="small" onClick={deleteTable}>
                                 <DeleteOutlineIcon fontSize="small"/>
                             </IconButton>
                         </Tooltip>
+                        
                         <Tooltip title="Insert Row Before">
                             <IconButton size="small" onClick={() => insertTableRow('before')}>
                                 <AddBoxOutlinedIcon fontSize="small"/>
                             </IconButton>
                         </Tooltip>
+                        
                         <Tooltip title="Insert Row After">
                             <IconButton size="small" onClick={() => insertTableRow('after')}>
                                 <AddBoxOutlinedIcon fontSize="small" sx={{transform: 'rotate(180deg)'}}/>
                             </IconButton>
                         </Tooltip>
+                        
                         <Tooltip title="Delete Row">
                             <IconButton size="small" onClick={deleteTableRow}>
                                 <DeleteForeverOutlinedIcon fontSize="small"/>
                             </IconButton>
                         </Tooltip>
+                        
                         <Tooltip title="Insert Col Before">
                             <IconButton size="small" onClick={() => insertTableColumn('before')}>
                                 <ViewColumnOutlinedIcon fontSize="small"/>
                             </IconButton>
                         </Tooltip>
+                        
                         <Tooltip title="Insert Col After">
                             <IconButton size="small" onClick={() => insertTableColumn('after')}>
                                 <ViewColumnOutlinedIcon fontSize="small" sx={{transform: 'rotate(180deg)'}}/>
                             </IconButton>
                         </Tooltip>
+                        
                         <Tooltip title="Delete Col">
                             <IconButton size="small" onClick={deleteTableColumn}>
                                 <DeleteForeverOutlinedIcon fontSize="small" sx={{transform: 'rotate(90deg)'}}/>
@@ -764,6 +845,7 @@ const DescriptionEditorBox = ({
                 <MenuItem sx={{display: 'block', cursor: 'default'}}>
                     <Stack spacing={1}>
                         <Typography fontSize={13} fontWeight={600}>Insert Table</Typography>
+                        
                         <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(6, 18px)', gap: 0.5}}>
                             {Array.from({length: 36}, (_, index) => {
                                 const row = Math.floor(index / 6) + 1;
@@ -794,22 +876,21 @@ const DescriptionEditorBox = ({
                         </Typography>
                     </Stack>
                 </MenuItem>
+                
                 <Divider/>
+                
                 <MenuItem onClick={() => setTableAnchorEl(null)}>Cell</MenuItem>
                 <MenuItem onClick={() => setTableAnchorEl(null)}>Row</MenuItem>
                 <MenuItem onClick={() => setTableAnchorEl(null)}>Column</MenuItem>
-                <MenuItem onClick={() => {
-                    setTableAnchorEl(null);
-                    openTableProperties();
-                }}>Table Properties</MenuItem>
+                <MenuItem onClick={() => {setTableAnchorEl(null);openTableProperties();}}>Table Properties</MenuItem>
+                
                 <MenuItem onClick={deleteTable}>
                     <DeleteOutlineIcon fontSize="small" sx={{mr: 1}}/>
                     Delete Table
                 </MenuItem>
             </Menu>
 
-            <Menu anchorEl={textColorAnchorEl} open={Boolean(textColorAnchorEl)}
-                  onClose={() => setTextColorAnchorEl(null)}>
+            <Menu anchorEl={textColorAnchorEl} open={Boolean(textColorAnchorEl)} onClose={() => setTextColorAnchorEl(null)}>
                 <Stack direction="row" spacing={1} sx={{p: 1}}>
                     {textColors.map((color) => (
                         <Box
@@ -832,8 +913,7 @@ const DescriptionEditorBox = ({
                 </Stack>
             </Menu>
 
-            <Menu anchorEl={highlightAnchorEl} open={Boolean(highlightAnchorEl)}
-                  onClose={() => setHighlightAnchorEl(null)}>
+            <Menu anchorEl={highlightAnchorEl} open={Boolean(highlightAnchorEl)} onClose={() => setHighlightAnchorEl(null)}>
                 <Stack direction="row" spacing={1} sx={{p: 1}}>
                     {highlightColors.map((color) => (
                         <Box
@@ -865,6 +945,7 @@ const DescriptionEditorBox = ({
                         </IconButton>
                     </Stack>
                 </DialogTitle>
+                
                 <DialogContent sx={{pt: 1}}>
                     <Stack direction={{xs: 'column', sm: 'row'}} spacing={3}>
                         <Stack spacing={1} minWidth={80}>
@@ -880,6 +961,7 @@ const DescriptionEditorBox = ({
                             >
                                 General
                             </Button>
+                            
                             <Button
                                 size="small"
                                 variant="text"
@@ -910,6 +992,7 @@ const DescriptionEditorBox = ({
                                     >
                                         Width
                                     </Typography>
+                                    
                                     <CustomTextField
                                         className="custom_font"
                                         value={tableProperties.width}
@@ -1038,6 +1121,7 @@ const DescriptionEditorBox = ({
                                     >
                                         Alignment
                                     </Typography>
+                                    
                                     <Select
                                         size="small"
                                         displayEmpty
@@ -1076,6 +1160,7 @@ const DescriptionEditorBox = ({
                                         ))
                                     }
                                 </Select>
+                                
                                 <ColorPickerField
                                     label="Border color"
                                     value={tableProperties.borderColor}
@@ -1087,6 +1172,7 @@ const DescriptionEditorBox = ({
                                             }))
                                     }
                                 />
+                                
                                 <ColorPickerField
                                     label="Background color"
                                     value={tableProperties.backgroundColor}
@@ -1099,6 +1185,7 @@ const DescriptionEditorBox = ({
                         )}
                     </Stack>
                 </DialogContent>
+                
                 <DialogActions sx={{px: 3, pb: 2}}>
                     <Button
                         color="inherit"
@@ -1121,6 +1208,7 @@ const DescriptionEditorBox = ({
                             fullWidth
                             size="small"
                         />
+                        
                         <CustomTextField
                             label="Text to display"
                             value={linkText}
@@ -1132,18 +1220,13 @@ const DescriptionEditorBox = ({
                         />
                     </Stack>
                 </DialogContent>
+                
                 <DialogActions>
-                    <Button
-                        color="inherit"
-                        onClick={() => setLinkOpen(false)}
-                    >
+                    <Button color="inherit" onClick={() => setLinkOpen(false)}>
                         Cancel
                     </Button>
 
-                    <Button
-                        variant="contained"
-                        onClick={saveLink}
-                    >
+                    <Button variant="contained" onClick={saveLink}>
                         Save
                     </Button>
                 </DialogActions>

@@ -1,6 +1,6 @@
 import {defaultLabelForType, emptyDraftForType} from './formBuilderConstants';
-import {FieldDraft, FormField, PublishOption, PublishWizardState} from './types';
-import {timeInputValue, todayInputValue} from '../formUtils';
+import {FieldDraft, FormField, PublishOption, PublishTeamsOption, PublishUsersOption, PublishWizardState} from '../types';
+import {timeInputValue, todayInputValue} from '../list/formUtils';
 
 const fieldToDraft = (field: FormField): FieldDraft => ({
     label: field.label || defaultLabelForType(field.type),
@@ -80,21 +80,79 @@ const normalizePublishSettings = (settings: Record<string, any> | null | undefin
     removalTime: settings?.removal_time ?? settings?.removalTime ?? defaults.removalTime,
 });
 
+const splitCommaIds = (value: unknown) => typeof value === 'string'
+    ? value.split(',').map((id) => id.trim()).filter(Boolean)
+    : [];
+
+const getPublishOptionId = (item: unknown) => {
+    if (item === null || item === undefined) return '';
+    if (typeof item === 'string' || typeof item === 'number') return String(item);
+    if (typeof item !== 'object') return '';
+
+    const record = item as Record<string, any>;
+    return String(record.id ?? record.user_id ?? record.team_id ?? '').trim();
+};
+
+const selectedIdsToString = (items: unknown) => {
+    const ids = Array.isArray(items)
+        ? items.map(getPublishOptionId)
+        : splitCommaIds(items);
+
+    return ids.filter(Boolean).join(',');
+};
+
+const normalizeStoredTeams = (value: unknown, fallback: PublishTeamsOption[]): PublishTeamsOption[] => {
+    const items = Array.isArray(value) ? value : splitCommaIds(value);
+    if (!items.length) return fallback;
+
+    return items
+        .map((item: any) => {
+            const id = getPublishOptionId(item);
+            if (!id) return null;
+
+            if (item && typeof item === 'object') {
+                const name = item.name || item.title || item.team_name || `Team ${id}`;
+                return {
+                    ...item,
+                    id,
+                    name,
+                    userIds: Array.isArray(item.userIds) ? item.userIds.map(String) : [],
+                };
+            }
+
+            return {id, name: `Team ${id}`, userIds: []};
+        })
+        .filter(Boolean) as PublishTeamsOption[];
+};
+
+const normalizeStoredUsers = (value: unknown, fallback: PublishUsersOption[]): PublishUsersOption[] => {
+    const items = Array.isArray(value) ? value : splitCommaIds(value);
+    if (!items.length) return fallback;
+
+    return items
+        .map((item: any) => {
+            const id = getPublishOptionId(item);
+            if (!id) return null;
+
+            if (item && typeof item === 'object') {
+                const name = item.name || item.user_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || `User ${id}`;
+                return {...item, id, name};
+            }
+
+            return {id, name: `User ${id}`};
+        })
+        .filter(Boolean) as PublishUsersOption[];
+};
+
 const normalizePublishTargetState = (parsed: Record<string, any>, defaults: PublishWizardState): PublishWizardState => ({
-    selectedTeams: Array.isArray(parsed.selected_teams)
-        ? parsed.selected_teams
-        : Array.isArray(parsed.selectedTeams)
-            ? parsed.selectedTeams
-            : Array.isArray(parsed.selected_groups)
-                ? parsed.selected_groups
-                : Array.isArray(parsed.selectedGroups)
-                    ? parsed.selectedGroups
-                    : defaults.selectedTeams,
-    selectedUsers: Array.isArray(parsed.selected_users)
-        ? parsed.selected_users
-        : Array.isArray(parsed.selectedUsers)
-            ? parsed.selectedUsers
-            : defaults.selectedUsers,
+    selectedTeams: normalizeStoredTeams(
+        parsed.selected_teams ?? parsed.selectedTeams ?? parsed.selected_groups ?? parsed.selectedGroups,
+        defaults.selectedTeams,
+    ),
+    selectedUsers: normalizeStoredUsers(
+        parsed.selected_users ?? parsed.selectedUsers,
+        defaults.selectedUsers,
+    ),
     groupAssignmentMode: (parsed.group_assignment_mode ?? parsed.groupAssignmentMode) === 'fixed' ? 'fixed' : 'dynamic',
     settings: normalizePublishSettings(
         parsed.settings && typeof parsed.settings === 'object' ? parsed.settings : null,
@@ -134,15 +192,21 @@ const initialsFor = (name: string) => name
 
 const normalizeUserOptions = (data: any): PublishOption[] => {
     const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+
+    console.log(list, 'listlistlistlistlistlistlist')
     return list
         .map((user: any) => {
             const id = user.id ?? user.user_id;
             const name = user.name || user.user_name || `${user.first_name || ''} ${user.last_name || ''}`.trim();
-            
+
+            console.log(user, 'useruseruseruser')
             return id && name ? {
                 id: String(id),
                 name,
+                user_image: user.user_image || null,
                 user_thumb_image: user.user_image || user.user_thumb_image || null,
+                trade_name: user.trade_name || user.tradeName || null,
+                status_color: user.status_color || user.statusColor || null,
             } : null;
         })
         .filter(Boolean) as PublishOption[];
@@ -180,8 +244,8 @@ const toggleOption = (current: PublishOption[], option: PublishOption) =>
         : [...current, option];
 
 const buildPublishTargetPayload = (state: PublishWizardState) => ({
-    selected_teams: state.selectedTeams,
-    selected_users: state.selectedUsers,
+    selected_teams: selectedIdsToString(state.selectedTeams),
+    selected_users: selectedIdsToString(state.selectedUsers),
     group_assignment_mode: state.groupAssignmentMode,
     settings: {
         publish_mode: state.settings.publishMode,

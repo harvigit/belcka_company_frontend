@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     Avatar,
     AvatarGroup,
@@ -36,39 +36,40 @@ import {
     SortingState,
     useReactTable,
 } from '@tanstack/react-table';
-import { IconArchive, IconFilter, IconPlus, IconSearch, IconTrash, IconX } from '@tabler/icons-react';
+import {IconArchive, IconPlus, IconSearch, IconTrash, IconX} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
+import {useRouter} from 'next/navigation';
 import api from '@/utils/axios';
 import PermissionGuard from '@/app/auth/PermissionGuard';
-import AddFormDialogComponent from './AddFormDialog';
-import TemplateLibraryDialogComponent from './TemplateLibraryDialog';
-import FormBuilderComponent from './FormBuilder';
-import { FormRecord, FormTemplate } from './common';
+import AddFormDialogComponent from './list/AddFormDialog';
+import TemplateLibraryDialogComponent from './list/TemplateLibraryDialog';
+import FormBuilderComponent from './list/FormBuilder';
+import {FormRecord, FormTemplate} from './types';
+import FormUserIdentity, {getFormUserImage, getFormUserInitials, getFormUserName, getFormUserTradeName} from './common/FormUserIdentity';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 
+const VISIBLE_FORM_STATUSES = new Set<FormRecord['status']>(['PUBLISHED', 'DRAFT']);
+const formColumnHelper = createColumnHelper<FormRecord>();
+
 const statusChip = (status: FormRecord['status']) => {
     if (status === 'PUBLISHED')
-        return <Chip label="Published" size="small" color="success" variant="outlined" />;
+        return <Chip label="Published" size="small" color="success" variant="outlined"/>;
     if (status === 'SCHEDULED')
-        return <Chip label="Scheduled" size="small" color="warning" variant="outlined" />;
+        return <Chip label="Scheduled" size="small" color="warning" variant="outlined"/>;
     if (status === 'ARCHIVED')
-        return <Chip label="Archived" size="small" color="default" variant="outlined" />;
-    return <Chip label="Draft" size="small" color="default" />;
+        return <Chip label="Archived" size="small" color="default" variant="outlined"/>;
+    return <Chip label="Draft" size="small" color="default"/>;
 };
 
 const getName = (form: FormRecord) => {
-    const first = form.createdBy?.first_name || '';
-    const last = form.createdBy?.last_name || '';
-    return `${first} ${last}`.trim() || form.createdBy?.email || '-';
+    return getFormUserName(form.createdBy);
 };
 
 const getUserName = (user?: { first_name?: string; last_name?: string; email?: string }) => {
-    const first = user?.first_name || '';
-    const last = user?.last_name || '';
-    return `${first} ${last}`.trim() || user?.email || '-';
+    return getFormUserName(user);
 };
 
 const getAssignedToLabel = (assignedTo?: string | null) => {
@@ -86,6 +87,7 @@ const getApiErrorMessage = (err: unknown, fallback: string) => {
 };
 
 const Index = () => {
+    const router = useRouter();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -99,14 +101,12 @@ const Index = () => {
     const [columnFilters, setColumnFilters] = useState<any>([]);
     const [sorting, setSorting] = useState<SortingState>([]);
 
-    /* Dialog / drawer state */
     const [addOpen, setAddOpen] = useState(false);
     const [templateOpen, setTemplateOpen] = useState(false);
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingFormId, setEditingFormId] = useState<string | undefined>(undefined);
     const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null);
 
-    /* ── Data fetching ── */
     const fetchForms = useCallback(async () => {
         setFetchForm(true);
         try {
@@ -128,7 +128,7 @@ const Index = () => {
         const q = search.trim().toLowerCase();
 
         return forms.filter((form) => {
-            if (form.status === 'ARCHIVED') return false;
+            if (!VISIBLE_FORM_STATUSES.has(form.status)) return false;
             if (!q) return true;
 
             return [
@@ -152,9 +152,6 @@ const Index = () => {
             return next.size === current.size ? current : next;
         });
     }, [visibleForms]);
-    /* ── Actions ── */
-
-    /** Open the drawer for a brand-new form */
     const openNewFormEditor = () => {
         setAddOpen(false);
         setTemplateOpen(false);
@@ -163,7 +160,6 @@ const Index = () => {
         setEditorOpen(true);
     };
 
-    /** Open the drawer to edit an existing form */
     const openExistingFormEditor = (formId: string) => {
         setEditingFormId(formId);
         setSelectedTemplate(null);
@@ -177,14 +173,13 @@ const Index = () => {
         setEditorOpen(true);
     };
 
-    /** Called by FormBuilder after a successful save */
     const handleSaved = () => {
-        fetchForms(); // refresh the list
+        fetchForms();
     };
 
-    const handleSelectAll = (checked: boolean) => {
+    const handleSelectAll = useCallback((checked: boolean) => {
         setSelectedRowIds(checked ? new Set(visibleForms.map((form) => form.id)) : new Set());
-    };
+    }, [visibleForms]);
 
     const handleSelectRow = (formId: number) => {
         setSelectedRowIds((current) => {
@@ -237,7 +232,6 @@ const Index = () => {
             setSelectedRowIds(new Set());
             await fetchForms();
         } catch (err) {
-            console.error('Failed to delete forms', err);
             toast.error(getApiErrorMessage(err, 'Failed to delete forms'));
         } finally {
             setBulkActionLoading(false);
@@ -271,7 +265,7 @@ const Index = () => {
 
         const observer = new MutationObserver(checkScroll);
         if (tableContainerRef.current) {
-            observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+            observer.observe(tableContainerRef.current, {childList: true, subtree: true, characterData: true});
         }
 
         return () => {
@@ -280,7 +274,6 @@ const Index = () => {
         };
     }, []);
 
-    const columnHelper = createColumnHelper<FormRecord>();
     const columns = useMemo(() => [
         {
             id: 'select',
@@ -298,7 +291,7 @@ const Index = () => {
                     />
                 </Stack>
             ),
-            cell: ({ row }: any) => {
+            cell: ({row}: any) => {
                 const form = row.original as FormRecord;
                 const isChecked = selectedRowIds.has(form.id);
                 const isHovered = hoveredRow === form.id;
@@ -310,7 +303,7 @@ const Index = () => {
                         alignItems="center"
                         onMouseEnter={() => setHoveredRow(form.id)}
                         onMouseLeave={() => setHoveredRow(null)}
-                        sx={{ pl: 1 }}
+                        sx={{pl: 1}}
                     >
                         <CustomCheckbox
                             checked={isChecked}
@@ -330,11 +323,12 @@ const Index = () => {
             },
             enableSorting: false,
         },
-        columnHelper.accessor('name', {
+        
+        formColumnHelper.accessor('name', {
             id: 'name',
             header: () => 'Name',
             enableSorting: true,
-            cell: ({ row }) => {
+            cell: ({row}) => {
                 const form = row.original;
 
                 return (
@@ -349,7 +343,7 @@ const Index = () => {
                             textOverflow: 'ellipsis',
                             lineHeight: 1.15,
                             wordBreak: 'break-word',
-                            maxWidth: { xs: 120, sm: 220, md: 260 },
+                            maxWidth: {xs: 120, sm: 220, md: 260},
                         }}
                     >
                         {form.name || '-'}
@@ -357,70 +351,66 @@ const Index = () => {
                 );
             },
         }),
-        columnHelper.accessor('status', {
+        
+        formColumnHelper.accessor('status', {
             id: 'status',
             header: () => 'Status',
             enableSorting: true,
             cell: (info) => statusChip(info.getValue()),
         }),
-        columnHelper.accessor('entries', {
+        
+        formColumnHelper.accessor('entries', {
             id: 'entries',
             header: () => 'Entries',
             enableSorting: true,
             cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
                     {info.getValue() ?? 0}
                 </Typography>
             ),
         }),
-        columnHelper.accessor('views', {
+        
+        formColumnHelper.accessor('views', {
             id: 'views',
             header: () => 'Views',
             enableSorting: true,
             cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
                     {info.getValue() ?? 0}
                 </Typography>
             ),
         }),
-        columnHelper.accessor((row) => getAssignedToLabel(row.assigned_to ?? row.assignedTo), {
+        
+        formColumnHelper.accessor((row) => getAssignedToLabel(row.assigned_to ?? row.assignedTo), {
             id: 'assignedTo',
             header: () => 'Assigned to',
             enableSorting: true,
             cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
                     {info.getValue()}
                 </Typography>
             ),
         }),
-        columnHelper.accessor((row) => getName(row), {
+        
+        formColumnHelper.accessor((row) => getName(row), {
             id: 'createdBy',
             header: () => 'Created by',
             enableSorting: true,
-            cell: ({ row }) => {
+            cell: ({row}) => {
                 const form = row.original;
 
                 return (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar
-                            src={form.createdBy?.createdBy_thumb_image || undefined}
-                            sx={{ width: 36, height: 36 }}
-                        >
-                            {getName(form).charAt(0)}
-                        </Avatar>
-                        {!isMobile && (
-                            <Typography className="f-14" noWrap>
-                                {getName(form)}
-                            </Typography>
-                        )}
-                    </Stack>
+                    <FormUserIdentity
+                        user={form.createdBy}
+                    />
                 );
             },
         }),
-        columnHelper.display({
+        
+        formColumnHelper.display({
             id: 'administrators',
             header: () => 'Administrated by',
-            cell: ({ row }) => {
+            cell: ({row}) => {
                 const form = row.original;
 
                 return (
@@ -438,12 +428,16 @@ const Index = () => {
                             }}
                         >
                             {(form.administrators?.length ? form.administrators : form.createdBy ? [form.createdBy] : []).map((admin) => (
-                                <Tooltip key={admin.id} title={getUserName(admin)}>
+                                <Tooltip
+                                    key={admin.id}
+                                    title={`${getUserName(admin)}${getFormUserTradeName(admin) !== '-' ? ` - ${getFormUserTradeName(admin)}` : ''}`}
+                                >
                                     <Avatar
-                                        src={(admin as any).admin_thumb_image || (admin as any).createdBy_thumb_image || undefined}
-                                        sx={{ width: 36, height: 36 }}
+                                        src={getFormUserImage(admin)}
+                                        alt={getUserName(admin)}
+                                        sx={{width: 36, height: 36}}
                                     >
-                                        {getUserName(admin).charAt(0)}
+                                        {getFormUserInitials(admin)}
                                     </Avatar>
                                 </Tooltip>
                             ))}
@@ -452,22 +446,23 @@ const Index = () => {
                 );
             },
         }),
-        columnHelper.accessor((row) => (row as any).createdAt ?? (row as any).created_at, {
+        
+        formColumnHelper.accessor((row) => (row as any).createdAt ?? (row as any).created_at, {
             id: 'createdAt',
             header: () => 'Date Created',
             enableSorting: true,
             cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
                     {info.getValue() ? dayjs(info.getValue()).format('DD/MM/YYYY') : '-'}
                 </Typography>
             ),
         }),
-    ], [allVisibleSelected, someVisibleSelected, selectedRowIds, hoveredRow, isMobile, visibleForms]);
+    ], [allVisibleSelected, handleSelectAll, someVisibleSelected, selectedRowIds, hoveredRow, isMobile]);
 
     const table = useReactTable({
         data: visibleForms,
         columns,
-        state: { columnFilters, sorting },
+        state: {columnFilters, sorting},
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
@@ -494,13 +489,12 @@ const Index = () => {
         <PermissionGuard permission="Forms">
             <Box
                 sx={{
-                    height: { xs: 'auto', md: 'calc(100vh - 100px)' },
-                    minHeight: { xs: '100vh', md: 'unset' },
+                    height: {xs: 'auto', md: 'calc(100vh - 100px)'},
+                    minHeight: {xs: '100vh', md: 'unset'},
                     display: 'flex',
                     flexDirection: 'column',
                 }}
             >
-                {/* ── Main card ── */}
                 <Paper
                     elevation={0}
                     sx={{
@@ -514,13 +508,12 @@ const Index = () => {
                         overflow: 'hidden',
                     }}
                 >
-                    {/* Search + filter */}
                     <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
+                        direction={{xs: 'column', sm: 'row'}}
                         spacing={1.5}
                         justifyContent="space-between"
-                        alignItems={{ sm: 'center' }}
-                        p={{ xs: 1.5, sm: 2 }}
+                        alignItems={{sm: 'center'}}
+                        p={{xs: 1.5, sm: 2}}
                     >
                         <CustomTextField
                             size="small"
@@ -530,46 +523,32 @@ const Index = () => {
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
-                                        <IconSearch size={16} />
+                                        <IconSearch size={16}/>
                                     </InputAdornment>
                                 ),
                             }}
-                            sx={{ maxWidth: { sm: 360 }, width: '100%' }}
+                            sx={{maxWidth: {sm: 360}, width: '100%'}}
                             fullWidth
                         />
 
-                        <Stack direction="row" spacing={1} alignItems="center" width={{ xs: '100%', sm: 'auto' }}>
-                            {/*<Tooltip title="Filters">*/}
-                            {/*    <IconButton*/}
-                            {/*        color="primary"*/}
-                            {/*        sx={{*/}
-                            {/*            border: '1px solid',*/}
-                            {/*            borderColor: 'divider',*/}
-                            {/*            borderRadius: 1,*/}
-                            {/*            alignSelf: { xs: 'flex-start', sm: 'unset' },*/}
-                            {/*        }}*/}
-                            {/*    >*/}
-                            {/*        <IconFilter size={18} />*/}
-                            {/*    </IconButton>*/}
-                            {/*</Tooltip>*/}
-                            
+                        <Stack direction="row" spacing={1} alignItems="center" width={{xs: '100%', sm: 'auto'}}>
                             {selectedRowIds.size > 0 && (
                                 <>
                                     <Button
                                         variant="outlined"
                                         color="primary"
-                                        startIcon={<IconArchive size={18} />}
+                                        startIcon={<IconArchive size={18}/>}
                                         onClick={() => setConfirmAction('archive')}
-                                        sx={{ whiteSpace: 'nowrap' }}
+                                        sx={{whiteSpace: 'nowrap'}}
                                     >
                                         Archive
                                     </Button>
                                     <Button
                                         variant="outlined"
                                         color="error"
-                                        startIcon={<IconTrash size={18} />}
+                                        startIcon={<IconTrash size={18}/>}
                                         onClick={() => setConfirmAction('delete')}
-                                        sx={{ whiteSpace: 'nowrap' }}
+                                        sx={{whiteSpace: 'nowrap'}}
                                     >
                                         Delete
                                     </Button>
@@ -579,10 +558,10 @@ const Index = () => {
                             {selectedRowIds.size === 0 && (
                                 <Button
                                     variant="contained"
-                                    startIcon={<IconPlus size={18} />}
+                                    startIcon={<IconPlus size={18}/>}
                                     onClick={() => setAddOpen(true)}
                                     fullWidth={isMobile}
-                                    sx={{ borderRadius: 2 }}
+                                    sx={{borderRadius: 2}}
                                 >
                                     Add new
                                 </Button>
@@ -599,133 +578,134 @@ const Index = () => {
                         }}
                     >
                         <TableContainer ref={tableContainerRef}>
-                        <Table stickyHeader aria-label="sticky table" size={isMobile ? 'small' : 'medium'}>
-                            <TableHead>
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow key={headerGroup.id}>
-                                        {headerGroup.headers.map((header) => {
-                                            const isActive = header.column.getIsSorted();
-                                            const isAsc = header.column.getIsSorted() === 'asc';
-                                            const isSortable = header.column.getCanSort();
+                            <Table stickyHeader aria-label="sticky table" size={isMobile ? 'small' : 'medium'}>
+                                
+                                <TableHead>
+                                    {table.getHeaderGroups().map((headerGroup) => (
+                                        <TableRow key={headerGroup.id}>
+                                            {headerGroup.headers.map((header) => {
+                                                const isActive = header.column.getIsSorted();
+                                                const isAsc = header.column.getIsSorted() === 'asc';
+                                                const isSortable = header.column.getCanSort();
 
-                                            return (
-                                                <TableCell
-                                                    key={header.id}
-                                                    align="center"
-                                                    sx={{
-                                                        paddingTop: '10px',
-                                                        paddingBottom: '10px',
-                                                        width: header.column.id === 'select' ? 30 : 'auto',
-                                                        ...(header.column.id === 'createdAt' && {
-                                                            position: 'sticky',
-                                                            right: 0,
-                                                            backgroundColor: 'background.paper',
-                                                            zIndex: 3,
-                                                            boxShadow: isScrollable ? '-2px 0 4px -2px rgba(0,0,0,0.1)' : 'none',
-                                                        }),
-                                                    }}
-                                                >
-                                                    <Box
-                                                        onClick={header.column.getToggleSortingHandler()}
-                                                        p={0}
-                                                        sx={{
-                                                            cursor: isSortable ? 'pointer' : 'default',
-                                                            border: '2px solid transparent',
-                                                            borderRadius: '6px',
-                                                            display: 'flex',
-                                                            justifyContent: 'flex-start',
-                                                            '&:hover': { color: '#888' },
-                                                            '&:hover .hoverIcon': { opacity: 1 },
-                                                        }}
-                                                    >
-                                                        <Typography variant="subtitle2">
-                                                            {flexRender(
-                                                                header.column.columnDef.header,
-                                                                header.getContext(),
-                                                            )}
-                                                        </Typography>
-                                                        {isSortable && (
-                                                            <Box
-                                                                component="span"
-                                                                className="hoverIcon"
-                                                                ml={0.5}
-                                                                sx={{
-                                                                    transition: 'opacity 0.2s',
-                                                                    opacity: isActive ? 1 : 0,
-                                                                    fontSize: '0.9rem',
-                                                                    color: isActive ? '#000' : '#888',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'space-between',
-                                                                }}
-                                                            >
-                                                                {isActive ? (isAsc ? '↑' : '↓') : '↑'}
-                                                            </Box>
-                                                        )}
-                                                    </Box>
-                                                </TableCell>
-                                            );
-                                        })}
-                                    </TableRow>
-                                ))}
-                            </TableHead>
-                            <TableBody>
-                                {fetchForm ? (
-                                    <SkeletonLoader
-                                        columns={simpleColumns}
-                                        rowCount={simpleColumns.length}
-                                    />
-                                ) : table.getRowModel().rows.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={columns.length}>
-                                            <Box sx={{ p: { xs: 4, sm: 6 }, textAlign: 'center' }}>
-                                                <Typography color="text.secondary">No forms found.</Typography>
-                                            </Box>
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    table.getRowModel().rows.map((row) => {
-                                        const form = row.original;
-
-                                        return (
-                                            <TableRow
-                                                key={row.id}
-                                                hover
-                                                sx={{ cursor: 'pointer' }}
-                                                onMouseEnter={() => setHoveredRow(form.id)}
-                                                onMouseLeave={() => setHoveredRow(null)}
-                                                onClick={() => openExistingFormEditor(String(form.id))}
-                                            >
-                                                {row.getVisibleCells().map((cell) => (
+                                                return (
                                                     <TableCell
-                                                        key={cell.id}
+                                                        key={header.id}
                                                         align="center"
-                                                        onClick={cell.column.id === 'select' ? (e) => e.stopPropagation() : undefined}
                                                         sx={{
-                                                            ...(cell.column.id === 'createdAt' && {
+                                                            paddingTop: '10px',
+                                                            paddingBottom: '10px',
+                                                            width: header.column.id === 'select' ? 30 : 'auto',
+                                                            ...(header.column.id === 'createdAt' && {
                                                                 position: 'sticky',
                                                                 right: 0,
                                                                 backgroundColor: 'background.paper',
-                                                                zIndex: 2,
+                                                                zIndex: 3,
                                                                 boxShadow: isScrollable ? '-2px 0 4px -2px rgba(0,0,0,0.1)' : 'none',
                                                             }),
                                                         }}
                                                     >
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        <Box
+                                                            onClick={header.column.getToggleSortingHandler()}
+                                                            p={0}
+                                                            sx={{
+                                                                cursor: isSortable ? 'pointer' : 'default',
+                                                                border: '2px solid transparent',
+                                                                borderRadius: '6px',
+                                                                display: 'flex',
+                                                                justifyContent: 'flex-start',
+                                                                '&:hover': {color: '#888'},
+                                                                '&:hover .hoverIcon': {opacity: 1},
+                                                            }}
+                                                        >
+                                                            <Typography variant="subtitle2">
+                                                                {flexRender(
+                                                                    header.column.columnDef.header,
+                                                                    header.getContext(),
+                                                                )}
+                                                            </Typography>
+                                                            {isSortable && (
+                                                                <Box
+                                                                    component="span"
+                                                                    className="hoverIcon"
+                                                                    ml={0.5}
+                                                                    sx={{
+                                                                        transition: 'opacity 0.2s',
+                                                                        opacity: isActive ? 1 : 0,
+                                                                        fontSize: '0.9rem',
+                                                                        color: isActive ? '#000' : '#888',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'space-between',
+                                                                    }}
+                                                                >
+                                                                    {isActive ? (isAsc ? '↑' : '↓') : '↑'}
+                                                                </Box>
+                                                            )}
+                                                        </Box>
                                                     </TableCell>
-                                                ))}
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                                );
+                                            })}
+                                        </TableRow>
+                                    ))}
+                                </TableHead>
+                                
+                                <TableBody>
+                                    {fetchForm ? (
+                                        <SkeletonLoader
+                                            columns={simpleColumns}
+                                            rowCount={simpleColumns.length}
+                                        />
+                                    ) : table.getRowModel().rows.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={columns.length}>
+                                                <Box sx={{p: {xs: 4, sm: 6}, textAlign: 'center'}}>
+                                                    <Typography color="text.secondary">No forms found.</Typography>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        table.getRowModel().rows.map((row) => {
+                                            const form = row.original;
+
+                                            return (
+                                                <TableRow
+                                                    key={row.id}
+                                                    hover
+                                                    sx={{cursor: 'pointer'}}
+                                                    onMouseEnter={() => setHoveredRow(form.id)}
+                                                    onMouseLeave={() => setHoveredRow(null)}
+                                                    onClick={() => router.push(`/apps/forms/${form.id}`)}
+                                                >
+                                                    {row.getVisibleCells().map((cell) => (
+                                                        <TableCell
+                                                            key={cell.id}
+                                                            align="center"
+                                                            onClick={cell.column.id === 'select' ? (e) => e.stopPropagation() : undefined}
+                                                            sx={{
+                                                                ...(cell.column.id === 'createdAt' && {
+                                                                    position: 'sticky',
+                                                                    right: 0,
+                                                                    backgroundColor: 'background.paper',
+                                                                    zIndex: 2,
+                                                                    boxShadow: isScrollable ? '-2px 0 4px -2px rgba(0,0,0,0.1)' : 'none',
+                                                                }),
+                                                            }}
+                                                        >
+                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                                
+                            </Table>
+                        </TableContainer>
                     </Box>
                 </Paper>
             </Box>
-
-            {/* ── Dialogs / Drawer ── */}
 
             <AddFormDialogComponent
                 open={addOpen}
@@ -753,7 +733,7 @@ const Index = () => {
             />
 
             <Dialog open={Boolean(confirmAction)} onClose={() => !bulkActionLoading && setConfirmAction(null)}>
-                <DialogTitle sx={{ pr: 6 }}>
+                <DialogTitle sx={{pr: 6}}>
                     {confirmAction === 'delete' ? 'Confirm Delete' : 'Confirm Archive'}
                     <IconButton
                         aria-label="close"
@@ -766,7 +746,7 @@ const Index = () => {
                             color: (theme) => theme.palette.grey[500],
                         }}
                     >
-                        <IconX />
+                        <IconX/>
                     </IconButton>
                 </DialogTitle>
                 <DialogContent>

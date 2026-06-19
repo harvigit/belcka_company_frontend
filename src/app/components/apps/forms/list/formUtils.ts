@@ -1,4 +1,4 @@
-import {FormField, FormFieldCondition} from './common/types';
+import {FormField, FormFieldCondition} from '../types';
 
 export const stripHtml = (value: string) => value
     .replace(/<style[\s\S]*?<\/style>/gi, '')

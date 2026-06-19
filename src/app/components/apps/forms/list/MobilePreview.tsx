@@ -7,7 +7,6 @@ import {
     Dialog,
     DialogActions,
     DialogContent,
-    Divider,
     IconButton,
     Rating,
     Stack,
@@ -39,30 +38,34 @@ import {
 } from '@react-google-maps/api';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
-import CustomTextField from '../../forms/theme-elements/CustomTextField';
+import CustomTextField from '../../../forms/theme-elements/CustomTextField';
 import {
     calculateFormulaValue,
     fieldConditionMatches,
     FilePreview,
     flattenFormFields,
-    FormField,
     getFieldOptions,
-    inputSx,
     isAudioRecordingPreview,
     isDateTimePreview,
     isEmptyValue,
     isFilePreview,
     isFilePreviewArray,
     isLocationPreview,
-    labelStyle,
     LocationPreview,
     NON_INPUT_TYPES,
     PreviewErrors,
     PreviewValue,
     PreviewValues,
+} from '../common/mobilePreviewUtils';
+
+import {
+    inputSx,
+    labelStyle,
     subLabelStyle,
     timeOptions,
-} from './common';
+} from '../common/mobilePreviewConstants';
+
+import {FormField} from '../types';
 
 const FieldShell = ({field, error, children}: {
     field: FormField;
@@ -105,6 +108,7 @@ const IMAGE_UPLOAD_ACCEPT = [
     'image/heic',
     'image/heif',
 ].join(',');
+
 const VIDEO_UPLOAD_ACCEPT = [
     '.mp4',
     '.m4v',
@@ -156,6 +160,7 @@ const OptionButton = ({label, selected, multiple, image, onClick}: {
                 sx={{width: '100%', height: 88, objectFit: 'cover', borderRadius: 1.25, mb: 0.75}}
             />
         )}
+        
         <Stack direction="row" alignItems="center" spacing={1}>
             <Box
                 sx={{
@@ -227,6 +232,7 @@ const TaskChecklistCard = ({label, selected, onClick}: {
 const formatPreviewDate = (value?: string) => {
     if (!value) return 'Select date';
     const [year, month, day] = value.split('-');
+    
     return year && month && day ? `${day}/${month}/${year}` : value;
 };
 
@@ -260,9 +266,11 @@ const UploadResultRow = ({file, onRemove}: {
         >
             <IconFile size={15} />
         </Box>
+        
         <Typography noWrap sx={{fontSize: 12, flex: 1, minWidth: 0}}>
             {file.name}
         </Typography>
+        
         <Box
             component="button"
             type="button"
@@ -388,6 +396,7 @@ const MediaPreviewGrid = ({files, mediaType, onRemove}: {
                                     />
                                 )}
                             </Box>
+                            
                             <Box
                                 component="button"
                                 type="button"
@@ -455,6 +464,7 @@ const MediaPreviewGrid = ({files, mediaType, onRemove}: {
                     >
                         Download {mediaLabel}
                     </Button>
+                    
                     <Button
                         variant="contained"
                         size="small"
@@ -498,6 +508,7 @@ const MediaPreviewGrid = ({files, mediaType, onRemove}: {
                             }}
                         />
                     )}
+                    
                     {activeMediaUrl && mediaType === 'image' && (
                         <Box
                             component="img"
@@ -570,6 +581,7 @@ const PillActionButton = ({icon, label, selected}: {
         <Box sx={{display: 'flex', color: selected ? 'primary.main' : '#2F80ED'}}>
             {icon}
         </Box>
+        
         <Typography sx={{fontSize: 13, fontWeight: 600}}>
             {label}
         </Typography>
@@ -604,19 +616,23 @@ const LocationMapPreview = ({location, onRefresh}: {
                 Latitude: {latitude}
                 <br />
                 Longitude: {longitude}
+                
                 {location.accuracy ? (
                     <>
                         <br />
                         Accuracy: {Math.round(location.accuracy)}m
                     </>
                 ) : null}
+                
             </Typography>
+            
             {onRefresh && (
                 <IconButton size="small" onClick={onRefresh} sx={{mt: -0.5, mr: -0.5}}>
                     <IconRefresh size={15} />
                 </IconButton>
             )}
         </Stack>
+        
         <Box sx={{height: 180, borderTop: '1px solid #E5E7EB', touchAction: 'none'}}>
             {position && isMapLoaded && !mapLoadError ? (
                 <GoogleMap
@@ -755,6 +771,7 @@ const SignatureInput = ({value, onChange}: {
                     >
                         <IconRefresh size={17} />
                     </IconButton>
+                    
                     <Box
                         component="img"
                         src={value}
@@ -823,6 +840,7 @@ const SignatureInput = ({value, onChange}: {
                         <IconX size={20} />
                     </IconButton>
                 </Stack>
+                
                 <DialogContent sx={{p: 1.5}}>
                     <Box
                         component="canvas"
@@ -842,6 +860,7 @@ const SignatureInput = ({value, onChange}: {
                         }}
                     />
                 </DialogContent>
+                
                 <DialogActions sx={{borderTop: '1px solid #E5E7EB', px: 1.5, py: 1.25}}>
                     <Button
                         variant="outlined"
@@ -1209,10 +1228,9 @@ const PreviewField = ({
             );
         }
 
-        case 'Date':
-            {
-                const showDate = field.dateIncludeDate !== false;
-                const showTime = Boolean(field.dateIncludeTime);
+        case 'Date': {
+            const showDate = field.dateIncludeDate !== false;
+            const showTime = Boolean(field.dateIncludeTime);
 
             return (
                 <FieldShell field={field} error={error}>
@@ -1286,7 +1304,7 @@ const PreviewField = ({
                     </Stack>
                 </FieldShell>
             );
-            }
+        }
 
         case 'Phone':
             return (
@@ -1408,32 +1426,31 @@ const PreviewField = ({
                 </FieldShell>
             );
 
-        case 'Numbers slider':
-            {
-                const min = typeof field.minValue === 'number' ? field.minValue : 0;
-                const max = typeof field.maxValue === 'number' ? field.maxValue : 100;
-                const rawValue = typeof value === 'number' ? value : min;
-                const currentValue = Math.min(max, Math.max(min, rawValue));
+        case 'Numbers slider': {
+            const min = typeof field.minValue === 'number' ? field.minValue : 0;
+            const max = typeof field.maxValue === 'number' ? field.maxValue : 100;
+            const rawValue = typeof value === 'number' ? value : min;
+            const currentValue = Math.min(max, Math.max(min, rawValue));
 
-                return (
-                    <FieldShell field={field} error={error}>
-                        <Stack spacing={0.75}>
-                            <Box
-                                component="input"
-                                type="range"
-                                min={min}
-                                max={max}
-                                value={currentValue}
-                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(field.id, Number(event.target.value))}
-                                style={{width: '100%'}}
-                            />
-                            <Typography sx={{fontSize: 12, color: '#6B7280'}}>
-                                Value: {currentValue}
-                            </Typography>
-                        </Stack>
-                    </FieldShell>
-                );
-            }
+            return (
+                <FieldShell field={field} error={error}>
+                    <Stack spacing={0.75}>
+                        <Box
+                            component="input"
+                            type="range"
+                            min={min}
+                            max={max}
+                            value={currentValue}
+                            onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(field.id, Number(event.target.value))}
+                            style={{width: '100%'}}
+                        />
+                        <Typography sx={{fontSize: 12, color: '#6B7280'}}>
+                            Value: {currentValue}
+                        </Typography>
+                    </Stack>
+                </FieldShell>
+            );
+        }
 
         case 'Email':
             return (
@@ -1573,74 +1590,73 @@ const PreviewField = ({
             );
         }
 
-        case 'Location':
-            {
-                const isManualLocation = field.locationSelectBy === 'manual';
+        case 'Location': {
+            const isManualLocation = field.locationSelectBy === 'manual';
 
-                return (
-                    <FieldShell field={field} error={error}>
-                        {isManualLocation ? (
-                            <Stack spacing={1}>
-                                <CustomTextField
-                                    fullWidth
-                                    size="small"
-                                    placeholder="Latitude, Longitude"
-                                    value={locationValue ? `${locationValue.latitude}${locationValue.longitude ? `, ${locationValue.longitude}` : ''}` : ''}
-                                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateManualLocation(event.target.value)}
-                                    sx={inputSx}
-                                    inputProps={{style: {textAlign: 'left'}}}
-                                />
-                                <Typography sx={{fontSize: 10.5, color: '#9CA3AF'}}>
-                                    Example: 23.0225, 72.5714
-                                </Typography>
-                                {locationValue && !isEmptyValue(locationValue) && (
-                                    <LocationMapPreview location={locationValue} />
-                                )}
-                            </Stack>
-                        ) : (
-                            <Stack spacing={1}>
-                                {locationValue && !isEmptyValue(locationValue) && (
-                                    <LocationMapPreview location={locationValue} onRefresh={captureCurrentLocation} />
-                                )}
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    onClick={captureCurrentLocation}
-                                    disabled={isLocating}
-                                    sx={{
-                                        minHeight: 40,
-                                        borderRadius: '999px',
+            return (
+                <FieldShell field={field} error={error}>
+                    {isManualLocation ? (
+                        <Stack spacing={1}>
+                            <CustomTextField
+                                fullWidth
+                                size="small"
+                                placeholder="Latitude, Longitude"
+                                value={locationValue ? `${locationValue.latitude}${locationValue.longitude ? `, ${locationValue.longitude}` : ''}` : ''}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateManualLocation(event.target.value)}
+                                sx={inputSx}
+                                inputProps={{style: {textAlign: 'left'}}}
+                            />
+                            <Typography sx={{fontSize: 10.5, color: '#9CA3AF'}}>
+                                Example: 23.0225, 72.5714
+                            </Typography>
+                            {locationValue && !isEmptyValue(locationValue) && (
+                                <LocationMapPreview location={locationValue} />
+                            )}
+                        </Stack>
+                    ) : (
+                        <Stack spacing={1}>
+                            {locationValue && !isEmptyValue(locationValue) && (
+                                <LocationMapPreview location={locationValue} onRefresh={captureCurrentLocation} />
+                            )}
+                            <Button
+                                variant="outlined"
+                                fullWidth
+                                onClick={captureCurrentLocation}
+                                disabled={isLocating}
+                                sx={{
+                                    minHeight: 40,
+                                    borderRadius: '999px',
+                                    borderColor: locationValue ? 'primary.main' : '#D7DCE1',
+                                    bgcolor: '#fff',
+                                    color: '#2F80ED',
+                                    textTransform: 'none',
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    '&:hover': {
                                         borderColor: locationValue ? 'primary.main' : '#D7DCE1',
                                         bgcolor: '#fff',
                                         color: '#2F80ED',
-                                        textTransform: 'none',
-                                        fontSize: 13,
                                         fontWeight: 600,
-                                        '&:hover': {
-                                            borderColor: locationValue ? 'primary.main' : '#D7DCE1',
-                                            bgcolor: '#fff',
-                                            color: '#2F80ED',
-                                            fontWeight: 600,
-                                            textDecoration: 'none',
-                                        },
-                                    }}
-                                >
-                                    <PillActionButton
-                                        icon={<IconMapPin size={17} />}
-                                        label={isLocating ? 'Getting location...' : locationValue ? 'Update location' : 'Add location'}
-                                        selected={Boolean(locationValue)}
-                                    />
-                                </Button>
-                            </Stack>
-                        )}
-                        {locationError && (
-                            <Typography sx={{fontSize: 11, color: 'error.main', mt: 0.5}}>
-                                {locationError}
-                            </Typography>
-                        )}
-                    </FieldShell>
-                );
-            }
+                                        textDecoration: 'none',
+                                    },
+                                }}
+                            >
+                                <PillActionButton
+                                    icon={<IconMapPin size={17} />}
+                                    label={isLocating ? 'Getting location...' : locationValue ? 'Update location' : 'Add location'}
+                                    selected={Boolean(locationValue)}
+                                />
+                            </Button>
+                        </Stack>
+                    )}
+                    {locationError && (
+                        <Typography sx={{fontSize: 11, color: 'error.main', mt: 0.5}}>
+                            {locationError}
+                        </Typography>
+                    )}
+                </FieldShell>
+            );
+        }
 
         case 'Open ended':
             return (
@@ -1658,9 +1674,8 @@ const PreviewField = ({
                 </FieldShell>
             );
 
-        case 'Formula':
-            {
-                const formulaValue = calculateFormulaValue(field, fields, values);
+        case 'Formula': {
+            const formulaValue = calculateFormulaValue(field, fields, values);
 
             return (
                 <Box>
@@ -1681,7 +1696,7 @@ const PreviewField = ({
                     </Box>
                 </Box>
             );
-            }
+        }
 
         case 'Group': {
             const childFields = groupChildFields(field);
@@ -1739,8 +1754,7 @@ const PreviewField = ({
                 </Box>
             );
         }
-
-
+        
         case 'Scanner':
             return (
                 <FieldShell field={field} error={error}>
@@ -1765,7 +1779,7 @@ const PreviewField = ({
             return (
                 <Box>
                     <Stack spacing={1}>
-                        {tasks.map((task, index) => {
+                        {tasks.map((task: any, index: any) => {
                             const isMultiTask = tasks.length > 1;
                             const selected = isMultiTask ? stringArrayValue.includes(task) : stringValue === 'done';
 
@@ -2008,6 +2022,7 @@ const MobilePreview = ({fields, title = ''}: { fields: FormField[]; title?: stri
                                         </Typography>
                                     </Box>
                                 )}
+                                
                                 {visibleFields.map((field) => (
                                     <Box
                                         key={field.id}

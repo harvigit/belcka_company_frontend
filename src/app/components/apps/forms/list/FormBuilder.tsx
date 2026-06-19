@@ -13,29 +13,20 @@ import {
     Stack,
     Typography,
 } from '@mui/material';
+
 import {TransitionProps} from '@mui/material/transitions';
-import {
-    IconSettings,
-    IconTemplate,
-    IconX,
-} from '@tabler/icons-react';
+import {IconTemplate, IconX,} from '@tabler/icons-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
-import {
-    FormField,
-    FormTemplate,
-    normalizeFields,
-    PublishWizardState,
-} from './common';
-import {
-    buildPublishTargetPayload,
-    createDefaultPublishWizardState,
-    parsePublishWizardState,
-} from './common/formBuilderUtils';
+
+import {FormField, FormTemplate, PublishWizardState} from '../types';
+import {normalizeFields} from '../common/formBuilderConstants';
+import {buildPublishTargetPayload, createDefaultPublishWizardState, parsePublishWizardState} from '../common/formBuilderUtils';
 import MobilePreview from './MobilePreview';
-import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import FormFieldsManager from './components/FormFieldsManager';
 import PublishWizard from './components/PublishWizard';
+
+import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 
 const SlideUp = React.forwardRef(function SlideUp(
     props: TransitionProps & { children: React.ReactElement },
@@ -52,7 +43,6 @@ export type FormEditorDrawerProps = {
     onSaved?: (formId: string) => void;
 };
 
-/* Main Drawer component */
 const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: FormEditorDrawerProps) => {
     const [name, setName] = useState('');
     const [formNameError, setFormNameError] = useState('');
@@ -66,6 +56,8 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
     const [initialDraftSignature, setInitialDraftSignature] = useState('');
     const [publishWizardState, setPublishWizardState] = useState<PublishWizardState>(createDefaultPublishWizardState);
 
+
+    console.log(publishWizardState, 'publishWizardStatepublishWizardStatepublishWizardStatepublishWizardStatepublishWizardState')
     const activeFormId = savedFormId || formId;
     const isExisting = useMemo(() => Boolean(activeFormId), [activeFormId]);
     const draftSignature = useMemo(() => JSON.stringify({
@@ -310,7 +302,6 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                     },
                 }}
             >
-                {/* Drawer top bar */}
                 <Box
                     sx={{
                         flexShrink: 0,
@@ -319,7 +310,6 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                         bgcolor: 'background.paper',
                     }}
                 >
-                    {/* Title row */}
                     <Stack
                         direction="row"
                         alignItems="center"
@@ -336,7 +326,6 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                     </Stack>
                 </Box>
 
-                {/* Body */}
                 <Box
                     sx={{
                         flex: 1,
@@ -366,7 +355,6 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                             overflow: 'hidden',
                             }}
                         >
-                            {/* Left: field editor */}
                             <Box
                             sx={{
                                 display: 'flex',
@@ -406,7 +394,6 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                             />
                         </Box>
 
-	                        {/* Right: mobile preview */}
                         <Box
                             sx={{
                                 display: 'flex',
@@ -424,7 +411,6 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                     </Box>
                 </Box>
 
-                {/* Footer */}
                 <Box
                     sx={{
                         flexShrink: 0,
@@ -441,14 +427,6 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
                         justifyContent="flex-end"
                         alignItems={{sm: 'center'}}
                     >
-                        {/*<Button*/}
-                        {/*    color="inherit"*/}
-                        {/*    startIcon={<IconSettings size={17}/>}*/}
-                        {/*    sx={{borderRadius: 1.5, color: '#111827', fontWeight: 700, width: {xs: '100%', sm: 'auto'}}}*/}
-                        {/*>*/}
-                        {/*    Settings*/}
-                        {/*</Button>*/}
-                        
                         <Button
                             variant="outlined"
                             startIcon={<IconTemplate size={17}/>}
