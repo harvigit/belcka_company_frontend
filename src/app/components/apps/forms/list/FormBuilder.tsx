@@ -131,7 +131,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
 
     const buildDraftPayload = (draftName = name.trim()) => ({
         name: draftName,
-        status: 'DRAFT',
+        ...(!isExisting ? {status: 'DRAFT'} : {}),
         fields,
     });
 
