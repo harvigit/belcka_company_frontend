@@ -585,6 +585,137 @@ const AttachmentDownloadRows = ({attachments}: { attachments: NormalizedAttachme
     </>
 );
 
+const selectedOptionValues = (value: any) => {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+
+        if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+            try {
+                return selectedOptionValues(JSON.parse(trimmed));
+            } catch {}
+        }
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => {
+            if (item && typeof item === 'object') {
+                return String(item.value ?? item.label ?? item.name ?? item.option ?? item.url ?? '').trim();
+            }
+
+            return String(item).trim();
+        }).filter(Boolean);
+    }
+
+    if (value && typeof value === 'object') {
+        return [String(value.value ?? value.label ?? value.name ?? value.option ?? value.url ?? '').trim()].filter(Boolean);
+    }
+
+    return [String(value ?? '').trim()].filter(Boolean);
+};
+
+const isOptionSelected = (selectedValues: string[], option: string, index: number, image?: string) => (
+    selectedValues.includes(option)
+    || selectedValues.includes(String(index))
+    || selectedValues.includes(String(index + 1))
+    || Boolean(image && selectedValues.includes(image))
+);
+
+const ImageSelectionAnswer = ({field, value}: { field: FormField; value: any }) => {
+    const selectedValues = selectedOptionValues(value);
+    const isMultiple = Boolean(field.multipleSelection);
+
+    return (
+        <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1}}>
+            {(field.options || []).map((option, index) => {
+                const image = field.optionImages?.[index] || '';
+                const selected = isOptionSelected(selectedValues, option, index, image);
+
+                return (
+                    <Box
+                        key={`${option}-${index}`}
+                        sx={{
+                            border: '2px solid',
+                            borderColor: selected ? '#1194F6' : '#E5E7EB',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            bgcolor: '#fff',
+                        }}
+                    >
+                        {image ? (
+                            <Box
+                                component="img"
+                                src={image}
+                                alt={option}
+                                sx={{width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block'}}
+                            />
+                        ) : (
+                            <Box sx={{aspectRatio: '4 / 3', bgcolor: '#EEF2F6'}}/>
+                        )}
+                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{p: 0.85}}>
+                            <Box
+                                sx={{
+                                    width: 16,
+                                    height: 16,
+                                    borderRadius: isMultiple ? '3px' : '50%',
+                                    border: selected ? '5px solid' : '1.5px solid',
+                                    borderColor: selected ? '#1194F6' : '#9CA3AF',
+                                    bgcolor: '#fff',
+                                    boxSizing: 'border-box',
+                                    flexShrink: 0,
+                                }}
+                            />
+                            <Typography sx={{fontSize: 13, color: '#263445', wordBreak: 'break-word'}}>
+                                {option}
+                            </Typography>
+                        </Stack>
+                    </Box>
+                );
+            })}
+        </Box>
+    );
+};
+
+const PdfImageSelectionAnswer = ({field, value}: { field: FormField; value: any }) => {
+    const selectedValues = selectedOptionValues(value);
+    const selectedOptions = (field.options || [])
+        .map((option, index) => ({
+            option,
+            image: field.optionImages?.[index] || '',
+            selected: isOptionSelected(selectedValues, option, index, field.optionImages?.[index] || ''),
+        }))
+        .filter((item) => item.selected);
+
+    if (!selectedOptions.length) return pdfEmptyAnswer;
+
+    return (
+        <Stack spacing={1} sx={{mt: 1}}>
+            {selectedOptions.map(({option, image}, index) => {
+                return (
+                    <Stack key={`${option}-${index}`} direction="row" spacing={1} alignItems="center">
+                        {image ? (
+                            <Box
+                                component="img"
+                                src={image}
+                                alt={option}
+                                sx={{
+                                    width: 118,
+                                    height: 86,
+                                    objectFit: 'cover',
+                                    border: '1px solid #D7DADD',
+                                    display: 'block',
+                                }}
+                            />
+                        ) : null}
+                        <Box component="span" sx={{color: pdfValueColor, fontWeight: 700}}>
+                            {option}
+                        </Box>
+                    </Stack>
+                );
+            })}
+        </Stack>
+    );
+};
+
 const renderMediaAttachments = (value: any, preferredType?: 'image' | 'video' | 'audio' | 'file') => {
     const attachments = asAttachmentArray(value);
 
@@ -729,6 +860,10 @@ const renderReadonlyValue = (value: any, field?: FormField) => {
         );
     }
 
+    if (field?.type === 'Image selection' && Array.isArray(field.options)) {
+        return <ImageSelectionAnswer field={field} value={value}/>;
+    }
+
     if (field?.type && selectableFieldTypes.includes(field.type) && Array.isArray(field.options)) {
         const selectedValues = Array.isArray(value) ? value.map(String) : [String(value)];
         const isMultiple = Boolean(field.multipleSelection);
@@ -868,6 +1003,10 @@ const PdfAnswer = ({value, field}: { value: any; field?: FormField }) => {
                 {'★'.repeat(rating)}{'☆'.repeat(total - rating)}
             </Box>
         );
+    }
+
+    if (field?.type === 'Image selection' && Array.isArray(field.options)) {
+        return <PdfImageSelectionAnswer field={field} value={value}/>;
     }
 
     if (field?.type && selectableFieldTypes.includes(field.type) && Array.isArray(field.options)) {
