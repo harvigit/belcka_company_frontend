@@ -1166,7 +1166,7 @@ const FieldSettingsDialog = ({
                                         onClick={(event) => setOptionSortAnchorEl(event.currentTarget)}
                                         sx={{
                                             minWidth: 0,
-                                            p: 0,
+                                            p: 1,
                                             color: 'primary.main',
                                             fontSize: 13,
                                             fontWeight: 400,
@@ -1204,7 +1204,7 @@ const FieldSettingsDialog = ({
                                         disabled={!canExportOptions}
                                         sx={{
                                             minWidth: 0,
-                                            p: 0,
+                                            p: 1,
                                             color: canExportOptions ? 'primary.main' : 'text.disabled',
                                             fontSize: 13,
                                             fontWeight: 400,
@@ -1219,7 +1219,7 @@ const FieldSettingsDialog = ({
                                         onClick={() => setOptionImportOpen(true)}
                                         sx={{
                                             minWidth: 0,
-                                            p: 0,
+                                            p: 1,
                                             color: 'primary.main',
                                             fontSize: 13,
                                             fontWeight: 400,
