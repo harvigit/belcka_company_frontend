@@ -65,7 +65,7 @@ const FormDetails = ({ formId }: { formId: string }) => {
     const fetchForm = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await api.get(`forms/${formId}`);
+            const res = await api.get(`forms/details/${formId}`);
             setForm(res.data.info ? normalizeFormRecord(res.data.info) : null);
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'Failed to fetch form details'));

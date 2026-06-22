@@ -70,7 +70,6 @@ const FormDetailsListView = ({
                                  filteredUsers,
                                  submittedCount,
                                  pendingCount,
-                                 progress,
                                  userRowsLength,
                                  onOpenSubmissionViewer,
                              }: {
