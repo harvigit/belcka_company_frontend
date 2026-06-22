@@ -155,7 +155,9 @@ const BuyerDashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const res = await api.get(`get-modules?company_id=${user.company_id}&is_web=true`);
+      const res = await api.get(
+        `get-modules?company_id=${user.company_id}&is_web=true`,
+      );
       if (res.data) {
         setProjects(res.data.projects);
         setAddresses(res.data.addresses);
@@ -177,23 +179,23 @@ const BuyerDashboard = () => {
   }, [user.company_id, user.id]);
 
   const handleExport = async () => {
-    const allOptions = REPORT_DATA_MAP[selectedReportType] || [];
+    const idsArray = selectedItems
+      .filter((item) => item.id !== "all")
+      .map((item) => Number(item.id));
 
-    let idsArray = [];
+    const isAllSelected = selectedItems.some((item) => item.id === "all");
 
-    if (selectedItems.some((item) => item.id === "all")) {
-      idsArray = allOptions.map((item) => item.id);
-    } else {
-      idsArray = selectedItems.map((item) => item.id);
-    }
+    const payload = {
+      company_id: user.company_id,
+      start_date: startDate,
+      end_date: endDate,
+      report_type: selectedReportType,
+      module_ids: isAllSelected ? "all" : idsArray,
+    };
 
-    const module_ids = idsArray.join(",");
-    const response = await api.get(
-      `export-reports?company_id=${user.company_id}&start_date=${startDate}&end_date=${endDate}&report_type=${selectedReportType}&module_ids=${module_ids}`,
-      {
-        responseType: "blob",
-      },
-    );
+    const response = await api.post("export-reports", payload, {
+      responseType: "blob",
+    });
 
     const blob = new Blob([response.data], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -201,13 +203,18 @@ const BuyerDashboard = () => {
 
     const url = window.URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `report_export.xlsx`;
-    document.body.appendChild(a);
-    a.click();
+    const link = document.createElement("a");
 
-    document.body.removeChild(a);
+    link.href = url;
+
+    link.download = "report_export.xlsx";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
     window.URL.revokeObjectURL(url);
   };
 
