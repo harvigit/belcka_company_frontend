@@ -57,7 +57,7 @@ const FormDetailsHeader = ({
                             {statusChip(form.status)}
                         </Stack>
                         <Typography variant="body2" color="text.secondary">
-                            Created {form.created_at ? dayjs(form.created_at).format('DD/MM/YYYY') : '-'} by {fullName(form.createdBy)}
+                            Created {form.created_at ? dayjs(form.created_at).format('DD/MM/YYYY') : '-'} by {fullName(form.created_by)}
                         </Typography>
                     </Box>
                 </Stack>
