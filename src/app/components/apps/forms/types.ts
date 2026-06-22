@@ -40,25 +40,30 @@ export type FormField = {
     fields?: FormField[];
 };
 
+export type FormStatus = 'DRAFT' | 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED';
+
 export type FormRecord = {
     id: number;
     name: string;
-    status: 'DRAFT' | 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED';
+    status: FormStatus;
+    status_text?: string;
     fields: FormField[];
     assigned_to?: string | null;
     assignedTo?: string | null;
     entries: number;
     views: number;
     createdAt: string;
-    createdBy?: {
+    created_at?: string;
+    created_by?: {
         id: number;
         first_name: string;
         last_name: string;
-        email?: string;
         name?: string;
+        trade_name?: string;
+        image?: string | null;
+        createdBy_image?: string | null;
         user_image?: string | null;
         createdBy_thumb_image?: string | null;
-        trade_name?: string | null;
         status_color?: string | null;
     };
     administrators?: {
@@ -69,9 +74,13 @@ export type FormRecord = {
         last_name: string;
         email?: string;
         name?: string;
+        image?: string | null;
+        admin_image?: string | null;
         trade_name?: string | null;
         status_color?: string | null;
     }[];
+    publishTarget?: unknown;
+    publish_target?: unknown;
 };
 
 export type FormTemplate = {

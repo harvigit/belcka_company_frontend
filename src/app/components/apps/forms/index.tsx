@@ -36,7 +36,7 @@ import {
     SortingState,
     useReactTable,
 } from '@tanstack/react-table';
-import {IconArchive, IconPlus, IconSearch, IconTrash, IconX} from '@tabler/icons-react';
+import {IconArchive, IconEdit, IconPlus, IconSearch, IconTrash, IconX} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import {useRouter} from 'next/navigation';
@@ -45,16 +45,17 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
 import AddFormDialogComponent from './list/AddFormDialog';
 import TemplateLibraryDialogComponent from './list/TemplateLibraryDialog';
 import FormBuilderComponent from './list/FormBuilder';
-import {FormRecord, FormTemplate} from './types';
+import {FormRecord, FormStatus, FormTemplate} from './types';
 import FormUserIdentity, {getFormUserImage, getFormUserInitials, getFormUserName, getFormUserTradeName} from './common/FormUserIdentity';
+import { normalizeFormRecord } from './common/formStatusUtils';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 
-const VISIBLE_FORM_STATUSES = new Set<FormRecord['status']>(['PUBLISHED', 'DRAFT']);
+const VISIBLE_FORM_STATUSES = new Set<FormStatus>(['PUBLISHED', 'DRAFT']);
 const formColumnHelper = createColumnHelper<FormRecord>();
 
-const statusChip = (status: FormRecord['status']) => {
+const statusChip = (status: FormStatus) => {
     if (status === 'PUBLISHED')
         return <Chip label="Published" size="small" color="success" variant="outlined"/>;
     if (status === 'SCHEDULED')
@@ -65,7 +66,7 @@ const statusChip = (status: FormRecord['status']) => {
 };
 
 const getName = (form: FormRecord) => {
-    return getFormUserName(form.createdBy);
+    return getFormUserName(form.created_by);
 };
 
 const getUserName = (user?: { first_name?: string; last_name?: string; email?: string }) => {
@@ -111,7 +112,8 @@ const Index = () => {
         setFetchForm(true);
         try {
             const res = await api.get('forms/list');
-            setForms(res.data.info || []);
+            const formList = Array.isArray(res.data.info) ? res.data.info : [];
+            setForms(formList.map(normalizeFormRecord));
         } catch (err) {
             console.error('Failed to fetch forms', err);
         } finally {
@@ -139,6 +141,7 @@ const Index = () => {
                 dayjs((form as any).createdAt ?? (form as any).created_at).format('DD/MM/YYYY'),
             ].some((value) => String(value || '').toLowerCase().includes(q));
         });
+        
     }, [forms, search]);
     const selectedFormIds = useMemo(() => Array.from(selectedRowIds), [selectedRowIds]);
     const allVisibleSelected = visibleForms.length > 0 && selectedRowIds.size === visibleForms.length;
@@ -159,13 +162,7 @@ const Index = () => {
         setSelectedTemplate(null);
         setEditorOpen(true);
     };
-
-    const openExistingFormEditor = (formId: string) => {
-        setEditingFormId(formId);
-        setSelectedTemplate(null);
-        setEditorOpen(true);
-    };
-
+    
     const openTemplateFormEditor = (template: FormTemplate) => {
         setTemplateOpen(false);
         setEditingFormId(undefined);
@@ -323,6 +320,17 @@ const Index = () => {
             },
             enableSorting: false,
         },
+
+        formColumnHelper.accessor((row) => (row as any).createdAt ?? (row as any).created_at, {
+            id: 'createdAt',
+            header: () => 'Date Created',
+            enableSorting: true,
+            cell: (info) => (
+                <Typography className="f-14" color="textPrimary">
+                    {info.getValue() ? dayjs(info.getValue()).format('DD/MM/YYYY') : '-'}
+                </Typography>
+            ),
+        }),
         
         formColumnHelper.accessor('name', {
             id: 'name',
@@ -364,7 +372,7 @@ const Index = () => {
             header: () => 'Entries',
             enableSorting: true,
             cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
+                <Typography className="f-14" color="textPrimary">
                     {info.getValue() ?? 0}
                 </Typography>
             ),
@@ -375,7 +383,7 @@ const Index = () => {
             header: () => 'Views',
             enableSorting: true,
             cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
+                <Typography className="f-14" color="textPrimary">
                     {info.getValue() ?? 0}
                 </Typography>
             ),
@@ -386,14 +394,14 @@ const Index = () => {
             header: () => 'Assigned to',
             enableSorting: true,
             cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
+                <Typography className="f-14" color="textPrimary">
                     {info.getValue()}
                 </Typography>
             ),
         }),
         
         formColumnHelper.accessor((row) => getName(row), {
-            id: 'createdBy',
+            id: 'created_by',
             header: () => 'Created by',
             enableSorting: true,
             cell: ({row}) => {
@@ -401,63 +409,43 @@ const Index = () => {
 
                 return (
                     <FormUserIdentity
-                        user={form.createdBy}
+                        user={form.created_by}
                     />
                 );
             },
         }),
-        
+
         formColumnHelper.display({
-            id: 'administrators',
-            header: () => 'Administrated by',
-            cell: ({row}) => {
-                const form = row.original;
+            id: "actions",
+            header: "Actions",
+            cell: ({ row }) => {
+                const item = row.original;
 
                 return (
-                    <Stack direction="row" justifyContent="flex-start">
-                        <AvatarGroup
-                            max={5}
-                            sx={{
-                                justifyContent: 'flex-end',
-                                '& .MuiAvatar-root': {
-                                    width: 26,
-                                    height: 26,
-                                    fontSize: 11,
-                                    borderColor: '#fff',
-                                },
-                            }}
-                        >
-                            {(form.administrators?.length ? form.administrators : form.createdBy ? [form.createdBy] : []).map((admin) => (
-                                <Tooltip
-                                    key={admin.id}
-                                    title={`${getUserName(admin)}${getFormUserTradeName(admin) !== '-' ? ` - ${getFormUserTradeName(admin)}` : ''}`}
-                                >
-                                    <Avatar
-                                        src={getFormUserImage(admin)}
-                                        alt={getUserName(admin)}
-                                        sx={{width: 36, height: 36}}
-                                    >
-                                        {getFormUserInitials(admin)}
-                                    </Avatar>
-                                </Tooltip>
-                            ))}
-                        </AvatarGroup>
+                    <Stack direction="row" spacing={1}>
+                        <Tooltip title="Delete">
+                            <IconButton
+                                onClick={(e) => {
+                                }}
+                                color="primary"
+                            >
+                                <IconArchive size={18}/>
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                            <IconButton
+                                onClick={(e) => {
+                                }}
+                                color="error"
+                            >
+                                <IconTrash size={18}/>
+                            </IconButton>
+                        </Tooltip>
                     </Stack>
                 );
             },
         }),
-        
-        formColumnHelper.accessor((row) => (row as any).createdAt ?? (row as any).created_at, {
-            id: 'createdAt',
-            header: () => 'Date Created',
-            enableSorting: true,
-            cell: (info) => (
-                <Typography className="f-14" color="textPrimary" sx={{px: 1.5}}>
-                    {info.getValue() ? dayjs(info.getValue()).format('DD/MM/YYYY') : '-'}
-                </Typography>
-            ),
-        }),
-    ], [allVisibleSelected, handleSelectAll, someVisibleSelected, selectedRowIds, hoveredRow, isMobile]);
+    ], [allVisibleSelected, handleSelectAll, someVisibleSelected, selectedRowIds, hoveredRow]);
 
     const table = useReactTable({
         data: visibleForms,
@@ -591,7 +579,7 @@ const Index = () => {
                                                 return (
                                                     <TableCell
                                                         key={header.id}
-                                                        align="center"
+                                                        align="left"
                                                         sx={{
                                                             paddingTop: '10px',
                                                             paddingBottom: '10px',
@@ -680,7 +668,7 @@ const Index = () => {
                                                     {row.getVisibleCells().map((cell) => (
                                                         <TableCell
                                                             key={cell.id}
-                                                            align="center"
+                                                            align="left"
                                                             onClick={cell.column.id === 'select' ? (e) => e.stopPropagation() : undefined}
                                                             sx={{
                                                                 ...(cell.column.id === 'createdAt' && {

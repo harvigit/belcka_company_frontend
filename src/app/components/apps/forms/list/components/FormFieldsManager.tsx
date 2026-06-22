@@ -50,6 +50,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
     const [groupingFieldIds, setGroupingFieldIds] = useState<string[]>([]);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [fieldTargetGroupId, setFieldTargetGroupId] = useState<string | null>(null);
+    const [insertAfterFieldId, setInsertAfterFieldId] = useState<string | null>(null);
     const [groupMenuAnchorEl, setGroupMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [activeGroupMenuId, setActiveGroupMenuId] = useState<string | null>(null);
     const [activeFieldType, setActiveFieldType] = useState<string | null>(null);
@@ -124,6 +125,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setActiveFieldType(null);
         setEditingFieldId(null);
         setFieldTargetGroupId(null);
+        setInsertAfterFieldId(null);
         setGroupingFieldIds([]);
         setFieldDraft(emptyDraftForType(''));
         setFieldQuestionError('');
@@ -302,7 +304,11 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                     ...field,
                     fields: [...(field.fields || []), nextField]
                 }));  
-            } 
+            }
+
+            if (insertAfterFieldId) {
+                return insertFieldAfterInTree(cur, insertAfterFieldId, nextField);
+            }
             
             return [...cur, nextField];
         });
@@ -310,6 +316,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         setFieldsError('');
         clearSelection();
         setFieldTargetGroupId(null);
+        setInsertAfterFieldId(null);
         setGroupingFieldIds([]);
         closeFieldDialog();
     };
@@ -457,293 +464,484 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
         );
     };
 
-    const renderFieldRow = (field: FormField, index: number, dragHandleProps?: any, nested = false) => (
-        <Paper elevation={0} sx={{
-            px: {xs: 1.25, sm: 1.5},
-            py: 1.25,
-            minHeight: nested ? 52 : 62,
-            border: nested ? '0' : '1px solid',
-            borderColor: 'divider',
-            borderRadius: nested ? 2 : '999px',
-            bgcolor: nested ? '#F6F7F8' : 'background.paper',
-            boxShadow: nested ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.03)',
-            '&:hover': {bgcolor: nested ? '#F1F3F5' : '#FAFBFC'}
-        }}>
-            <Stack direction="row" alignItems="center" spacing={{xs: 1, sm: 1.25}}>
-                { !nested && 
-                    <Box 
-                        sx={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: '50%',
-                            bgcolor: 'primary.light',
-                            color: 'primary.main',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            flexShrink: 0
-                        }}
-                    >
-                        {index + 1}
-                    </Box>
-                }
-                <Box
-                    {...(dragHandleProps || {})} 
-                    sx={{
-                        display: 'flex',
-                        color: 'text.disabled',
-                        cursor: dragHandleProps ? 'grab' : 'default',
-                        flexShrink: 0,
-                        touchAction: 'none'
-                    }}
-                >
-                    <IconGripVertical size={18}/>
-                </Box>
-                
-                <Checkbox 
-                    size="small" 
-                    checked={selectedFieldIds.includes(field.id)}
-                    onChange={(event) =>
-                        setSelectedFieldIds((current) => 
-                            event.target.checked ? [...new Set([...current, field.id])] : current.filter((id) => id !== field.id)
-                        )
-                    }
-                    onClick={(event) => event.stopPropagation()}
-                    sx={{ p: 0.25 }}
-                />
-                
-                <Box 
-                    sx={{
-                        color: 'text.secondary', 
-                        display: 'flex', 
-                        flexShrink: 0
-                     }}
-                >
-                    {iconForType(field.type)}
-                </Box>
-                
-                <Typography 
-                    fontSize={14} 
-                    color="text.primary"
-                    noWrap
-                    sx={{flex: 1, minWidth: 0}}
-                >
-                    {fieldDisplayLabel(field)}
-                </Typography>
-                
-                <Box 
-                    sx={{
-                        display: {xs: 'none', sm: nested ? 'none' : 'flex'}
-                    }}
-                >
-                    <Chip label={field.type} size="small"
-                          sx={{
-                              height: 24,
-                              fontSize: 11,
-                              bgcolor: '#E5E7EB',
-                              color: '#111827',
-                              borderRadius: '999px'
-                        }}
-                    />
-                </Box>
-                
-                <Tooltip title="Edit field">
-                    <IconButton 
-                        onClick={() => editField(field)} 
-                        size="small"
-                        sx={{
-                            color: 'text.secondary',
-                            flexShrink: 0
-                        }}
-                    >
-                        <IconPencil size={16}/>
-                    </IconButton>
-                </Tooltip>
-                
-                <Tooltip title="Duplicate field">
-                    <IconButton 
-                        onClick={() => duplicateField(field)}
-                        size="small" 
-                        sx={{
-                            color: 'text.secondary',
-                            flexShrink: 0
-                        }}
-                    >
-                        <ContentCopyIcon sx={{fontSize: 16}}/>
-                    </IconButton>
-                </Tooltip>
-                
-                <Tooltip title="Delete field">
-                    <IconButton 
-                        onClick={() => removeField(field.id)} 
-                        size="small"
-                        sx={{color: 'text.secondary', flexShrink: 0}}>
-                        <IconTrash size={16}/>
-                    </IconButton>
-                </Tooltip>
-            </Stack>
-            {renderConditionBadges(field)}
-        </Paper>
-    );
+    const renderInsertAfterButton = (field: FormField, canInsertAfter: boolean) => canInsertAfter ? (
+        <IconButton
+            size="small"
+            onClick={(event) => {
+                event.stopPropagation();
+                setFieldsError('');
+                setFieldTargetGroupId(null);
+                setInsertAfterFieldId(field.id);
+                setAnchorEl(event.currentTarget);
+            }}
+            className="insert-field-button"
+            sx={{
+                position: 'absolute',
+                left: '50%',
+                top: 'calc(100% + 6px)',
+                width: 32,
+                height: 32,
+                transform: 'translate(-50%, -50%) scale(0.94)',
+                border: '1px solid',
+                borderColor: 'primary.main',
+                bgcolor: '#fff',
+                color: 'primary.main',
+                opacity: 0,
+                pointerEvents: 'none',
+                cursor: 'pointer',
+                transition: 'opacity 120ms ease, transform 120ms ease, background-color 120ms ease',
+                zIndex: 3,
+                '&:hover': {
+                    bgcolor: 'primary.light',
+                },
+            }}
+        >
+            <IconPlus size={18}/>
+        </IconButton>
+    ) : null;
 
-    const renderGroupField = (field: FormField, index: number, dragHandleProps?: any) => {
-        const children = field.fields || [];
-        
-        return (
+    const renderFieldRow = (field: FormField, index: number, dragHandleProps?: any, nested = false, canInsertAfter = true) => (
+        <Box
+            sx={{
+                position: 'relative',
+                display: 'grid',
+                gridTemplateColumns: {xs: 'minmax(0, 1fr) 32px', sm: 'minmax(0, 1fr) 36px'},
+                columnGap: 1,
+                alignItems: 'stretch',
+                overflow: 'visible',
+                '&:hover .insert-field-button, &:focus-within .insert-field-button, & .insert-field-slot:hover .insert-field-button': {
+                    opacity: 1,
+                    pointerEvents: 'auto',
+                    transform: 'translate(-50%, -50%) scale(1)',
+                },
+                '&:hover .field-row-hover-control': {
+                    width: 24,
+                    opacity: 1,
+                    pointerEvents: 'auto',
+                    marginLeft: '8px',
+                },
+                '&:hover .field-row-action': {
+                    width: 28,
+                    opacity: 1,
+                    pointerEvents: 'auto',
+                    marginLeft: '4px',
+                },
+            }}
+        >
             <Paper elevation={0} sx={{
                 px: {xs: 1.25, sm: 1.5},
                 py: 1.25,
-                border: '1px solid',
+                minHeight: nested ? 52 : 62,
+                border: nested ? '0' : '1px solid',
                 borderColor: 'divider',
-                borderRadius: 2,
-                bgcolor: 'background.paper',
-                boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
+                borderRadius: nested ? 2 : '999px',
+                bgcolor: nested ? '#F6F7F8' : 'background.paper',
+                boxShadow: nested ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.03)',
+                cursor: 'pointer',
+                '&:hover': {bgcolor: nested ? '#F1F3F5' : '#FAFBFC'}
             }}>
-                <Stack direction="row" alignItems="center" spacing={1.25}>
-                    <Box 
-                        sx={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: '50%',
-                            bgcolor: 'primary.light',
-                            color: 'primary.main',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            flexShrink: 0
-                        }}
-                    >
-                        {index + 1}
-                    </Box>
-                    
-                    <Box 
+                <Stack direction="row" alignItems="center" spacing={0}>
+                    { !nested &&
+                        <Box
+                            sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                bgcolor: 'primary.light',
+                                color: 'primary.main',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                flexShrink: 0
+                            }}
+                        >
+                            {index + 1}
+                        </Box>
+                    }
+                    <Box
+                        className="field-row-hover-control"
                         {...(dragHandleProps || {})}
                         sx={{
                             display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 0,
+                            overflow: 'hidden',
+                            opacity: 0,
                             color: 'text.disabled',
-                            cursor: 'grab',
+                            cursor: dragHandleProps ? 'grab' : 'default',
                             flexShrink: 0,
-                            touchAction: 'none'
+                            touchAction: 'none',
+                            pointerEvents: 'none',
+                            transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
                         }}
                     >
                         <IconGripVertical size={18}/>
                     </Box>
-                    
-                    <Checkbox
-                        size="small"
-                        checked={selectedFieldIds.includes(field.id)}
-                        onChange={(event) => 
-                            setSelectedFieldIds((current) => event.target.checked ? [...new Set([...current, field.id])] : current.filter((id) => id !== field.id))
-                        }
-                        onClick={(event) => event.stopPropagation()} sx={{p: 0.25}}
-                    />
-                    
-                    <Box sx={{display: 'flex', color: 'text.secondary'}}>
-                        <IconBoxMultiple size={17}/>
+
+                    <Box
+                        className="field-row-hover-control"
+                        sx={{
+                            width: selectedFieldIds.includes(field.id) ? 24 : 0,
+                            marginLeft: selectedFieldIds.includes(field.id) ? '8px' : 0,
+                            overflow: 'hidden',
+                            opacity: selectedFieldIds.includes(field.id) ? 1 : 0,
+                            flexShrink: 0,
+                            pointerEvents: selectedFieldIds.includes(field.id) ? 'auto' : 'none',
+                            transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
+                        }}
+                    >
+                        <Checkbox
+                            size="small"
+                            checked={selectedFieldIds.includes(field.id)}
+                            onChange={(event) =>
+                                setSelectedFieldIds((current) =>
+                                    event.target.checked ? [...new Set([...current, field.id])] : current.filter((id) => id !== field.id)
+                                )
+                            }
+                            onClick={(event) => event.stopPropagation()}
+                            sx={{
+                                p: 0.25,
+                                width: 20,
+                                height: 20,
+                                '& .MuiSvgIcon-root': {fontSize: 18},
+                            }}
+                        />
                     </Box>
-                    
-                    <Typography 
-                        fontSize={14} 
-                        fontWeight={800} 
-                        color="#123044"
+
+                    <Box
+                        sx={{
+                            color: 'text.secondary',
+                            display: 'flex',
+                            flexShrink: 0,
+                            ml: 1,
+                        }}
+                    >
+                        {iconForType(field.type)}
+                    </Box>
+
+                    <Typography
+                        fontSize={14}
+                        color="text.primary"
                         noWrap
-                        sx={{flex: 1, minWidth: 0}}
+                        sx={{flex: 1, minWidth: 0, ml: 1.25}}
                     >
                         {fieldDisplayLabel(field)}
                     </Typography>
-                    
-                    <Tooltip title="Group actions">
+
+                    <Tooltip title="Edit field">
                         <IconButton
-                            size="small" 
-                            onClick={(event) => {
-                                setActiveGroupMenuId(field.id);
-                                setGroupMenuAnchorEl(event.currentTarget);
-                            }} 
-                            sx={{color: 'text.secondary'}}
-                        >
-                            <IconDots size={17}/>
-                        </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="Add field to group">
-                        <IconButton 
-                            size="small" 
-                            onClick={(event) => {
-                                setFieldTargetGroupId(field.id);
-                                setAnchorEl(event.currentTarget);
-                            }} 
+                            className="field-row-action"
+                            onClick={() => editField(field)}
+                            size="small"
                             sx={{
-                                width: 26,
-                                height: 26,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                color: 'primary.main'
+                                width: 0,
+                                overflow: 'hidden',
+                                opacity: 0,
+                                pointerEvents: 'none',
+                                color: 'text.secondary',
+                                flexShrink: 0,
+                                transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
                             }}
                         >
-                            <IconPlus size={15}/>
+                            <IconPencil size={16}/>
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Duplicate field">
+                        <IconButton
+                            className="field-row-action"
+                            onClick={() => duplicateField(field)}
+                            size="small"
+                            sx={{
+                                width: 0,
+                                overflow: 'hidden',
+                                opacity: 0,
+                                pointerEvents: 'none',
+                                color: 'text.secondary',
+                                flexShrink: 0,
+                                transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
+                            }}
+                        >
+                            <ContentCopyIcon sx={{fontSize: 16}}/>
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Delete field">
+                        <IconButton
+                            className="field-row-action"
+                            onClick={() => removeField(field.id)}
+                            size="small"
+                            sx={{
+                                width: 0,
+                                overflow: 'hidden',
+                                opacity: 0,
+                                pointerEvents: 'none',
+                                color: 'text.secondary',
+                                flexShrink: 0,
+                                transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
+                            }}>
+                            <IconTrash size={16}/>
                         </IconButton>
                     </Tooltip>
                 </Stack>
-                
-                {field.description && 
-                    <Typography fontSize={13} color="text.secondary" mt={1} ml={{xs: 0, sm: 8}}>
-                        {field.description}
-                    </Typography>
-                }
-                
-                {renderConditionBadges(field)}
-                
-                <Droppable droppableId={`group:${field.id}`} type="FIELD">
-                    {(provided, snapshot) => (
-                        <Stack
-                            spacing={1} 
-                            mt={1.25} 
-                            ml={{xs: 0, sm: 3}}
-                            ref={provided.innerRef} {...provided.droppableProps} 
+                    {renderConditionBadges(field)}
+            </Paper>
+            <Box
+                className="insert-field-slot"
+                sx={{
+                    position: 'relative',
+                    minWidth: {xs: 32, sm: 36},
+                    cursor: canInsertAfter ? 'pointer' : 'default',
+                    overflow: 'visible',
+                }}
+            >
+                {renderInsertAfterButton(field, canInsertAfter)}
+            </Box>
+        </Box>
+    );
+
+    const renderGroupField = (field: FormField, index: number, dragHandleProps?: any, canInsertAfter = true) => {
+        const children = field.fields || [];
+        
+        return (
+            <Box
+                sx={{
+                    position: 'relative',
+                    display: 'grid',
+                    gridTemplateColumns: {xs: 'minmax(0, 1fr) 32px', sm: 'minmax(0, 1fr) 36px'},
+                    columnGap: 1,
+                    alignItems: 'stretch',
+                    overflow: 'visible',
+                    '&:hover .insert-field-button, &:focus-within .insert-field-button, & .insert-field-slot:hover .insert-field-button': {
+                        opacity: 1,
+                        pointerEvents: 'auto',
+                        transform: 'translate(-50%, -50%) scale(1)',
+                    },
+                    '&:hover .field-row-hover-control': {
+                        width: 24,
+                        opacity: 1,
+                        pointerEvents: 'auto',
+                        marginLeft: '8px',
+                    },
+                    '&:hover .field-row-action': {
+                        width: 28,
+                        opacity: 1,
+                        pointerEvents: 'auto',
+                        marginLeft: '4px',
+                    },
+                }}
+            >
+                <Paper elevation={0} sx={{
+                    px: {xs: 1.25, sm: 1.5},
+                    py: 1.25,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+                    cursor: 'pointer'
+                }}>
+                    <Stack direction="row" alignItems="center" spacing={0}>
+                        <Box
                             sx={{
-                                minHeight: children.length ? 12 : 44,
-                                borderRadius: 1.5,
-                                bgcolor: snapshot.isDraggingOver ? '#EAF4FF' : 'transparent',
-                                outline: snapshot.isDraggingOver ? '1px dashed #0B8CFF' : 'none',
-                                outlineOffset: 4,
-                                transition: 'background-color 120ms ease, outline-color 120ms ease'
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                bgcolor: 'primary.light',
+                                color: 'primary.main',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                flexShrink: 0
                             }}
                         >
-                            {children.length > 0 ? 
-                                children.map((child, childIndex) => (
-                                    <Draggable 
-                                        draggableId={child.id}
-                                        index={childIndex}
-                                        key={child.id}>{(childDrag) => 
-                                            <Box
-                                                ref={childDrag.innerRef} 
-                                                {...childDrag.draggableProps}
-                                            >
-                                                {child.type === 'Group' ? 
-                                                    renderGroupField(child, childIndex, childDrag.dragHandleProps) :
-                                                    renderFieldRow(child, childIndex, childDrag.dragHandleProps, true)
-                                                }
-                                            </Box>}
-                                    </Draggable>
-                                )) :
-                                <Typography 
-                                    fontSize={13}
-                                    color="#8A99A8"
-                                    sx={{px: 0.5, py: 1}}
-                                >
-                                    Drag fields to the group or add new ones
-                                </Typography>
-                            }
-                            
-                            {provided.placeholder}
-                        </Stack>
-                    )}
-                </Droppable>
-            </Paper>
+                            {index + 1}
+                        </Box>
+
+                        <Box
+                            className="field-row-hover-control"
+                            {...(dragHandleProps || {})}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 0,
+                                overflow: 'hidden',
+                                opacity: 0,
+                                color: 'text.disabled',
+                                cursor: 'grab',
+                                flexShrink: 0,
+                                touchAction: 'none',
+                                pointerEvents: 'none',
+                                transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
+                            }}
+                        >
+                            <IconGripVertical size={18}/>
+                        </Box>
+
+                        <Box
+                            className="field-row-hover-control"
+                            sx={{
+                                width: selectedFieldIds.includes(field.id) ? 24 : 0,
+                                marginLeft: selectedFieldIds.includes(field.id) ? '8px' : 0,
+                                overflow: 'hidden',
+                                opacity: selectedFieldIds.includes(field.id) ? 1 : 0,
+                                flexShrink: 0,
+                                pointerEvents: selectedFieldIds.includes(field.id) ? 'auto' : 'none',
+                                transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
+                            }}
+                        >
+                            <Checkbox
+                                size="small"
+                                checked={selectedFieldIds.includes(field.id)}
+                                onChange={(event) =>
+                                    setSelectedFieldIds((current) => event.target.checked ? [...new Set([...current, field.id])] : current.filter((id) => id !== field.id))
+                                }
+                                onClick={(event) => event.stopPropagation()}
+                                sx={{
+                                    p: 0.25,
+                                    width: 20,
+                                    height: 20,
+                                    '& .MuiSvgIcon-root': {fontSize: 18},
+                                }}
+                            />
+                        </Box>
+
+                        <Box sx={{display: 'flex', color: 'text.secondary', ml: 1}}>
+                            <IconBoxMultiple size={17}/>
+                        </Box>
+
+                        <Typography
+                            fontSize={14}
+                            fontWeight={800}
+                            color="#123044"
+                            noWrap
+                            sx={{flex: 1, minWidth: 0, ml: 1.25}}
+                        >
+                            {fieldDisplayLabel(field)}
+                        </Typography>
+
+                        <Tooltip title="Group actions">
+                            <IconButton
+                                className="field-row-action"
+                                size="small"
+                                onClick={(event) => {
+                                    setActiveGroupMenuId(field.id);
+                                    setGroupMenuAnchorEl(event.currentTarget);
+                                }}
+                                sx={{
+                                    width: 0,
+                                    overflow: 'hidden',
+                                    opacity: 0,
+                                    pointerEvents: 'none',
+                                    color: 'text.secondary',
+                                    flexShrink: 0,
+                                    transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
+                                }}
+                            >
+                                <IconDots size={17}/>
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Add field to group">
+                            <IconButton
+                                className="field-row-action"
+                                size="small"
+                                onClick={(event) => {
+                                    setInsertAfterFieldId(null);
+                                    setFieldTargetGroupId(field.id);
+                                    setAnchorEl(event.currentTarget);
+                                }}
+                                sx={{
+                                    width: 0,
+                                    height: 26,
+                                    overflow: 'hidden',
+                                    opacity: 0,
+                                    pointerEvents: 'none',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    color: 'primary.main',
+                                    flexShrink: 0,
+                                    transition: 'width 120ms ease, opacity 120ms ease, margin-left 120ms ease',
+                                }}
+                            >
+                                <IconPlus size={15}/>
+                            </IconButton>
+                        </Tooltip>
+                    </Stack>
+
+                    {field.description &&
+                        <Typography fontSize={13} color="text.secondary" mt={1} ml={{xs: 0, sm: 8}}>
+                            {field.description}
+                        </Typography>
+                    }
+
+                    {renderConditionBadges(field)}
+
+                    <Droppable droppableId={`group:${field.id}`} type="FIELD">
+                        {(provided, snapshot) => (
+                            <Stack
+                                spacing={1}
+                                mt={1.25}
+                                ml={{xs: 0, sm: 3}}
+                                ref={provided.innerRef} {...provided.droppableProps}
+                                sx={{
+                                    minHeight: children.length ? 12 : 44,
+                                    borderRadius: 1.5,
+                                    bgcolor: snapshot.isDraggingOver ? '#EAF4FF' : 'transparent',
+                                    outline: snapshot.isDraggingOver ? '1px dashed #0B8CFF' : 'none',
+                                    outlineOffset: 4,
+                                    transition: 'background-color 120ms ease, outline-color 120ms ease'
+                                }}
+                            >
+                                {children.length > 0 ?
+                                    children.map((child, childIndex) => (
+                                        <Draggable
+                                            draggableId={child.id}
+                                            index={childIndex}
+                                            key={child.id}>{(childDrag) =>
+                                                <Box
+                                                    ref={childDrag.innerRef}
+                                                    {...childDrag.draggableProps}
+                                                >
+                                                    {child.type === 'Group' ?
+                                                        renderGroupField(child, childIndex, childDrag.dragHandleProps, childIndex < children.length - 1) :
+                                                        renderFieldRow(child, childIndex, childDrag.dragHandleProps, true, childIndex < children.length - 1)
+                                                    }
+                                                </Box>}
+                                        </Draggable>
+                                    )) :
+                                    <Typography
+                                        fontSize={13}
+                                        color="#8A99A8"
+                                        sx={{px: 0.5, py: 1}}
+                                    >
+                                        Drag fields to the group or add new ones
+                                    </Typography>
+                                }
+
+                                {provided.placeholder}
+                            </Stack>
+                        )}
+                    </Droppable>
+                </Paper>
+                <Box
+                    className="insert-field-slot"
+                    sx={{
+                        position: 'relative',
+                        minWidth: {xs: 32, sm: 36},
+                        cursor: canInsertAfter ? 'pointer' : 'default',
+                        overflow: 'visible',
+                    }}
+                >
+                    {renderInsertAfterButton(field, canInsertAfter)}
+                </Box>
+            </Box>
         );
     };
 
@@ -780,6 +978,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                         onClick={(event) => {
                             setFieldsError('');
                             setFieldTargetGroupId(null);
+                            setInsertAfterFieldId(null);
                             setAnchorEl(event.currentTarget);
                         }}
                         sx={{
@@ -833,6 +1032,7 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                 onClose={() => {
                     setAnchorEl(null);
                     setFieldTargetGroupId(null);
+                    setInsertAfterFieldId(null);
                 }}
                 onAdd={selectFieldType}
             />
@@ -951,7 +1151,10 @@ const FormFieldsManager = ({fields, setFields, fieldsError, setFieldsError, form
                                                 ref={drag.innerRef}
                                                 {...drag.draggableProps}
                                             >
-                                                {field.type === 'Group' ? renderGroupField(field, index, drag.dragHandleProps) : renderFieldRow(field, index, drag.dragHandleProps)}
+                                                {field.type === 'Group' ?
+                                                    renderGroupField(field, index, drag.dragHandleProps, index < fields.length - 1) :
+                                                    renderFieldRow(field, index, drag.dragHandleProps, false, index < fields.length - 1)
+                                                }
                                             </Box>
                                         }
                                     </Draggable>

@@ -4,10 +4,9 @@ import {
     Button,
     Chip,
     CircularProgress,
+    Divider,
     IconButton,
     InputAdornment,
-    LinearProgress,
-    MenuItem,
     Paper,
     Stack,
     Tab,
@@ -18,16 +17,34 @@ import {
     TableHead,
     TableRow,
     Tabs,
-    Tooltip,
     Typography,
 } from '@mui/material';
-import { IconDownload, IconSearch } from '@tabler/icons-react';
+import { IconCalendar, IconDownload, IconSearch } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import FormUserIdentity from '../common/FormUserIdentity';
 import FormDetailsDateRangeFilter, { DateRangeFilterValue } from './FormDetailsDateRangeFilter';
 import ReadonlySubmissionPreview from './FormDetailsSubmissionPreview';
 import { DetailsForm, FormEntry, SubmissionListItem, UserRow } from './formDetailsTypes';
+
+const USER_FILTER_CONTROL_HEIGHT = 48;
+
+const formatTimeTaken = (entry: FormEntry | null) => {
+    if (!entry) return '--';
+
+    const source = entry as any;
+    const rawValue = source.time_taken ?? source.timeTaken ?? source.duration ?? source.duration_text ?? source.data?.time_taken ?? source.data?.timeTaken;
+    if (rawValue !== undefined && rawValue !== null && rawValue !== '') return String(rawValue);
+
+    const seconds = Number(source.duration_seconds ?? source.durationSeconds ?? source.data?.duration_seconds ?? source.data?.durationSeconds);
+    if (!Number.isFinite(seconds) || seconds <= 0) return '--';
+
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.round(seconds % 60);
+
+    if (minutes <= 0) return `${remainingSeconds}s`;
+    return `${minutes}m ${remainingSeconds}s`;
+};
 
 const FormDetailsListView = ({
                                  form,
@@ -113,59 +130,50 @@ const FormDetailsListView = ({
 
         {tab === 0 && (
             <>
-                <Stack
-                    direction={{ xs: 'column', md: 'row' }}
-                    spacing={1.5}
-                    alignItems={{ xs: 'stretch', md: 'center' }}
-                    sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}
-                >
-                    <CustomTextField
-                        size="small"
-                        placeholder="Search"
-                        value={submissionSearch}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onSubmissionSearchChange(event.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <IconSearch size={18} />
-                                </InputAdornment>
-                            ),
+                <Box sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    display: 'grid',
+                    gridTemplateColumns: {xs: '1fr', lg: '360px 1fr'},
+                }}>
+                    <Box
+                        sx={{
+                            minHeight: 0,
+                            overflow: 'hidden',
+                            borderRight: {lg: '1px solid'},
+                            borderColor: {lg: 'divider'},
+                            display: 'flex',
+                            flexDirection: 'column',
                         }}
-                        sx={{ width: { xs: '100%', md: 280 } }}
-                    />
+                    >
+                        <Stack spacing={1.25} sx={{p: 1.5, borderBottom: '1px solid', borderColor: 'divider'}}>
+                            <CustomTextField
+                                size="small"
+                                placeholder="Search submissions"
+                                value={submissionSearch}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => onSubmissionSearchChange(event.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <IconSearch size={18}/>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                fullWidth
+                            />
 
-                    <FormDetailsDateRangeFilter
-                        value={submissionDateFilter}
-                        onChange={onSubmissionDateFilterChange}
-                    />
+                            <Box sx={{'& > button': {width: '100%'}}}>
+                                <FormDetailsDateRangeFilter
+                                    value={submissionDateFilter}
+                                    onChange={onSubmissionDateFilterChange}
+                                />
+                            </Box>
+                        </Stack>
 
-                    <Typography variant="body2" fontWeight={700}>
-                        {filteredSubmissionItems.length} submissions
-                    </Typography>
+                        <Box sx={{overflow: 'auto', p: 1.5, flex: 1, minHeight: 0}}>
+                            <Typography fontWeight={800} mb={1.25}>Submissions {filteredSubmissionItems.length}</Typography>
 
-                    <Box flex={1} />
-                    <Tooltip title="Download">
-                        <span>
-                            <IconButton
-                                disabled={!selectedSubmissionItem || Boolean(pdfGeneratingEntryId)}
-                                onClick={() => onDownloadSubmissionPdf(selectedSubmissionItem)}
-                                sx={{ border: '1px solid', borderColor: 'divider' }}
-                            >
-                                {pdfGeneratingEntryId === selectedSubmissionItem?.entry.id ? (
-                                    <CircularProgress size={18} thickness={5} />
-                                ) : (
-                                    <IconDownload size={18} />
-                                )}
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-                </Stack>
-
-                <Box sx={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '360px 1fr' } }}>
-                    <Box sx={{ overflow: 'auto', p: 2 }}>
-                        <Typography fontWeight={800} mb={1.5}>Submissions </Typography>
-
-                        <Stack spacing={1}>
+                            <Stack spacing={1}>
                             {filteredSubmissionItems.length === 0 ? (
                                 <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
                                     <Typography>No submitted users found.</Typography>
@@ -181,12 +189,12 @@ const FormDetailsListView = ({
                                             p: 1.5,
                                             borderRadius: 2,
                                             cursor: 'pointer',
-                                            bgcolor: selected ? 'primary.light' : 'transparent',
+                                            bgcolor: selected ? '#EAF2FF' : 'transparent',
                                             color: 'inherit',
                                             border: '1px solid',
-                                            borderColor: selected ? 'primary.light' : 'transparent',
+                                            borderColor: selected ? '#D5E5FF' : 'transparent',
                                             '&:hover': {
-                                                bgcolor: selected ? 'primary.light' : 'action.hover',
+                                                bgcolor: selected ? '#EAF2FF' : 'action.hover',
                                             },
                                         }}
                                     >
@@ -200,25 +208,31 @@ const FormDetailsListView = ({
                                                     }}
                                                 />
                                             </Box>
-                                            <Typography variant="caption">
-                                                {item.submitted_at ? dayjs(item.submitted_at).format('HH:mm') : '--'}
-                                            </Typography>
+                                            <Box textAlign="right" flexShrink={0}>
+                                                <Typography variant="caption" display="block">
+                                                    {item.submitted_at ? dayjs(item.submitted_at).format('HH:mm') : '--'}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" display="block">
+                                                    {item.submitted_at ? dayjs(item.submitted_at).format('DD/MM/YYYY') : ''}
+                                                </Typography>
+                                            </Box>
                                         </Stack>
                                     </Box>
                                 );
                             })}
-                        </Stack>
+                            </Stack>
+                        </Box>
                     </Box>
 
                     <Box sx={{ minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                         <Stack
                             direction={{ xs: 'column', sm: 'row' }}
-                            spacing={1}
+                            spacing={2}
                             alignItems={{ xs: 'flex-start', sm: 'center' }}
                             justifyContent="space-between"
-                            sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}
+                            sx={{ px: 2, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}
                         >
-                            <Stack direction="row" spacing={1} alignItems="center">
+                            <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
                                 <Box sx={{minWidth: 0}}>
                                     <FormUserIdentity
                                         user={{
@@ -227,11 +241,48 @@ const FormDetailsListView = ({
                                             trade_name: filteredSubmissionItems.find((item) => item.entry.id === selectedEntryId)?.trade_name,
                                         }}
                                     />
-                                    <Typography variant="caption" color="text.secondary">
-                                        {selectedEntry?.created_at ? dayjs(selectedEntry.created_at).format('DD/MM/YYYY HH:mm') : 'No submission selected'}
-                                        {selectedEntry ? `, Submission ID: ${selectedEntry.id}` : ''}
-                                    </Typography>
                                 </Box>
+                            </Stack>
+
+                            <Stack
+                                direction={{xs: 'column', sm: 'row'}}
+                                spacing={{xs: 1, sm: 4}}
+                                alignItems={{xs: 'flex-start', sm: 'center'}}
+                                flexShrink={0}
+                            >
+                                <Stack direction="row" spacing={1} alignItems="flex-start">
+                                    <IconCalendar size={18} color="#6B7280"/>
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary" display="block">
+                                            Submitted on
+                                        </Typography>
+                                        <Typography variant="body2" color="text.primary">
+                                            {selectedEntry?.created_at ? dayjs(selectedEntry.created_at).format('DD/MM/YYYY, hh:mm A') : '--'}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+
+                                <Stack direction="row" spacing={1} alignItems="flex-start">
+                                    <span>
+                                        <IconButton
+                                            disabled={!selectedSubmissionItem || Boolean(pdfGeneratingEntryId)}
+                                            onClick={() => onDownloadSubmissionPdf(selectedSubmissionItem)}
+                                            sx={{
+                                                width: 36,
+                                                height: 36,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                bgcolor: '#fff',
+                                            }}
+                                        >
+                                            {pdfGeneratingEntryId === selectedSubmissionItem?.entry.id ? (
+                                                <CircularProgress size={18} thickness={5}/>
+                                            ) : (
+                                                <IconDownload size={18}/>
+                                            )}
+                                        </IconButton>
+                                    </span>
+                                </Stack>
                             </Stack>
                         </Stack>
                         <ReadonlySubmissionPreview form={form} entry={selectedEntry} />
@@ -246,7 +297,7 @@ const FormDetailsListView = ({
                     direction={{ xs: 'column', md: 'row' }}
                     spacing={1.5}
                     alignItems={{ xs: 'stretch', md: 'center' }}
-                    sx={{ p: 2 }}
+                    sx={{ p: 2, flexWrap: { md: 'wrap' } }}
                 >
                     <CustomTextField
                         size="small"
@@ -260,53 +311,92 @@ const FormDetailsListView = ({
                                 </InputAdornment>
                             ),
                         }}
-                        sx={{ width: { xs: '100%', md: 280 } }}
+                        sx={{
+                            width: { xs: '100%', md: 280 },
+                            '& .MuiInputBase-root': {
+                                height: USER_FILTER_CONTROL_HEIGHT,
+                            },
+                        }}
                     />
 
-                    <FormDetailsDateRangeFilter
-                        value={userDateFilter}
-                        onChange={onUserDateFilterChange}
-                    />
-
-                    <CustomTextField
-                        select
-                        size="small"
-                        value={userStatusFilter}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onUserStatusFilterChange(event.target.value)}
-                        sx={{ width: { xs: '100%', md: 170 } }}
+                    <Box
+                        sx={{
+                            width: { xs: '100%', md: 250 },
+                            '& > button': {
+                                width: '100%',
+                                height: USER_FILTER_CONTROL_HEIGHT,
+                                minHeight: USER_FILTER_CONTROL_HEIGHT,
+                            },
+                        }}
                     >
-                        <MenuItem value="all">Status filter</MenuItem>
-                        <MenuItem value="submitted">Submitted</MenuItem>
-                        <MenuItem value="pending">Did not submit</MenuItem>
-                    </CustomTextField>
+                        <FormDetailsDateRangeFilter
+                            value={userDateFilter}
+                            onChange={onUserDateFilterChange}
+                        />
+                    </Box>
 
-                    <Typography variant="body2" fontWeight={700} sx={{ ml: { md: 1 } }}>
-                        {filteredUsers.length} users
-                    </Typography>
-                </Stack>
-
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ px: 2, pb: 2 }}>
                     <Paper
+                        component="button"
                         variant="outlined"
-                        sx={{ flex: 1, p: 2, bgcolor: 'rgba(0, 194, 150, 0.08)', borderColor: 'transparent', borderRadius: 2 }}
+                        onClick={() => onUserStatusFilterChange(userStatusFilter === 'submitted' ? 'all' : 'submitted')}
+                        sx={{
+                            width: { xs: '100%', md: 220 },
+                            height: USER_FILTER_CONTROL_HEIGHT,
+                            px: 1.75,
+                            py: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            bgcolor: userStatusFilter === 'submitted' ? 'rgba(0, 194, 150, 0.12)' : 'background.paper',
+                            borderColor: userStatusFilter === 'submitted' ? 'success.main' : 'divider',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            font: 'inherit',
+                            color: 'inherit',
+                            '&:hover': {
+                                bgcolor: 'rgba(0, 194, 150, 0.08)',
+                            },
+                        }}
                     >
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                            <Box>
-                                <Typography color="success.main" fontWeight={800}>{submittedCount}/{userRowsLength}</Typography>
-                                <Typography color="success.main" variant="body2" fontWeight={600}>Submitted</Typography>
-                            </Box>
-
-                            <Typography variant="body2" color="text.secondary">{progress}%</Typography>
-                        </Stack>
-
-                        <LinearProgress variant="determinate" value={progress} color="success" sx={{ height: 8, borderRadius: 10 }} />
+                        <Box minWidth={0}>
+                            <Typography color="success.main" fontWeight={800} lineHeight={1.1}>{submittedCount}/{userRowsLength}</Typography>
+                            <Typography color="success.main" variant="body2" fontWeight={600} noWrap>Submitted</Typography>
+                        </Box>
                     </Paper>
 
-                    <Paper variant="outlined" sx={{ width: { xs: '100%', md: 350 }, p: 2, borderRadius: 2 }}>
-                        <Typography color="error.main" fontWeight={800}>{pendingCount}/{userRowsLength}</Typography>
-                        <Typography variant="body2" fontWeight={600}>Did not submit</Typography>
+                    <Paper
+                        component="button"
+                        variant="outlined"
+                        onClick={() => onUserStatusFilterChange(userStatusFilter === 'pending' ? 'all' : 'pending')}
+                        sx={{
+                            width: { xs: '100%', md: 220 },
+                            height: USER_FILTER_CONTROL_HEIGHT,
+                            px: 1.75,
+                            py: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            bgcolor: userStatusFilter === 'pending' ? 'rgba(255, 51, 102, 0.08)' : 'background.paper',
+                            borderColor: userStatusFilter === 'pending' ? 'error.main' : 'divider',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            font: 'inherit',
+                            color: 'inherit',
+                            '&:hover': {
+                                bgcolor: 'rgba(255, 51, 102, 0.06)',
+                            },
+                        }}
+                    >
+                        <Box minWidth={0}>
+                            <Typography color="error.main" fontWeight={800} lineHeight={1.1}>{pendingCount}/{userRowsLength}</Typography>
+                            <Typography variant="body2" fontWeight={600} noWrap>Did not submit</Typography>
+                        </Box>
                     </Paper>
                 </Stack>
+                
+                <Divider />
 
                 <TableContainer sx={{ flex: 1, minHeight: 0 }}>
                     <Table stickyHeader>

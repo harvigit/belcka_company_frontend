@@ -32,6 +32,9 @@ export default function NavItem({
   const Icon = item?.icon;
   const theme = useTheme();
   const { t } = useTranslation();
+  const isSelected = Boolean(
+    item?.href && (pathDirect === item.href || pathDirect.startsWith(`${item.href}/`)),
+  );
 
   const itemIcon = Icon ? (
     (level ?? 1) > 1 ? (
@@ -48,7 +51,7 @@ export default function NavItem({
     borderRadius: `${isBorderRadius}px`,
     backgroundColor: (level ?? 1) > 1 ? "transparent !important" : "inherit",
     color:
-      (level ?? 1) > 1 && pathDirect === item?.href
+      (level ?? 1) > 1 && isSelected
         ? `${theme.palette.primary.main}!important`
         : theme.palette.text.primary,
     paddingLeft: hideMenu
@@ -75,7 +78,7 @@ export default function NavItem({
       <Link href={item.href || ""}>
         <ListItemStyled
           disabled={item?.disabled}
-          selected={pathDirect === item?.href}
+          selected={isSelected}
           onClick={lgDown ? onClick : undefined}
         >
           <ListItemIcon
@@ -83,7 +86,7 @@ export default function NavItem({
               minWidth: "36px",
               p: "3px 0",
               color:
-                (level ?? 1) > 1 && pathDirect === item?.href
+                (level ?? 1) > 1 && isSelected
                   ? `${theme.palette.primary.main}!important`
                   : "inherit",
             }}

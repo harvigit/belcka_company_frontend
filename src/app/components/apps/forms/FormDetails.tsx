@@ -23,6 +23,7 @@ import FormDetailsHeader from './details/FormDetailsHeader';
 import FormDetailsListView from './details/FormDetailsListView';
 import FormDetailsMobilePreviewDrawer from './details/FormDetailsMobilePreviewDrawer';
 import PublishWizard from './list/components/PublishWizard';
+import { normalizeFormRecord } from './common/formStatusUtils';
 
 import {
     downloadElementAsPdf,
@@ -65,7 +66,7 @@ const FormDetails = ({ formId }: { formId: string }) => {
         setLoading(true);
         try {
             const res = await api.get(`forms/${formId}`);
-            setForm(res.data.info || null);
+            setForm(res.data.info ? normalizeFormRecord(res.data.info) : null);
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'Failed to fetch form details'));
         } finally {
