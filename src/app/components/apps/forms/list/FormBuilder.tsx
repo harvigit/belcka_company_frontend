@@ -113,7 +113,7 @@ const FormEditorDrawer = ({open, onClose, formId, initialTemplate, onSaved}: For
 
         const fetchForm = async () => {
             try {
-                const res = await api.get(`forms/${formId}`);
+                const res = await api.get(`forms/details/${formId}`);
                 const form = res.data.info;
                 const normalizedFields = normalizeFields(form.fields);
                 const normalizedName = form.name || '';
