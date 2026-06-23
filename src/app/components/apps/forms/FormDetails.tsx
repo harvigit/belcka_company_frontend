@@ -130,8 +130,8 @@ const FormDetails = ({ formId }: { formId: string }) => {
     });
 
 
-    const selectedSubmissionItem = filteredSubmissionItems.find((item) => item.entry.id === selectedEntryId)
-        || filteredSubmissionItems[0] || null;
+    const selectedSubmissionItem = filteredSubmissionItems.find((item) => 
+        item.entry.id === selectedEntryId) || filteredSubmissionItems[0] || null;
     const selectedEntry = selectedSubmissionItem?.entry || null;
 
     const submissionViewerItems = useMemo(
