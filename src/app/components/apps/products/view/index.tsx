@@ -121,7 +121,7 @@ const ProductView: React.FC<ProductViewProps> = ({
       );
       if (res.data) {
         setProduct(res.data.info);
-        setAttachments(res.data.info.attachments);
+        setAttachments(res.data.info?.attachments);
       }
     } catch (err) {
       console.error("Failed to fetch product", err);

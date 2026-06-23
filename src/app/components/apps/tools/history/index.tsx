@@ -16,6 +16,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import { Grid } from "@mui/system";
 import Image from "next/image";
 import { IconArrowLeft } from "@tabler/icons-react";
+import { useSession } from "next-auth/react";
+import { User } from "next-auth";
 
 interface HireHistoryProps {
   open: boolean;
@@ -35,7 +37,8 @@ const HireHistory: React.FC<HireHistoryProps> = ({
   const [requestOrders, setRequestOrders] = useState<any[]>([]);
   const [value, setValue] = useState(0);
   const [loadingId, setLoadingId] = useState<number | null>(null);
-
+  const session = useSession();
+  const user = session.data?.user as User & { id: number };
   const handleTabChange = (event: any, newValue: number) => {
     setValue(newValue);
     setOrders([]);
@@ -66,7 +69,7 @@ const HireHistory: React.FC<HireHistoryProps> = ({
       const status = tabStatusMap[value];
 
       const res = await api.get(
-        `hire-orders/get-products?company_id=${companyId}&status=${status}`,
+        `hire-orders/get-products?company_id=${companyId}&status=${status}&user_id=${user.id}`,
       );
 
       if (res.data.IsSuccess) {
@@ -208,21 +211,23 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                         sx={{ top: -8, position: "absolute" }}
                         flexWrap="wrap"
                       >
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            px: 1.2,
-                            py: 0.2,
-                            borderRadius: "12px",
-                            bgcolor: "#FF7F00",
-                            color: "#fff",
-                            fontSize: "0.75rem",
-                            fontWeight: 500,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          Order: #{order.order_id}
-                        </Typography>
+                        {value === 1 && (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              px: 1.2,
+                              py: 0.2,
+                              borderRadius: "12px",
+                              bgcolor: "#FF7F00",
+                              color: "#fff",
+                              fontSize: "0.75rem",
+                              fontWeight: 500,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            Order: #{order.order_id}
+                          </Typography>
+                        )}
                       </Box>
                       {order.products.map((product: any) => (
                         <Box
@@ -231,23 +236,33 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                           gap={1}
                           alignItems="center"
                         >
-                          <Typography fontWeight={500} textAlign={"end"}>
-                            {order.user_name}
-                          </Typography>
-                          <Box
-                            display={"block "}
-                            alignItems={"center"}
-                            justifyContent={"space-between"}
-                            sx={{ p: 1 }}
-                          >
-                            <Typography color="textSecondary" className="f-14">
-                              Hire: {order.from_date_formate} -{" "}
-                              {order.from_date_formate}
-                            </Typography>
-                            <Typography color="textSecondary" className="f-14">
-                              Order Date: {order.date}
-                            </Typography>
-                          </Box>
+                          {value === 1 && (
+                            <>
+                              <Typography fontWeight={500} textAlign={"end"}>
+                                {order.user_name}
+                              </Typography>
+                              <Box
+                                display={"block "}
+                                alignItems={"center"}
+                                justifyContent={"space-between"}
+                                sx={{ p: 1 }}
+                              >
+                                <Typography
+                                  color="textSecondary"
+                                  className="f-14"
+                                >
+                                  Hire: {order.from_date_formate} -{" "}
+                                  {order.from_date_formate}
+                                </Typography>
+                                <Typography
+                                  color="textSecondary"
+                                  className="f-14"
+                                >
+                                  Order Date: {order.date}
+                                </Typography>
+                              </Box>
+                            </>
+                          )}
                           <Box
                             display="flex"
                             gap={1}
@@ -383,7 +398,8 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                       sx={{ top: -8, position: "absolute" }}
                       flexWrap="wrap"
                     >
-                      {work.order_status == hireStatus.AVAILABLE ? (
+                      {work.order_status == hireStatus.AVAILABLE ||
+                      value == 0 ? (
                         <Typography
                           variant="body2"
                           sx={{
@@ -420,22 +436,23 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                     <Typography fontWeight={500} textAlign={"end"}>
                       {work.user_name}
                     </Typography>
-                    {work.order_status !== hireStatus.AVAILABLE && (
-                      <Box
-                        display={"block "}
-                        alignItems={"center"}
-                        justifyContent={"space-between"}
-                        sx={{ p: 1 }}
-                      >
-                        <Typography color="textSecondary" className="f-14">
-                          Hire: {work.from_date_formate} -{" "}
-                          {work.from_date_formate}
-                        </Typography>
-                        <Typography color="textSecondary" className="f-14">
-                          Order Date: {work.date}
-                        </Typography>
-                      </Box>
-                    )}
+                    {work.order_status !== hireStatus.AVAILABLE &&
+                      value !== 0 && (
+                        <Box
+                          display={"block "}
+                          alignItems={"center"}
+                          justifyContent={"space-between"}
+                          sx={{ p: 1 }}
+                        >
+                          <Typography color="textSecondary" className="f-14">
+                            Hire: {work.from_date_formate} -{" "}
+                            {work.from_date_formate}
+                          </Typography>
+                          <Typography color="textSecondary" className="f-14">
+                            Order Date: {work.date}
+                          </Typography>
+                        </Box>
+                      )}
                     <Box display="block" gap={1} alignItems="center">
                       <Box display="flex" gap={1} alignItems="center">
                         <Image
@@ -460,15 +477,84 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                             </Typography>
 
                             <Box display="flex" gap={1} justifyContent={"end"}>
-                              {work.order_status === hireStatus.HIRED && (
+                              {work.order_status === hireStatus.HIRED &&
+                                value !== 0 && (
+                                  <Button
+                                    disabled={loadingId === work.id}
+                                    onClick={() =>
+                                      handleStatusChange({
+                                        orderId: work.order_id_int,
+                                        productIds: [work.product_id],
+                                        status: hireStatus.IN_SERVICE,
+                                        needService: true,
+                                      })
+                                    }
+                                    sx={{
+                                      px: 1.6,
+                                      py: 0.7,
+                                      borderRadius: "18px",
+                                      border: 2,
+                                      bgcolor: "#FF7F00",
+                                      color: "#fff",
+                                      fontSize: "0.75rem",
+                                      fontWeight: 500,
+                                      textTransform: "capitalize",
+                                      "&:hover": {
+                                        bgcolor: "#FF7F00",
+                                        color: "#fff",
+                                      },
+                                    }}
+                                  >
+                                    Return
+                                  </Button>
+                                )}
+                            </Box>
+                          </Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {work.supplier_name}
+                          </Typography>
+                          {work.approve_by_user_name &&
+                            work.order_status == hireStatus.HIRED &&
+                            value !== 0 && (
+                              <Typography variant="body2">
+                                Approved by: {work.approve_by_user_name}
+                              </Typography>
+                            )}
+                          {work.reject_by_user_name &&
+                            work.order_status == hireStatus.CANCELLED &&
+                            value !== 0 && (
+                              <Typography variant="body2">
+                                Cancel by: {work.reject_by_user_name}
+                              </Typography>
+                            )}
+                          {work.return_by_user_name &&
+                            work.order_status == hireStatus.IN_SERVICE &&
+                            value !== 0 && (
+                              <Typography variant="body2">
+                                In service by: {work.return_by_user_name}
+                              </Typography>
+                            )}
+                          {work.approve_by_user_name &&
+                            work.order_status == hireStatus.IN_SERVICE &&
+                            value !== 0 && (
+                              <Typography variant="body2">
+                                Qty: {work.available_qty}
+                              </Typography>
+                            )}
+                          {work.order_status === hireStatus.IN_SERVICE &&
+                            value !== 0 && (
+                              <Box
+                                display="flex"
+                                gap={1}
+                                justifyContent={"flex-end"}
+                              >
                                 <Button
-                                  disabled={loadingId === work.id}
                                   onClick={() =>
                                     handleStatusChange({
                                       orderId: work.order_id_int,
                                       productIds: [work.product_id],
-                                      status: hireStatus.IN_SERVICE,
-                                      needService: true,
+                                      status: hireStatus.AVAILABLE,
+                                      needService: false,
                                     })
                                   }
                                   sx={{
@@ -476,112 +562,49 @@ const HireHistory: React.FC<HireHistoryProps> = ({
                                     py: 0.7,
                                     borderRadius: "18px",
                                     border: 2,
-                                    bgcolor: "#FF7F00",
+                                    bgcolor: "#32A852",
                                     color: "#fff",
                                     fontSize: "0.75rem",
                                     fontWeight: 500,
                                     textTransform: "capitalize",
                                     "&:hover": {
-                                      bgcolor: "#FF7F00",
+                                      bgcolor: "#32A852",
                                       color: "#fff",
                                     },
                                   }}
                                 >
-                                  Return
+                                  Available To
                                 </Button>
-                              )}
-                            </Box>
-                          </Box>
-                          <Typography variant="body2" fontWeight={500}>
-                            {work.supplier_name}
-                          </Typography>
-                          {work.approve_by_user_name &&
-                            work.order_status == hireStatus.HIRED && (
-                              <Typography variant="body2">
-                                Approved by: {work.approve_by_user_name}
-                              </Typography>
-                            )}
-                          {work.reject_by_user_name &&
-                            work.order_status == hireStatus.CANCELLED && (
-                              <Typography variant="body2">
-                                Cancel by: {work.reject_by_user_name}
-                              </Typography>
-                            )}
-                          {work.return_by_user_name &&
-                            work.order_status == hireStatus.IN_SERVICE && (
-                              <Typography variant="body2">
-                                In service by: {work.return_by_user_name}
-                              </Typography>
-                            )}
-                          {work.approve_by_user_name &&
-                            work.order_status == hireStatus.IN_SERVICE && (
-                              <Typography variant="body2">
-                                Qty: {work.available_qty}
-                              </Typography>
-                            )}
-                          {work.order_status === hireStatus.IN_SERVICE && (
-                            <Box
-                              display="flex"
-                              gap={1}
-                              justifyContent={"flex-end"}
-                            >
-                              <Button
-                                onClick={() =>
-                                  handleStatusChange({
-                                    orderId: work.order_id_int,
-                                    productIds: [work.product_id],
-                                    status: hireStatus.AVAILABLE,
-                                    needService: false,
-                                  })
-                                }
-                                sx={{
-                                  px: 1.6,
-                                  py: 0.7,
-                                  borderRadius: "18px",
-                                  border: 2,
-                                  bgcolor: "#32A852",
-                                  color: "#fff",
-                                  fontSize: "0.75rem",
-                                  fontWeight: 500,
-                                  textTransform: "capitalize",
-                                  "&:hover": {
-                                    bgcolor: "#32A852",
-                                    color: "#fff",
-                                  },
-                                }}
-                              >
-                                Available To
-                              </Button>
 
-                              <Button
-                                onClick={() =>
-                                  handleStatusChange({
-                                    orderId: work.order_id_int,
-                                    productIds: [work.product_id],
-                                    status: hireStatus.DAMAGED,
-                                    needService: false,
-                                  })
-                                }
-                                sx={{
-                                  px: 1.6,
-                                  py: 0.7,
-                                  borderRadius: "18px",
-                                  border: 2,
-                                  bgcolor: "#FF0000",
-                                  color: "#fff",
-                                  fontSize: "0.75rem",
-                                  fontWeight: 500,
-                                  textTransform: "capitalize",
-                                  "&:hover": {
+                                <Button
+                                  onClick={() =>
+                                    handleStatusChange({
+                                      orderId: work.order_id_int,
+                                      productIds: [work.product_id],
+                                      status: hireStatus.DAMAGED,
+                                      needService: false,
+                                    })
+                                  }
+                                  sx={{
+                                    px: 1.6,
+                                    py: 0.7,
+                                    borderRadius: "18px",
+                                    border: 2,
                                     bgcolor: "#FF0000",
                                     color: "#fff",
-                                  },
-                                }}
-                              >
-                                Damaged
-                              </Button>
-                            </Box>
-                          )}
+                                    fontSize: "0.75rem",
+                                    fontWeight: 500,
+                                    textTransform: "capitalize",
+                                    "&:hover": {
+                                      bgcolor: "#FF0000",
+                                      color: "#fff",
+                                    },
+                                  }}
+                                >
+                                  Damaged
+                                </Button>
+                              </Box>
+                            )}
                         </Box>
                       </Box>
                     </Box>
