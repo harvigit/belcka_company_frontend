@@ -49,7 +49,7 @@ import FormBuilderComponent from './list/FormBuilder';
 import ArchiveFormsDrawer from './ArchiveFormsDrawer';
 import {FormRecord, FormStatus, FormTemplate} from './types';
 import FormUserIdentity, {getFormUserName} from './common/FormUserIdentity';
-import { normalizeFormRecord } from './common/formStatusUtils';
+import {normalizeFormRecord} from './common/formStatusUtils';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
@@ -71,8 +71,17 @@ const getName = (form: FormRecord) => {
     return getFormUserName(form.created_by);
 };
 
-const getAssignedToLabel = (assignedTo?: string | null) => {
-    if (!assignedTo) return 'Everyone';
+const getAssignedToLabel = (form: FormRecord) => {
+    const assignedTo = form.assigned_to ?? form.assignedTo;
+    if (!assignedTo) {
+        return form.status === 'DRAFT' ? '--' : 'Everyone';
+    }
+    
+    const zeroAssignmentPattern = /^\s*0\s+teams?,\s*0\s+users?\s*\(\s*0\s+current\s+assignees?\s*\)\s*$/i;
+    if (zeroAssignmentPattern.test(assignedTo)) {
+        return '--';
+    }
+    
     return assignedTo.replace(/\bgroups\b/gi, (match) => match.charAt(0) === 'G' ? 'Teams' : 'teams');
 };
 
@@ -110,7 +119,7 @@ const Index = () => {
     const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
 
     const closeMenu = () => setMenuAnchorEl(null);
-    
+
     const fetchForms = useCallback(async () => {
         setFetchForm(true);
         try {
@@ -139,12 +148,12 @@ const Index = () => {
             return [
                 form.name,
                 form.status,
-                getAssignedToLabel(form.assigned_to ?? form.assignedTo),
+                getAssignedToLabel(form),
                 getName(form),
                 dayjs((form as any).createdAt ?? (form as any).created_at).format('DD/MM/YYYY'),
             ].some((value) => String(value || '').toLowerCase().includes(q));
         });
-        
+
     }, [forms, search]);
     const selectedFormIds = useMemo(() => Array.from(selectedRowIds), [selectedRowIds]);
     const allVisibleSelected = visibleForms.length > 0 && selectedRowIds.size === visibleForms.length;
@@ -165,7 +174,7 @@ const Index = () => {
         setSelectedTemplate(null);
         setEditorOpen(true);
     };
-    
+
     const openTemplateFormEditor = (template: FormTemplate) => {
         setTemplateOpen(false);
         setEditingFormId(undefined);
@@ -339,7 +348,7 @@ const Index = () => {
                 </Typography>
             ),
         }),
-        
+
         formColumnHelper.accessor('name', {
             id: 'name',
             header: () => 'Name',
@@ -367,14 +376,14 @@ const Index = () => {
                 );
             },
         }),
-        
+
         formColumnHelper.accessor('status', {
             id: 'status',
             header: () => 'Status',
             enableSorting: true,
             cell: (info) => statusChip(info.getValue()),
         }),
-        
+
         formColumnHelper.accessor('entries', {
             id: 'entries',
             header: () => 'Entries',
@@ -385,7 +394,7 @@ const Index = () => {
                 </Typography>
             ),
         }),
-        
+
         formColumnHelper.accessor('views', {
             id: 'views',
             header: () => 'Views',
@@ -396,8 +405,8 @@ const Index = () => {
                 </Typography>
             ),
         }),
-        
-        formColumnHelper.accessor((row) => getAssignedToLabel(row.assigned_to ?? row.assignedTo), {
+
+        formColumnHelper.accessor((row) => getAssignedToLabel(row), {
             id: 'assignedTo',
             header: () => 'Assigned to',
             enableSorting: true,
@@ -407,7 +416,7 @@ const Index = () => {
                 </Typography>
             ),
         }),
-        
+
         formColumnHelper.accessor((row) => getName(row), {
             id: 'created_by',
             header: () => 'Created by',
@@ -424,13 +433,13 @@ const Index = () => {
         }),
 
         formColumnHelper.display({
-            id: "actions",
-            header: "Actions",
-            cell: ({ row }) => {
+            id: 'actions',
+            header: 'Actions',
+            cell: ({row}) => {
                 const item = row.original;
 
                 return (
-                        <Stack direction="row" spacing={1}>
+                    <Stack direction="row" spacing={1}>
                         <Tooltip title="Archive">
                             <IconButton
                                 onClick={(e) => {
@@ -569,17 +578,17 @@ const Index = () => {
 
                                     <IconButton
                                         onClick={(event) => setMenuAnchorEl(event.currentTarget)}
-                                        sx={{ border: '1px solid', borderColor: 'divider' }}
+                                        sx={{border: '1px solid', borderColor: 'divider'}}
                                     >
-                                        <IconDotsVertical size={20} />
+                                        <IconDotsVertical size={20}/>
                                     </IconButton>
-                                    
+
                                     <Menu
                                         anchorEl={menuAnchorEl}
                                         open={Boolean(menuAnchorEl)}
                                         onClose={closeMenu}
-                                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                        transformOrigin={{vertical: 'top', horizontal: 'right'}}
                                         PaperProps={{
                                             sx: {
                                                 mt: 1,
@@ -596,9 +605,9 @@ const Index = () => {
                                                 closeMenu();
                                                 setArchiveOpen(true);
                                             }}
-                                            sx={{ gap: 1.25, fontSize: 14, py: 1.1 }}
+                                            sx={{gap: 1.25, fontSize: 14, py: 1.1}}
                                         >
-                                            <IconArchive size={18} />
+                                            <IconArchive size={18}/>
                                             Archive List
                                         </MenuItem>
                                     </Menu>
@@ -617,7 +626,7 @@ const Index = () => {
                     >
                         <TableContainer ref={tableContainerRef}>
                             <Table stickyHeader aria-label="sticky table" size={isMobile ? 'small' : 'medium'}>
-                                
+
                                 <TableHead>
                                     {table.getHeaderGroups().map((headerGroup) => (
                                         <TableRow key={headerGroup.id}>
@@ -687,7 +696,7 @@ const Index = () => {
                                         </TableRow>
                                     ))}
                                 </TableHead>
-                                
+
                                 <TableBody>
                                     {fetchForm ? (
                                         <SkeletonLoader
@@ -738,7 +747,7 @@ const Index = () => {
                                         })
                                     )}
                                 </TableBody>
-                                
+
                             </Table>
                         </TableContainer>
                     </Box>
