@@ -28,7 +28,6 @@ import {
     IconTrash,
     IconSun,
     IconPointFilled,
-    IconMapPin,
     IconBrandAndroid,
     IconBrandApple,
     IconWorld,
@@ -319,6 +318,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             : (log.end_latitude || log.end_longitude);
 
         const deviceType = isStartTime ? log.start_device_type : log.end_device_type;
+        const deviceInfo = getDeviceInfo(deviceType);
 
         if (!hasLocation) return null;
 
@@ -340,7 +340,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         }}
                         onClick={() => handleLocationPinClick(Number(log.worklog_id))}
                     >
-                        <IconMapPin size={14} style={{ color: '#1976d2' }} />
+                        {deviceInfo.icon}
                     </Box>
                 </Tooltip>
             );
@@ -385,7 +385,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                     }}
                     onClick={() => handleLocationPinClick(Number(log.worklog_id))}
                 >
-                    <IconMapPin size={14} style={{ color: '#1976d2' }}/>
+                    {deviceInfo.icon}
                 </Box>
             </Tooltip>
         );
