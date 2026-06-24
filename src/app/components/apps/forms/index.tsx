@@ -2,8 +2,6 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
-    Avatar,
-    AvatarGroup,
     Box,
     Button,
     Chip,
@@ -13,6 +11,8 @@ import {
     DialogTitle,
     IconButton,
     InputAdornment,
+    Menu,
+    MenuItem,
     Paper,
     Stack,
     Table,
@@ -33,10 +33,11 @@ import {
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
+    ColumnFiltersState,
     SortingState,
     useReactTable,
 } from '@tanstack/react-table';
-import {IconArchive, IconEdit, IconPlus, IconSearch, IconTrash, IconX} from '@tabler/icons-react';
+import {IconArchive, IconDotsVertical, IconPlus, IconSearch, IconTrash, IconX} from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import {useRouter} from 'next/navigation';
@@ -45,8 +46,9 @@ import PermissionGuard from '@/app/auth/PermissionGuard';
 import AddFormDialogComponent from './list/AddFormDialog';
 import TemplateLibraryDialogComponent from './list/TemplateLibraryDialog';
 import FormBuilderComponent from './list/FormBuilder';
+import ArchiveFormsDrawer from './ArchiveFormsDrawer';
 import {FormRecord, FormStatus, FormTemplate} from './types';
-import FormUserIdentity, {getFormUserImage, getFormUserInitials, getFormUserName, getFormUserTradeName} from './common/FormUserIdentity';
+import FormUserIdentity, {getFormUserName} from './common/FormUserIdentity';
 import { normalizeFormRecord } from './common/formStatusUtils';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
@@ -67,10 +69,6 @@ const statusChip = (status: FormStatus) => {
 
 const getName = (form: FormRecord) => {
     return getFormUserName(form.created_by);
-};
-
-const getUserName = (user?: { first_name?: string; last_name?: string; email?: string }) => {
-    return getFormUserName(user);
 };
 
 const getAssignedToLabel = (assignedTo?: string | null) => {
@@ -99,15 +97,20 @@ const Index = () => {
     const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null);
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
     const [fetchForm, setFetchForm] = useState(false);
-    const [columnFilters, setColumnFilters] = useState<any>([]);
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [sorting, setSorting] = useState<SortingState>([]);
 
     const [addOpen, setAddOpen] = useState(false);
     const [templateOpen, setTemplateOpen] = useState(false);
     const [editorOpen, setEditorOpen] = useState(false);
+    const [archiveOpen, setArchiveOpen] = useState(false);
     const [editingFormId, setEditingFormId] = useState<string | undefined>(undefined);
     const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null);
 
+    const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+
+    const closeMenu = () => setMenuAnchorEl(null);
+    
     const fetchForms = useCallback(async () => {
         setFetchForm(true);
         try {
@@ -245,6 +248,11 @@ const Index = () => {
         if (confirmAction === 'delete') {
             handleDeleteForms();
         }
+    };
+
+    const openSingleActionConfirm = (action: 'archive' | 'delete', formId: number) => {
+        setSelectedRowIds(new Set([formId]));
+        setConfirmAction(action);
     };
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -422,10 +430,12 @@ const Index = () => {
                 const item = row.original;
 
                 return (
-                    <Stack direction="row" spacing={1}>
-                        <Tooltip title="Delete">
+                        <Stack direction="row" spacing={1}>
+                        <Tooltip title="Archive">
                             <IconButton
                                 onClick={(e) => {
+                                    e.stopPropagation();
+                                    openSingleActionConfirm('archive', item.id);
                                 }}
                                 color="primary"
                             >
@@ -435,6 +445,8 @@ const Index = () => {
                         <Tooltip title="Delete">
                             <IconButton
                                 onClick={(e) => {
+                                    e.stopPropagation();
+                                    openSingleActionConfirm('delete', item.id);
                                 }}
                                 color="error"
                             >
@@ -544,15 +556,53 @@ const Index = () => {
                             )}
 
                             {selectedRowIds.size === 0 && (
-                                <Button
-                                    variant="contained"
-                                    startIcon={<IconPlus size={18}/>}
-                                    onClick={() => setAddOpen(true)}
-                                    fullWidth={isMobile}
-                                    sx={{borderRadius: 2}}
-                                >
-                                    Add new
-                                </Button>
+                                <>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<IconPlus size={18}/>}
+                                        onClick={() => setAddOpen(true)}
+                                        fullWidth={isMobile}
+                                        sx={{borderRadius: 2}}
+                                    >
+                                        Add new
+                                    </Button>
+
+                                    <IconButton
+                                        onClick={(event) => setMenuAnchorEl(event.currentTarget)}
+                                        sx={{ border: '1px solid', borderColor: 'divider' }}
+                                    >
+                                        <IconDotsVertical size={20} />
+                                    </IconButton>
+                                    
+                                    <Menu
+                                        anchorEl={menuAnchorEl}
+                                        open={Boolean(menuAnchorEl)}
+                                        onClose={closeMenu}
+                                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                                        PaperProps={{
+                                            sx: {
+                                                mt: 1,
+                                                minWidth: 210,
+                                                borderRadius: 2,
+                                                boxShadow: '0 12px 30px rgba(15, 23, 42, 0.14)',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                            },
+                                        }}
+                                    >
+                                        <MenuItem
+                                            onClick={() => {
+                                                closeMenu();
+                                                setArchiveOpen(true);
+                                            }}
+                                            sx={{ gap: 1.25, fontSize: 14, py: 1.1 }}
+                                        >
+                                            <IconArchive size={18} />
+                                            Archive List
+                                        </MenuItem>
+                                    </Menu>
+                                </>
                             )}
                         </Stack>
                     </Stack>
@@ -718,6 +768,12 @@ const Index = () => {
                 formId={editingFormId}
                 initialTemplate={selectedTemplate}
                 onSaved={handleSaved}
+            />
+
+            <ArchiveFormsDrawer
+                open={archiveOpen}
+                onClose={() => setArchiveOpen(false)}
+                onUpdated={fetchForms}
             />
 
             <Dialog open={Boolean(confirmAction)} onClose={() => !bulkActionLoading && setConfirmAction(null)}>
