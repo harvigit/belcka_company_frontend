@@ -259,7 +259,6 @@ const RequestActionList = () => {
             setSearchFilter('');
             fetchSavedData();
         } catch (err) {
-            console.error('Failed to save request action', err);
             toast.error('Something went wrong. Please try again.');
         }
         setEditLoading(false);
@@ -271,11 +270,10 @@ const RequestActionList = () => {
 
         const query = searchFilter.toLowerCase();
         return users.filter((user) =>
-            user.name.toLowerCase().includes(query) ||
-            user.email.toLowerCase().includes(query)
+            user.name.toLowerCase().includes(query)
         );
     }, [users, searchFilter]);
-
+    
     const usersById = useMemo(() => {
         return new Map(users.map((u) => [u.id, u.name]));
     }, [users]);
