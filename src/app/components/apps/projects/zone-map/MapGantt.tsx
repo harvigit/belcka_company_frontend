@@ -83,9 +83,12 @@ function DateTimePicker({value, onChange}: DateTimePickerProps) {
         const dd = String(value.getDate()).padStart(2, '0');
         const MM = String(value.getMonth() + 1).padStart(2, '0');
         const yyyy = value.getFullYear();
-        const hh = String(value.getHours()).padStart(2, '0');
-        const mm = String(value.getMinutes()).padStart(2, '0');
-        return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
+        // const hh = String(value.getHours()).padStart(2, '0');
+        // const mm = String(value.getMinutes()).padStart(2, '0');
+        
+        // return `${dd}/${MM}/${yyyy} ${hh}:${mm}`;
+
+        return `${dd}/${MM}/${yyyy}`;
     }, [value]);
 
     useEffect(() => {
@@ -189,7 +192,7 @@ function DateTimePicker({value, onChange}: DateTimePickerProps) {
                 onClick={() => setOpen(o => !o)}
                 inputProps={{
                     readOnly: true,
-                    style: {cursor: 'pointer', caretColor: 'transparent', width: 148, fontSize: 14},
+                    style: {cursor: 'pointer', caretColor: 'transparent', width: 135, fontSize: 14},
                 }}
                 sx={{
                     '& .MuiOutlinedInput-root': {
@@ -273,55 +276,55 @@ function DateTimePicker({value, onChange}: DateTimePickerProps) {
 
                     <Divider/>
                     
-                    <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                        <TextField
-                            type="number"
-                            value={String(hours).padStart(2, '0')}
-                            onChange={(e) => {
-                                let val = Number(e.target.value);
-                                if (isNaN(val)) val = 0;
-                                val = Math.max(0, Math.min(23, val));
-                                setHours(val);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'ArrowUp') {
-                                    e.preventDefault();
-                                    setHours((prev) => (prev + 1) % 24);
-                                }
-                                if (e.key === 'ArrowDown') {
-                                    e.preventDefault();
-                                    setHours((prev) => (prev - 1 + 24) % 24);
-                                }
-                            }}
-                            InputProps={{sx: {'& fieldset': {border: 'none'}, borderRadius: 8, height: 48, width: 110}}}
-                            inputProps={{style: {textAlign: 'center', fontSize: 18, fontWeight: 600}}}
-                            sx={{width: 110}}
-                        />
-                        <Typography sx={{fontSize: 26, fontWeight: 700, color: '#666', mx: 0.5}}>:</Typography>
-                        <TextField
-                            type="number"
-                            value={String(minutes).padStart(2, '0')}
-                            onChange={(e) => {
-                                let val = Number(e.target.value);
-                                if (isNaN(val)) val = 0;
-                                val = Math.max(0, Math.min(59, val));
-                                setMinutes(val);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'ArrowUp') {
-                                    e.preventDefault();
-                                    setMinutes((prev) => (prev + 5) % 60);
-                                }
-                                if (e.key === 'ArrowDown') {
-                                    e.preventDefault();
-                                    setMinutes((prev) => (prev - 5 + 60) % 60);
-                                }
-                            }}
-                            InputProps={{sx: {'& fieldset': {border: 'none'}, borderRadius: 8, height: 48, width: 110}}}
-                            inputProps={{style: {textAlign: 'center', fontSize: 18}}}
-                            sx={{width: 110}}
-                        />
-                    </Box>
+                    {/*<Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>*/}
+                    {/*    <TextField*/}
+                    {/*        type="number"*/}
+                    {/*        value={String(hours).padStart(2, '0')}*/}
+                    {/*        onChange={(e) => {*/}
+                    {/*            let val = Number(e.target.value);*/}
+                    {/*            if (isNaN(val)) val = 0;*/}
+                    {/*            val = Math.max(0, Math.min(23, val));*/}
+                    {/*            setHours(val);*/}
+                    {/*        }}*/}
+                    {/*        onKeyDown={(e) => {*/}
+                    {/*            if (e.key === 'ArrowUp') {*/}
+                    {/*                e.preventDefault();*/}
+                    {/*                setHours((prev) => (prev + 1) % 24);*/}
+                    {/*            }*/}
+                    {/*            if (e.key === 'ArrowDown') {*/}
+                    {/*                e.preventDefault();*/}
+                    {/*                setHours((prev) => (prev - 1 + 24) % 24);*/}
+                    {/*            }*/}
+                    {/*        }}*/}
+                    {/*        InputProps={{sx: {'& fieldset': {border: 'none'}, borderRadius: 8, height: 48, width: 110}}}*/}
+                    {/*        inputProps={{style: {textAlign: 'center', fontSize: 18, fontWeight: 600}}}*/}
+                    {/*        sx={{width: 110}}*/}
+                    {/*    />*/}
+                    {/*    <Typography sx={{fontSize: 26, fontWeight: 700, color: '#666', mx: 0.5}}>:</Typography>*/}
+                    {/*    <TextField*/}
+                    {/*        type="number"*/}
+                    {/*        value={String(minutes).padStart(2, '0')}*/}
+                    {/*        onChange={(e) => {*/}
+                    {/*            let val = Number(e.target.value);*/}
+                    {/*            if (isNaN(val)) val = 0;*/}
+                    {/*            val = Math.max(0, Math.min(59, val));*/}
+                    {/*            setMinutes(val);*/}
+                    {/*        }}*/}
+                    {/*        onKeyDown={(e) => {*/}
+                    {/*            if (e.key === 'ArrowUp') {*/}
+                    {/*                e.preventDefault();*/}
+                    {/*                setMinutes((prev) => (prev + 5) % 60);*/}
+                    {/*            }*/}
+                    {/*            if (e.key === 'ArrowDown') {*/}
+                    {/*                e.preventDefault();*/}
+                    {/*                setMinutes((prev) => (prev - 5 + 60) % 60);*/}
+                    {/*            }*/}
+                    {/*        }}*/}
+                    {/*        InputProps={{sx: {'& fieldset': {border: 'none'}, borderRadius: 8, height: 48, width: 110}}}*/}
+                    {/*        inputProps={{style: {textAlign: 'center', fontSize: 18}}}*/}
+                    {/*        sx={{width: 110}}*/}
+                    {/*    />*/}
+                    {/*</Box>*/}
 
                     <Divider/>
 
