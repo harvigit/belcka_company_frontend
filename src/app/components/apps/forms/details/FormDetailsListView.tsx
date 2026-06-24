@@ -29,23 +29,6 @@ import { DetailsForm, FormEntry, SubmissionListItem, UserRow } from './formDetai
 
 const USER_FILTER_CONTROL_HEIGHT = 48;
 
-const formatTimeTaken = (entry: FormEntry | null) => {
-    if (!entry) return '--';
-
-    const source = entry as any;
-    const rawValue = source.time_taken ?? source.timeTaken ?? source.duration ?? source.duration_text ?? source.data?.time_taken ?? source.data?.timeTaken;
-    if (rawValue !== undefined && rawValue !== null && rawValue !== '') return String(rawValue);
-
-    const seconds = Number(source.duration_seconds ?? source.durationSeconds ?? source.data?.duration_seconds ?? source.data?.durationSeconds);
-    if (!Number.isFinite(seconds) || seconds <= 0) return '--';
-
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.round(seconds % 60);
-
-    if (minutes <= 0) return `${remainingSeconds}s`;
-    return `${minutes}m ${remainingSeconds}s`;
-};
-
 const FormDetailsListView = ({
                                  form,
                                  tab,
