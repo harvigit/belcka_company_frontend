@@ -807,20 +807,22 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                         verticalAlign: 'middle'
                                                     }}>
                                                         {log.is_leave ? (
-                                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                                <IconSun size={18} color='#32bf90' />
-                                                                <Box sx={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    opacity: isLogLocked ? 0.6 : 1,
-                                                                    textTransform: 'capitalize',
-                                                                    marginLeft: '4px',
-                                                                    color: '#32bf90'
-                                                                }}>
-                                                                    {getTruncatedName(log.leave_name)}
+                                                            <Tooltip title={log.leave_name || ''} arrow placement="top">
+                                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                                    <IconSun size={18} color='#32bf90' />
+                                                                    <Box sx={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        opacity: isLogLocked ? 0.6 : 1,
+                                                                        textTransform: 'capitalize',
+                                                                        marginLeft: '4px',
+                                                                        color: '#32bf90'
+                                                                    }}>
+                                                                        {getTruncatedName(log.leave_name)}
+                                                                    </Box>
                                                                 </Box>
-                                                            </Box>
+                                                            </Tooltip>
                                                         ) : log.is_expense ? (
                                                             <Box sx={{
                                                                 display: 'flex',
