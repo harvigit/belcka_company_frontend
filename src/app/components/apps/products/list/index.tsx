@@ -767,7 +767,18 @@ const ProductList = () => {
       const res = await api.post("products/update", payload);
       if (res.data.IsSuccess) {
         toast.success(res.data.message);
-        fetchProducts();
+        setData((prev: any[]) =>
+          prev.map((p) => {
+            if (p.id === Number(id)) {
+              return {
+                ...p,
+                category_ids: selected.map((c) => c.id).join(","),
+                product_categories: selected,
+              };
+            }
+            return p;
+          })
+        );
         setOpenCategoryModal(false);
       }
     } catch (err) {
