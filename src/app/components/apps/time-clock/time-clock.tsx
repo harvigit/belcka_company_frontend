@@ -1773,30 +1773,6 @@ const TimeClock = ({ queryParams }: Props) => {
 
                             <Stack direction="row" spacing={1.5}>
                                 <Button
-                                    size="small"
-                                    variant="outlined"
-                                    color="primary"
-                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
-                                    onClick={handleExportClick}
-                                    endIcon={open ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
-                                >
-                                    Export
-                                </Button>
-                                <Menu
-                                    anchorEl={anchorEl}
-                                    open={open}
-                                    onClose={() => handleExportClose('')}
-                                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                                    transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                                >
-                                    <MenuItem onClick={() => handleExportClose('summary')}>Export Summary (Excel)</MenuItem>
-                                    <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details (Excel)</MenuItem>
-                                    <Divider />
-                                    <MenuItem onClick={() => handleExportClose('summary_pdf')}>Export Summary (PDF)</MenuItem>
-                                    <MenuItem onClick={() => handleExportClose('details_pdf')}>Export Timeclock Details (PDF)</MenuItem>
-                                </Menu>
-
-                                <Button
                                     startIcon={<IconLock size={15} />}
                                     variant="outlined"
                                     color="success"
@@ -1827,6 +1803,30 @@ const TimeClock = ({ queryParams }: Props) => {
                                 >
                                     Paid
                                 </Button>
+
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
+                                    onClick={handleExportClick}
+                                    endIcon={open ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+                                >
+                                    Export
+                                </Button>
+                                <Menu
+                                    anchorEl={anchorEl}
+                                    open={open}
+                                    onClose={() => handleExportClose('')}
+                                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                                    transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                                >
+                                    <MenuItem onClick={() => handleExportClose('summary')}>Export Summary (Excel)</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details (Excel)</MenuItem>
+                                    <Divider />
+                                    <MenuItem onClick={() => handleExportClose('summary_pdf')}>Export Summary (PDF)</MenuItem>
+                                    <MenuItem onClick={() => handleExportClose('details_pdf')}>Export Timeclock Details (PDF)</MenuItem>
+                                </Menu>
                             </Stack>
                         </Stack>
                     </Box>
