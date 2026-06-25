@@ -1735,23 +1735,48 @@ const TimeClock = ({ queryParams }: Props) => {
                         </Box>
                     </Box>
 
-                    {/* Row 2: Action buttons */}
+                </Box>
+
+                <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)} />
+
+                {isAnyRowSelected && (
                     <Box
                         sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            flexWrap: 'wrap',
-                            mb: 2
+                            position: 'fixed',
+                            bottom: 20,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            backgroundColor: 'white',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                            px: 3,
+                            py: 1.5,
+                            zIndex: 1000,
+                            minWidth: '420px',
+                            border: '1px solid #e0e0e0',
                         }}
                     >
-                        {isAnyRowSelected && (
-                            <>
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                            <IconButton
+                                size="small"
+                                onClick={() => setSelectedRowIds(new Set())}
+                                sx={{ color: '#666', '&:hover': { bgcolor: 'grey.100' } }}
+                            >
+                                <IconX size={16} />
+                            </IconButton>
+
+                            <Typography variant="body2" fontWeight={600} color="text.primary">
+                                {selectedRowIds.size} Selected
+                            </Typography>
+
+                            <Box sx={{ flexGrow: 1 }} />
+
+                            <Stack direction="row" spacing={1.5}>
                                 <Button
                                     size="small"
                                     variant="outlined"
                                     color="primary"
-                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
                                     onClick={handleExportClick}
                                     endIcon={open ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
                                 >
@@ -1761,8 +1786,8 @@ const TimeClock = ({ queryParams }: Props) => {
                                     anchorEl={anchorEl}
                                     open={open}
                                     onClose={() => handleExportClose('')}
-                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                                    transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                                 >
                                     <MenuItem onClick={() => handleExportClose('summary')}>Export Summary (Excel)</MenuItem>
                                     <MenuItem onClick={() => handleExportClose('details')}>Export Timeclock Details (Excel)</MenuItem>
@@ -1777,7 +1802,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                     color="success"
                                     size="small"
                                     onClick={handleLock}
-                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
                                 >
                                     Lock
                                 </Button>
@@ -1788,7 +1813,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                     color="error"
                                     size="small"
                                     onClick={handleUnlock}
-                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
                                 >
                                     Unlock
                                 </Button>
@@ -1798,16 +1823,14 @@ const TimeClock = ({ queryParams }: Props) => {
                                     color="primary"
                                     size="small"
                                     onClick={handleMarkAsPaid}
-                                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                    sx={{ px: 2.5, textTransform: 'none', fontWeight: 600, borderRadius: '8px', boxShadow: 'none', '&:hover': { boxShadow: 'none' } }}
                                 >
                                     Paid
                                 </Button>
-                            </>
-                        )}
+                            </Stack>
+                        </Stack>
                     </Box>
-                </Box>
-
-                <BookkeeperHistory open={openDrawer} onClose={() => setOpenDrawer(false)} />
+                )}
 
                 <Popover
                     open={Boolean(anchorEl2)}
