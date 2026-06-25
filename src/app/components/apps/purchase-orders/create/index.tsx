@@ -118,37 +118,40 @@ const PurchaseOrder: React.FC<Props> = ({
       supplier_id: uniqueSupplierIds,
     }));
 
-    const mappedProducts: ProductRow[] = source
-      .map((selected: any) => {
-        const product = allProducts.find((p) => p.id === selected.id);
+    if (mode === "create") {
+      const mappedProducts: ProductRow[] = source
+        .map((selected: any) => {
+          const product = allProducts.find((p) => p.id === selected.id);
 
-        const items = allProducts.filter((product) =>
-          source.some((x: any) => x.id === product.id),
-        );
+          const items = allProducts.filter((product) =>
+            source.some((x: any) => x.id === product.id),
+          );
 
-        setSelectedProducts(items);
+          setSelectedProducts(items);
 
-        if (!product) return null;
+          if (!product) return null;
 
-        setCurrency(product.currency);
+          setCurrency(product.currency);
 
-        return {
-          id: product.id,
-          short_name: product.short_name,
-          price: product.price ?? "",
-          qty: selected.qty,
-          line_total: (Number(product.price) || 0) * selected.qty,
-          checked: true,
-          image_url: product.image_url,
-          uuid: product.uuid,
-          supplier_name: product.supplier_name,
-          supplier_code: product.supplier_code,
-        };
-      })
-      .filter(Boolean) as ProductRow[];
+          return {
+            id: product.id,
+            short_name: product.short_name,
+            price: product.price ?? "",
+            qty: selected.qty,
+            line_total: (Number(product.price) || 0) * selected.qty,
+            checked: true,
+            image_url: product.image_url,
+            uuid: product.uuid,
+            supplier_name: product.supplier_name,
+            supplier_code: product.supplier_code,
+          };
+        })
+        .filter(Boolean) as ProductRow[];
 
-    setProducts(mappedProducts);
-  }, [ids, editData, allProducts]);
+      setProducts(mappedProducts);
+    }
+  }, [ids, allProducts, mode !== "edit"]);
+
   const parseDateForInput = (dateStr: string) => {
     if (!dateStr) return "";
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
@@ -165,73 +168,84 @@ const PurchaseOrder: React.FC<Props> = ({
     if (mode === "edit" && editData) {
       fetchResources(true);
 
-      setCurrency(editData.currency);
+      const fetchOrderDetails = async () => {
+        try {
+          const res = await api.get(
+            `purchase-orders/detail?company_id=${companyId}&id=${editData.id}&is_web=true`,
+          );
+          const data = res.data.info;
 
-      const supplierIdsFromPO = [
-        ...new Set(editData.purchase_orders.map((po: any) => po.supplier_id)),
-      ];
-      setIsDisable(
-        editData?.status == 5 || editData?.status == 4 ? true : false,
-      );
-      setFormData((prev: any) => ({
-        id: editData.id,
-        company_id: editData.company_id,
-        order_id: editData.order_id,
-        supplier_id:
-          supplierIdsFromPO.length > 0
-            ? supplierIdsFromPO
-            : Array.isArray(editData.supplier_id)
-              ? editData.supplier_id
-              : [editData.supplier_id || 0],
-        store_id: editData.store_id,
-        received_by: editData.received_by,
-        note: editData.note,
-        ref: editData.ref,
-        date: editData.date,
-        expected_delivery_date: parseDateForInput(
-          editData.expected_delivery_date,
-        ),
-        total_amount: editData.total_amount,
-        tax: editData.tax,
-        status: editData.status,
-      }));
+          setCurrency(data.currency || editData.currency);
 
-      const mappedProducts: ProductRow[] = editData.purchase_orders
-        .filter((p: any) => Number(p.remaining_qty) > 0)
-        .map((p: any) => {
-          const qty = Number(p.remaining_qty) || 0;
-          const price = Number(p.price) || 0;
+          const supplierIdsFromPO = [
+            ...new Set(data.purchase_orders.map((po: any) => po.supplier_id)),
+          ];
+          setIsDisable(data?.status == 5 || data?.status == 4 ? true : false);
+          setFormData((prev: any) => ({
+            id: data.id,
+            company_id: data.company_id,
+            order_id: data.order_id,
+            supplier_id:
+              supplierIdsFromPO.length > 0
+                ? supplierIdsFromPO
+                : Array.isArray(data.supplier_id)
+                  ? data.supplier_id
+                  : [data.supplier_id || 0],
+            store_id: data.store_id,
+            received_by: data.received_by,
+            note: data.note,
+            ref: data.ref,
+            date: data.date,
+            expected_delivery_date: parseDateForInput(
+              data.expected_delivery_date,
+            ),
+            total_amount: data.total_amount,
+            tax: data.tax,
+            status: data.status,
+          }));
 
-          return {
-            id: p.product_id,
-            short_name: p.short_name,
-            qty,
-            price,
-            line_total: qty * price,
-            checked: true,
-            image_url: p.image_url,
-            uuid: p.uuid,
-            supplier_name: p.supplier_name,
-            supplier_code: p.supplier_code,
-          };
-        });
+          const mappedProducts: ProductRow[] = data.purchase_orders.map(
+            (p: any) => {
+              const qty = Number(p.qty) || 0;
+              const price = Number(p.order_price) || 0;
 
-      setProducts(mappedProducts);
+              return {
+                id: p.product_id,
+                short_name: p.short_name,
+                qty,
+                price,
+                line_total: qty * price,
+                checked: true,
+                image_url: p.image_url,
+                uuid: p.uuid,
+                supplier_name: p.supplier_name,
+                supplier_code: p.supplier_code,
+              };
+            },
+          );
 
-      // Select products from allProducts that match purchase_orders
-      const selected = allProducts.filter((product) =>
-        editData.purchase_orders.some(
-          (po: any) => po.product_id === product.id,
-        ),
-      );
+          setProducts(mappedProducts);
 
-      setSelectedProducts(selected);
+          // Select products from allProducts that match purchase_orders
+          const selected = allProducts.filter((product) =>
+            data.purchase_orders.some(
+              (po: any) => po.product_id === product.id,
+            ),
+          );
+
+          setSelectedProducts(selected);
+        } catch (error) {
+          console.error("Failed to fetch order details", error);
+        }
+      };
+
+      fetchOrderDetails();
     } else {
       fetchResources(false);
       setProducts([]);
       setSelectedProducts([]);
     }
-  }, [open, mode, editData]);
+  }, [open, mode, editData, companyId, mode === "edit"]);
 
   const fetchResources = async (isEdit = false) => {
     const res = await api.get(

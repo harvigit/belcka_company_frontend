@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Drawer,
   Box,
@@ -25,14 +25,25 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
+  InputAdornment,
+  Grid,
+  Select,
+  MenuItem,
+  FormControl,
+  Modal,
+  CircularProgress,
+  LinearProgress,
 } from "@mui/material";
 import {
   IconX,
   IconTrash,
   IconEdit,
-  IconPlus,
   IconArrowLeft,
   IconEye,
+  IconSearch,
+  IconFileExport,
+  IconFileImport,
+  IconFilter,
 } from "@tabler/icons-react";
 import {
   useReactTable,
@@ -42,10 +53,13 @@ import {
 } from "@tanstack/react-table";
 import api from "@/utils/axios";
 import toast from "react-hot-toast";
+import { useDropzone } from "react-dropzone";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import OtherProductForm from "./form";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
+import { FileDownload } from "@mui/icons-material";
+import Link from "next/link";
 
 interface OtherProductsDrawerProps {
   open: boolean;
@@ -70,6 +84,18 @@ const OtherProductsDrawer = ({
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [tempProject, setTempProject] = useState("");
+  const [projects, setProjects] = useState<any[]>([]);
+  const [openModel, setOpenModel] = useState(false);
+  const [file, setFile] = useState<any | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isImport, setIsImport] = useState(false);
+
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl2(event.currentTarget);
   };
@@ -92,7 +118,10 @@ const OtherProductsDrawer = ({
     if (!companyId) return;
     setIsLoading(true);
     try {
-      const res = await api.get(`other-products/get?company_id=${companyId}`);
+      const url = selectedProject
+        ? `other-products/get?company_id=${companyId}&project_id=${selectedProject}`
+        : `other-products/get?company_id=${companyId}`;
+      const res = await api.get(url);
       if (res.data?.IsSuccess) {
         setData(res.data.info || []);
       }
@@ -105,10 +134,127 @@ const OtherProductsDrawer = ({
 
   useEffect(() => {
     if (open) {
+      const fetchResources = async () => {
+        try {
+          const res = await api.get("/expense/get-resources");
+          if (res.data) {
+            setProjects(res.data.projects || []);
+          }
+        } catch (err) {
+          console.error("Failed to fetch resources", err);
+        }
+      };
+      fetchResources();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      fetchData();
+    }
+  }, [open, companyId, selectedProject]);
+
+  const exportProducts = async () => {
+    try {
+      const selectedIds = Array.from(selectedRowIds);
+      const ids = selectedIds.join(",");
+      const payload = {
+        company_id: companyId,
+        ids: ids,
+      };
+      const res = await api.post(`other-products/export`, payload, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `other_products_export.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
       fetchData();
       setSelectedRowIds(new Set());
+    } catch (err) {
+      console.error("Failed to export products", err);
     }
-  }, [open, companyId]);
+  };
+
+  const handleFileChange = (acceptedFiles: File[]) => {
+    const selectedFile = acceptedFiles[0];
+    setFile(selectedFile);
+    setPreview(selectedFile.name);
+  };
+
+  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
+    useDropzone({
+      accept: {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx",
+        ],
+        "application/vnd.ms-excel": [".xls"],
+      },
+      onDrop: handleFileChange,
+    });
+
+  const importProducts = async () => {
+    if (!file) {
+      toast.error("Please select a file");
+      return;
+    }
+
+    setIsImport(true);
+    setUploadProgress(0);
+    setIsProcessing(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("company_id", String(companyId));
+
+      const res = await api.post("other-products/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
+            setUploadProgress(percent);
+            if (percent === 100) {
+              setIsProcessing(true);
+            }
+          }
+        },
+      });
+
+      if (res.data.IsSuccess) {
+        toast.success(res.data.message);
+        fetchData();
+        setTimeout(() => {
+          setOpenModel(false);
+          setUploadProgress(0);
+          setIsProcessing(false);
+          setFile(null);
+          setPreview(null);
+        }, 1000);
+      } else {
+        toast.error(res.data.message || "Import failed");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Import failed");
+    } finally {
+      setIsImport(false);
+    }
+  };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +324,23 @@ const OtherProductsDrawer = ({
       setConfirmOpen(false);
     }
   };
+
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const search = searchTerm.toLowerCase();
+
+      const matchesSearch =
+        item.product_name?.toLowerCase().includes(search) ||
+        item.cost?.toLocaleLowerCase().includes(search) ||
+        item.unit?.toLocaleLowerCase().includes(search) ||
+        item.user_name?.toLocaleLowerCase().includes(search) ||
+        item.supplier_name?.toLocaleLowerCase().includes(search) ||
+        item.supplier_code?.toLocaleLowerCase().includes(search) ||
+        item.address_name?.toLocaleLowerCase().includes(search);
+
+      return matchesSearch;
+    });
+  }, [data, searchTerm]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
@@ -325,7 +488,7 @@ const OtherProductsDrawer = ({
   ];
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
@@ -353,6 +516,43 @@ const OtherProductsDrawer = ({
                 Other Products
               </Typography>
             </Box>
+
+            <Grid display="flex" gap={1} alignItems="center">
+              <TextField
+                id="search"
+                type="text"
+                size="small"
+                variant="outlined"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconSearch size={"16"} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                sx={{ width: '100%' }}
+              />
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setTempProject(selectedProject);
+                  setFilterOpen(true);
+                }}
+                sx={{
+                  mt: { xs: 1, sm: 0 },
+                  minWidth: "40px",
+                  padding: "6px 12px",
+                }}
+              >
+                <IconFilter width={18} />
+              </Button>
+            </Grid>
+
             <Stack direction="row" spacing={2}>
               {selectedRowIds.size > 0 && (
                 <Button
@@ -364,6 +564,24 @@ const OtherProductsDrawer = ({
                   Remove
                 </Button>
               )}
+              <Button
+                variant="contained"
+                onClick={exportProducts}
+                sx={{ mt: { xs: 1, sm: 0 } }}
+              >
+                <IconFileExport width={18} /> Export
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<IconFileImport width={18} />}
+                onClick={() => {
+                  setFile(null);
+                  setPreview(null);
+                  setOpenModel(true);
+                }}
+              >
+                Import
+              </Button>
               <Button
                 variant="contained"
                 color="primary"
@@ -522,7 +740,210 @@ const OtherProductsDrawer = ({
             </TableContainer>
           </Box>
         </Box>
+
+        {/* Filter Dialog */}
+        <Dialog
+          open={filterOpen}
+          onClose={() => setFilterOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle sx={{ m: 0, position: "relative", overflow: "visible" }}>
+            Filters
+            <IconButton
+              aria-label="close"
+              onClick={() => setFilterOpen(false)}
+              size="large"
+              sx={{
+                position: "absolute",
+                right: 12,
+                top: 8,
+                color: (theme) => theme.palette.grey[900],
+                backgroundColor: "transparent",
+                zIndex: 10,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <IconX size={40} style={{ width: 40, height: 40 }} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} mt={1}>
+              <TextField
+                select
+                label="Project"
+                value={tempProject}
+                onChange={(e) => setTempProject(e.target.value)}
+                fullWidth
+              >
+                <MenuItem value="">All Projects</MenuItem>
+                {projects.map((proj) => (
+                  <MenuItem key={proj.id} value={proj.id.toString()}>
+                    {proj.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+          </DialogContent>
+
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setTempProject("");
+                setSelectedProject("");
+                setFilterOpen(false);
+              }}
+              color="inherit"
+            >
+              Clear
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={() => {
+                setSelectedProject(tempProject);
+                setFilterOpen(false);
+              }}
+            >
+              Apply
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Drawer>
+
+      <Modal
+        open={openModel}
+        onClose={() => setOpenModel(false)}
+        disableEscapeKeyDown
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            bgcolor: "background.paper",
+            p: 3,
+            borderRadius: 2,
+            boxShadow: 24,
+            width: 400,
+          }}
+        >
+          <DialogTitle sx={{ p: 0 }}>
+            <Typography color="GrayText" fontWeight={700}>
+              Upload Your File
+            </Typography>
+            <IconButton
+              onClick={() => setOpenModel(false)}
+              sx={{
+                position: "absolute",
+                right: 8,
+                top: 10,
+                backgroundColor: "transparent",
+              }}
+            >
+              <IconX size={40} />
+            </IconButton>
+          </DialogTitle>
+          <Box
+            {...getExcelRootProps()}
+            sx={{
+              width: 350,
+              height: 100,
+              mt: 2,
+              border: "2px dashed",
+              borderColor: "primary.main",
+              borderRadius: 1,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+              overflow: "hidden",
+              "&:hover": {
+                backgroundColor: "primary.light",
+              },
+            }}
+          >
+            <input {...getExcelInputProps()} accept=".xls,.xlsx" />
+            {preview ? (
+              preview
+            ) : (
+              <Typography fontSize="12px" color="primary.main">
+                Click or Drag File
+              </Typography>
+            )}
+          </Box>
+          <Stack
+            direction="row"
+            justifyContent={"space-between"}
+            alignItems="center"
+          >
+            {isImport && (
+              <Box sx={{ mt: 2 }}>
+                {!isProcessing ? (
+                  <>
+                    <Typography variant="body2" mb={1}>
+                      Uploading... {uploadProgress}%
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={uploadProgress}
+                      sx={{ height: 8, borderRadius: 5 }}
+                    />
+                  </>
+                ) : (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CircularProgress size={18} />
+                    <Typography variant="body2">Processing file...</Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+            <Box sx={{ mt: 2, display: "flex", justifyContent: "end" }}>
+              <Link
+                href="#"
+                onClick={() => {
+                  const link = document.createElement("a");
+                  link.href = "/files/other_products_export.xlsx";
+                  link.download = "sample-file.xlsx";
+                  link.click();
+                }}
+                style={{
+                  width: "100%",
+                  color: "#1e4db7",
+                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <FileDownload />
+                Download Sample File
+              </Link>
+            </Box>
+            <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+              <Button
+                variant="contained"
+                disabled={isImport}
+                onClick={(e: any) => {
+                  importProducts();
+                }}
+              >
+                Save
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setOpenModel(false)}
+                color="error"
+              >
+                Cancel
+              </Button>
+            </Box>
+          </Stack>
+        </Box>
+      </Modal>
 
       <OtherProductForm
         open={createOpen}

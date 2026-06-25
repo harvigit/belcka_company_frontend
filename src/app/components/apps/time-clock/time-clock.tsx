@@ -827,75 +827,75 @@ const TimeClock = ({ queryParams }: Props) => {
                 
                 return (
                     <Stack direction="row" alignItems="center" spacing={4}>
-                        <Link
-                            href={{
-                                pathname: `/apps/users/${row?.user_id}`,
-                                query: isReadOnlyUser
-                                    ? (isRemovedUser
-                                        ? { is_removed_user: 'true' }
-                                        : { is_archived_user: 'true' })
-                                    : {}
-                            }}
-                            passHref
-                            onClick={(e) => e.stopPropagation()}
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={4}
+                            sx={{cursor: 'pointer'}}
                         >
-                            <Stack
-                                direction="row"
-                                alignItems="center"
-                                spacing={4}
-                                sx={{cursor: 'pointer'}}
+                        <Link
+                        href={{
+                            pathname: `/apps/users/${row?.user_id}`,
+                            query: isReadOnlyUser
+                                ? (isRemovedUser
+                                    ? { is_removed_user: 'true' }
+                                    : { is_archived_user: 'true' })
+                                : {}
+                        }}
+                        passHref
+                        onClick={(e) => e.stopPropagation()}
+                        >
+                            <Badge
+                                overlap="circular"
+                                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                variant="dot"
+                                sx={{
+                                    '& .MuiBadge-badge': {
+                                        backgroundColor: row?.user_status_color,
+                                        color: row?.user_status_color,
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        boxShadow: '0 0 0 2px white',
+                                        cursor: 'pointer',
+                                    },
+                                }}
                             >
-                                <Badge
-                                    overlap="circular"
-                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                                    variant="dot"
+                                <Avatar
+                                    src={
+                                        row?.user_thumb_image
+                                            ? row.user_thumb_image
+                                            : '/images/users/user.png'
+                                    }
+                                    alt={row?.user_name}
+                                    sx={{width: 36, height: 36, cursor: 'pointer'}}
+                                />
+                            </Badge>
+                        </Link>
+                            <Box>
+                                <Typography
+                                    className="f-14"
+                                    color="textPrimary"
                                     sx={{
-                                        '& .MuiBadge-badge': {
-                                            backgroundColor: row?.user_status_color,
-                                            color: row?.user_status_color,
-                                            width: 8,
-                                            height: 8,
-                                            borderRadius: '50%',
-                                            boxShadow: '0 0 0 2px white',
-                                            cursor: 'pointer',
-                                        },
+                                        cursor: 'pointer',
+                                        '&:hover': {color: '#173f98'},
+                                        width: 150,
                                     }}
                                 >
-                                    <Avatar
-                                        src={
-                                            row?.user_thumb_image
-                                                ? row.user_thumb_image
-                                                : '/images/users/user.png'
-                                        }
-                                        alt={row?.user_name}
-                                        sx={{width: 36, height: 36, cursor: 'pointer'}}
-                                    />
-                                </Badge>
-                                <Box>
+                                    {row.user_name}
+                                </Typography>
+                                <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
                                     <Typography
-                                        className="f-14"
-                                        color="textPrimary"
-                                        sx={{
-                                            cursor: 'pointer',
-                                            '&:hover': {color: '#173f98'},
-                                            width: 150,
-                                        }}
+                                        color="textSecondary"
+                                        variant="subtitle1"
+                                        width={150}
+                                        noWrap
                                     >
-                                        {row.user_name}
+                                        {row.trade_name}
                                     </Typography>
-                                    <Tooltip title={row.trade_name ?? '-'} placement="top" arrow>
-                                        <Typography
-                                            color="textSecondary"
-                                            variant="subtitle1"
-                                            width={150}
-                                            noWrap
-                                        >
-                                            {row.trade_name}
-                                        </Typography>
-                                    </Tooltip>
-                                </Box>
-                            </Stack>
-                        </Link>
+                                </Tooltip>
+                            </Box>
+                        </Stack>
                     </Stack>
                 );
             },
