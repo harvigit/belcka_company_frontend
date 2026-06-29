@@ -133,6 +133,12 @@ export interface ProductFormData {
 
 const ProductList = () => {
   const [data, setData] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 50,
+  });
+  const [totalRows, setTotalRows] = useState(0);
+  const [pageCount, setPageCount] = useState(0);
   const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchProduct, setFetchProduct] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -469,16 +475,59 @@ const ProductList = () => {
   const fetchProducts = async (restorePage?: number) => {
     setFetchProduct(true);
     try {
-      const res = await api.get(
-        `products/get?company_id=${user.company_id}&is_products=true`,
-      );
+      let url = `products/get?company_id=${user.company_id}&is_products=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
+      if (filters.category && filters.category !== "All") {
+        const categoryId = categories.find(
+          (c) => c.name === filters.category,
+        )?.id;
+        if (categoryId) {
+          url += `&category_ids=${categoryId}`;
+        }
+      }
+      if (filters.supplier && filters.supplier !== "All") {
+        const supplierObj = suppliers.find((s) => s.name === filters.supplier);
+        if (supplierObj) {
+          url += `&supplier_id=${supplierObj.id}`;
+        } else {
+          url += `&supplier=${encodeURIComponent(filters.supplier)}`;
+        }
+      }
+
+      const res = await api.get(url);
       if (res.data) {
-        setData(res.data.info);
-        setCurrency(res.data.info[0]?.currency);
+        const responseData =
+          res.data.info || res.data.data?.data || res.data.data || [];
+        setData(responseData);
+
+        const pagMeta =
+          res.data.totalPages !== undefined || res.data.totalItems !== undefined
+            ? res.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
+
+        if (responseData.length > 0) {
+          setCurrency(responseData[0]?.currency || "");
+        }
 
         if (restorePage !== undefined) {
           setTimeout(() => {
-            table.setPageIndex(restorePage);
+            setPagination((prev) => ({ ...prev, pageIndex: restorePage }));
           }, 0);
         }
       }
@@ -490,8 +539,21 @@ const ProductList = () => {
 
   useEffect(() => {
     fetchResources();
-    fetchProducts();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    searchTerm,
+    filters,
+    user.company_id,
+    categories,
+  ]);
 
   const exportProducts = async () => {
     try {
@@ -777,7 +839,7 @@ const ProductList = () => {
               };
             }
             return p;
-          })
+          }),
         );
         setOpenCategoryModal(false);
       }
@@ -866,35 +928,8 @@ const ProductList = () => {
   };
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-      if (filters.supplier == "All") return data;
-      if (filters.category == "All") return data;
-      const matchesSupplier = filters.supplier
-        ? item.supplier_name === filters.supplier
-        : true;
-
-      const matchesCategory = filters.category
-        ? item.product_categories
-            ?.toLowerCase()
-            .split(",")
-            .map((c: any) => c.trim())
-            .includes(filters.category.toLowerCase())
-        : true;
-
-      const matchesSearch =
-        item.name?.toString().toLowerCase().includes(search) ||
-        item.short_name?.toString().toLowerCase().includes(search) ||
-        item.uuid?.toString().toLowerCase().includes(search) ||
-        item.price?.toString().toLowerCase().includes(search) ||
-        item.supplier_code?.toString().toLowerCase().includes(search) ||
-        item.product_categories?.toString().toLowerCase().includes(search) ||
-        item.barcode_text?.toString().toLowerCase().includes(search) ||
-        item.supplier_name?.toString().toLowerCase().includes(search);
-
-      return matchesSearch && matchesCategory && matchesSupplier;
-    });
-  }, [data, searchTerm, filters]);
+    return data;
+  }, [data]);
 
   const handleView = useCallback((id: number) => {
     setSelectedTaskId(id);
@@ -924,7 +959,6 @@ const ProductList = () => {
     }
   };
 
-  
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -932,18 +966,23 @@ const ProductList = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -1719,24 +1758,23 @@ const ProductList = () => {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
+    state: { columnFilters, sorting, pagination },
     autoResetPageIndex: false,
+    manualPagination: true,
+    pageCount: pageCount,
+    rowCount: totalRows,
+    onPaginationChange: setPagination,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
   });
 
   // Reset to first page when search term changes
   useEffect(() => {
-    table.setPageIndex(0);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [searchTerm]);
 
   const simpleColumns = columns.map((column) => ({
@@ -2815,14 +2853,17 @@ const ProductList = () => {
                                     : header.column.id === "select"
                                       ? 30
                                       : "auto",
-                          
+
                             ...(header.column.id === "actions" && {
                               position: "sticky",
                               right: 0,
                               backgroundColor: "background.paper",
                               zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
                         >
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
@@ -2912,18 +2953,20 @@ const ProductList = () => {
                       >
                         {row.getVisibleCells().map((cell) => {
                           return (
-                            <TableCell 
-      key={cell.id}
-      sx={{
-        ...(cell.column.id === "actions" && {
-          position: "sticky",
-          right: 0,
-          backgroundColor: "background.paper",
-          zIndex: 1,
-          boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-        }),
-      }}
-    >
+                            <TableCell
+                              key={cell.id}
+                              sx={{
+                                ...(cell.column.id === "actions" && {
+                                  position: "sticky",
+                                  right: 0,
+                                  backgroundColor: "background.paper",
+                                  zIndex: 1,
+                                  boxShadow: isScrollable
+                                    ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                    : "none",
+                                }),
+                              }}
+                            >
                               {flexRender(
                                 cell.column.columnDef.cell,
                                 cell.getContext(),
@@ -2953,7 +2996,7 @@ const ProductList = () => {
         >
           <Box display="flex" alignItems="center" gap={1}>
             <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
+              {totalRows} Rows
             </Typography>
           </Box>
           <Box
