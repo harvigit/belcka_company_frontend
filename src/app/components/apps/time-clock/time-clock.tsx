@@ -84,6 +84,15 @@ const columnHelper = createColumnHelper<TimeClock>();
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
+const TIME_CLOCK_AMOUNT_COLUMNS = [
+    'daylog_payable_amount',
+    'pricework_total_amount',
+    'cis_amount',
+    'gross_amount',
+    'net_payable_amount',
+    'total_adjustment_amount',
+    'total_payable_amount',
+] as const;
 
 interface ExportResponse {
     IsSuccess: boolean;
@@ -95,17 +104,33 @@ interface ExportResponse {
     };
 }
 
+interface StoredTimeClockState {
+    startDate: string | null;
+    endDate: string | null;
+    columnVisibility?: VisibilityState;
+}
+
 const saveDateRangeToStorage = (
     startDate: Date | null,
-    endDate: Date | null
+    endDate: Date | null,
+    columnVisibility?: VisibilityState
 ) => {
     try {
-        const dateRange = {
+        const existingPageState = loadDateRangeFromStorage();
+        const existingDetailsState = loadDetailsStateFromStorage();
+        const dateRange: StoredTimeClockState = {
             startDate: startDate ? startDate.toISOString() : null,
             endDate: endDate ? endDate.toISOString() : null,
+            columnVisibility: columnVisibility ?? existingPageState?.columnVisibility ?? {},
         };
+        const detailsRange: StoredTimeClockState = {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+            columnVisibility: existingDetailsState?.columnVisibility ?? {},
+        };
+
         localStorage.setItem(TIME_CLOCK_PAGE, JSON.stringify(dateRange));
-        localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
+        localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(detailsRange));
     } catch (error) {
         console.error('Error saving date range to localStorage:', error);
     }
@@ -119,10 +144,28 @@ const loadDateRangeFromStorage = () => {
             return {
                 startDate: parsed.startDate ? new Date(parsed.startDate) : null,
                 endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+                columnVisibility: parsed.columnVisibility || {},
             };
         }
     } catch (error) {
         console.error('Error loading date range from localStorage:', error);
+    }
+    return null;
+};
+
+const loadDetailsStateFromStorage = () => {
+    try {
+        const stored = localStorage.getItem(TIME_CLOCK_DETAILS_PAGE);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+                endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+                columnVisibility: parsed.columnVisibility || {},
+            };
+        }
+    } catch (error) {
+        console.error('Error loading details state from localStorage:', error);
     }
     return null;
 };
@@ -226,10 +269,11 @@ interface Props {
 
 const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
     try {
-        const dateRange = {
-            startDate: startDate ? startDate.toDateString() : null,
-            endDate: endDate ? endDate.toDateString() : null,
-            columnVisibility: {},
+        const existingDetailsState = loadDetailsStateFromStorage();
+        const dateRange: StoredTimeClockState = {
+            startDate: startDate ? startDate.toISOString() : null,
+            endDate: endDate ? endDate.toISOString() : null,
+            columnVisibility: existingDetailsState?.columnVisibility ?? {},
         };
         localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));
     } catch (error) {
@@ -244,6 +288,7 @@ const TimeClock = ({ queryParams }: Props) => {
     defaultStart.setDate(today.getDate() - today.getDay() + 1);
     const defaultEnd = new Date(today);
     defaultEnd.setDate(today.getDate() - today.getDay() + 7);
+    const initialStoredState = useMemo(() => loadDateRangeFromStorage(), []);
 
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
@@ -289,17 +334,9 @@ const TimeClock = ({ queryParams }: Props) => {
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
 
-    const amountColumns = [
-        'daylog_payable_amount',
-        'pricework_total_amount',
-        'cis_amount',
-        'gross_amount',
-        'net_payable_amount',
-        'total_adjustment_amount',
-        'total_payable_amount',
-    ];
-
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+        initialStoredState?.columnVisibility || {}
+    );
 
     const queryParamsRef = useRef(queryParams);
     useEffect(() => {
@@ -315,9 +352,19 @@ const TimeClock = ({ queryParams }: Props) => {
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
-            ...Object.fromEntries(amountColumns.map((col) => [col, userHasRatePermission])),
+            ...Object.fromEntries(
+                TIME_CLOCK_AMOUNT_COLUMNS.map((col) => [
+                    col,
+                    userHasRatePermission ? (prev[col] ?? true) : false,
+                ])
+            ),
         }));
     }, [userHasRatePermission]);
+
+    useEffect(() => {
+        if (!startDate || !endDate) return;
+        saveDateRangeToStorage(startDate, endDate, columnVisibility);
+    }, [startDate, endDate, columnVisibility]);
 
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
@@ -455,25 +502,23 @@ const TimeClock = ({ queryParams }: Props) => {
 
                 let from: Date;
                 let to: Date;
+                const stored = loadDateRangeFromStorage();
 
-                if (cycle) {
+                if (stored?.startDate && stored?.endDate) {
+                    from = stored.startDate;
+                    to = stored.endDate;
+                } else if (cycle) {
                     const range = getRangeForCycle(cycle);
                     from = range.from;
                     to   = range.to;
                 } else {
-                    const stored = loadDateRangeFromStorage();
-                    if (stored && stored.startDate && stored.endDate) {
-                        from = stored.startDate;
-                        to   = stored.endDate;
-                    } else {
-                        from = defaultStart;
-                        to   = defaultEnd;
-                    }
+                    from = defaultStart;
+                    to   = defaultEnd;
                 }
 
                 setStartDate(from);
                 setEndDate(to);
-                saveDateRangeToStorage(from, to);
+                saveDateRangeToStorage(from, to, stored?.columnVisibility ?? columnVisibility);
             } catch (error) {
                 console.error('Error fetching payroll cycle:', error);
                 setStartDate(defaultStart);
@@ -584,7 +629,7 @@ const TimeClock = ({ queryParams }: Props) => {
 
             setStartDate(from);
             setEndDate(to);
-            saveDateRangeToStorage(from, to);
+            saveDateRangeToStorage(from, to, columnVisibility);
 
             await fetchData(from, to);
             await fetchConflictsData(from, to);
@@ -645,7 +690,7 @@ const TimeClock = ({ queryParams }: Props) => {
         if (range.from && range.to) {
             setStartDate(range.from);
             setEndDate(range.to);
-            saveDateRangeToStorage(range.from, range.to);
+            saveDateRangeToStorage(range.from, range.to, columnVisibility);
         }
     };
 
@@ -1855,7 +1900,7 @@ const TimeClock = ({ queryParams }: Props) => {
                                 const excludedColumns = ['select'];
                                 if (excludedColumns.includes(col.id)) return false;
 
-                                if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
+                                if (!userHasRatePermission && TIME_CLOCK_AMOUNT_COLUMNS.includes(col.id as typeof TIME_CLOCK_AMOUNT_COLUMNS[number])) return false;
 
                                 return col.id.toLowerCase().includes(search.toLowerCase());
                             })

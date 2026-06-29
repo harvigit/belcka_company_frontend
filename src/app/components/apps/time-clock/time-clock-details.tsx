@@ -39,6 +39,33 @@ import {useRouter} from 'next/navigation';
 
 const TIME_CLOCK_PAGE = 'time-clock-page';
 const TIME_CLOCK_DETAILS_PAGE = 'time-clock-details-page';
+const TIME_CLOCK_DETAILS_AMOUNT_COLUMNS = [
+    'priceWork',
+    'cis_amount',
+    'gross_amount',
+    'netPayableAmount',
+    'adjustment',
+    'payableAmount',
+    'dailyTotal',
+] as const;
+
+const loadStorageState = (storageKey: string) => {
+    try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+                endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+                columnVisibility: parsed.columnVisibility || {},
+            };
+        }
+    } catch (error) {
+        console.error(`Error loading data from localStorage for ${storageKey}:`, error);
+    }
+
+    return null;
+};
 
 interface RowData {
     rowType: string;
@@ -64,12 +91,19 @@ const DELETE_ENDPOINTS: Record<RecordType, string> = {
 
 const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, columnVisibility: VisibilityState) => {
     try {
+        const pageState = loadStorageState(TIME_CLOCK_PAGE);
         const data = {
-            startDate: startDate ? startDate.toDateString() : null,
-            endDate: endDate ? endDate.toDateString() : null,
+            startDate: startDate ? startDate.toISOString() : null,
+            endDate: endDate ? endDate.toISOString() : null,
             columnVisibility,
         };
-        localStorage.setItem(TIME_CLOCK_PAGE, JSON.stringify(data));
+        
+        localStorage.setItem(TIME_CLOCK_PAGE, JSON.stringify({
+            startDate: data.startDate,
+            endDate: data.endDate,
+            columnVisibility: pageState?.columnVisibility || {},
+        }));
+        
         localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(data));
     } catch (error) {
         console.error('Error saving data to localStorage:', error);
@@ -77,20 +111,7 @@ const saveDateRangeToStorage = (startDate: Date | null, endDate: Date | null, co
 };
 
 const loadDateRangeFromStorage = () => {
-    try {
-        const stored = localStorage.getItem(TIME_CLOCK_DETAILS_PAGE);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            return {
-                startDate: parsed.startDate ? new Date(parsed.startDate) : null,
-                endDate: parsed.endDate ? new Date(parsed.endDate) : null,
-                columnVisibility: parsed.columnVisibility || {},
-            };
-        }
-    } catch (error) {
-        console.error('Error loading data from localStorage:', error);
-    }
-    return null;
+    return loadStorageState(TIME_CLOCK_DETAILS_PAGE);
 };
 
 interface ExtendedTimeClockDetailsProps extends TimeClockDetailsProps {
@@ -205,16 +226,6 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         fetchPayrollCycle,
     } = useTimeClockData(user_id, currency, isRemovedUser, isArchivedUser);
 
-    const amountColumns = [
-        'priceWork',
-        'cis_amount',
-        'gross_amount',
-        'netPayableAmount',
-        'adjustment',
-        'payableAmount',
-        'dailyTotal',
-    ];
-
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
         ...initialData.columnVisibility,
         priceWork: false,
@@ -231,7 +242,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     useEffect(() => {
         setColumnVisibility((prev) => ({
             ...prev,
-            ...Object.fromEntries(amountColumns.map((col) => [col, userHasRatePermission])),
+            ...Object.fromEntries(
+                TIME_CLOCK_DETAILS_AMOUNT_COLUMNS.map((col) => [
+                    col,
+                    userHasRatePermission ? (prev[col] ?? true) : false,
+                ])
+            ),
         }));
     }, [userHasRatePermission]);
 
@@ -864,15 +880,22 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             const response = await api.post('/time-clock/add-worklog', params);
 
             if (response.data.IsSuccess) {
-                toast.success(response.data.message)
+                toast.success(response.data.message);
+
                 cancelNewRecord(recordKey);
+
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
                 await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                
                 onDataChange?.();
+            } else {
+                toast.error(response.data.message || 'Failed to save worklog');
+                cancelNewRecord(recordKey);
             }
-        } catch (error) {
-            console.error('Error saving new record:', error);
+        } catch (error: any) {
+            console.error('Error saving new worklog:', error);
+            cancelNewRecord(recordKey);
         } finally {
             setSavingNewRecords((prev) => {
                 const newSet = new Set(prev);
@@ -1816,7 +1839,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 handlePopoverOpen={handlePopoverOpen}
                 handlePopoverClose={handlePopoverClose}
                 userHasRatePermission={userHasRatePermission}
-                amountColumns={amountColumns}
+                amountColumns={Array.from(TIME_CLOCK_DETAILS_AMOUNT_COLUMNS)}
             />
 
             <TimeClockTable
