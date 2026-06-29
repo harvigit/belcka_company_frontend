@@ -190,13 +190,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             </Box>
         );
     };
-
+    
     const renderLocationPin = (log: any, isStartTime: boolean) => {
         const hasLocation = isStartTime
             ? (log.start_latitude || log.start_longitude)
             : (log.end_latitude || log.end_longitude);
 
         const deviceType = isStartTime ? log.start_device_type : log.end_device_type;
+        const deviceInfo = getDeviceInfo(deviceType);
 
         if (!hasLocation) return null;
 
@@ -218,7 +219,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                         }}
                         onClick={() => handleLocationPinClick(Number(log.worklog_id))}
                     >
-                        <IconMapPin size={14} style={{ color: '#1976d2' }} />
+                        {deviceInfo.icon}
                     </Box>
                 </Tooltip>
             );
@@ -263,12 +264,12 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                     }}
                     onClick={() => handleLocationPinClick(Number(log.worklog_id))}
                 >
-                    <IconMapPin size={14} style={{ color: '#1976d2' }}/>
+                    {deviceInfo.icon}
                 </Box>
             </Tooltip>
         );
     };
-
+    
     return (
         <Box sx={{
             flex: 1,
