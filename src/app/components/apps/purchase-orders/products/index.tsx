@@ -119,6 +119,9 @@ const PurchaseProductList: React.FC<Props> = ({
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
+  const [stores, setStores] = useState<any[]>([]);
+  const [storeSelectionOpen, setStoreSelectionOpen] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState("");
   const [tempFilters, setTempFilters] = useState(filters);
   const [allProductsChecked, setAllProductsChecked] = useState(false);
   const [openModel, setOpenModel] = useState(false);
@@ -225,6 +228,18 @@ const PurchaseProductList: React.FC<Props> = ({
         setSuppliers(res.data.suppliers);
         setProjects(res.data.projects);
         setAddresses(res.data.addresses);
+        if (res.data.stores) {
+          setStores(res.data.stores);
+        } else {
+          const storesRes = await api.get(
+            `stores/get?company_id=${user.company_id}`,
+          );
+          if (storesRes.data && storesRes.data.info) {
+            setStores(storesRes.data.info);
+          } else if (storesRes.data && Array.isArray(storesRes.data)) {
+            setStores(storesRes.data);
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to fetch inventory resource", err);
@@ -420,32 +435,7 @@ const PurchaseProductList: React.FC<Props> = ({
     return result;
   };
 
-  const handleDirectSaveAsDraft = async () => {
-    if (hasMultipleSuppliers) {
-      toast.error("All selected products must belong to the same supplier!");
-      return;
-    }
-
-    if (selectedProductsWithQty.length === 0) {
-      toast.error("Please select at least one product with quantity.");
-      return;
-    }
-
-    let store_id = null;
-    if (user?.id && user?.company_id) {
-      const storedStoreStr = Cookies.get(
-        `user_store_${user.id}_${user.company_id}`,
-      );
-      if (storedStoreStr) {
-        try {
-          const parsed = JSON.parse(storedStoreStr);
-          store_id = parsed.id;
-        } catch (err) {
-          console.error("Failed to parse store cookie:", err);
-        }
-      }
-    }
-
+  const submitDraft = async (store_id: any) => {
     const supplier_id = selectedProductsWithQty[0]?.supplier_id || null;
 
     const product_data = selectedProductsWithQty.map((sp) => {
@@ -477,11 +467,42 @@ const PurchaseProductList: React.FC<Props> = ({
           onDraftSaved();
         }
       } else {
-        toast.error(result.data.message || "Failed to save draft");
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to save draft");
+    } catch (err: any) {}
+  };
+
+  const handleDirectSaveAsDraft = async () => {
+    if (hasMultipleSuppliers) {
+      toast.error("All selected products must belong to the same supplier!");
+      return;
     }
+
+    if (selectedProductsWithQty.length === 0) {
+      toast.error("Please select at least one product with quantity.");
+      return;
+    }
+
+    let store_id = null;
+    if (user?.id && user?.company_id) {
+      const storedStoreStr = Cookies.get(
+        `user_store_${user.id}_${user.company_id}`,
+      );
+      if (storedStoreStr) {
+        try {
+          const parsed = JSON.parse(storedStoreStr);
+          store_id = parsed.id;
+        } catch (err) {
+          console.error("Failed to parse store cookie:", err);
+        }
+      }
+    }
+
+    if (!store_id) {
+      setStoreSelectionOpen(true);
+      return;
+    }
+
+    submitDraft(store_id);
   };
 
   const columnHelper = createColumnHelper<any>();
@@ -1695,6 +1716,57 @@ const PurchaseProductList: React.FC<Props> = ({
           </Box>
         </Stack>
       </Box>
+      <Dialog
+        open={storeSelectionOpen}
+        onClose={() => setStoreSelectionOpen(false)}
+      >
+        <DialogTitle>Select Store</DialogTitle>
+        <DialogContent sx={{ minWidth: 300, mt: 1 }}>
+          <Typography variant="body2" mb={2}>
+            Please select a store before saving as draft.
+          </Typography>
+          <CustomSelect
+            fullWidth
+            size="small"
+            value={selectedStoreId}
+            onChange={(e: any) => setSelectedStoreId(e.target.value)}
+            displayEmpty
+          >
+            <MenuItem value="" disabled>
+              Select Store
+            </MenuItem>
+            {stores.map((s) => (
+              <MenuItem key={s.id} value={s.id}>
+                {s.name}
+              </MenuItem>
+            ))}
+          </CustomSelect>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStoreSelectionOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (!selectedStoreId) {
+                toast.error("Please select a store");
+                return;
+              }
+              const sStore = stores.find((s) => s.id === selectedStoreId);
+              if (sStore) {
+                Cookies.set(
+                  `user_store_${user.id}_${user.company_id}`,
+                  JSON.stringify({ id: sStore.id, name: sStore.name }),
+                  { expires: 365 },
+                );
+              }
+              setStoreSelectionOpen(false);
+              submitDraft(selectedStoreId);
+            }}
+          >
+            Save Draft
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Drawer>
   );
 };
