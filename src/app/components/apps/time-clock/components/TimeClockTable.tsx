@@ -149,9 +149,74 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            openExpensesSidebar,
                                                            openPenaltiesSidebar,
                                                            leaveRequestCount,
-                                                           openLeaveRequestsSideBar,
-                                                           onAdjustmentSave
-                                                       }) => {
+                                                       openLeaveRequestsSideBar,
+                                                       onAdjustmentSave
+                                                   }) => {
+    const resolveAnchorDate = (rowData: DailyBreakdown): string => {
+        const firstRowDate = rowData.rowsData?.find((log: any) => log?.date_added)?.date_added;
+        if (firstRowDate) {
+            return firstRowDate;
+        }
+
+        if (rowData.parsedDate instanceof Date && !Number.isNaN(rowData.parsedDate.getTime())) {
+            const day = String(rowData.parsedDate.getDate()).padStart(2, '0');
+            const month = String(rowData.parsedDate.getMonth() + 1).padStart(2, '0');
+            const year = rowData.parsedDate.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        return '';
+    };
+
+    const weekAdjustmentMeta = useMemo(() => {
+        const meta: Record<string, {
+            firstDayRowIndex: number;
+            totalPhysicalRows: number;
+            weeklyAdjustmentAmount: number;
+            addedBy: string;
+            anchorDate: string;
+        }> = {};
+
+        dailyData.forEach((rowData, index) => {
+            if (rowData.rowType !== 'day' || !rowData.weekLabel || rowData.weekLabel === '--') {
+                return;
+            }
+
+            const newRowsCount = Object.entries(newRecords).filter(
+                ([, rec]) => rec.date === rowData.date
+            ).length;
+
+            let physicalRows = 1 + newRowsCount;
+            if (rowData.rowsData?.length) {
+                const worklogIds = rowData.rowsData.map((log: any) => log.worklog_id);
+                const expandedCount = expandedWorklogsIds.filter((id) => worklogIds.includes(id)).length;
+                physicalRows = rowData.rowsData.length + expandedCount + newRowsCount;
+            }
+
+            if (!meta[rowData.weekLabel]) {
+                meta[rowData.weekLabel] = {
+                    firstDayRowIndex: index,
+                    totalPhysicalRows: 0,
+                    weeklyAdjustmentAmount: Number(rowData.weekly_adjustment_amount || 0),
+                    addedBy: '',
+                    anchorDate: resolveAnchorDate(rowData),
+                };
+            }
+
+            meta[rowData.weekLabel].totalPhysicalRows += physicalRows;
+
+            if (!meta[rowData.weekLabel].addedBy && rowData.adjustment_added_by_name && rowData.adjustment_added_by_name !== '--') {
+                meta[rowData.weekLabel].addedBy = rowData.adjustment_added_by_name;
+            }
+
+            if (!meta[rowData.weekLabel].anchorDate) {
+                meta[rowData.weekLabel].anchorDate = resolveAnchorDate(rowData);
+            }
+        });
+
+        return meta;
+    }, [dailyData, newRecords, expandedWorklogsIds]);
+
     const [conflictAnchorEl, setConflictAnchorEl] = useState<HTMLElement | null>(null);
     const [exclamationAnchorEl, setExclamationAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedWorklog, setSelectedWorklog] = useState<any>(null);
@@ -530,6 +595,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                             const hasConflicts = conflictsByDate && conflictsByDate[rowData.date] > 0;
                             const hasLeaveRequests = rowData.has_pending_leave_request === true;
+                            const currentWeekAdjustmentMeta = rowData.weekLabel ? weekAdjustmentMeta[rowData.weekLabel] : null;
+                            const shouldRenderWeekAdjustmentCell = Boolean(
+                                currentWeekAdjustmentMeta &&
+                                currentWeekAdjustmentMeta.firstDayRowIndex === row.index
+                            );
 
                             // Day rows with multiple worklogs
                             if (row.original.rowsData) {
@@ -1249,22 +1319,25 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
 
                                                 {/* Adjustment Amount Column */}
                                                 {isFirstRow && visibleColumnConfigs.adjustment?.visible && (
-                                                    <TableCell
-                                                        rowSpan={rowSpan}
-                                                        align="center"
-                                                        className="rowspan-cell"
-                                                        sx={{ py: 0.5, fontSize: '0.875rem', height: '45px', verticalAlign: 'middle' }}
-                                                    >
-                                                        <EditableAdjustmentCell
-                                                            date={row.original.rowsData.find((l: any) => l.type === 'worklog')?.date_added
-                                                                ?? row.original.rowsData[0].date_added}
-                                                            currentAmount={rowData.daily_adjustment_amount}
-                                                            addedBy={rowData.adjustment_added_by_name}
-                                                            currency={currency}
-                                                            isLocked={rowData.is_timesheet_paid === true}
-                                                            onSave={onAdjustmentSave!}
-                                                        />
-                                                    </TableCell>
+                                                    shouldRenderWeekAdjustmentCell ? (
+                                                        <TableCell
+                                                            rowSpan={currentWeekAdjustmentMeta?.totalPhysicalRows || rowSpan}
+                                                            align="center"
+                                                            className="rowspan-cell"
+                                                            sx={{ py: 0.5, fontSize: '0.875rem', height: '45px', verticalAlign: 'middle' }}
+                                                        >
+                                                            <EditableAdjustmentCell
+                                                                date={currentWeekAdjustmentMeta?.anchorDate
+                                                                    || row.original.rowsData.find((l: any) => l.type === 'worklog')?.date_added
+                                                                    || row.original.rowsData[0].date_added}
+                                                                currentAmount={currentWeekAdjustmentMeta?.weeklyAdjustmentAmount ?? 0}
+                                                                addedBy={currentWeekAdjustmentMeta?.addedBy || rowData.adjustment_added_by_name}
+                                                                currency={currency}
+                                                                isLocked={rowData.is_timesheet_paid === true}
+                                                                onSave={onAdjustmentSave!}
+                                                            />
+                                                        </TableCell>
+                                                    ) : null
                                                 )}
 
                                                 {/* Payable Amount Column */}
@@ -1525,6 +1598,40 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                                 </IconButton>
                                                             </Tooltip>
                                                         )}
+                                                    </TableCell>
+                                                );
+                                            }
+
+                                            if (column.id === 'adjustment' && row.original.rowType === 'day') {
+                                                if (!visibleColumnConfigs.adjustment?.visible) {
+                                                    return null;
+                                                }
+
+                                                if (!shouldRenderWeekAdjustmentCell) {
+                                                    return null;
+                                                }
+
+                                                return (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        rowSpan={currentWeekAdjustmentMeta?.totalPhysicalRows || 1}
+                                                        align="center"
+                                                        className="rowspan-cell"
+                                                        sx={{
+                                                            py: 0.5,
+                                                            fontSize: '0.875rem',
+                                                            height: '45px',
+                                                            verticalAlign: 'middle',
+                                                        }}
+                                                    >
+                                                        <EditableAdjustmentCell
+                                                            date={currentWeekAdjustmentMeta?.anchorDate || row.original.date || ''}
+                                                            currentAmount={currentWeekAdjustmentMeta?.weeklyAdjustmentAmount ?? 0}
+                                                            addedBy={currentWeekAdjustmentMeta?.addedBy || rowData.adjustment_added_by_name}
+                                                            currency={currency}
+                                                            isLocked={rowData.is_timesheet_paid === true}
+                                                            onSave={onAdjustmentSave!}
+                                                        />
                                                     </TableCell>
                                                 );
                                             }

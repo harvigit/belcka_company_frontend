@@ -3,6 +3,8 @@ import {TimeClock} from '../time-clock';
 export type DailyBreakdown = {
     total_break_hours?: null | string;
     adjustment_id?: number;
+    adjustment_added_by_name?: string;
+    daily_adjustment_amount?: number | string;
     adjustment: string;
     cis_amount: number;
     gross_amount: number;
@@ -20,6 +22,7 @@ export type DailyBreakdown = {
     rowType: 'week' | 'day';
     weeklyTotalHours?: string;
     weeklyPayableAmount?: string;
+    weekly_adjustment_amount?: number;
     weekLabel?: string;
     date?: string;
     shift?: string;
@@ -177,4 +180,3 @@ export type NewRecord = {
 };
 
 export type RecordType = 'worklog' | 'expense' | 'leave' | 'adjustment';
-

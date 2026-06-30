@@ -8,7 +8,7 @@ import {
     VisibilityState,
     ExpandedState
 } from '@tanstack/react-table';
-import {format, parse} from 'date-fns';
+import {endOfWeek, format, parse, startOfWeek} from 'date-fns';
 import {DateTime} from 'luxon';
 import {AxiosResponse} from 'axios';
 import api from '@/utils/axios';
@@ -30,6 +30,7 @@ import Penalties from './time-clock-details/penalties/index';
 import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
+import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import {Stack} from '@mui/system';
 
@@ -187,6 +188,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     const [leaveRequestSidebar, setLeaveRequestSidebar] = useState<boolean>(false);
 
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
+    const [addAdjustmentSidebar, setAddAdjustmentSidebar] = useState<boolean>(false);
     const [expensesSidebar, setExpensesSidebar] = useState<boolean>(false);
     const [selectedExpenseId, setSelectedExpenseId] = useState<number>(0);
     const router = useRouter();
@@ -646,6 +648,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setAddExpenseSidebar(true);
     };
 
+    const handleAddAdjustment = async () => {
+        setAddAdjustmentSidebar(true);
+    };
+
     const closeAddLeaveSidebar = async () => {
         setAddLeaveSidebar(false);
         try {
@@ -670,6 +676,18 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         }
     };
 
+    const closeAddAdjustmentSidebar = async () => {
+        setAddAdjustmentSidebar(false);
+        try {
+            const defaultStartDate = startDate || defaultStart;
+            const defaultEndDate = endDate || defaultEnd;
+            await fetchTimeClockData(defaultStartDate, defaultEndDate);
+            onDataChange?.();
+        } catch (error) {
+            console.error('Error fetching time clock data after closing add adjustment sidebar:', error);
+        }
+    };
+
     const handlePendingRequest = async () => {
         setRequestListOpen(true);
     };
@@ -690,7 +708,16 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const handleAdjustmentSave = async (date: string, amount: number) => {
         try {
-            const response = await api.post('/time-clock/adjustment-amount', {user_id, date, adjustment_amount: amount});
+            const parsedDate = parse(date, 'dd/MM/yyyy', new Date());
+            const weekStart = startOfWeek(parsedDate, { weekStartsOn: 1 });
+            const weekEnd = endOfWeek(parsedDate, { weekStartsOn: 1 });
+
+            const response = await api.post('/time-clock/adjustment-amount', {
+                user_id,
+                start_date: format(weekStart, 'dd/MM/yyyy'),
+                end_date: format(weekEnd, 'dd/MM/yyyy'),
+                adjustment_amount: amount,
+            });
             if (response.data.IsSuccess) {
                 const defaultStartDate = startDate || defaultStart;
                 const defaultEndDate = endDate || defaultEnd;
@@ -989,6 +1016,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         weekLabel: week.week_range,
                         weeklyTotalHours: formatHour(week.weekly_total_hours),
                         weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
+                        weekly_adjustment_amount: Number(week.weekly_adjustment_amount || 0),
                         parsedDate: parseDate(day.date),
                         address: '--',
                         check_out: '--',
@@ -1019,16 +1047,17 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     penaltyHours: '--',
                     dailyTotal: '--',
                     netPayableAmount: '--',
-                    daily_adjustment_amount: '--',
+                    daily_adjustment_amount: day.daily_adjustment_amount ?? 0,
                     payableAmount: '--',
                     adjustment_id: day.adjustment_id ?? null,
-                    adjustment_added_by_name: '--',
+                    adjustment_added_by_name: day.adjustment_added_by_name ?? '',
                     regular: '--',
                     employeeNotes: '--',
                     managerNotes: '--',
-                    weekLabel: '--',
-                    weeklyTotalHours: '--',
-                    weeklyPayableAmount: '--',
+                    weekLabel: week.week_range,
+                    weeklyTotalHours: formatHour(week.weekly_total_hours),
+                    weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
+                    weekly_adjustment_amount: Number(week.weekly_adjustment_amount || 0),
                     parsedDate: '--',
                     address: '--',
                     check_in: '--',
@@ -1824,6 +1853,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 onExportData={handleExportData}
                 onAddLeave={handleAddLeave}
                 onAddExpense={handleAddExpense}
+                onAddAdjustment={handleAddAdjustment}
                 payrollCycle={payrollCycle}
                 isRemovedUser={Boolean(isRemovedUser || isArchivedUser)}
             />
@@ -2058,6 +2088,35 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     userId={user_id}
                     selectUser={false}
                     companyId={companyId}
+                />
+            </Drawer>
+
+            <Drawer
+                anchor="right"
+                open={addAdjustmentSidebar}
+                onClose={closeAddAdjustmentSidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '504px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <AddAdjustment
+                    onClose={closeAddAdjustmentSidebar}
+                    userId={user_id}
+                    initialFrom={startDate}
+                    initialTo={endDate}
+                    onDataRefresh={async () => {
+                        const defaultStartDate = startDate || defaultStart;
+                        const defaultEndDate = endDate || defaultEnd;
+                        await fetchTimeClockData(defaultStartDate, defaultEndDate);
+                        onDataChange?.();
+                    }}
                 />
             </Drawer>
 
