@@ -67,6 +67,8 @@ import EditTask from "../edit";
 import { AxiosResponse } from "axios";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 
 dayjs.extend(customParseFormat);
 
@@ -95,11 +97,9 @@ export type UserList = {
 
 const TablePagination = () => {
   const [data, setData] = useState<TaskList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchTask, setFetchTask] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
 
   const [filters, setFilters] = useState({
     team: "",
@@ -144,24 +144,54 @@ const TablePagination = () => {
     setAnchorEl(null);
   };
 
-  // Fetch data
   const fetchTasks = async () => {
     setFetchTask(true);
     try {
-      const res = await api.get(`type-works/get?company_id=${id.company_id}`);
+      let url = `type-works/get?company_id=${id.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
+
+      if (filters.team && filters.team !== "All") {
+        const tradeId = trade.find((c) => c.name === filters.team)?.id;
+        if (tradeId) {
+          url += `&trade_ids=${tradeId}`;
+        }
+      }
+
+      const res = await api.get(url);
       if (res.data) {
-        setData(res.data.info);
+        setData(res.data.info || []);
+
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        } else {
+          setTotalRows((res.data.info || []).length);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
         setarchiveDrawerOpen(false);
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);
+    } finally {
+      setFetchTask(false);
     }
-    setFetchTask(false);
   };
-
-  useEffect(() => {
-    fetchTasks();
-  }, [api]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -216,7 +246,7 @@ const TablePagination = () => {
         });
         fetchTasks();
         setDrawerOpen(false);
-      } 
+      }
     } catch (error) {
       console.log(error, "error");
     } finally {
@@ -268,23 +298,7 @@ const TablePagination = () => {
     [trade],
   );
 
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      if (filters.team == "All") return data;
-      const matchesTeam = filters.team
-        ? item.trade_name === filters.team
-        : true;
-
-      const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.trade_name?.toLowerCase().includes(search) ||
-        item.duration?.toLowerCase().includes(search);
-
-      return matchesTeam && matchesSearch;
-    });
-  }, [data, filters, searchTerm]);
+  const filteredData = data;
 
   // UseCallback to memoize these functions
   const handleEdit = useCallback((id: number) => {
@@ -292,7 +306,6 @@ const TablePagination = () => {
     setEditDrawerOpen(true);
   }, []);
 
-  
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -300,18 +313,23 @@ const TablePagination = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -514,27 +532,24 @@ const TablePagination = () => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const table = useReactTable({
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: fetchTasks,
+    debounceDependencies: [searchTerm, filters],
   });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -724,12 +739,12 @@ const TablePagination = () => {
                     label={
                       col.columnDef.meta?.label ||
                       (typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
+                      col.columnDef.header.trim() !== ""
                         ? col.columnDef.header
                         : col.id
-                          .replace(/([A-Z])/g, " $1")
-                          .replace(/^./, (str: string) => str.toUpperCase())
-                          .trim())
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str: string) => str.toUpperCase())
+                            .trim())
                     }
                   />
                 ))}
@@ -909,14 +924,17 @@ const TablePagination = () => {
                               : header.column.id === "select"
                                 ? 30
                                 : "auto",
-                        
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
                       >
                         <Box
                           onClick={header.column.getToggleSortingHandler()}
@@ -996,14 +1014,21 @@ const TablePagination = () => {
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}>
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
@@ -1019,86 +1044,7 @@ const TablePagination = () => {
         {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        pb={2}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              className="f-14"
-              fontWeight={600}
-              ml={1}
-            >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+      <TablePaginationFooter table={table} totalRows={totalRows} />
     </Box>
   );
 };

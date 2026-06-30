@@ -42,6 +42,7 @@ import {
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
+import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconBasketCancel,
   IconChevronLeft,
@@ -83,6 +84,7 @@ import TermsAndConditions from "../terms-conditions";
 import { IconHelp } from "@tabler/icons-react";
 import CancelOrder from "../cancel-orders";
 import OtherProductsDrawer from "../other-products";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 
 dayjs.extend(customParseFormat);
 
@@ -117,11 +119,9 @@ interface TableRow {
 
 const PurchaseOrderList = () => {
   const [data, setData] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
-  const [fetchStore, setFetchStore] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fetchStore, setFetchStore] = useState<boolean>(true);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -239,12 +239,35 @@ const PurchaseOrderList = () => {
   const fetchOrders = async () => {
     setFetchStore(true);
     try {
+      const queryParams = new URLSearchParams({
+        company_id: String(user?.company_id || ""),
+        page: String(pagination.pageIndex + 1),
+        limit: String(pagination.pageSize),
+      });
+
+      if (searchTerm) {
+        queryParams.append("search", searchTerm);
+      }
+
+      if (filters.status && filters.status !== "all") {
+        queryParams.append("status", filters.status);
+      }
+
+      if (sorting.length > 0) {
+        queryParams.append("sort_by", sorting[0].id);
+        queryParams.append("sort_order", sorting[0].desc ? "desc" : "asc");
+      }
+
       const res = await api.get(
-        `purchase-orders/get?company_id=${user.company_id}`,
+        `purchase-orders/get?${queryParams.toString()}`,
       );
       if (res.data) {
         setData(res.data.info);
-        setEmail(res.data.info.supplier_email);
+        setTotalRows(res.data.totalCount || 0);
+        setPageCount(
+          Math.ceil((res.data.totalCount || 0) / pagination.pageSize),
+        );
+        setEmail(res.data.info?.[0]?.supplier_email || "");
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -252,8 +275,27 @@ const PurchaseOrderList = () => {
     setFetchStore(false);
   };
 
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
+    data,
+    columns: [], // We will set columns below using table.setOptions if needed, but we must define columns before or pass it here. Actually, we can define columns before useServerTable, but wait, useServerTable is called here.
+    fetchData: fetchOrders,
+    debounceDependencies: [searchTerm, filters],
+  });
+
   useEffect(() => {
-    fetchOrders();
+    // Initial fetch is handled by useServerTable
   }, [api]);
 
   const handleCancelOrder = useCallback((id: number) => {
@@ -656,57 +698,6 @@ const PurchaseOrderList = () => {
     setEditDrawerOpen(true);
   }, []);
 
-  const filteredData = useMemo(() => {
-    const search = searchTerm.toLowerCase();
-
-    return data.filter((item) => {
-      const matchStatus =
-        filters.status && filters.status !== "all"
-          ? item.status === Number(filters.status)
-          : true;
-
-      const matchesSearch =
-        String(item.created_date ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.order_id ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.user_name ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.order_qty ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.receive_qty ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.store_name ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.expected_delivery_date ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.status_text ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.supplier_name ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        String(item.ref ?? "")
-          .toLowerCase()
-          .includes(search) ||
-        (item.purchase_orders?.some((po: any) =>
-          [po.supplier_code]
-            .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(search)),
-        ) ??
-          false);
-
-      return matchesSearch && matchStatus;
-    });
-  }, [data, searchTerm, filters]);
-
   const selectedProductsWithQty = useMemo(() => {
     return data
       .filter(
@@ -734,7 +725,7 @@ const PurchaseOrderList = () => {
     checkScroll();
     window.addEventListener("resize", checkScroll);
     return () => window.removeEventListener("resize", checkScroll);
-  }, [filteredData, drawerOpen, editDrawerOpen, productDrawerOpen]);
+  }, [data, drawerOpen, editDrawerOpen, productDrawerOpen]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
@@ -744,13 +735,9 @@ const PurchaseOrderList = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
-            }
+            checked={selectedRowIds.size === data.length && data.length > 0}
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
@@ -759,7 +746,7 @@ const PurchaseOrderList = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setSelectedRowIds(new Set(data.map((row) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -1400,27 +1387,10 @@ Team Belcka
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-  const table = useReactTable({
-    data: filteredData,
+  table.setOptions((prev: any) => ({
+    ...prev,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
-  });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
+  }));
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -2386,86 +2356,7 @@ Team Belcka
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={2}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
 
         <Dialog open={modalOpen} onClose={handleCloseModal}>
           <DialogTitle>Select Delivery Date</DialogTitle>

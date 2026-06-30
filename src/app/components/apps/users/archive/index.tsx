@@ -25,13 +25,9 @@ import {
 import {
     flexRender,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    useReactTable,
     createColumnHelper,
-    SortingState,
 } from "@tanstack/react-table";
+import { useServerTable } from "@/hooks/useServerTable";
 import {
     IconChevronLeft,
     IconChevronRight,
@@ -48,6 +44,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Avatar } from "@mui/material";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { useSearchParams } from "next/navigation";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
@@ -96,13 +93,11 @@ type DialogAction = "unarchive" | "remove" | null;
 
 const ArchiveUserList = () => {
     const [data, setData] = useState<UserList[]>([]);
-    const [columnFilters, setColumnFilters] = useState<any>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
     const [filters, setFilters] = useState({ team: "", supervisor: "" });
     const [tempFilters, setTempFilters] = useState(filters);
     const [open, setOpen] = useState(false);
-    const [sorting, setSorting] = useState<SortingState>([]);
     const searchParams = useSearchParams();
     const projectId = searchParams ? searchParams.get("project_id") : "";
     const [usersToAction, setUsersToAction] = useState<number[]>([]);
@@ -133,19 +128,52 @@ const ArchiveUserList = () => {
         fetchActiveUsers();
     }, []);
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (restorePage?: number) => {
         setFetchUser(true);
         try {
-            const res = await api.get(
-                `user/archive-users-list?company_id=${user.company_id}`,
-            );
+            let url = `user/archive-users-list?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+            
+            if (searchTerm) url += `&search=${searchTerm}`;
+            if (filters.team && filters.team !== "All") url += `&team_ids=${filters.team}`;
+            if (filters.supervisor && filters.supervisor !== "All") url += `&supervisor_ids=${filters.supervisor}`;
+
+            const res = await api.get(url);
             if (res.data) {
-                setData(res.data.info);
+                const responseData = res.data.info?.data || res.data.info || res.data.data || [];
+                setData(responseData);
+
+                const pagMeta =
+                    res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
+                        ? res.data.data
+                        : res.data.info && res.data.info.totalPages !== undefined
+                        ? res.data.info
+                        : res.data.data || {};
+
+                if (pagMeta.totalItems !== undefined) {
+                    setTotalRows(pagMeta.totalItems);
+                } else if (pagMeta.total !== undefined) {
+                    setTotalRows(pagMeta.total);
+                } else {
+                    setTotalRows(responseData.length);
+                }
+
+                if (pagMeta.totalPages !== undefined) {
+                    setPageCount(pagMeta.totalPages);
+                } else if (pagMeta.last_page !== undefined) {
+                    setPageCount(pagMeta.last_page);
+                }
+
+                if (restorePage !== undefined) {
+                    setTimeout(() => {
+                        setPagination((prev) => ({ ...prev, pageIndex: restorePage }));
+                    }, 0);
+                }
             }
         } catch (err) {
             console.error("Failed to fetch archive users", err);
+        } finally {
+            setFetchUser(false);
         }
-        setFetchUser(false);
     };
 
     useEffect(() => {
@@ -201,23 +229,7 @@ const ArchiveUserList = () => {
         }
     };
 
-    const filteredData = useMemo(() => {
-        return data.filter((item) => {
-            if (filters.team == "All" || filters.supervisor == "All") return data;
-            const matchesTeam = filters.team ? item.team_name === filters.team : true;
-            const matchesSupervisor = filters.supervisor
-                ? item.supervisor_name === filters.supervisor
-                : true;
-            const search = searchTerm.toLowerCase();
-            const matchesSearch =
-                item.name?.toLowerCase().includes(search) ||
-                item.trade_name?.toLowerCase().includes(search) ||
-                item.supervisor_name?.toLowerCase().includes(search) ||
-                item.action_by?.toLowerCase().includes(search) ||
-                item.team_name?.toLowerCase().includes(search);
-            return matchesTeam && matchesSupervisor && matchesSearch;
-        });
-    }, [data, filters, searchTerm]);
+    const filteredData = data; // Filtering is now handled by the backend
 
     const handleOpenConfirm = (action: DialogAction) => {
         const selectedIds = Array.from(selectedRowIds).filter(Boolean);
@@ -407,26 +419,12 @@ const ArchiveUserList = () => {
         }),
     ];
 
-    const table = useReactTable({
+    const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount } = useServerTable({
         data: filteredData,
         columns,
-        state: { columnFilters, sorting },
-        onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: {
-            pagination: {
-                pageSize: 50,
-            },
-        },
+        fetchData: fetchUsers,
+        debounceDependencies: [searchTerm, filters],
     });
-
-    useEffect(() => {
-        table.setPageIndex(0);
-    }, [searchTerm, table]);
 
     const simpleColumns = columns.map((column) => ({
         name: column.id ?? "Unnamed Column",
@@ -853,80 +851,10 @@ const ArchiveUserList = () => {
 
                 {/* ── Pagination ── */}
                 <Divider />
-                <Stack
-                    gap={1}
-                    pr={3}
-                    pt={1}
-                    pl={3}
-                    pb={1}
-                    alignItems="center"
-                    direction={{ xs: "column", sm: "row" }}
-                    justifyContent="space-between"
-                >
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <Typography color="textSecondary" className="f-14">
-                            {table.getPrePaginationRowModel().rows.length} Rows
-                        </Typography>
-                    </Box>
-                    <Box
-                        sx={{ display: { xs: "block", sm: "flex" }, alignItems: "center" }}
-                    >
-                        <Stack direction="row" alignItems="center">
-                            <Typography color="textSecondary" className="f-14">
-                                Page
-                            </Typography>
-                            <Typography
-                                color="textSecondary"
-                                className="f-14"
-                                fontWeight={600}
-                                ml={1}
-                            >
-                                {table.getState().pagination.pageIndex + 1} of{" "}
-                                {table.getPageCount()}
-                            </Typography>
-                            <Typography color="textSecondary" ml={"3px"} className="f-14">
-                                {" "}
-                                | Entries :{" "}
-                            </Typography>
-                        </Stack>
-                        <Stack
-                            ml={"5px"}
-                            direction="row"
-                            alignItems="center"
-                            color="textSecondary"
-                        >
-                            <CustomSelect
-                                className="custom-select"
-                                value={table.getState().pagination.pageSize}
-                                onChange={(e: { target: { value: any } }) => {
-                                    table.setPageSize(Number(e.target.value));
-                                }}
-                            >
-                                {[50, 100, 250, 500].map((pageSize) => (
-                                    <MenuItem key={pageSize} value={pageSize}>
-                                        {pageSize}
-                                    </MenuItem>
-                                ))}
-                            </CustomSelect>
-                            <IconButton
-                                size="small"
-                                sx={{ width: "30px" }}
-                                onClick={() => table.previousPage()}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                <IconChevronLeft />
-                            </IconButton>
-                            <IconButton
-                                size="small"
-                                sx={{ width: "30px" }}
-                                onClick={() => table.nextPage()}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                <IconChevronRight />
-                            </IconButton>
-                        </Stack>
-                    </Box>
-                </Stack>
+                <TablePaginationFooter
+                    table={table}
+                    totalRows={table.getPrePaginationRowModel().rows.length}
+                />
             </Box>
         </PermissionGuard>
     );

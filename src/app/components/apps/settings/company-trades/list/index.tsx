@@ -75,14 +75,15 @@ export type UserList = {
   name: string;
 };
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+
 const TradeList = () => {
   const [data, setData] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchTrade, setFetchTrade] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [switchLoading, setSwitchLoading] = useState(false);
 
   const [filters, setFilters] = useState({
@@ -114,7 +115,7 @@ const TradeList = () => {
     trade_category_id: "",
     company_id: id.company_id,
     status: true,
-      max_members: null,
+    max_members: null,
   });
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -128,9 +129,20 @@ const TradeList = () => {
   const fetchTrades = async () => {
     setFetchTrade(true);
     try {
-      const res = await api.get(`trade/get-trades?company_id=${id.company_id}`);
+      let url = `trade/get-trades?company_id=${id.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+
+      if (searchTerm) {
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+      if (filters.team && filters.team !== "All") {
+        url += `&trade_ids=${filters.team}`;
+      }
+
+      const res = await api.get(url);
       if (res.data) {
         setData(res.data.info);
+        setPageCount(res.data.data?.totalPages || 0);
+        setTotalRows(res.data.data?.totalItems || 0);
         setLoading(false);
       }
     } catch (err) {
@@ -138,10 +150,6 @@ const TradeList = () => {
     }
     setFetchTrade(false);
   };
-
-  useEffect(() => {
-    fetchTrades();
-  }, [api]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -162,7 +170,7 @@ const TradeList = () => {
       name: "",
       trade_id: null,
       company_id: id.company_id,
-        max_members: null,
+      max_members: null,
     });
     setDrawerOpen(true);
   };
@@ -185,7 +193,7 @@ const TradeList = () => {
           id: 0,
           name: "",
           trade_category_id: 0,
-            max_members: null,
+          max_members: null,
         });
         fetchTrades();
         setDrawerOpen(false);
@@ -218,7 +226,7 @@ const TradeList = () => {
           name: "",
           trade_id: 0,
           trade_category_id: 0,
-            max_members: null,
+          max_members: null,
         });
         fetchTrades();
         setEditDrawerOpen(false);
@@ -231,25 +239,9 @@ const TradeList = () => {
     }
   };
 
-  const uniqueTrades = useMemo(
-    () => [...new Set(trade.map((item) => item.name).filter(Boolean))],
-    [trade],
-  );
-
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      if (filters.team == "All") return data;
-      const matchesTeam = filters.team ? item.name === filters.team : true;
-
-      const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.category_name?.toLowerCase().includes(search);
-
-      return matchesTeam && matchesSearch;
-    });
-  }, [data, filters, searchTerm]);
+    return data;
+  }, [data]);
 
   // UseCallback to memoize these functions
   const handleEdit = useCallback((id: number) => {
@@ -257,7 +249,6 @@ const TradeList = () => {
     setEditDrawerOpen(true);
   }, []);
 
-  
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -265,18 +256,23 @@ const TradeList = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -399,17 +395,17 @@ const TradeList = () => {
       },
     }),
 
-      // columnHelper.accessor((row) => row?.max_members, {
-      //     id: "maxMembers",
-      //     header: () => "Max Members",
-      //     cell: (info) => {
-      //         return (
-      //             <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
-      //                 {info.getValue() ?? "-"}
-      //             </Typography>
-      //         );
-      //     },
-      // }),
+    // columnHelper.accessor((row) => row?.max_members, {
+    //     id: "maxMembers",
+    //     header: () => "Max Members",
+    //     cell: (info) => {
+    //         return (
+    //             <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+    //                 {info.getValue() ?? "-"}
+    //             </Typography>
+    //         );
+    //     },
+    // }),
 
     columnHelper.accessor((row) => row?.status, {
       id: "status",
@@ -479,27 +475,24 @@ const TradeList = () => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const table = useReactTable({
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: fetchTrades,
+    debounceDependencies: [searchTerm, filters],
   });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -585,9 +578,9 @@ const TradeList = () => {
                   fullWidth
                 >
                   <MenuItem value="All">All</MenuItem>
-                  {uniqueTrades.map((trade, i) => (
-                    <MenuItem key={i} value={trade}>
-                      {trade}
+                  {trade.map((t, i) => (
+                    <MenuItem key={i} value={t.id}>
+                      {t.name}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -842,14 +835,17 @@ const TradeList = () => {
                               : header.column.id === "select"
                                 ? 30
                                 : "auto",
-                        
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
                       >
                         <Box
                           onClick={header.column.getToggleSortingHandler()}
@@ -929,14 +925,21 @@ const TradeList = () => {
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}>
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
@@ -953,86 +956,7 @@ const TradeList = () => {
       </Box>
       <Divider />
 
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        pb={2}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              fontWeight={600}
-              ml={1}
-              className="f-14"
-            >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </Typography>
-            <Typography color="textSecondary" className="f-14" ml={"3px"}>
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+      <TablePaginationFooter table={table} totalRows={totalRows} />
     </Box>
   );
 };

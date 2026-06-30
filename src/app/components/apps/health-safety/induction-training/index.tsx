@@ -2,21 +2,19 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Avatar, Box, Chip, Divider, IconButton, MenuItem, Stack, Table, TableBody,
+    Avatar, Box, Chip, Divider, IconButton,  Stack, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, TextField, Typography,
     Drawer, InputAdornment, Snackbar, Button, Autocomplete, Tooltip,
     Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress,
 } from '@mui/material';
 import {
-    IconSearch, IconChevronLeft, IconChevronRight, IconX, IconPlus,
+    IconSearch, IconX, IconPlus,
     IconPencil, IconTrash,
     IconPhoto, IconVideo, IconMusic, IconFileText, IconFile,
     IconCloudUpload, IconPaperclip, IconDownload, IconExternalLink,
 } from '@tabler/icons-react';
 import Image from 'next/image';
-import {
-    useReactTable, getCoreRowModel, getFilteredRowModel,
-    getPaginationRowModel, getSortedRowModel, flexRender,
+import {flexRender,
 } from '@tanstack/react-table';
 
 import api from '@/utils/axios';
@@ -24,6 +22,8 @@ import CustomSelect from '@/app/components/forms/theme-elements/CustomSelect';
 import SkeletonLoader from '@/app/components/SkeletonLoader';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField';
+import { useServerTable } from '@/hooks/useServerTable';
+import TablePaginationFooter from '@/app/components/common/TablePaginationFooter';
 
 export type TrainingRow = {
     id: number;
@@ -476,13 +476,21 @@ const InductionTraining = ({ companyId }: Props) => {
         } catch {}
     }, [companyId]);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = async () => {
         if (!companyId) return;
         try {
             setFetchLoading(true);
-            const res = await api.get('/induction-trainings/get', { params: { company_id: companyId } });
+            const params: any = {
+                company_id: companyId,
+                page: pagination.pageIndex + 1,
+                limit: pagination.pageSize,
+            };
+            if (searchTerm) params.search = searchTerm;
+
+            const res = await api.get('/induction-trainings/get', { params });
             if (res.data.IsSuccess) {
-                setData((res.data.info || []).map((item: any) => ({
+                const fetchedData = res.data.info?.data || res.data.info || res.data.data || [];
+                setData(fetchedData.map((item: any) => ({
                     id: item.id,
                     added_by: item.added_by_name || '-',
                     user_thumb_image: item.added_by_user_thumb_image || '',
@@ -496,16 +504,36 @@ const InductionTraining = ({ companyId }: Props) => {
                     files: item.files || [],
                     date: item.date,
                 })));
+
+                const pagMeta =
+                  res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
+                    ? res.data.data
+                    : res.data.info && res.data.info.totalPages !== undefined
+                      ? res.data.info
+                      : res.data.data || {};
+
+                if (pagMeta.totalItems !== undefined) {
+                  setTotalRows(pagMeta.totalItems);
+                } else if (pagMeta.total !== undefined) {
+                  setTotalRows(pagMeta.total);
+                } else {
+                  setTotalRows(fetchedData.length);
+                }
+
+                if (pagMeta.totalPages !== undefined) {
+                  setPageCount(pagMeta.totalPages);
+                } else if (pagMeta.last_page !== undefined) {
+                  setPageCount(pagMeta.last_page);
+                }
             }
         } catch {
             showError('Failed to fetch induction trainings.');
         } finally {
             setFetchLoading(false);
         }
-    }, [companyId, showError]);
+    };
 
     useEffect(() => { fetchResources(); }, [fetchResources]);
-    useEffect(() => { fetchData(); }, [fetchData]);
     
     const resetAndClose = useCallback(() => {
         resetAttachments();
@@ -613,17 +641,7 @@ const InductionTraining = ({ companyId }: Props) => {
         }
     }, [deletingId, showSuccess, showError, fetchData]);
     
-    const filteredData = useMemo(() =>
-            data.filter(item => {
-                const q = searchTerm.toLowerCase();
-                return (
-                    item.added_by?.toLowerCase().includes(q) ||
-                    item.title?.toLowerCase().includes(q) ||
-                    item.description?.toLowerCase().includes(q)
-                );
-            }),
-        [data, searchTerm]
-    );
+    const filteredData = data;
     
     const columns = useMemo(() => [
         {
@@ -819,14 +837,19 @@ const InductionTraining = ({ companyId }: Props) => {
     };
   }, []);
 
-  const table = useReactTable({
+    const {
+        table,
+        pagination,
+        setPagination,
+        pageCount,
+        setPageCount,
+        totalRows,
+        setTotalRows,
+    } = useServerTable({
         data: filteredData,
         columns,
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: { pagination: { pageSize: 50 } },
+        fetchData,
+        debounceDependencies: [searchTerm],
     });
     
     return (
@@ -916,30 +939,10 @@ const InductionTraining = ({ companyId }: Props) => {
             </TableContainer>
 
             {/* ── Pagination ── */}
-            {filteredData.length > 0 && (
-                <Stack gap={1} pr={3} pt={1} pl={3} pb={1} alignItems="center"
-                       direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between">
-                    <Typography color="textSecondary" className="f-14">
-                        {table.getPrePaginationRowModel().rows.length} Rows
-                    </Typography>
-                    <Stack direction="row" alignItems="center" gap={1}>
-                        <Typography color="textSecondary" className="f-14">Page</Typography>
-                        <Typography fontWeight={600}>{table.getState().pagination.pageIndex + 1}</Typography>
-                        <Typography color="textSecondary" className="f-14">of {table.getPageCount()}</Typography>
-                        <CustomSelect
-                            value={table.getState().pagination.pageSize}
-                            onChange={(e: any) => table.setPageSize(Number(e.target.value))}>
-                            {PAGE_SIZES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                        </CustomSelect>
-                        <IconButton size="small" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-                            <IconChevronLeft />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-                            <IconChevronRight />
-                        </IconButton>
-                    </Stack>
-                </Stack>
-            )}
+            <TablePaginationFooter
+                table={table}
+                totalRows={table.getPrePaginationRowModel().rows.length}
+            />
 
             {/* ── Create / Edit Drawer ── */}
             <Drawer anchor="right" open={drawerOpen} onClose={resetAndClose}

@@ -35,19 +35,9 @@ import {
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import {
-  IconArrowsShuffle,
-  IconBasket,
-  IconChevronLeft,
-  IconChevronRight,
   IconFileExport,
   IconFileImport,
   IconFilter,
@@ -59,7 +49,6 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
@@ -131,19 +120,14 @@ export interface ProductFormData {
   qty?: number | null;
 }
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+
 const ProductList = () => {
   const [data, setData] = useState<any[]>([]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 50,
-  });
-  const [totalRows, setTotalRows] = useState(0);
-  const [pageCount, setPageCount] = useState(0);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchProduct, setFetchProduct] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -490,7 +474,7 @@ const ProductList = () => {
       if (filters.supplier && filters.supplier !== "All") {
         const supplierObj = suppliers.find((s) => s.name === filters.supplier);
         if (supplierObj) {
-          url += `&supplier_id=${supplierObj.id}`;
+          url += `&supplier_ids=${supplierObj.id}`;
         } else {
           url += `&supplier=${encodeURIComponent(filters.supplier)}`;
         }
@@ -503,8 +487,8 @@ const ProductList = () => {
         setData(responseData);
 
         const pagMeta =
-          res.data.totalPages !== undefined || res.data.totalItems !== undefined
-            ? res.data
+          res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
+            ? res.data.data
             : res.data.info && res.data.info.totalPages !== undefined
               ? res.data.info
               : res.data.data || {};
@@ -540,20 +524,6 @@ const ProductList = () => {
   useEffect(() => {
     fetchResources();
   }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [
-    pagination.pageIndex,
-    pagination.pageSize,
-    searchTerm,
-    filters,
-    user.company_id,
-    categories,
-  ]);
 
   const exportProducts = async () => {
     try {
@@ -1755,21 +1725,23 @@ const ProductList = () => {
 
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const table = useReactTable({
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting, pagination },
-    autoResetPageIndex: false,
-    manualPagination: true,
-    pageCount: pageCount,
-    rowCount: totalRows,
-    onPaginationChange: setPagination,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    fetchData: fetchProducts,
+    debounceDependencies: [searchTerm, filters, user.company_id, categories],
   });
 
   // Reset to first page when search term changes
@@ -2984,86 +2956,7 @@ const ProductList = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={2}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {totalRows} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
         <Settings
           settingOpen={settingOpen}
           onClose={() => setSettingOpen(false)}

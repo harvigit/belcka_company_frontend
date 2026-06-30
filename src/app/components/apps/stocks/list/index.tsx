@@ -111,14 +111,15 @@ export interface ProductFormData {
   model?: number | null;
 }
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+
 const StockList = () => {
   const [data, setData] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchProduct, setFetchProduct] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [storeModalOpen, setStoreModalOpen] = useState(false);
@@ -291,7 +292,21 @@ const StockList = () => {
       const storeFilter = storeIdParam ?? storeId ?? store?.id;
 
       if (!storeFilter) return;
-      let url = `products/get?company_id=${user.company_id}&store_ids=${storeFilter}&is_products=true&is_web=true`;
+
+      const supplierObj = suppliers.find((s) => s.name === filters.supplier);
+      const categoryObj = categories.find((c) => c.name === filters.category);
+
+      let url = `products/get?company_id=${user.company_id}&store_ids=${storeFilter}&is_products=true&is_web=true&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+
+      if (searchTerm) {
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+      if (supplierObj) {
+        url += `&supplier_ids=${supplierObj.id}`;
+      }
+      if (categoryObj) {
+        url += `&category_ids=${categoryObj.id}`;
+      }
 
       if (productIdParam) {
         url += `&product_id=${productIdParam}`;
@@ -307,13 +322,18 @@ const StockList = () => {
       } else {
         setData([]);
       }
+      setPageCount(res.data.data.totalPages || 0);
+      setTotalRows(res.data.data.totalItems || 0);
 
       if (productIdParam) {
         router.replace("/apps/stocks/list", { scroll: false });
       }
 
       if (restorePage !== undefined) {
-        setTimeout(() => table.setPageIndex(restorePage), 0);
+        setTimeout(
+          () => setPagination((prev) => ({ ...prev, pageIndex: restorePage })),
+          0,
+        );
       }
     } catch (err) {
       console.error("Failed to fetch products", err);
@@ -389,10 +409,6 @@ const StockList = () => {
       setEditing({ id: null, field: null });
     }
   };
-  useEffect(() => {
-    if (!storeId) return;
-    fetchProducts(storeId);
-  }, [storeId]);
 
   const editSupplier = async (
     e: React.FormEvent,
@@ -489,43 +505,11 @@ const StockList = () => {
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(data)) return [];
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-
-      if (
-        filters.store == "All" ||
-        filters.supplier == "All" ||
-        filters.category == "All"
-      )
-        return true;
-      const matchesSupplier = filters.supplier
-        ? item.supplier_name === filters.supplier
-        : true;
-
-      const matchesCategory = filters.category
-        ? item.product_categories
-            ?.toLowerCase()
-            .split(",")
-            .map((c: any) => c.trim())
-            .includes(filters.category.toLowerCase())
-        : true;
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.short_name?.toLowerCase().includes(search) ||
-        item.uuid?.toLowerCase().includes(search) ||
-        item.price?.toLowerCase().includes(search) ||
-        item.supplier_code?.toLowerCase().includes(search) ||
-        item.product_categories?.toLowerCase().includes(search) ||
-        item.barcode_text?.toLowerCase().includes(search) ||
-        item.supplier_name?.toLowerCase().includes(search);
-
-      return matchesSearch && matchesCategory && matchesSupplier;
-    });
-  }, [data, searchTerm, filters]);
+    return data;
+  }, [data]);
 
   const MAX_QTY = 1000.99;
-  
+
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -533,18 +517,23 @@ const StockList = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -995,28 +984,29 @@ const StockList = () => {
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-  const table = useReactTable({
+
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    autoResetPageIndex: false,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
+    fetchData: () => {
+      if (storeId) {
+        fetchProducts(storeId);
+      }
     },
+    debounceDependencies: [searchTerm, filters, storeId],
   });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -1377,14 +1367,17 @@ const StockList = () => {
                                         : header.column.id === "QrCode"
                                           ? 120
                                           : "auto",
-                          
+
                             ...(header.column.id === "actions" && {
                               position: "sticky",
                               right: 0,
                               backgroundColor: "background.paper",
                               zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
                         >
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
@@ -1464,18 +1457,20 @@ const StockList = () => {
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell 
-      key={cell.id}
-      sx={{
-        ...(cell.column.id === "actions" && {
-          position: "sticky",
-          right: 0,
-          backgroundColor: "background.paper",
-          zIndex: 1,
-          boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-        }),
-      }}
-    >
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -1491,86 +1486,7 @@ const StockList = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={2}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
 
         {/* Stock History */}
         <StockHistoryList
@@ -1618,7 +1534,7 @@ const StockList = () => {
                 fontWeight={500}
                 fontSize={20}
               >
-                {isSubQty ? 'Sub qty' : 'Qty'} in Stock: {stockQty}
+                {isSubQty ? "Sub qty" : "Qty"} in Stock: {stockQty}
               </Typography>
               <IconButton onClick={() => setDrawerOpen(false)}>
                 <IconX size={18} />

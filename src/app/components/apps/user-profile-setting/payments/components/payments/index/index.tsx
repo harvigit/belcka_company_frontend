@@ -28,13 +28,10 @@ import {
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
+import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -53,6 +50,7 @@ import { IconEye } from "@tabler/icons-react";
 import DateRangePickerBox from "@/app/components/common/DateRangePickerBox";
 import { format } from "date-fns";
 import IconArrowLeft from "@mui/icons-material/ArrowBack";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 
 dayjs.extend(customParseFormat);
 
@@ -95,11 +93,9 @@ const saveDateRangeToStorage = (
 const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = false }) => {
   const [data, setData] = useState<any[]>([]);
   const [payment, setPayment] = useState<any>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -144,22 +140,55 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
   };
 
   // Fetch data
-    const fetchPayments = async (start: Date | null, end: Date | null): Promise<void> => {
+    const fetchPayments = async (start: Date | null, end: Date | null, restorePage?: number): Promise<void> => {
         setFetchPayslip(true);
         try {
-            const startParam = start ? format(start, "dd/MM/yyyy") : "";
-            const endParam = end ? format(end, "dd/MM/yyyy") : "";
+            const activeStart = start !== undefined ? start : startDate;
+            const activeEnd = end !== undefined ? end : endDate;
+            const startParam = activeStart ? format(activeStart, "dd/MM/yyyy") : "";
+            const endParam = activeEnd ? format(activeEnd, "dd/MM/yyyy") : "";
 
             const params = {
                 company_id: user.company_id,
                 start_date: startParam,
                 end_date: endParam,
                 ...(userId ? { user_id: userId } : {}),
+                page: pagination.pageIndex + 1,
+                limit: pagination.pageSize,
+                ...(searchTerm ? { search: searchTerm } : {})
             };
 
             const res = await api.get(`payslips/get-bookkeeper-payments`, { params });
             if (res.data) {
-                setData(res.data.info);
+                const responseData = res.data.info?.data || res.data.info || res.data.data || [];
+                setData(responseData);
+
+                const pagMeta =
+                    res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
+                        ? res.data.data
+                        : res.data.info && res.data.info.totalPages !== undefined
+                        ? res.data.info
+                        : res.data.data || {};
+
+                if (pagMeta.totalItems !== undefined) {
+                    setTotalRows(pagMeta.totalItems);
+                } else if (pagMeta.total !== undefined) {
+                    setTotalRows(pagMeta.total);
+                } else {
+                    setTotalRows(responseData.length);
+                }
+
+                if (pagMeta.totalPages !== undefined) {
+                    setPageCount(pagMeta.totalPages);
+                } else if (pagMeta.last_page !== undefined) {
+                    setPageCount(pagMeta.last_page);
+                }
+
+                if (restorePage !== undefined) {
+                    setTimeout(() => {
+                        setPagination((prev: any) => ({ ...prev, pageIndex: restorePage }));
+                    }, 0);
+                }
             }
         } catch (err) {
             console.error("Failed to fetch payments", err);
@@ -179,16 +208,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
   };
   const handleCloseDrawer = () => setDrawerOpen(false);
 
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
-        item.user_name?.toLowerCase().includes(search) ||
-        item.total_payable_amount?.toLowerCase().includes(search);
 
-      return matchesSearch;
-    });
-  }, [data, searchTerm]);
 
   
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
@@ -225,12 +245,12 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
           <CustomCheckbox
             className="header-checkbox"
             checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
+              selectedRowIds.size === data.length &&
+              data.length > 0
             }
             indeterminate={
               selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
@@ -239,7 +259,7 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setSelectedRowIds(new Set(data.map((row) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -389,21 +409,23 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-  const table = useReactTable({
-    data: filteredData,
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
+    data,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: () => fetchPayments(startDate, endDate),
+    debounceDependencies: [searchTerm],
   });
 
   // Reset to first page when search term changes
@@ -686,86 +708,10 @@ const PaymentsList: React.FC<Props> = ({ userId, isShow, disableDateFilter = fal
         {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        pb={2}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Records
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              className="f-14"
-              fontWeight={600}
-              ml={1}
-            >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+      <TablePaginationFooter
+        table={table}
+        totalRows={table.getPrePaginationRowModel().rows.length}
+      />
 
       <Drawer
         anchor="right"

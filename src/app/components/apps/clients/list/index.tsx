@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   TableContainer,
   Table,
@@ -29,21 +29,9 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
-  Skeleton,
 } from "@mui/material";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  createColumnHelper,
-  SortingState,
-} from "@tanstack/react-table";
-import {
-  IconChevronLeft,
-  IconChevronRight,
   IconDotsVertical,
   IconEdit,
   IconEye,
@@ -54,7 +42,6 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
@@ -66,9 +53,7 @@ import ArchiveClient from "../archive";
 import AuthRegister from "../../settings/auth";
 import EditClient from "@/app/components/apps/clients/edit";
 import relativeTime from "dayjs/plugin/relativeTime";
-import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
 import PermissionGuard from "@/app/auth/PermissionGuard";
-import { AxiosResponse } from "axios";
 import { IconTableColumn } from "@tabler/icons-react";
 import Image from "next/image";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
@@ -93,14 +78,17 @@ export type ClientList = {
   expire_date: string;
 };
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+import { AxiosResponse } from "axios";
+import CustomTextField from "@/app/components/forms/theme-elements/CustomTextField";
+
 const ClientList = () => {
   const [data, setData] = useState<ClientList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchClient, setFetchClient] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [openActiveDialog, setOpenActiveDialog] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>();
@@ -131,25 +119,26 @@ const ClientList = () => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
   // Fetch data
-  const fetchClients = useCallback(async () => {
+  const fetchClients = async () => {
     setFetchClient(true);
     try {
-      const res: AxiosResponse<any> = await api.get(
-        `company-clients/get?company_id=${id.company_id}`,
-      );
+      let url = `company-clients/get?company_id=${id.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+
+      const res: AxiosResponse<any> = await api.get(url);
       if (res.data) {
         setData(res.data.info);
+        setPageCount(res.data.data.totalPages || 0);
+        setTotalRows(res.data.data.totalItems || 0);
       }
     } catch (err) {
       console.error("Failed to fetch clients", err);
     } finally {
       setFetchClient(false);
     }
-  }, [id.company_id]);
-
-  useEffect(() => {
-    fetchClients();
-  }, [id?.company_id]);
+  };
 
   const formatDate = (date: string | undefined) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
@@ -161,16 +150,8 @@ const ClientList = () => {
   }, []);
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.email?.toLocaleLowerCase().includes(search);
-
-      return matchesSearch;
-    });
-  }, [data, searchTerm]);
+    return data;
+  }, [data]);
 
   const handleCopy = (link: string) => {
     const codeToCopy = link ?? "";
@@ -204,7 +185,6 @@ const ClientList = () => {
     }
   };
 
-  
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -212,18 +192,23 @@ const ClientList = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -521,27 +506,24 @@ const ClientList = () => {
     }),
   ];
 
-  const table = useReactTable({
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: fetchClients,
+    debounceDependencies: [searchTerm],
   });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -771,14 +753,17 @@ const ClientList = () => {
                               : header.column.id === "select"
                                 ? 30
                                 : "auto",
-                        
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
                       >
                         <Box
                           onClick={header.column.getToggleSortingHandler()}
@@ -858,14 +843,21 @@ const ClientList = () => {
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}>
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
@@ -1049,86 +1041,7 @@ const ClientList = () => {
         </DialogActions>
       </Dialog>
 
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        pb={1}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              className="f-14"
-              fontWeight={600}
-              ml={1}
-            >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+      <TablePaginationFooter table={table} totalRows={totalRows} />
     </Box>
   );
 };

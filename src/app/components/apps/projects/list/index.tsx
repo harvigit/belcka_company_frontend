@@ -495,16 +495,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   }, [openDrawer == true && !Number.isNaN(projectID)]);
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prevData: any) => ({
-      ...prevData,
-      [name]: value,
-    }));
-  };
-
   const handleOpenCreateDrawer = () => {
     setFormData({
       address_id: null,

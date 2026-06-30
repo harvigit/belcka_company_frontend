@@ -88,15 +88,16 @@ const loadDateRangeFromStorage = () => {
   return null;
 };
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+
 const HistoryList = () => {
   const [data, setData] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchHistory, setFetchHistory] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [filters, setFilters] = useState({ type: "", user: "" });
   const [tempFilters, setTempFilters] = useState(filters);
@@ -139,11 +140,21 @@ const HistoryList = () => {
   const fetchHistories = async (start?: string, end?: string) => {
     setFetchHistory(true);
     try {
-      const res = await api.get(
-        `requests/get-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}`,
-      );
+      let url = `requests/get-history?company_id=${user.company_id}&start_date=${start}&end_date=${end}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+      if (filters.type && filters.type !== "All") {
+        url += `&type=${filters.type}`;
+      }
+      if (filters.user && filters.user !== "All") {
+        url += `&user_id=${filters.user}`;
+      }
+      const res = await api.get(url);
       if (res.data) {
         setData(res.data.info);
+        setPageCount(res.data.data?.totalPages || 0);
+        setTotalRows(res.data.data?.totalItems || 0);
       }
     } catch (err) {
       console.error("Failed to fetch location", err);
@@ -162,14 +173,6 @@ const HistoryList = () => {
     }
   };
 
-  useEffect(() => {
-    if (startDate && endDate && user?.company_id) {
-      const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
-      const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
-      fetchHistories(formattedStart, formattedEnd);
-    }
-  }, [startDate, endDate, user?.company_id]);
-
   const handleDateRangeChange = (range: {
     from: Date | null;
     to: Date | null;
@@ -187,27 +190,18 @@ const HistoryList = () => {
     }
   }, [user?.company_id]);
 
-  const uniqueSupervisors = useMemo(
-    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
+  const uniqueUsers = useMemo(
+    () =>
+      users.filter(
+        (item, index, self) =>
+          index === self.findIndex((t) => t.id === item.id),
+      ),
     [users],
   );
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-      if (filters.type == "All" || filters.user == "All") return data;
-      const matchesType = filters.type
-        ? item.request_type === Number(filters.type)
-        : true;
-      const matchesUser = filters.user ? item.user_name === filters.user : true;
-      const matchesSearch =
-        item.user_name?.toLowerCase().includes(search) ||
-        item.type_name?.toLowerCase().includes(search) ||
-        item.message?.toLowerCase().includes(search);
-
-      return matchesSearch && matchesType && matchesUser;
-    });
-  }, [data, filters, searchTerm]);
+    return data;
+  }, [data]);
 
   const columnHelper = createColumnHelper<any>();
   const columns = [
@@ -363,27 +357,36 @@ const HistoryList = () => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const table = useReactTable({
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
+    fetchData: () => {
+      if (startDate && endDate && user?.company_id) {
+        const formattedStart = dayjs(startDate).format("DD/MM/YYYY");
+        const formattedEnd = dayjs(endDate).format("DD/MM/YYYY");
+        fetchHistories(formattedStart, formattedEnd);
+      }
     },
+    debounceDependencies: [
+      searchTerm,
+      filters,
+      startDate,
+      endDate,
+      user?.company_id,
+    ],
   });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -493,7 +496,7 @@ const HistoryList = () => {
                 <MenuItem value="120">Stock</MenuItem>
               </TextField>
 
-              {uniqueSupervisors.length > 0 ? (
+              {uniqueUsers.length > 0 ? (
                 <TextField
                   select
                   label="User"
@@ -507,9 +510,9 @@ const HistoryList = () => {
                   fullWidth
                 >
                   <MenuItem value="All">All</MenuItem>
-                  {uniqueSupervisors.map((supervisor, i) => (
-                    <MenuItem key={i} value={supervisor}>
-                      {supervisor}
+                  {uniqueUsers.map((u, i) => (
+                    <MenuItem key={i} value={u.id}>
+                      {u.name}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -592,12 +595,12 @@ const HistoryList = () => {
                     label={
                       col.columnDef.meta?.label ||
                       (typeof col.columnDef.header === "string" &&
-                        col.columnDef.header.trim() !== ""
+                      col.columnDef.header.trim() !== ""
                         ? col.columnDef.header
                         : col.id
-                          .replace(/([A-Z])/g, " $1")
-                          .replace(/^./, (str: string) => str.toUpperCase())
-                          .trim())
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str: string) => str.toUpperCase())
+                            .trim())
                     }
                   />
                 ))}
@@ -739,86 +742,7 @@ const HistoryList = () => {
         {data.length ? <Divider /> : <></>}
       </Box>
       <Divider />
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        pb={2}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              className="f-14"
-              fontWeight={600}
-              ml={1}
-            >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+      <TablePaginationFooter table={table} totalRows={totalRows} />
     </Box>
   );
 };

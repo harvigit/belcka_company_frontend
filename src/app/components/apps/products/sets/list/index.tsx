@@ -30,25 +30,9 @@ import {
   Checkbox,
   Drawer,
 } from "@mui/material";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  createColumnHelper,
-  SortingState,
-} from "@tanstack/react-table";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconSearch,
-  IconTrash,
-  IconX,
-} from "@tabler/icons-react";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
+import { IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import Link from "next/link";
@@ -72,13 +56,14 @@ interface Props {
   onClose: () => void;
 }
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+
 const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const [data, setData] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchSet, setFetchSet] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -107,11 +92,15 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
   const fetchSets = async () => {
     setFetchSet(true);
     try {
-      const res = await api.get(
-        `products/get-sets?company_id=${user.company_id}`,
-      );
+      let url = `products/get-sets?company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+      const res = await api.get(url);
       if (res.data) {
         setData(res.data.info);
+        setPageCount(res.data.data?.totalPages || 0);
+        setTotalRows(res.data.data?.totalItems || 0);
       }
     } catch (err) {
       console.error("Failed to fetch product sets", err);
@@ -121,25 +110,11 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
 
   useEffect(() => {
     setUsersToDelete([]);
-    fetchSets();
-  }, [api,openDrawer]);
-
-  useEffect(() => {
-    setUsersToDelete([]);
   }, [openDrawer]);
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.type?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search);
-
-      return matchesSearch;
-    });
-  }, [data, searchTerm]);
+    return data;
+  }, [data]);
 
   // UseCallback to memoize these functions
   const handleEdit = useCallback((id: number) => {
@@ -147,7 +122,6 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
     setDrawerOpen(true);
   }, []);
 
-  
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -155,18 +129,23 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -311,28 +290,25 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-  const table = useReactTable({
+
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: fetchSets,
+    debounceDependencies: [searchTerm, user?.company_id, openDrawer],
   });
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
-
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
     width: "auto",
@@ -627,14 +603,17 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                                 : header.column.id === "select"
                                   ? 30
                                   : "auto",
-                          
+
                             ...(header.column.id === "actions" && {
                               position: "sticky",
                               right: 0,
                               backgroundColor: "background.paper",
                               zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
                         >
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
@@ -714,14 +693,21 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}>
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            padding: "10px",
+                            ...(cell.column.id === "actions" && {
+                              position: "sticky",
+                              right: 0,
+                              backgroundColor: "background.paper",
+                              zIndex: 1,
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -737,86 +723,7 @@ const SetList: React.FC<Props> = ({ openDrawer, onClose }) => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={2}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
       </Box>
     </Drawer>
   );

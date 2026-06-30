@@ -86,6 +86,8 @@ import { useDropzone } from "react-dropzone";
 import { FileDownload } from "@mui/icons-material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import Cookies from "js-cookie";
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 
 dayjs.extend(customParseFormat);
 interface TableRow {
@@ -129,11 +131,9 @@ export interface ProductFormData {
 
 const ToolsList = () => {
   const [data, setData] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchProduct, setFetchProduct] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const storedStore = Cookies.get(`tools_store_${user.id}_${user.company_id}`);
@@ -339,20 +339,32 @@ const ToolsList = () => {
   }, [user, stores]);
 
   // Fetch data
-  const fetchProducts = async (restorePage?: number) => {
+  const fetchProducts = async () => {
     setFetchProduct(true);
     try {
       const storeFilter = activeStore?.id ? `&store_id=${activeStore.id}` : "";
-      const res = await api.get(
-        `product-tools/get?company_id=${user.company_id}&is_web=true${storeFilter}`,
-      );
+      let url = `product-tools/get?company_id=${user.company_id}&is_web=true${storeFilter}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
+      const res = await api.get(url);
       if (res.data) {
-        setData(res.data.info);
+        const responseData =
+          res.data.info?.data || res.data.info || res.data.data || [];
+        setData(responseData);
 
-        if (restorePage !== undefined) {
-          setTimeout(() => {
-            table.setPageIndex(restorePage);
-          }, 0);
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info;
+
+        if (pagMeta) {
+          setTotalRows(pagMeta.totalItems || responseData.length);
+          setPageCount(pagMeta.totalPages || 1);
+        } else {
+          setTotalRows(responseData.length);
+          setPageCount(1);
         }
       }
     } catch (err) {
@@ -362,9 +374,6 @@ const ToolsList = () => {
   };
 
   useEffect(() => {
-    if (activeStore?.id) {
-      fetchProducts();
-    }
     fetchTrades();
   }, []);
 
@@ -635,25 +644,6 @@ const ToolsList = () => {
     fetchResources();
   }, [api]);
 
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.short_name?.toLowerCase().includes(search) ||
-        item.uuid?.toLowerCase().includes(search) ||
-        item.price?.toLowerCase().includes(search) ||
-        item.supplier_code?.toLowerCase().includes(search) ||
-        item.product_trades?.toLowerCase().includes(search) ||
-        item.product_categories?.toLowerCase().includes(search) ||
-        item.stock_status?.toLowerCase().includes(search) ||
-        item.supplier_name?.toLowerCase().includes(search);
-
-      return matchesSearch;
-    });
-  }, [data, searchTerm]);
-
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -692,13 +682,9 @@ const ToolsList = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
-            }
+            checked={selectedRowIds.size === data.length && data.length > 0}
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
@@ -707,7 +693,7 @@ const ToolsList = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setSelectedRowIds(new Set(data.map((row) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -1110,27 +1096,33 @@ const ToolsList = () => {
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-  const table = useReactTable({
-    data: filteredData,
+
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
+    data,
     columns,
-    state: { columnFilters, sorting },
-    autoResetPageIndex: false,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
+    fetchData: () => {
+      if (activeStore?.id) {
+        fetchProducts();
+      }
     },
+    debounceDependencies: [searchTerm, activeStore?.id, user?.company_id],
   });
 
   // Reset to first page when search term changes
   useEffect(() => {
-    table.setPageIndex(0);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [searchTerm]);
 
   const simpleColumns = columns.map((column) => ({
@@ -2263,86 +2255,7 @@ const ToolsList = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={2}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
       </Box>
     </PermissionGuard>
   );

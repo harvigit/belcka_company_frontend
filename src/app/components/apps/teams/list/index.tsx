@@ -86,7 +86,7 @@ export type TeamList = {
   supervisor_image?: string;
   supervisor_email?: string;
   supervisor_phone?: string;
-    max_members?: number;
+  max_members?: number;
   team_member_count?: number;
   working_member_count?: number;
   subcontractor_company_name?: string;
@@ -107,15 +107,16 @@ export type UserList = {
   name: string;
 };
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchTeam, setFetchTeam] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const rerender = React.useReducer(() => ({}), {})[1];
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [archiveDrawerOpen, setarchiveDrawerOpen] = useState(false);
   const [anchorEl2, setAnchorEl2] = React.useState<null | HTMLElement>(null);
   const [search, setSearch] = useState("");
@@ -160,16 +161,55 @@ const TablePagination = () => {
   };
 
   // Fetch data
-  const fetchTeams = async () => {
+  const fetchTeams = async (restorePage?: number) => {
     setFetchTeam(true);
     try {
-      const url = projectId
-        ? `team/get-team-member-list?project_id=${projectId}`
-        : "team/get-team-member-list";
+      let url = `team/get-team-member-list?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+
+      if (projectId) {
+        url += `&project_id=${projectId}`;
+      }
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
+      if (filters.team && filters.team !== "All") {
+        url += `&team_ids=${filters.team}`;
+      }
+      if (filters.supervisor && filters.supervisor !== "All") {
+        url += `&supervisor_ids=${filters.supervisor}`;
+      }
 
       const res = await api.get(url);
       if (res.data) {
-        setData(res.data.info);
+        const responseData =
+          res.data.info?.data || res.data.info || res.data.data || [];
+        setData(responseData);
+
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
+
+        if (restorePage !== undefined) {
+          setTimeout(() => {
+            setPagination((prev) => ({ ...prev, pageIndex: restorePage }));
+          }, 0);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch trades", err);
@@ -177,10 +217,6 @@ const TablePagination = () => {
       setFetchTeam(false);
     }
   };
-
-  useEffect(() => {
-    fetchTeams();
-  }, [projectId]);
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -247,40 +283,26 @@ const TablePagination = () => {
     setSelectedTeamId(null);
   };
 
-  const uniqueTrades = useMemo(
-    () => [...new Set(data.map((item) => item.name).filter(Boolean))],
-    [data],
-  );
-  const uniqueSupervisors = useMemo(
-    () => [
-      ...new Set(data.map((item) => item.supervisor_name).filter(Boolean)),
-    ],
-    [data],
-  );
-
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      if (filters.team == "All" || filters.supervisor == "All") return data;
-      const matchesTeam = filters.team ? item.name === filters.team : true;
-      const matchesSupervisor = filters.supervisor
-        ? item.supervisor_name === filters.supervisor
-        : true;
-
-      const search = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.supervisor_name?.toLowerCase().includes(search) ||
-        (item.users &&
-          item.users.some((user: any) =>
-            user.name?.toLowerCase().includes(search),
-          ));
-
-      return matchesTeam && matchesSearch && matchesSupervisor;
+  const uniqueTrades = useMemo(() => {
+    const map = new Map();
+    data.forEach((item) => {
+      if (item.name && item.team_id) {
+        map.set(item.team_id, item.name);
+      }
     });
-  }, [data, filters, searchTerm]);
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [data]);
 
-  
+  const uniqueSupervisors = useMemo(() => {
+    const map = new Map();
+    data.forEach((item) => {
+      if (item.supervisor_name && item.supervisor_id) {
+        map.set(item.supervisor_id, item.supervisor_name);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [data]);
+
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -288,18 +310,23 @@ const TablePagination = () => {
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -314,13 +341,9 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
-            }
+            checked={selectedRowIds.size === data.length && data.length > 0}
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
@@ -329,9 +352,7 @@ const TablePagination = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(
-                  new Set(filteredData.map((row) => row.team_id)),
-                );
+                setSelectedRowIds(new Set(data.map((row) => row.team_id)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -452,18 +473,18 @@ const TablePagination = () => {
       },
     }),
 
-      columnHelper.accessor((row) => row?.max_members, {
-          id: "teamMemberLimit",
-          header: () => "Member Limit",
-          cell: (info) => {
-              return (
-                  <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
-                      {info.getValue()}
-                  </Typography>
-              );
-          },
-      }),
-      
+    columnHelper.accessor((row) => row?.max_members, {
+      id: "teamMemberLimit",
+      header: () => "Member Limit",
+      cell: (info) => {
+        return (
+          <Typography className="f-14" color="textPrimary" sx={{ px: 1.5 }}>
+            {info.getValue()}
+          </Typography>
+        );
+      },
+    }),
+
     columnHelper.accessor((row) => row?.team_member_count, {
       id: "teamMemberCount",
       header: () => "Online",
@@ -478,7 +499,7 @@ const TablePagination = () => {
         );
       },
     }),
-      
+
     columnHelper.display({
       id: "actions",
       header: "Actions",
@@ -523,28 +544,25 @@ const TablePagination = () => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const table = useReactTable({
-    data: filteredData,
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
+    data,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: fetchTeams,
+    debounceDependencies: [searchTerm, filters, projectId],
   });
   const rows = table.getRowModel().rows;
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    table.setPageIndex(0);
-  }, [searchTerm, table]);
 
   const simpleColumns = columns.map((column) => ({
     name: column.id ?? "Unnamed Column",
@@ -631,9 +649,9 @@ const TablePagination = () => {
                     fullWidth
                   >
                     <MenuItem value="All">All</MenuItem>
-                    {uniqueTrades.map((trade, i) => (
-                      <MenuItem key={i} value={trade}>
-                        {trade}
+                    {uniqueTrades.map((trade) => (
+                      <MenuItem key={trade.id} value={trade.id}>
+                        {trade.name}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -652,8 +670,8 @@ const TablePagination = () => {
                   >
                     <MenuItem value="All">All</MenuItem>
                     {uniqueSupervisors.map((supervisor, i) => (
-                      <MenuItem key={i} value={supervisor}>
-                        {supervisor}
+                      <MenuItem key={supervisor.id} value={supervisor.id}>
+                        {supervisor.name}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -1004,14 +1022,17 @@ const TablePagination = () => {
                                 : header.column.id === "select"
                                   ? 30
                                   : "auto",
-                          
+
                             ...(header.column.id === "actions" && {
                               position: "sticky",
                               right: 0,
                               backgroundColor: "background.paper",
                               zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+                              boxShadow: isScrollable
+                                ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                : "none",
+                            }),
+                          }}
                         >
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
@@ -1110,14 +1131,18 @@ const TablePagination = () => {
                           return (
                             <TableCell
                               key={cell.id}
-                              sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}
+                              sx={{
+                                padding: "10px",
+                                ...(cell.column.id === "actions" && {
+                                  position: "sticky",
+                                  right: 0,
+                                  backgroundColor: "background.paper",
+                                  zIndex: 1,
+                                  boxShadow: isScrollable
+                                    ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                                    : "none",
+                                }),
+                              }}
                               onClick={() => {
                                 if (
                                   !isDisabled &&
@@ -1147,86 +1172,7 @@ const TablePagination = () => {
           {data.length ? <Divider /> : <></>}
         </Box>
         <Divider />
-        <Stack
-          gap={1}
-          pr={3}
-          pt={1}
-          pl={3}
-          pb={2}
-          alignItems="center"
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography color="textSecondary" className="f-14">
-              {table.getPrePaginationRowModel().rows.length} Rows
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: {
-                xs: "block",
-                sm: "flex",
-              },
-            }}
-            alignItems="center"
-          >
-            <Stack direction="row" alignItems="center">
-              <Typography color="textSecondary" className="f-14">
-                Page
-              </Typography>
-              <Typography
-                color="textSecondary"
-                className="f-14"
-                fontWeight={600}
-                ml={1}
-              >
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </Typography>
-              <Typography color="textSecondary" ml={"3px"} className="f-14">
-                {" "}
-                | Entries :{" "}
-              </Typography>
-            </Stack>
-            <Stack
-              ml={"5px"}
-              direction="row"
-              alignItems="center"
-              color="textSecondary"
-            >
-              <CustomSelect
-                className="custom-select"
-                value={table.getState().pagination.pageSize}
-                onChange={(e: { target: { value: any } }) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-              >
-                {[50, 100, 250, 500].map((pageSize) => (
-                  <MenuItem key={pageSize} value={pageSize}>
-                    {pageSize}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <IconChevronLeft />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ width: "30px" }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <IconChevronRight />
-              </IconButton>
-            </Stack>
-          </Box>
-        </Stack>
+        <TablePaginationFooter table={table} totalRows={totalRows} />
       </Box>
     </PermissionGuard>
   );

@@ -37,13 +37,9 @@ import {
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
+import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconArrowLeft,
   IconChevronLeft,
@@ -59,6 +55,7 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { ProjectList } from "./index";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 
 import { WorksTab } from "./address-sidebar-tab/works-tab";
 import { DocumentsTab } from "./address-sidebar-tab/documents-tab";
@@ -136,11 +133,9 @@ const AddressesList = ({
   shouldRefresh,
 }: AddressesListProps) => {
   const [data, setData] = useState<ProjectList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchAddress, setFetchAddress] = useState<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [sidebarData, setSidebarData] = useState<any>(null);
   const [value, setValue] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -227,15 +222,41 @@ const AddressesList = ({
     setDrawerOpen(true);
   };
 
-  const fetchAddresses = async () => {
+  const fetchAddresses = async (restorePage?: number) => {
     if (!projectId) return;
     setFetchAddress(true);
     try {
-      const res = await api.get(
-        `address/get?project_id=${projectId}&company_id=${user.company_id}`,
-      );
+      let url = `address/get?project_id=${projectId}&company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      const res = await api.get(url);
       if (res.data) {
-        setData(res.data.info);
+        const responseData = res.data.info?.data || res.data.info || res.data.data || [];
+        setData(responseData);
+        const pagMeta =
+            res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
+                ? res.data.data
+                : res.data.info && res.data.info.totalPages !== undefined
+                ? res.data.info
+                : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+            setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+            setTotalRows(pagMeta.total);
+        } else {
+            setTotalRows(responseData.length);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+            setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+            setPageCount(pagMeta.last_page);
+        }
+
+        if (restorePage !== undefined) {
+            setTimeout(() => {
+                setPagination((prev: any) => ({ ...prev, pageIndex: restorePage }));
+            }, 0);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch addresses", err);
@@ -951,17 +972,10 @@ const AddressesList = ({
     [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds],
   );
 
-  const table = useReactTable({
+  const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount } = useServerTable({
     data: currentFilteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 50 } },
+    fetchData: fetchAddresses,
   });
 
   useEffect(() => {
@@ -1109,85 +1123,10 @@ const AddressesList = ({
       </Box>
       <Divider />
 
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              className="f-14"
-              fontWeight={600}
-              ml={1}
-            >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {Math.max(1, table.getPageCount())}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+      <TablePaginationFooter
+        table={table}
+        totalRows={table.getPrePaginationRowModel().rows.length}
+      />
 
       <Drawer
         anchor="right"

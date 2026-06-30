@@ -33,36 +33,29 @@ import {
   Badge,
   Tooltip,
   CircularProgress,
+  Avatar,
 } from "@mui/material";
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
+import { useServerTable } from "@/hooks/useServerTable";
 import {
-  IconChevronLeft,
-  IconChevronRight,
   IconDotsVertical,
   IconEye,
   IconFilter,
-  IconHistory,
   IconRotate,
   IconSearch,
   IconTrash,
   IconUserPlus,
-  IconActivity,
   IconArrowLeft,
 } from "@tabler/icons-react";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { Avatar } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import BlankCard from "@/app/components/shared/BlankCard";
 import { useSession } from "next-auth/react";
@@ -114,8 +107,7 @@ export interface UserList {
 
 const TablePagination = () => {
   const [data, setData] = useState<TeamList[]>([]);
-  const [trade, setTrade] = useState<TradeList[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
+  const [trade, setTrade] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchTeam, setFetchTeam] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -123,6 +115,7 @@ const TablePagination = () => {
   const rerender = React.useReducer(() => ({}), {})[1];
   const [users, setUsers] = useState<UserList[]>([]);
   const [user, setUser] = useState<UserList[]>([]);
+  const [teamInfo, setTeamInfo] = useState<any>(null);
 
   const session = useSession();
   const id = session.data?.user as User & { company_id?: number | null };
@@ -134,7 +127,6 @@ const TablePagination = () => {
   const [tempFilters, setTempFilters] = useState(filters);
 
   const [open, setOpen] = useState(false);
-  const [sorting, setSorting] = useState<SortingState>([]);
 
   const [modelopen, setModelOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -237,12 +229,37 @@ const TablePagination = () => {
   }, [api]);
 
   // fetch team member's
-  const fetchData = async () => {
+  const fetchData = async (restorePage?: number) => {
     setFetchTeam(true);
     try {
-      const res = await api.get(`team/get-team-member-list?team_id=${teamId}`);
-      if (res.data?.info) {
-        const flattened = res.data.info.flatMap((team: any) => {
+      let url = `team/get-team-member-list?team_id=${teamId}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
+      if (filters.team && filters.team !== "All") {
+        url += `&user_ids=${filters.team}`;
+      }
+      if (filters.trade && filters.trade !== "All") {
+        url += `&trade_ids=${filters.trade}`;
+      }
+
+      const res = await api.get(url);
+      const teamData = res.data?.info?.data || res.data?.info || res.data?.data || [];
+
+      if (teamData && Array.isArray(teamData)) {
+        if (teamData.length > 0) {
+          const firstTeam = teamData[0];
+          setTeamInfo((prev: any) => ({
+            ...prev,
+            supervisor_image: firstTeam.supervisor_image,
+            supervisor_name: firstTeam.supervisor_name,
+            extension: firstTeam.extension,
+            supervisor_phone: firstTeam.supervisor_phone,
+            team_name: firstTeam.team_name,
+          }));
+        }
+
+        const flattened = teamData.flatMap((team: any) => {
           setEnabled(team.is_check_in ?? false);
 
           const updatedSettings = {
@@ -251,7 +268,7 @@ const TablePagination = () => {
           };
           setGeoSettings(updatedSettings);
 
-          if (team.users.length === 0) {
+          if (!team.users || team.users.length === 0) {
             return [
               {
                 supervisor_id: team.supervisor_id,
@@ -300,10 +317,46 @@ const TablePagination = () => {
         });
 
         setData(flattened);
+
+        const pagMeta =
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
+
+        if (pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+        } else if (pagMeta.total !== undefined) {
+          setTotalRows(pagMeta.total);
+        } else {
+          setTotalRows(flattened.length);
+        }
+
+        if (pagMeta.totalPages !== undefined) {
+          setPageCount(pagMeta.totalPages);
+        } else if (pagMeta.last_page !== undefined) {
+          setPageCount(pagMeta.last_page);
+        }
+
+        if (restorePage !== undefined) {
+          setTimeout(() => {
+            setPagination((prev: any) => ({ ...prev, pageIndex: restorePage }));
+          }, 0);
+        }
       }
-      if (res.data?.info.length <= 0 && teamId !== null) {
+
+      const isSearchOrFilterActive =
+        searchTerm || filters.team || filters.trade;
+      if (
+        (!teamData || teamData.length <= 0) &&
+        teamId !== null &&
+        !isSearchOrFilterActive &&
+        !teamInfo
+      ) {
         router.push("/apps/teams/list");
-      }
+      } // }
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
@@ -412,14 +465,25 @@ const TablePagination = () => {
     setAnchorEl(null);
   };
 
-  const members = useMemo(
-    () => [...new Set(users.map((item) => item.name).filter(Boolean))],
-    [users],
-  );
-  const trades = useMemo(
-    () => [...new Set(trade.map((trade) => trade.name).filter(Boolean))],
-    [trade],
-  );
+  const uniqueUsers = useMemo(() => {
+    const map = new Map();
+    users.forEach((item) => {
+      if (item.name && item.id) {
+        map.set(item.id, item.name);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [users]);
+
+  const uniqueTrades = useMemo(() => {
+    const map = new Map();
+    trade.forEach((item) => {
+      if (item.name && item.id) {
+        map.set(item.id, item.name);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [trade]);
   //Add team to company
   const joinCompany = async () => {
     try {
@@ -456,18 +520,6 @@ const TablePagination = () => {
     }
   };
 
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const matchesTeam = filters.team ? item.name === filters.team : true;
-      const matchesTrade = filters.trade
-        ? item.trade_name === filters.trade
-        : true;
-      const search = searchTerm.toLowerCase();
-      const matchesSearch = item.name?.toLowerCase().includes(search);
-      return matchesTeam && matchesSearch && matchesTrade;
-    });
-  }, [data, filters, searchTerm]);
-
   const columnHelper = createColumnHelper<TeamList>();
   const columns = [
     {
@@ -476,13 +528,9 @@ const TablePagination = () => {
         <Stack direction="row" alignItems="center">
           <CustomCheckbox
             className="header-checkbox"
-            checked={
-              selectedRowIds.size === filteredData.length &&
-              filteredData.length > 0
-            }
+            checked={selectedRowIds.size === data.length && data.length > 0}
             indeterminate={
-              selectedRowIds.size > 0 &&
-              selectedRowIds.size < filteredData.length
+              selectedRowIds.size > 0 && selectedRowIds.size < data.length
             }
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
@@ -491,7 +539,7 @@ const TablePagination = () => {
               const isChecked = e.target.checked;
 
               if (isChecked) {
-                setSelectedRowIds(new Set(filteredData.map((row) => row.id)));
+                setSelectedRowIds(new Set(data.map((row: any) => row.id)));
               } else {
                 setSelectedRowIds(new Set());
               }
@@ -679,26 +727,29 @@ const TablePagination = () => {
   };
   const handlePopoverClose = () => setAnchorEl2(null);
 
-  const table = useReactTable({
-    data: filteredData,
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
+    data,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData,
+    debounceDependencies: [searchTerm, filters],
   });
 
   const handleCopy = () => {
-    const extension = data[0]?.extension || "";
-    const supervisorPhone = data[0]?.supervisor_phone || "-";
+    const extension = teamInfo?.extension || data[0]?.extension || "";
+    const supervisorPhone =
+      teamInfo?.supervisor_phone || data[0]?.supervisor_phone || "-";
     const textToCopy = `${extension} ${supervisorPhone}`;
 
     if (textToCopy) {
@@ -731,12 +782,20 @@ const TablePagination = () => {
               <Box textAlign="center" display="flex" justifyContent="center">
                 <Box>
                   <Avatar
-                    src={data[0]?.supervisor_image || "/images/users/user.png"}
-                    alt={data[0]?.supervisor_name || "user1"}
+                    src={
+                      teamInfo?.supervisor_image ||
+                      data[0]?.supervisor_image ||
+                      "/images/users/user.png"
+                    }
+                    alt={
+                      teamInfo?.supervisor_name ||
+                      data[0]?.supervisor_name ||
+                      "user1"
+                    }
                     sx={{ width: 120, height: 120, margin: "0 auto" }}
                   />
                   <Typography variant="h5" mb={1}>
-                    {data[0]?.supervisor_name}
+                    {teamInfo?.supervisor_name || data[0]?.supervisor_name}
                   </Typography>
                   <Typography variant="subtitle1" color="textSecondary" mb={1}>
                     Supervisor
@@ -753,8 +812,10 @@ const TablePagination = () => {
                   onClick={handleCopy}
                 >
                   <Typography variant="h5" color="textSecondary">
-                    {data[0]?.extension || ""}{" "}
-                    {data[0]?.supervisor_phone || "-"}
+                    {teamInfo?.extension || data[0]?.extension || ""}{" "}
+                    {teamInfo?.supervisor_phone ||
+                      data[0]?.supervisor_phone ||
+                      "-"}
                   </Typography>
                 </Box>
               </Stack>
@@ -838,7 +899,9 @@ const TablePagination = () => {
         >
           <BlankCard>
             <Grid display="flex" gap={1} mt={2} ml={2}>
-              <Typography variant="h3">{data[0]?.team_name}</Typography>
+              <Typography variant="h3">
+                {teamInfo?.team_name || data[0]?.team_name}
+              </Typography>
             </Grid>
 
             <Stack
@@ -914,10 +977,10 @@ const TablePagination = () => {
                         }
                         fullWidth
                       >
-                        <MenuItem value="">Users</MenuItem>
-                        {members.map((name, i) => (
-                          <MenuItem key={i} value={name}>
-                            {name}
+                        <MenuItem value="All">All</MenuItem>
+                        {uniqueUsers.map((member) => (
+                          <MenuItem key={member.id} value={member.id}>
+                            {member.name}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -934,10 +997,10 @@ const TablePagination = () => {
                         }
                         fullWidth
                       >
-                        <MenuItem value="">Trades</MenuItem>
-                        {trades.map((name, i) => (
-                          <MenuItem key={i} value={name}>
-                            {name}
+                        <MenuItem value="All">All</MenuItem>
+                        {uniqueTrades.map((tradeItem) => (
+                          <MenuItem key={tradeItem.id} value={tradeItem.id}>
+                            {tradeItem.name}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -1348,78 +1411,10 @@ const TablePagination = () => {
                 {data.length ? <Divider /> : <></>}
               </Box>
               <Divider />
-              <Stack
-                gap={1}
-                pr={3}
-                pt={1}
-                pl={3}
-                pb={1}
-                alignItems="center"
-                direction={{ xs: "column", sm: "row" }}
-                justifyContent="space-between"
-              >
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography color="textSecondary">
-                    {table.getPrePaginationRowModel().rows.length} Rows
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    display: {
-                      xs: "block",
-                      sm: "flex",
-                    },
-                  }}
-                  alignItems="center"
-                  gap={1}
-                >
-                  <Stack direction="row" alignItems="center">
-                    <Typography color="textSecondary">Page </Typography>
-                    <Typography color="textSecondary" fontWeight={600} ml={1}>
-                      {table.getState().pagination.pageIndex + 1} of{" "}
-                      {table.getPageCount()}
-                    </Typography>
-                    <Typography color="textSecondary" ml={"3px"}>
-                      | Entries :{" "}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    ml={"5px"}
-                    direction="row"
-                    alignItems="center"
-                    color="textSecondary"
-                  >
-                    <CustomSelect
-                      value={table.getState().pagination.pageSize}
-                      onChange={(e: { target: { value: any } }) => {
-                        table.setPageSize(Number(e.target.value));
-                      }}
-                    >
-                      {[50, 100, 250, 500].map((pageSize) => (
-                        <MenuItem key={pageSize} value={pageSize}>
-                          {pageSize}
-                        </MenuItem>
-                      ))}
-                    </CustomSelect>
-                    <IconButton
-                      size="small"
-                      sx={{ width: "30px" }}
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      <IconChevronLeft />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      sx={{ width: "30px" }}
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      <IconChevronRight />
-                    </IconButton>
-                  </Stack>
-                </Box>
-              </Stack>
+              <TablePaginationFooter
+                table={table}
+                totalRows={table.getPrePaginationRowModel().rows.length}
+              />
             </Box>
           </BlankCard>
         </Grid>

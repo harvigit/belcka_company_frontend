@@ -84,6 +84,9 @@ interface TasksListProps {
   onTableReady: any;
 }
 
+import { useServerTable } from "@/hooks/useServerTable";
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
+
 const TasksList = ({
   projectId,
   searchTerm,
@@ -96,7 +99,6 @@ const TasksList = ({
   const [loading, setLoading] = useState(false);
   const [fetchTask, setFetchTask] = useState(false);
   const [isSaving, seIsSaving] = useState(false);
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskList | null>(null);
@@ -105,7 +107,6 @@ const TasksList = ({
   const [location, setLocation] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [formData, setFormData] = useState<any>({});
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteIds, setDeleteIds] = useState<number[]>([]);
 
@@ -116,18 +117,28 @@ const TasksList = ({
   const fetchTasks = async () => {
     setFetchTask(true);
     try {
-      const res = await api.get(`project/get-tasks?project_id=${projectId}`);
-      if (res.data) setData(res.data.info);
+      let url = `project/get-tasks?project_id=${projectId}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (searchTerm) {
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+      if (filters?.status) {
+        url += `&status=${encodeURIComponent(filters.status)}`;
+      }
+      if (filters?.sortOrder) {
+        url += `&sortOrder=${encodeURIComponent(filters.sortOrder)}`;
+      }
+      const res = await api.get(url);
+      if (res.data) {
+        setData(res.data.info);
+        setPageCount(res.data.data?.totalPages || 0);
+        setTotalRows(res.data.data?.totalItems || 0);
+      }
     } catch (err) {
       console.error("Failed to fetch tasks", err);
     } finally {
       setFetchTask(false);
     }
   };
-  useEffect(() => {
-    if (!projectId) return;
-    fetchTasks();
-  }, [projectId]);
 
   useEffect(() => {
     if (shouldRefresh == false && projectId) {
@@ -272,28 +283,8 @@ const TasksList = ({
 
   // ✅ UI Filtering
   const currentFilteredData = useMemo(() => {
-    let filtered = data.filter((item) => {
-      const matchesStatus = filters.status
-        ? item.status_text === filters.status
-        : true;
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
-        item.company_task_name.toLowerCase().includes(search) ||
-        item.address_name.toLowerCase().includes(search);
-      return matchesStatus && matchesSearch;
-    });
-
-    if (filters.sortOrder === "asc") {
-      filtered = filtered.sort((a, b) =>
-        a.company_task_name?.localeCompare(b.company_task_name),
-      );
-    } else if (filters.sortOrder === "desc") {
-      filtered = filtered.sort((a, b) =>
-        b.company_task_name?.localeCompare(a.company_task_name),
-      );
-    }
-    return filtered;
-  }, [data, searchTerm, filters]);
+    return data;
+  }, [data]);
 
   const handleDownloadZip = async (addressId: number, taskId: number) => {
     try {
@@ -317,7 +308,7 @@ const TasksList = ({
       console.error("Download failed", error);
     }
   };
-  
+
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
 
@@ -325,18 +316,23 @@ const TasksList = ({
     const checkScroll = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
-          tableContainerRef.current.scrollWidth > tableContainerRef.current.clientWidth
+          tableContainerRef.current.scrollWidth >
+            tableContainerRef.current.clientWidth,
         );
       }
     };
     checkScroll();
     window.addEventListener("resize", checkScroll);
-    
+
     const observer = new MutationObserver(checkScroll);
     if (tableContainerRef.current) {
-      observer.observe(tableContainerRef.current, { childList: true, subtree: true, characterData: true });
+      observer.observe(tableContainerRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
-    
+
     return () => {
       window.removeEventListener("resize", checkScroll);
       observer.disconnect();
@@ -579,23 +575,32 @@ const TasksList = ({
       }),
     ];
   }, [data, selectedRowIds, hoveredRow, showAllCheckboxes]);
-  const table = useReactTable<TaskList>({
+
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
     data: currentFilteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
+    fetchData: () => {
+      if (projectId) fetchTasks();
     },
+    debounceDependencies: [
+      searchTerm,
+      filters?.status,
+      filters?.sortOrder,
+      projectId,
+    ],
   });
-
   useEffect(() => {
     if (onTableReady) onTableReady(table);
     table.setPageIndex(0);
@@ -644,14 +649,17 @@ const TasksList = ({
                               : header.column.id === "select"
                                 ? 30
                                 : "auto",
-                        
-                            ...(header.column.id === "actions" && {
-                              position: "sticky",
-                              right: 0,
-                              backgroundColor: "background.paper",
-                              zIndex: 3,
-                              boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                            }),}}
+
+                          ...(header.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 3,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
                       >
                         <Box
                           onClick={header.column.getToggleSortingHandler()}
@@ -731,14 +739,21 @@ const TasksList = ({
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} hover sx={{ cursor: "pointer" }}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} sx={{ padding: "10px",
-                              ...(cell.column.id === "actions" && {
-                                position: "sticky",
-                                right: 0,
-                                backgroundColor: "background.paper",
-                                zIndex: 1,
-                                boxShadow: isScrollable ? "-2px 0 4px -2px rgba(0,0,0,0.1)" : "none",
-                              }),}}>
+                      <TableCell
+                        key={cell.id}
+                        sx={{
+                          padding: "10px",
+                          ...(cell.column.id === "actions" && {
+                            position: "sticky",
+                            right: 0,
+                            backgroundColor: "background.paper",
+                            zIndex: 1,
+                            boxShadow: isScrollable
+                              ? "-2px 0 4px -2px rgba(0,0,0,0.1)"
+                              : "none",
+                          }),
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
@@ -755,85 +770,7 @@ const TasksList = ({
       </Box>
 
       <Divider />
-      <Stack
-        gap={1}
-        pr={3}
-        pt={1}
-        pl={3}
-        alignItems="center"
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-      >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography color="textSecondary" className="f-14">
-            {table.getPrePaginationRowModel().rows.length} Rows
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: {
-              xs: "block",
-              sm: "flex",
-            },
-          }}
-          alignItems="center"
-        >
-          <Stack direction="row" alignItems="center">
-            <Typography color="textSecondary" className="f-14">
-              Page
-            </Typography>
-            <Typography
-              color="textSecondary"
-              className="f-14"
-              fontWeight={600}
-              ml={1}
-            >
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {Math.max(1, table.getPageCount())}
-            </Typography>
-            <Typography color="textSecondary" ml={"3px"} className="f-14">
-              {" "}
-              | Entries :{" "}
-            </Typography>
-          </Stack>
-          <Stack
-            ml={"5px"}
-            direction="row"
-            alignItems="center"
-            color="textSecondary"
-          >
-            <CustomSelect
-              className="custom-select"
-              value={table.getState().pagination.pageSize}
-              onChange={(e: { target: { value: any } }) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[50, 100, 250, 500].map((pageSize) => (
-                <MenuItem key={pageSize} value={pageSize}>
-                  {pageSize}
-                </MenuItem>
-              ))}
-            </CustomSelect>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <IconChevronLeft />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ width: "30px" }}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <IconChevronRight />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+      <TablePaginationFooter table={table} totalRows={totalRows} />
 
       {/* ✅ Drawer for Add/Edit */}
       <Drawer

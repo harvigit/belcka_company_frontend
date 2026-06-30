@@ -34,13 +34,9 @@ import {
 import {
     flexRender,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    useReactTable,
     createColumnHelper,
-    SortingState,
 } from '@tanstack/react-table';
+import { useServerTable } from "@/hooks/useServerTable";
 import {
     IconChevronLeft,
     IconChevronRight,
@@ -66,6 +62,7 @@ import DateRangePickerBox from '@/app/components/common/DateRangePickerBox';
 import {format} from 'date-fns';
 import CreateInvoice from '../create';
 import {DateTime} from 'luxon';
+import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
 
 dayjs.extend(customParseFormat);
 
@@ -214,11 +211,9 @@ const InvoiceAmountCell = ({item, startDate, endDate, fetchInvoices,}: {
 
 const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = false}) => {
     const [data, setData] = useState<any[]>([]);
-    const [columnFilters, setColumnFilters] = useState<any>([]);
     const [fetchPayslip, setFetchPayslip] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-    const [sorting, setSorting] = useState<SortingState>([]);
     const session = useSession();
     const user = session.data?.user as User & { company_id?: number | null };
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -302,21 +297,54 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
     };
 
     // Fetch data
-    const fetchInvoices = async (start: Date | null, end: Date | null): Promise<void> => {
+    const fetchInvoices = async (start?: Date | null, end?: Date | null, restorePage?: number) => {
         setFetchPayslip(true);
         try {
-            const startParam = start ? format(start, "dd/MM/yyyy") : "";
-            const endParam = end ? format(end, "dd/MM/yyyy") : "";
-            const res = await api.get(
-                `bookkeeper-invoices/get?company_id=${user.company_id}&user_id=${userId}&start_date=${startParam}&end_date=${endParam}`,
-            );
+            const activeStart = start !== undefined ? start : startDate;
+            const activeEnd = end !== undefined ? end : endDate;
+            const startParam = activeStart ? format(activeStart, "dd/MM/yyyy") : "";
+            const endParam = activeEnd ? format(activeEnd, "dd/MM/yyyy") : "";
+            let url = `bookkeeper-invoices/get?company_id=${user.company_id}&user_id=${userId}&start_date=${startParam}&end_date=${endParam}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+            
+            if (searchTerm) url += `&search=${searchTerm}`;
+
+            const res = await api.get(url);
             if (res.data) {
-                setData(res.data.info);
+                const responseData = res.data.info?.data || res.data.info || res.data.data || [];
+                setData(responseData);
+
+                const pagMeta =
+                    res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
+                        ? res.data.data
+                        : res.data.info && res.data.info.totalPages !== undefined
+                        ? res.data.info
+                        : res.data.data || {};
+
+                if (pagMeta.totalItems !== undefined) {
+                    setTotalRows(pagMeta.totalItems);
+                } else if (pagMeta.total !== undefined) {
+                    setTotalRows(pagMeta.total);
+                } else {
+                    setTotalRows(responseData.length);
+                }
+
+                if (pagMeta.totalPages !== undefined) {
+                    setPageCount(pagMeta.totalPages);
+                } else if (pagMeta.last_page !== undefined) {
+                    setPageCount(pagMeta.last_page);
+                }
+
+                if (restorePage !== undefined) {
+                    setTimeout(() => {
+                        setPagination((prev: any) => ({ ...prev, pageIndex: restorePage }));
+                    }, 0);
+                }
             }
         } catch (err) {
             console.error("Failed to fetch invoices", err);
+        } finally {
+            setFetchPayslip(false);
         }
-        setFetchPayslip(false);
     };
 
     useEffect(() => {
@@ -325,7 +353,7 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
 
     useEffect(() => {
         if (user?.company_id) {
-            fetchInvoices(startDate, endDate);
+            fetchInvoices();
         }
     }, [user?.company_id, startDate, endDate]);
 
@@ -734,21 +762,11 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
         setAnchorEl2(event.currentTarget);
     };
     const handlePopoverClose = () => setAnchorEl2(null);
-    const table = useReactTable({
+    const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount } = useServerTable({
         data: filteredData,
         columns,
-        state: {columnFilters, sorting},
-        onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: {
-            pagination: {
-                pageSize: 50,
-            },
-        },
+        fetchData: () => fetchInvoices(startDate, endDate),
+        debounceDependencies: [searchTerm],
     });
 
     // Reset to first page when search term changes
@@ -1188,86 +1206,10 @@ const InvoicesList: React.FC<Props> = ({userId, isShow, disableDateFilter = fals
                 {data.length ? <Divider/> : <></>}
             </Box>
             <Divider/>
-            <Stack
-                gap={1}
-                pr={3}
-                pt={1}
-                pl={3}
-                pb={2}
-                alignItems="center"
-                direction={{xs: 'column', sm: 'row'}}
-                justifyContent="space-between"
-            >
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Typography color="textSecondary" className="f-14">
-                        {table.getPrePaginationRowModel().rows.length} Records
-                    </Typography>
-                </Box>
-                <Box
-                    sx={{
-                        display: {
-                            xs: 'block',
-                            sm: 'flex',
-                        },
-                    }}
-                    alignItems="center"
-                >
-                    <Stack direction="row" alignItems="center">
-                        <Typography color="textSecondary" className="f-14">
-                            Page
-                        </Typography>
-                        <Typography
-                            color="textSecondary"
-                            className="f-14"
-                            fontWeight={600}
-                            ml={1}
-                        >
-                            {table.getState().pagination.pageIndex + 1} of{' '}
-                            {table.getPageCount()}
-                        </Typography>
-                        <Typography color="textSecondary" ml={'3px'} className="f-14">
-                            {' '}
-                            | Entries :{' '}
-                        </Typography>
-                    </Stack>
-                    <Stack
-                        ml={'5px'}
-                        direction="row"
-                        alignItems="center"
-                        color="textSecondary"
-                    >
-                        <CustomSelect
-                            className="custom-select"
-                            value={table.getState().pagination.pageSize}
-                            onChange={(e: { target: { value: any } }) => {
-                                table.setPageSize(Number(e.target.value));
-                            }}
-                        >
-                            {[50, 100, 250, 500].map((pageSize) => (
-                                <MenuItem key={pageSize} value={pageSize}>
-                                    {pageSize}
-                                </MenuItem>
-                            ))}
-                        </CustomSelect>
-                        <IconButton
-                            size="small"
-                            sx={{width: '30px'}}
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <IconChevronLeft/>
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            sx={{width: '30px'}}
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <IconChevronRight/>
-                        </IconButton>
-                    </Stack>
-                </Box>
-            </Stack>
+            <TablePaginationFooter
+                table={table}
+                totalRows={table.getPrePaginationRowModel().rows.length}
+            />
         </Box>
     );
 };
