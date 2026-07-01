@@ -179,7 +179,18 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                             onClose={handlePopoverClose}
                             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                            PaperProps={{ sx: { width: { xs: 200, sm: 220 }, p: 1, borderRadius: 2 } }}
+                            PaperProps={{
+                                sx: {
+                                    width: 280,
+                                    mt: 1,
+                                    p: 1,
+                                    borderRadius: 2,
+                                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
+                                    border: '1px solid #e5e7eb',
+                                    maxHeight: 'min(420px, calc(100vh - 140px))',
+                                    overflow: 'hidden',
+                                }
+                            }}
                         >
                             <TextField
                                 size="small"
@@ -187,43 +198,72 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                 fullWidth
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                sx={{ mb: 1 }}
+                                sx={{
+                                    mb: 1,
+                                    '& .MuiInputBase-root': {
+                                        borderRadius: 1.5,
+                                        backgroundColor: '#fff',
+                                    },
+                                }}
                             />
 
-                            <FormGroup>
-                                {table
-                                    .getAllLeafColumns()
-                                    .filter((col: any) => {
-                                        const excludedColumns = ['conflicts'];
-                                        if (excludedColumns.includes(col.id)) return false;
+                            <Box
+                                sx={{
+                                    maxHeight: 'calc(min(420px, calc(100vh - 140px)) - 64px)',
+                                    overflowY: 'auto',
+                                    pr: 0.5,
+                                }}
+                            >
+                                <FormGroup sx={{ gap: 0.25 }}>
+                                    {table
+                                        .getAllLeafColumns()
+                                        .filter((col: any) => {
+                                            const excludedColumns = ['conflicts'];
+                                            if (excludedColumns.includes(col.id)) return false;
 
-                                        if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
+                                            if (!userHasRatePermission && amountColumns.includes(col.id)) return false;
 
-                                        return col.id.toLowerCase().includes(search.toLowerCase());
-                                    })
-                                    .map((col: any) => (
-                                        <FormControlLabel
-                                            key={col.id}
-                                            control={
-                                                <Checkbox
-                                                    checked={col.getIsVisible()}
-                                                    onChange={col.getToggleVisibilityHandler()}
-                                                    disabled={col.id === 'conflicts'}
-                                                />
-                                            }
-                                            label={
-                                                col.columnDef.meta?.label ||
-                                                (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
-                                                    ? col.columnDef.header
-                                                    : col.id
-                                                        .replace(/([A-Z])/g, ' $1')
-                                                        .replace(/^./, (str: string) => str.toUpperCase())
-                                                        .trim())
-                                            }
-                                            sx={{ textTransform: 'none' }}
-                                        />
-                                    ))}
-                            </FormGroup>
+                                            return col.id.toLowerCase().includes(search.toLowerCase());
+                                        })
+                                        .map((col: any) => (
+                                            <FormControlLabel
+                                                key={col.id}
+                                                control={
+                                                    <Checkbox
+                                                        size="small"
+                                                        checked={col.getIsVisible()}
+                                                        onChange={col.getToggleVisibilityHandler()}
+                                                        disabled={col.id === 'conflicts'}
+                                                    />
+                                                }
+                                                label={
+                                                    col.columnDef.meta?.label ||
+                                                    (typeof col.columnDef.header === 'string' && col.columnDef.header.trim() !== ''
+                                                        ? col.columnDef.header
+                                                        : col.id
+                                                            .replace(/([A-Z])/g, ' $1')
+                                                            .replace(/^./, (str: string) => str.toUpperCase())
+                                                            .trim())
+                                                }
+                                                sx={{
+                                                    m: 0,
+                                                    px: 0.75,
+                                                    py: 0.375,
+                                                    borderRadius: 1.5,
+                                                    alignItems: 'flex-start',
+                                                    textTransform: 'none',
+                                                    '&:hover': {
+                                                        backgroundColor: '#f8fafc',
+                                                    },
+                                                    '& .MuiFormControlLabel-label': {
+                                                        fontSize: '14px',
+                                                        lineHeight: 1.35,
+                                                    },
+                                                }}
+                                            />
+                                        ))}
+                                </FormGroup>
+                            </Box>
                         </Popover>
                     </Box>
 

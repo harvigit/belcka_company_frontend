@@ -10,7 +10,14 @@ interface EditableAdjustmentCellProps {
     onSave: (date: string, amount: number) => Promise<void>;
 }
 
-const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, currentAmount, addedBy, currency, isLocked, onSave}) => {
+const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({
+    date,
+    currentAmount,
+    addedBy,
+    currency,
+    isLocked,
+    onSave,
+}) => {
     const [isEditing, setIsEditing] = useState(false);
     const [value, setValue] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -26,9 +33,21 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
     };
 
     const handleCommit = async () => {
+        if (value.trim() === '' || value.trim() === '-') {
+            setIsEditing(false);
+            return;
+        }
+
         const parsed = parseFloat(value);
         const finalValue = isNaN(parsed) ? 0 : parsed;
-        if (finalValue !== (currentAmount ?? 0)) {
+        const originalValue = currentAmount ?? 0;
+
+        if (finalValue === originalValue) {
+            setIsEditing(false);
+            return;
+        }
+
+        if (finalValue !== 0) {
             setIsSaving(true);
             try {
                 await onSave(date, finalValue);
@@ -73,7 +92,7 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
                     }}
                     sx={{
                         width: 'auto',
-                        minWidth: '75px',
+                        minWidth: '5px',
                         '& .MuiInputBase-root': {
                             height: '32px',
                             fontSize: '0.875rem',
@@ -107,6 +126,7 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
                 cursor: isLocked ? 'not-allowed' : 'text',
                 minHeight: '32px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '2px',
@@ -115,10 +135,12 @@ const EditableAdjustmentCell: React.FC<EditableAdjustmentCellProps> = ({date, cu
                 '&:hover': !isLocked ? { boxShadow: '0 0 0 1px #1976d2' } : {},
             }}
         >
-            {hasValue && !isPositive && ('-')}
-            <Typography variant="body2">
-                {hasValue ? `${currency}${Math.abs(currentAmount!)}` : '--'}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {hasValue && !isPositive && ('-')}
+                <Typography variant="body2">
+                    {hasValue ? `${currency}${Math.abs(currentAmount!)}` : '--'}
+                </Typography>
+            </Box>
         </Box>
     );
 

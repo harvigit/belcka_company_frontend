@@ -5,6 +5,7 @@ export type DailyBreakdown = {
     adjustment_id?: number;
     adjustment_added_by_name?: string;
     daily_adjustment_amount?: number | string;
+    export_timesheet_ids?: string | null;
     adjustment: string;
     cis_amount: number;
     gross_amount: number;
@@ -23,6 +24,7 @@ export type DailyBreakdown = {
     weeklyTotalHours?: string;
     weeklyPayableAmount?: string;
     weekly_adjustment_amount?: number;
+    weekly_adjustment_activities?: AdjustmentActivity[];
     weekLabel?: string;
     date?: string;
     shift?: string;
@@ -59,6 +61,15 @@ export type DailyBreakdown = {
     has_pending_leave_request?: boolean;
     is_timesheet_locked?: boolean;
     timesheet_status?: string;
+};
+
+export type AdjustmentActivity = {
+    actor_name: string;
+    action: 'add' | 'edit' | string;
+    delta_amount: number;
+    previous_amount: number;
+    updated_amount: number;
+    occurred_at: string | Date;
 };
 
 export interface TimeClockDetailsProps {

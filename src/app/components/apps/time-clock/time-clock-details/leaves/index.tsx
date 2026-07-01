@@ -78,10 +78,18 @@ const loadDateRangeFromStorage = () => {
 
 const saveDateToStorage = (startDate: Date | null, endDate: Date | null) => {
     try {
+        const existingDetailsState = localStorage.getItem(TIME_CLOCK_DETAILS_PAGE);
+        let existingColumnVisibility = {};
+
+        if (existingDetailsState) {
+            const parsed = JSON.parse(existingDetailsState);
+            existingColumnVisibility = parsed.columnVisibility || {};
+        }
+
         const dateRange = {
             startDate: startDate ? startDate.toDateString() : null,
             endDate: endDate ? endDate.toDateString() : null,
-            columnVisibility: {},
+            columnVisibility: existingColumnVisibility,
         };
         
         localStorage.setItem(TIME_CLOCK_DETAILS_PAGE, JSON.stringify(dateRange));

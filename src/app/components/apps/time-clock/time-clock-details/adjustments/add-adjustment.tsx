@@ -31,12 +31,12 @@ const normalizeWeekRange = (date: Date) => ({
 });
 
 const AddAdjustment: React.FC<AddAdjustmentProps> = ({
-    onClose,
-    userId,
-    initialFrom,
-    initialTo,
-    onDataRefresh,
-}) => {
+                                                         onClose,
+                                                         userId,
+                                                         initialFrom,
+                                                         initialTo,
+                                                         onDataRefresh,
+                                                     }) => {
     const defaultWeek = useMemo(() => {
         const baseDate = initialFrom ?? new Date();
         return normalizeWeekRange(baseDate);
@@ -49,6 +49,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
         return defaultWeek;
     });
     const [amount, setAmount] = useState('');
+    const [isNegative, setIsNegative] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +80,37 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
         }
 
         return null;
+    };
+
+    const handleToggleSign = () => {
+        setIsNegative((prevIsNegative) => {
+            const nextIsNegative = !prevIsNegative;
+
+            setAmount((prevAmount) => {
+                if (!prevAmount || prevAmount === '-') {
+                    return nextIsNegative ? '-' : '';
+                }
+
+                const isCurrentlyNegative = prevAmount.startsWith('-');
+                if (nextIsNegative && !isCurrentlyNegative) {
+                    return `-${prevAmount}`;
+                }
+                if (!nextIsNegative && isCurrentlyNegative) {
+                    return prevAmount.slice(1);
+                }
+                return prevAmount;
+            });
+
+            return nextIsNegative;
+        });
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value;
+        if (/^-?\d{0,8}(\.\d{0,2})?$/.test(raw) || raw === '' || raw === '-') {
+            setAmount(raw);
+            setIsNegative(raw.startsWith('-'));
+        }
     };
 
     const handleSubmit = async () => {
@@ -152,16 +184,35 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
             <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {error && <Alert severity="error">{error}</Alert>}
 
-                <FormControl fullWidth>
+                <FormControl>
                     <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
                         Week Range
                     </Typography>
-                    <DateRangePickerBox
-                        from={range.from}
-                        to={range.to}
-                        onChange={handleRangeChange}
-                        payrollCycle="1_week"
-                    />
+                    
+                    <Box
+                        sx={{
+                            '& input': {
+                                textAlign: 'left !important',
+                            },
+                            '& .MuiInputBase-input': {
+                                textAlign: 'left !important',
+                            },
+                            '& .MuiInputBase-root': {
+                                justifyContent: 'flex-start',
+                            },
+                            '& .MuiTypography-root': {
+                                textAlign: 'left',
+                            },
+                        }}
+                    >
+                        <DateRangePickerBox
+                            from={range.from}
+                            to={range.to}
+                            onChange={handleRangeChange}
+                            payrollCycle="1_week"
+                        />
+                    </Box>
+
                     {rangeLabel && (
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                             {rangeLabel}
@@ -176,16 +227,19 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                     <CustomTextField
                         value={amount}
                         placeholder="Enter plus or minus amount"
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            const raw = e.target.value;
-                            if (/^-?\d{0,8}(\.\d{0,2})?$/.test(raw) || raw === '' || raw === '-') {
-                                setAmount(raw);
-                            }
-                        }}
+                        onChange={handleAmountChange}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
-                                    {Number(amount || 0) < 0 ? <IconMinus size={16} /> : <IconPlus size={16} />}
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleToggleSign}
+                                        aria-label={isNegative ? 'Switch to positive amount' : 'Switch to negative amount'}
+                                        edge="start"
+                                        sx={{ p: 0.5 }}
+                                    >
+                                        {isNegative ? <IconMinus size={16} /> : <IconPlus size={16} />}
+                                    </IconButton>
                                 </InputAdornment>
                             ),
                         }}

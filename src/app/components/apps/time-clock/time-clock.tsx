@@ -333,6 +333,7 @@ const TimeClock = ({ queryParams }: Props) => {
 
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
+    const [ratePermissionLoaded, setRatePermissionLoaded] = useState<boolean>(false);
 
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
         initialStoredState?.columnVisibility || {}
@@ -350,6 +351,8 @@ const TimeClock = ({ queryParams }: Props) => {
     }, [queryParamsRef.current?.user_id]);
 
     useEffect(() => {
+        if (!ratePermissionLoaded) return;
+
         setColumnVisibility((prev) => ({
             ...prev,
             ...Object.fromEntries(
@@ -359,7 +362,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 ])
             ),
         }));
-    }, [userHasRatePermission]);
+    }, [userHasRatePermission, ratePermissionLoaded]);
 
     useEffect(() => {
         if (!startDate || !endDate) return;
@@ -399,6 +402,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 setData(response.data.info);
                 setCompanyId(response.data.company_id);
                 setUserHasRatePermission(response.data.user_rate_permission);
+                setRatePermissionLoaded(true);
                 if (response.data.currency !== null) {
                     setCurrency(response.data.currency);
                     setFetchTimesheet(false);
@@ -607,7 +611,6 @@ const TimeClock = ({ queryParams }: Props) => {
         setSettingOpen(false);
 
         try {
-            // 1. Re-fetch payroll settings (cycle may have changed)
             const response = await api.get('/setting/get-payroll-settings');
             const cycle = response.data?.IsSuccess
                 ? (response.data.data?.payroll_cycle || '')
@@ -615,17 +618,8 @@ const TimeClock = ({ queryParams }: Props) => {
 
             setPayrollCycle(cycle);
 
-            let from: Date;
-            let to: Date;
-
-            if (cycle) {
-                const range = getRangeForCycle(cycle);
-                from = range.from;
-                to   = range.to;
-            } else {
-                from = startDate || defaultStart;
-                to   = endDate   || defaultEnd;
-            }
+            const from = startDate || defaultStart;
+            const to = endDate || defaultEnd;
 
             setStartDate(from);
             setEndDate(to);
@@ -1880,58 +1874,101 @@ const TimeClock = ({ queryParams }: Props) => {
                 <Popover
                     open={Boolean(anchorEl2)}
                     anchorEl={anchorEl2}
-                    onClose={() => setAnchorEl2(null)}
+                    onClose={() => {
+                        setAnchorEl2(null);
+                        setSearch('');
+                    }}
                     anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
                     transformOrigin={{vertical: 'top', horizontal: 'right'}}
-                    PaperProps={{sx: {width: 220, p: 1, borderRadius: 2}}}
+                    PaperProps={{
+                        sx: {
+                            width: 280,
+                            mt: 1,
+                            p: 1,
+                            borderRadius: 2,
+                            boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
+                            border: '1px solid #e5e7eb',
+                            maxHeight: 'min(420px, calc(100vh - 140px))',
+                            overflow: 'hidden',
+                        }
+                    }}
                 >
                     <TextField
                         size="small"
-                        placeholder="Search"
+                        placeholder="Search columns..."
                         fullWidth
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        sx={{mb: 1}}
+                        sx={{
+                            mb: 1,
+                            '& .MuiInputBase-root': {
+                                borderRadius: 1.5,
+                                backgroundColor: '#fff',
+                            },
+                        }}
                     />
-                    <FormGroup>
-                        {table
-                            .getAllLeafColumns()
-                            .filter((col: any) => {
-                                const excludedColumns = ['select'];
-                                if (excludedColumns.includes(col.id)) return false;
+                    <Box
+                        sx={{
+                            maxHeight: 'calc(min(420px, calc(100vh - 140px)) - 64px)',
+                            overflowY: 'auto',
+                            pr: 0.5,
+                        }}
+                    >
+                        <FormGroup sx={{ gap: 0.25 }}>
+                            {table
+                                .getAllLeafColumns()
+                                .filter((col: any) => {
+                                    const excludedColumns = ['select'];
+                                    if (excludedColumns.includes(col.id)) return false;
 
-                                if (!userHasRatePermission && TIME_CLOCK_AMOUNT_COLUMNS.includes(col.id as typeof TIME_CLOCK_AMOUNT_COLUMNS[number])) return false;
+                                    if (!userHasRatePermission && TIME_CLOCK_AMOUNT_COLUMNS.includes(col.id as typeof TIME_CLOCK_AMOUNT_COLUMNS[number])) return false;
 
-                                return col.id.toLowerCase().includes(search.toLowerCase());
-                            })
-                            .map((col: any) => (
-                                <FormControlLabel
-                                    key={col.id}
-                                    control={
-                                        <Checkbox
-                                            checked={col.getIsVisible()}
-                                            onChange={(e) => {
-                                                e.stopPropagation();
-                                                col.getToggleVisibilityHandler()(e);
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                    }
-                                    sx={{textTransform: 'none'}}
-                                    onClick={(e) => e.stopPropagation()}
-                                    label={
-                                        col.columnDef.meta?.label ||
-                                        (typeof col.columnDef.header === 'string' &&
-                                        col.columnDef.header.trim() !== ''
-                                            ? col.columnDef.header
-                                            : col.id
-                                                .replace(/([A-Z])/g, ' $1')
-                                                .replace(/^./, (str: string) => str.toUpperCase())
-                                                .trim())
-                                    }
-                                />
-                            ))}
-                    </FormGroup>
+                                    return col.id.toLowerCase().includes(search.toLowerCase());
+                                })
+                                .map((col: any) => (
+                                    <FormControlLabel
+                                        key={col.id}
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={col.getIsVisible()}
+                                                onChange={(e) => {
+                                                    e.stopPropagation();
+                                                    col.getToggleVisibilityHandler()(e);
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        }
+                                        sx={{
+                                            m: 0,
+                                            px: 0.75,
+                                            py: 0.375,
+                                            borderRadius: 1.5,
+                                            alignItems: 'flex-start',
+                                            textTransform: 'none',
+                                            '&:hover': {
+                                                backgroundColor: '#f8fafc',
+                                            },
+                                            '& .MuiFormControlLabel-label': {
+                                                fontSize: '14px',
+                                                lineHeight: 1.35,
+                                            },
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        label={
+                                            col.columnDef.meta?.label ||
+                                            (typeof col.columnDef.header === 'string' &&
+                                            col.columnDef.header.trim() !== ''
+                                                ? col.columnDef.header
+                                                : col.id
+                                                    .replace(/([A-Z])/g, ' $1')
+                                                    .replace(/^./, (str: string) => str.toUpperCase())
+                                                    .trim())
+                                        }
+                                    />
+                                ))}
+                        </FormGroup>
+                    </Box>
                 </Popover>
 
                 <Divider/>

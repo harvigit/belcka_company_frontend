@@ -22,7 +22,7 @@ import TimeClockHeader from './components/TimeClockHeader';
 import TimeClockStats from './components/TimeClockStats';
 import TimeClockTable from './components/TimeClockTable';
 import ActionBar from './components/ActionBar';
-import {DailyBreakdown, TimeClockDetailsProps, RecordType} from '@/app/components/apps/time-clock/types/timeClock';
+import {AdjustmentActivity, DailyBreakdown, TimeClockDetailsProps, RecordType} from '@/app/components/apps/time-clock/types/timeClock';
 import {IconExclamationMark} from '@tabler/icons-react';
 import Checklogs from './time-clock-details/checklogs/index';
 import Expenses from './time-clock-details/expenses/index';
@@ -31,6 +31,7 @@ import AddLeave from './time-clock-details/leaves/add-leave';
 import LeaveRequest from './time-clock-details/leaves/leave-request';
 import AddExpense from './time-clock-details/expenses/add-expense';
 import AddAdjustment from './time-clock-details/adjustments/add-adjustment';
+import AdjustmentActivitySidebar from './time-clock-details/adjustments/activity-sidebar';
 import {formatHour} from '@/app/components/apps/time-clock/utils/recordHelpers';
 import {Stack} from '@mui/system';
 
@@ -189,6 +190,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
 
     const [addExpenseSidebar, setAddExpenseSidebar] = useState<boolean>(false);
     const [addAdjustmentSidebar, setAddAdjustmentSidebar] = useState<boolean>(false);
+    const [adjustmentActivitySidebar, setAdjustmentActivitySidebar] = useState<boolean>(false);
+    const [selectedAdjustmentActivities, setSelectedAdjustmentActivities] = useState<AdjustmentActivity[]>([]);
     const [expensesSidebar, setExpensesSidebar] = useState<boolean>(false);
     const [selectedExpenseId, setSelectedExpenseId] = useState<number>(0);
     const router = useRouter();
@@ -221,6 +224,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setPenaltyAppealCount,
         userHasRatePermission,
         setUserHasRatePermission,
+        ratePermissionLoaded,
         shifts,
         projects,
         fetchTimeClockData,
@@ -242,6 +246,8 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
     useEffect(() => { fetchPayrollCycle(); }, []);
     
     useEffect(() => {
+        if (!ratePermissionLoaded) return;
+
         setColumnVisibility((prev) => ({
             ...prev,
             ...Object.fromEntries(
@@ -251,7 +257,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 ])
             ),
         }));
-    }, [userHasRatePermission]);
+    }, [userHasRatePermission, ratePermissionLoaded]);
 
     // Save columnVisibility to localStorage whenever it changes
     useEffect(() => {
@@ -437,7 +443,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setAnchorEl(event.currentTarget);
     };
 
-    const handlePopoverClose = () => setAnchorEl(null);
+    const handlePopoverClose = () => {
+        setAnchorEl(null);
+        setSearch('');
+    };
 
     const handleDateRangeChange = useCallback(
         (range: { from: Date | null; to: Date | null }) => {
@@ -471,7 +480,10 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             selectedRowIndices.forEach((rowIndex) => {
                 const rowData = dailyData[rowIndex];
                 if (rowData && rowData.rowType === 'day') {
-                    timesheetIds.push(rowData.timesheet_ids);
+                    const exportIds = rowData.export_timesheet_ids || rowData.timesheet_ids;
+                    if (exportIds) {
+                        timesheetIds.push(exportIds);
+                    }
                 }
             });
 
@@ -652,6 +664,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         setAddAdjustmentSidebar(true);
     };
 
+    const handleOpenAdjustmentActivities = (activities: AdjustmentActivity[]) => {
+        setSelectedAdjustmentActivities(activities);
+        setAdjustmentActivitySidebar(true);
+    };
+
     const closeAddLeaveSidebar = async () => {
         setAddLeaveSidebar(false);
         try {
@@ -686,6 +703,11 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
         } catch (error) {
             console.error('Error fetching time clock data after closing add adjustment sidebar:', error);
         }
+    };
+
+    const closeAdjustmentActivitySidebar = () => {
+        setAdjustmentActivitySidebar(false);
+        setSelectedAdjustmentActivities([]);
     };
 
     const handlePendingRequest = async () => {
@@ -952,7 +974,9 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 weekLabel: week.week_range,
                 weeklyTotalHours: formatHour(week.weekly_total_hours),
                 weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
+                weekly_adjustment_activities: week.weekly_adjustment_activities || [],
                 timesheet_ids: '',
+                export_timesheet_ids: null,
                 cis_amount: 0,
                 gross_amount: 0,
                 adjustment: ''
@@ -990,6 +1014,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         has_pending_leave_request: day.has_pending_leave_request ?? false,
                         is_timesheet_paid: day.status === '9' || day.status === 9,
                         timesheet_ids: day.timesheet_ids ?? '--',
+                        export_timesheet_ids: day.export_timesheet_ids ?? day.timesheet_ids ?? '--',
                         shift: '--',
                         project: '--',
                         start: '--',
@@ -1017,6 +1042,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         weeklyTotalHours: formatHour(week.weekly_total_hours),
                         weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
                         weekly_adjustment_amount: Number(week.weekly_adjustment_amount || 0),
+                        weekly_adjustment_activities: week.weekly_adjustment_activities || [],
                         parsedDate: parseDate(day.date),
                         address: '--',
                         check_out: '--',
@@ -1034,6 +1060,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     has_pending_leave_request: day.has_pending_leave_request ?? false,
                     is_timesheet_paid: day.status === '9' || day.status === 9,
                     timesheet_ids: day.timesheet_ids ?? null,
+                    export_timesheet_ids: day.export_timesheet_ids ?? day.timesheet_ids ?? null,
                     shift: '--',
                     project: '--',
                     start: '--',
@@ -1058,6 +1085,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     weeklyTotalHours: formatHour(week.weekly_total_hours),
                     weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
                     weekly_adjustment_amount: Number(week.weekly_adjustment_amount || 0),
+                    weekly_adjustment_activities: week.weekly_adjustment_activities || [],
                     parsedDate: '--',
                     address: '--',
                     check_in: '--',
@@ -1922,6 +1950,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 penaltyAppealCount={penaltyAppealCount}
                 openLeaveRequestsSideBar={handleLeaveRequests}
                 onAdjustmentSave={handleAdjustmentSave}
+                onOpenAdjustmentActivities={handleOpenAdjustmentActivities}
             />
 
             <ActionBar
@@ -2043,6 +2072,28 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 <Penalties
                     worklogId={selectedWorkId}
                     onClose={closePenaltiesSidebar}
+                />
+            </Drawer>
+
+            <Drawer
+                anchor="right"
+                open={adjustmentActivitySidebar}
+                onClose={closeAdjustmentActivitySidebar}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        overflow: 'hidden',
+                        width: '500px',
+                        borderTopLeftRadius: 18,
+                        borderBottomLeftRadius: 18,
+                    },
+                }}
+            >
+                <AdjustmentActivitySidebar
+                    activities={selectedAdjustmentActivities}
+                    currency={currency}
+                    onClose={closeAdjustmentActivitySidebar}
                 />
             </Drawer>
 

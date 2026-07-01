@@ -22,6 +22,7 @@ export const useTimeClockData = (
 
     // Pay Rate Permission
     const [userHasRatePermission, setUserHasRatePermission] = useState<boolean>(false);
+    const [ratePermissionLoaded, setRatePermissionLoaded] = useState<boolean>(false);
 
     // Payroll cycle
     const [payrollCycle, setPayrollCycle] = useState<string>('');
@@ -61,6 +62,7 @@ export const useTimeClockData = (
                 setLeaveRequestCount(response.data.total_leave_requests || 0);
                 setPenaltyAppealCount(response.data.pending_penalty_appeal_count || 0);
                 setUserHasRatePermission(response.data.user_rate_permission);
+                setRatePermissionLoaded(true);
 
                 await fetchConflicts(start, end, user_id);
 
@@ -68,6 +70,7 @@ export const useTimeClockData = (
             }
         } catch (error) {
             console.error('Error fetching timeClock data:', error);
+            setRatePermissionLoaded(true);
         }
     }, [user_id, isRemovedUser, isArchivedUser]);
 
@@ -121,6 +124,7 @@ export const useTimeClockData = (
         setPenaltyAppealCount,
         userHasRatePermission,
         setUserHasRatePermission,
+        ratePermissionLoaded,
         shifts,
         projects,
         fetchTimeClockData,

@@ -31,6 +31,7 @@ import {
     IconBrandAndroid,
     IconBrandApple,
     IconWorld,
+    IconHistory,
 } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
 import EditableTimeCell from './EditableTimeCell';
@@ -40,6 +41,7 @@ import EditableAdjustmentCell from './EditableAdjustmentCell';
 import NewRecordRow from './NewRecordRow';
 import {
     DailyBreakdown,
+    AdjustmentActivity,
     EditingWorklog,
     NewRecord,
     Shift,
@@ -102,6 +104,7 @@ interface TimeClockTableProps {
     penaltyAppealByDate?: { [key: string]: number };
     openLeaveRequestsSideBar?: () => Promise<void>;
     onAdjustmentSave?: (date: string, amount: number) => Promise<void>;
+    onOpenAdjustmentActivities?: (activities: AdjustmentActivity[]) => void;
 }
 
 const TimeClockTable: React.FC<TimeClockTableProps> = ({
@@ -149,9 +152,10 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                            openExpensesSidebar,
                                                            openPenaltiesSidebar,
                                                            leaveRequestCount,
-                                                       openLeaveRequestsSideBar,
-                                                       onAdjustmentSave
-                                                   }) => {
+                                                           openLeaveRequestsSideBar,
+                                                           onAdjustmentSave,
+                                                           onOpenAdjustmentActivities,
+                                                       }) => {
     const resolveAnchorDate = (rowData: DailyBreakdown): string => {
         const firstRowDate = rowData.rowsData?.find((log: any) => log?.date_added)?.date_added;
         if (firstRowDate) {
@@ -175,6 +179,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             weeklyAdjustmentAmount: number;
             addedBy: string;
             anchorDate: string;
+            activities: AdjustmentActivity[];
         }> = {};
 
         dailyData.forEach((rowData, index) => {
@@ -200,6 +205,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                     weeklyAdjustmentAmount: Number(rowData.weekly_adjustment_amount || 0),
                     addedBy: '',
                     anchorDate: resolveAnchorDate(rowData),
+                    activities: rowData.weekly_adjustment_activities || [],
                 };
             }
 
@@ -225,6 +231,14 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
         open: false,
         worklogId: undefined,
     });
+
+    const handleOpenAdjustmentActivity = (
+        event: React.MouseEvent<HTMLButtonElement>,
+        activities: AdjustmentActivity[]
+    ) => {
+        event.stopPropagation();
+        onOpenAdjustmentActivities?.(activities);
+    };
     
     const getVisibleColumnConfigs = () => {
         const visibleColumns = table.getVisibleLeafColumns();
@@ -1326,16 +1340,40 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             className="rowspan-cell"
                                                             sx={{ py: 0.5, fontSize: '0.875rem', height: '45px', verticalAlign: 'middle' }}
                                                         >
-                                                            <EditableAdjustmentCell
-                                                                date={currentWeekAdjustmentMeta?.anchorDate
-                                                                    || row.original.rowsData.find((l: any) => l.type === 'worklog')?.date_added
-                                                                    || row.original.rowsData[0].date_added}
-                                                                currentAmount={currentWeekAdjustmentMeta?.weeklyAdjustmentAmount ?? 0}
-                                                                addedBy={currentWeekAdjustmentMeta?.addedBy || rowData.adjustment_added_by_name}
-                                                                currency={currency}
-                                                                isLocked={rowData.is_timesheet_paid === true}
-                                                                onSave={onAdjustmentSave!}
-                                                            />
+                                                            <Box
+                                                                sx={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: 0.5,
+                                                                }}
+                                                            >
+                                                                <EditableAdjustmentCell
+                                                                    date={currentWeekAdjustmentMeta?.anchorDate
+                                                                        || row.original.rowsData.find((l: any) => l.type === 'worklog')?.date_added
+                                                                        || row.original.rowsData[0].date_added}
+                                                                    currentAmount={currentWeekAdjustmentMeta?.weeklyAdjustmentAmount ?? 0}
+                                                                    addedBy={currentWeekAdjustmentMeta?.addedBy || rowData.adjustment_added_by_name}
+                                                                    currency={currency}
+                                                                    isLocked={rowData.is_timesheet_paid === true}
+                                                                    onSave={onAdjustmentSave!}
+                                                                />
+                                                                {(currentWeekAdjustmentMeta?.activities?.length || 0) > 0 && (
+                                                                    <Tooltip title="View adjustment activity" arrow placement="bottom">
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={(event) => handleOpenAdjustmentActivity(event, currentWeekAdjustmentMeta?.activities || [])}
+                                                                            sx={{
+                                                                                p: 0.25,
+                                                                                color: '#5b6574',
+                                                                                '&:hover': { backgroundColor: 'transparent', color: '#173f98' },
+                                                                            }}
+                                                                        >
+                                                                            <IconHistory size={14} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                )}
+                                                            </Box>
                                                         </TableCell>
                                                     ) : null
                                                 )}
@@ -1624,14 +1662,38 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             verticalAlign: 'middle',
                                                         }}
                                                     >
-                                                        <EditableAdjustmentCell
-                                                            date={currentWeekAdjustmentMeta?.anchorDate || row.original.date || ''}
-                                                            currentAmount={currentWeekAdjustmentMeta?.weeklyAdjustmentAmount ?? 0}
-                                                            addedBy={currentWeekAdjustmentMeta?.addedBy || rowData.adjustment_added_by_name}
-                                                            currency={currency}
-                                                            isLocked={rowData.is_timesheet_paid === true}
-                                                            onSave={onAdjustmentSave!}
-                                                        />
+                                                        <Box
+                                                            sx={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: 0.5,
+                                                            }}
+                                                        >
+                                                            <EditableAdjustmentCell
+                                                                date={currentWeekAdjustmentMeta?.anchorDate || row.original.date || ''}
+                                                                currentAmount={currentWeekAdjustmentMeta?.weeklyAdjustmentAmount ?? 0}
+                                                                addedBy={currentWeekAdjustmentMeta?.addedBy || rowData.adjustment_added_by_name}
+                                                                currency={currency}
+                                                                isLocked={rowData.is_timesheet_paid === true}
+                                                                onSave={onAdjustmentSave!}
+                                                            />
+                                                            {(currentWeekAdjustmentMeta?.activities?.length || 0) > 0 && (
+                                                                <Tooltip title="View adjustment activity" arrow placement="top">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        onClick={(event) => handleOpenAdjustmentActivity(event, currentWeekAdjustmentMeta?.activities || [])}
+                                                                        sx={{
+                                                                            p: 0.25,
+                                                                            color: '#5b6574',
+                                                                            '&:hover': { backgroundColor: 'transparent', color: '#173f98' },
+                                                                        }}
+                                                                    >
+                                                                        <IconHistory size={14} />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            )}
+                                                        </Box>
                                                     </TableCell>
                                                 );
                                             }
