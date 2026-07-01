@@ -14,7 +14,6 @@ import { IconX, IconArrowLeft } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import api from "@/utils/axios";
-import PermissionGuard from "@/app/auth/PermissionGuard";
 
 interface BookkeeperProps {
   open: boolean;
@@ -23,40 +22,69 @@ interface BookkeeperProps {
 
 const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
   const [history, setHistory] = useState<any[]>([]);
-  const [page, setPage] = useState<number>(1);
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
   const limit = 20;
   const session = useSession();
-  const user = session.data?.user as User & { company_id?: number | null };
-  const [loading, setLoading] = useState<boolean>(false);
+  const user = session.data?.user as User & {
+    company_id?: number | null;
+  };
 
-  const fetchHistories = async () => {
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && user?.company_id) {
+      setHistory([]);
+      setPage(1);
+      setTotalItems(0);
+
+      fetchHistories(1);
+    } else {
+      setHistory([]);
+      setPage(1);
+      setTotalItems(0);
+    }
+  }, [open, user?.company_id]);
+
+  const fetchHistories = async (currentPage: number) => {
     setLoading(true);
+
     try {
       const res = await api.get(
-        `time-clock/bookkeeper-history?company_id=${user.company_id}`,
+        `time-clock/bookkeeper-history?company_id=${user.company_id}&page=${currentPage}&limit=${limit}`,
       );
-      if (res.data?.info) {
-        setHistory(res.data.info);
+
+      if (res.data?.IsSuccess) {
+        const newData = res.data.info || [];
+
+        setHistory((prev) =>
+          currentPage === 1 ? newData : [...prev, ...newData],
+        );
+
+        setTotalItems(res.data.data?.totalItems || 0);
       }
     } catch (err) {
       console.error("Failed to fetch history", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
-  const paginatedFeeds = history?.slice(0, page * limit) || [];
 
-  useEffect(() => {
-    if (open == true) {
-      fetchHistories();
-    }
-  }, [open]);
+  const handleSeeMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchHistories(nextPage);
+  };
+
+  const hasMore = history.length < totalItems;
 
   return (
     <Box>
       <Drawer
         anchor="right"
         open={open}
-        onClose={() => onClose()}
+        onClose={onClose}
         PaperProps={{
           sx: {
             width: 500,
@@ -69,153 +97,125 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
           },
         }}
       >
-        <Box sx={{ position: "relative", p: 2 }}>
-          {/* Close Button */}
+        <Box
+          sx={{
+            position: "relative",
+            p: 2,
+          }}
+        >
           <IconButton
-            aria-label="close"
-            onClick={() => onClose()}
-            size="small"
+            onClick={onClose}
             sx={{
               position: "absolute",
               right: 0,
               top: 8,
-              color: (theme) => theme.palette.grey[900],
-              backgroundColor: "transparent",
-              zIndex: 10,
-              width: 50,
-              height: 50,
             }}
           >
             <IconX size={18} />
           </IconButton>
 
-          {/* Activity History List */}
           <Grid container spacing={2} display="block">
-            <Box
-              display={"flex"}
-              alignContent={"center"}
-              alignItems={"center"}
-              flexWrap={"wrap"}
-            >
-              <IconButton onClick={() => onClose()}>
+            <Box display="flex" alignItems="center">
+              <IconButton onClick={onClose}>
                 <IconArrowLeft />
               </IconButton>
+
               <Typography variant="h6" fontWeight={700}>
                 Bookkeeper Activities
               </Typography>
             </Box>
 
-            {history.length > 0 ? (
+            {loading && history.length === 0 ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : history.length > 0 ? (
               <Box mt={1}>
-                <Box
-                  sx={{
-                    maxHeight: history.length > 3 ? "auto" : "auto",
-                    overflow: history.length > 3 ? "auto" : "visible",
-                    pr: 0,
-                  }}
-                >
-                  {paginatedFeeds.map((addr, index) => {
-                    let color = "";
+                {history.map((addr, index) => {
+                  let color = "";
 
-                    switch (addr.request_type) {
-                      case 126:
-                        color = "#0066ffff";
-                        break;
-                      case 111:
-                        color = "#A600FF";
-                        break;
-                      case 102:
-                        color = "#FF7F00";
-                        break;
-                      case 121:
-                        color = "#32A852";
-                        break;
-                      case 110:
-                        color = "#949090ff";
-                        break;
-                      default:
-                        color = "#ff3737ff";
-                    }
+                  switch (addr.request_type) {
+                    case 126:
+                      color = "#0066ff";
+                      break;
 
-                    return (
+                    case 111:
+                      color = "#A600FF";
+                      break;
+
+                    case 102:
+                      color = "#FF7F00";
+                      break;
+
+                    case 121:
+                      color = "#32A852";
+                      break;
+
+                    case 110:
+                      color = "#949090";
+                      break;
+
+                    default:
+                      color = "#ff3737";
+                  }
+
+                  return (
+                    <Box
+                      key={addr.id ?? index}
+                      mt={2}
+                      p={2}
+                      position="relative"
+                      display="flex"
+                      alignItems="center"
+                      sx={{
+                        width: "100%",
+                        height: "100px",
+                        borderRadius: "25px",
+                        boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
+                        border: "1px solid rgb(240 240 240)",
+                        background: "#fff",
+                      }}
+                    >
                       <Box
-                        key={addr.id ?? index}
-                        mb={index === history.length - 1 ? 0 : 2}
-                        pl={2}
-                        pr={2}
-                        mt={2}
-                        position="relative"
-                        display="flex"
-                        alignItems="center"
-                        sx={{
-                          width: "100%",
-                          lineHeight: "10px",
-                          height: "100px",
-                          borderRadius: "25px",
-                          boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
-                          border: "1px solid rgb(240 240 240)",
-                        }}
+                        position="absolute"
+                        top="-10px"
+                        left="15px"
+                        bgcolor={color}
+                        px={1.5}
+                        borderRadius="10px"
                       >
-                        <Box
-                          position="absolute"
-                          top="-10px"
-                          left="15px"
-                          bgcolor={color}
-                          px={1.5}
-                          borderRadius="10px"
-                          zIndex={1}
-                        >
-                          <Typography
-                            variant="caption"
-                            fontWeight={700}
-                            fontSize={"12px !important"}
-                            color="#fff"
-                          >
-                            {addr.type_name}
-                          </Typography>
-                        </Box>
-                        <Box
-                          display="initial"
-                          width="100%"
-                          textAlign="start"
-                        >
-                          <Typography
-                            fontSize="14px"
-                            className="multi-ellipsis"
-                          >
-                            <b>{addr.user_name}:</b>{" "}
-                            <Tooltip placement="top" title={addr.message} arrow>
-                              {addr.message}
-                            </Tooltip>
-                          </Typography>
-                          <p
-                            style={{
-                              fontSize: "12px",
-                              textAlign: "end",
-                              color: "GrayText",
-                              margin: "3px",
-                            }}
-                            color="textSecondary"
-                          >
-                            {addr.date}
-                          </p>
-                        </Box>
+                        <Typography color="#fff" fontSize={12} fontWeight={700}>
+                          {addr.type_name}
+                        </Typography>
                       </Box>
-                    );
-                  })}
-                </Box>
 
-                {paginatedFeeds.length < history.length && (
+                      <Box width="100%" textAlign="start">
+                        <Typography fontSize="14px" className="multi-ellipsis">
+                          <b>{addr.user_name}:</b>{" "}
+                          <Tooltip title={addr.message} arrow>
+                            <span>{addr.message}</span>
+                          </Tooltip>
+                        </Typography>
+
+                        <Typography
+                          fontSize="12px"
+                          textAlign="end"
+                          color="gray"
+                        >
+                          {addr.date}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })}
+
+                {hasMore && (
                   <Box display="flex" justifyContent="center" my={2}>
                     <Button
                       variant="outlined"
-                      startIcon={
-                        loading ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : null
-                      }
-                      onClick={() => setPage((prev) => prev + 1)}
                       disabled={loading}
+                      onClick={handleSeeMore}
+                      startIcon={loading && <CircularProgress size={16} />}
                     >
                       See More
                     </Button>
@@ -223,11 +223,9 @@ const BookkeeperHistory: React.FC<BookkeeperProps> = ({ open, onClose }) => {
                 )}
               </Box>
             ) : (
-              <>
-                <Typography mt={2} ml={2} variant="h5">
-                  No activities are found for bookkeeper!!
-                </Typography>
-              </>
+              <Typography mt={3} ml={2} variant="h5">
+                No activities are found for bookkeeper!!
+              </Typography>
             )}
           </Grid>
         </Box>

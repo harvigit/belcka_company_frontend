@@ -7,49 +7,51 @@ import React, {
   useState,
 } from "react";
 import {
-    Typography,
-    Box,
-    Grid,
-    Button,
-    Divider,
-    IconButton,
-    Stack,
-    TextField,
-    InputAdornment,
-    DialogActions,
-    DialogTitle,
-    DialogContent,
-    Dialog,
-    Tabs,
-    Tab,
-    Drawer,
-    Autocomplete,
-    CircularProgress,
-    ListItem,
-    ListItemButton,
-    List,
-    MenuItem,
-    Menu,
-    ListItemIcon,
-    Popover,
-    FormGroup,
-    FormControlLabel,
-    Checkbox, Tooltip,
-} from '@mui/material';
+  Typography,
+  Box,
+  Grid,
+  Button,
+  Divider,
+  IconButton,
+  Stack,
+  TextField,
+  InputAdornment,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
+  Dialog,
+  Tabs,
+  Tab,
+  Drawer,
+  Autocomplete,
+  CircularProgress,
+  ListItem,
+  ListItemButton,
+  List,
+  MenuItem,
+  Menu,
+  ListItemIcon,
+  Popover,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Tooltip,
+} from "@mui/material";
 import {
-    IconChartPie,
-    IconChevronRight,
-    IconDotsVertical,
-    IconFilter,
-    IconPencil,
-    IconPlus,
-    IconSearch,
-    IconX,
-    IconArrowLeft,
-    IconTrash,
-    IconLocation,
-    IconEye, IconSettings,
-} from '@tabler/icons-react';
+  IconChartPie,
+  IconChevronRight,
+  IconDotsVertical,
+  IconFilter,
+  IconPencil,
+  IconPlus,
+  IconSearch,
+  IconX,
+  IconArrowLeft,
+  IconTrash,
+  IconLocation,
+  IconEye,
+  IconSettings,
+} from "@tabler/icons-react";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useSession } from "next-auth/react";
@@ -84,7 +86,7 @@ import { IconNotes } from "@tabler/icons-react";
 import { IconDatabase } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { Chip } from "@mui/material";
-import Setting from '@/app/components/apps/projects/setting';
+import Setting from "@/app/components/apps/projects/setting";
 
 dayjs.extend(customParseFormat);
 
@@ -202,7 +204,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
-  const [page, setPage] = useState<number>(1);
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
   const limit = 20;
   const productLimit = 50;
   const session = useSession();
@@ -210,7 +214,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
   const [mapOpen, setMapOpen] = useState<boolean>(false);
   const [projectId, setProjectId] = useState<number | null>(null);
-  const [favoriteProjectId, setFavoriteProjectId] = useState<number | null>(null);
+  const [favoriteProjectId, setFavoriteProjectId] = useState<number | null>(
+    null,
+  );
   const [processedIds, setProcessedIds] = useState<number[]>([]);
   const [shouldRefresh, setShouldRefresh] = useState(false);
   const openMenu = Boolean(anchorEl);
@@ -248,9 +254,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [selectAll, setSelectAll] = useState(false);
   const [openFilter, setOpenFilter] = useState(false);
 
-    const [settingOpen, setSettingOpen] = useState(false);
+  const [settingOpen, setSettingOpen] = useState(false);
 
-    // For create
+  // For create
   const initialCreateState: ProjectFormData = {
     name: "",
     address: "",
@@ -293,18 +299,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setAnchorEl(event.currentTarget);
   };
 
-    const handleSettingOpen = () => {
-        setSettingOpen(true);
-    };
+  const handleSettingOpen = () => {
+    setSettingOpen(true);
+  };
 
-    const handleSettingClose = async () => {
-        setSettingOpen(false);
+  const handleSettingClose = async () => {
+    setSettingOpen(false);
 
-        try {
-            
-        } catch (error) {
-        }
-    };
+    try {
+    } catch (error) {}
+  };
 
   const handleClose = () => {
     setAnchorEl(null);
@@ -480,13 +484,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   }, [value]);
 
-  const fetchHistories = async () => {
+  const fetchHistories = async (currentPage: number) => {
     try {
       const res = await api.get(
-        `project/get-history?project_id=${Number(projectID)}`,
+        `project/get-history?project_id=${Number(projectID)}&page=${currentPage}&limit=${limit}`,
       );
       if (res.data?.info) {
-        setHistory(res.data.info);
+        const newData = res.data.info || [];
+
+        setHistory((prev) =>
+          currentPage === 1 ? newData : [...prev, ...newData],
+        );
+        setTotalItems(res.data.data?.totalItems || 0);
       }
     } catch (err) {
       console.error("Failed to fetch history", err);
@@ -495,7 +504,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
   useEffect(() => {
     if (!Number.isNaN(projectID) && projectID !== null && openDrawer == true) {
-      fetchHistories();
+      fetchHistories(page);
     }
   }, [openDrawer == true && !Number.isNaN(projectID)]);
 
@@ -702,8 +711,6 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     return dayjs(date ?? "").isValid() ? dayjs(date).format("DD/MM/YYYY") : "-";
   };
 
-  const paginatedFeeds = history?.slice(0, page * limit) || [];
-
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
     libraries: GOOGLE_MAP_LIBRARIES,
@@ -899,6 +906,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
   const paginatedProduct = filteredData?.slice(0, page * productLimit) || [];
 
+  const handleSeeMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchHistories(nextPage);
+  };
+  const hasMore = history.length < totalItems;
   return (
     <PermissionGuard permission="Projects">
       <Box p={2} pt={1}>
@@ -1050,14 +1063,18 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 </Button>
               )}
 
-                <Tooltip title="Settings">
-                    <IconButton onClick={handleSettingOpen} color="primary" size="small">
-                        <IconSettings size={20} />
-                    </IconButton>
-                </Tooltip>
+              <Tooltip title="Settings">
+                <IconButton
+                  onClick={handleSettingOpen}
+                  color="primary"
+                  size="small"
+                >
+                  <IconSettings size={20} />
+                </IconButton>
+              </Tooltip>
 
-                <Setting settingOpen={settingOpen} onClose={handleSettingClose} />
-                
+              <Setting settingOpen={settingOpen} onClose={handleSettingClose} />
+
               <IconButton
                 onClick={handlePopoverOpen}
                 sx={{ ml: 1 }}
@@ -1984,7 +2001,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 </Typography>
               </Box>
 
-              {history.length > 0 ? (
+              {loading && history.length === 0 ? (
+                <Box display="flex" justifyContent="center" mt={4}>
+                  <CircularProgress />
+                </Box>
+              ) : history.length > 0 ? (
                 <Box mt={1}>
                   <Box
                     sx={{
@@ -1993,7 +2014,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       pr: 0,
                     }}
                   >
-                    {paginatedFeeds.map((addr, index) => {
+                    {history.map((addr, index) => {
                       return (
                         <Box
                           key={addr.id ?? index}
@@ -2067,17 +2088,13 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                     })}
                   </Box>
 
-                  {paginatedFeeds.length < history.length && (
+                  {hasMore && (
                     <Box display="flex" justifyContent="center" my={2}>
                       <Button
                         variant="outlined"
-                        startIcon={
-                          loading ? (
-                            <CircularProgress size={16} color="inherit" />
-                          ) : null
-                        }
-                        onClick={() => setPage((prev) => prev + 1)}
                         disabled={loading}
+                        onClick={handleSeeMore}
+                        startIcon={loading && <CircularProgress size={16} />}
                       >
                         See More
                       </Button>

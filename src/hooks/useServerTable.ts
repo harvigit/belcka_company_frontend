@@ -3,6 +3,7 @@ import {
   useReactTable,
   getCoreRowModel,
   SortingState,
+  getSortedRowModel,
 } from '@tanstack/react-table';
 
 interface UseServerTableOptions<TData> {
@@ -67,12 +68,13 @@ export function useServerTable<TData>({
     rowCount: totalRows,
     manualPagination: true,
     manualFiltering: true,
-    manualSorting: true,
+    manualSorting: false,
     autoResetPageIndex: false,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return {

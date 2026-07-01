@@ -25,37 +25,47 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
   onClose,
 }) => {
   const [history, setHistory] = useState<any[]>([]);
-  const [page, setPage] = useState<number>(1);
-  const limit = 20;
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [loading, setLoading] = useState<boolean>(false);
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
-  const fetchHistories = async () => {
+  const limit = 20;
+  const fetchHistories = async (currentPage: any) => {
     setLoading(true);
     try {
       const res = await api.get(
-        `requests/get-history?company_id=${user.company_id}`,
+        `requests/get-history?company_id=${user.company_id}&type=119&page=${currentPage}&limit=${limit}`,
       );
       if (res.data?.info) {
-        setHistory(res.data.info);
+        const newData = res.data.info || [];
+
+        setHistory((prev) =>
+          currentPage === 1 ? newData : [...prev, ...newData],
+        );
+
+        setTotalItems(res.data.data?.totalItems || 0);
       }
     } catch (err) {
       console.error("Failed to fetch history", err);
     }
     setLoading(false);
   };
-  const filteredHistory =
-    history?.filter((item) => item.request_type === 119) || [];
-
-  const paginatedFeeds = filteredHistory.slice(0, page * limit);
 
   useEffect(() => {
     if (open == true) {
-      fetchHistories();
+      fetchHistories(page);
     }
   }, [open]);
 
+  const handleSeeMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchHistories(nextPage);
+  };
+
+  const hasMore = history.length < totalItems;
   return (
     <Box>
       <Drawer
@@ -112,22 +122,29 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
               </Typography>
             </Box>
 
-            {paginatedFeeds.length > 0 ? (
+            {loading && history.length === 0 ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : history.length > 0 ? (
               <Box sx={{ flex: 1, overflowY: "auto" }}>
                 <Box
                   sx={{
-                    maxHeight: paginatedFeeds.length > 3 ? "auto" : "auto",
-                    overflow: paginatedFeeds.length > 3 ? "auto" : "visible",
+                    maxHeight: history.length > 3 ? "auto" : "auto",
+                    overflow: history.length > 3 ? "auto" : "visible",
                     pr: 0,
                   }}
                 >
-                  {paginatedFeeds
-                    .filter((item) => item.request_type === 119 || item.request_type === 120)
+                  {history
+                    .filter(
+                      (item) =>
+                        item.request_type === 119 || item.request_type === 120,
+                    )
                     .map((addr, index) => {
                       return (
                         <Box
                           key={addr.id ?? index}
-                          mb={index === paginatedFeeds.length - 1 ? 0 : 2}
+                          mb={index === history.length - 1 ? 0 : 2}
                           pl={2}
                           pr={2}
                           mt={2}
@@ -161,11 +178,7 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
                               {addr.type_name}
                             </Typography>
                           </Box>
-                          <Box
-                            display="initial"
-                            width="100%"
-                            textAlign="start"
-                          >
+                          <Box display="initial" width="100%" textAlign="start">
                             <Typography
                               fontSize="14px"
                               className="multi-ellipsis"
@@ -196,17 +209,13 @@ const PurchaseOrderHistory: React.FC<PurchaseOrderProps> = ({
                     })}
                 </Box>
 
-                {paginatedFeeds.length < filteredHistory.length && (
+                {hasMore && (
                   <Box display="flex" justifyContent="center" my={2}>
                     <Button
                       variant="outlined"
-                      startIcon={
-                        loading ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : null
-                      }
-                      onClick={() => setPage((prev) => prev + 1)}
                       disabled={loading}
+                      onClick={handleSeeMore}
+                      startIcon={loading && <CircularProgress size={16} />}
                     >
                       See More
                     </Button>

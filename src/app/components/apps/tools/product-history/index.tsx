@@ -7,12 +7,10 @@ import {
   Typography,
   CircularProgress,
   Tooltip,
-  Grid,
   Button,
 } from "@mui/material";
 import { IconX, IconArrowLeft } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import dayjs from "dayjs";
 
 interface ProductHistoryProps {
   open: boolean;
@@ -27,26 +25,36 @@ const ProductHistory: React.FC<ProductHistoryProps> = ({
 }) => {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState<number>(1);
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const limit = 50;
 
   useEffect(() => {
     if (open && productId) {
-      fetchHistory();
+      setHistory([]);
+      setPage(1);
+      fetchHistory(1);
     } else {
       setHistory([]);
       setPage(1);
+      setTotalItems(0);
     }
   }, [open, productId]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (currentPage: number) => {
     setLoading(true);
+
     try {
       const res = await api.get(
-        `product-tools/history?product_id=${productId}`,
+        `product-tools/history?product_id=${productId}&page=${currentPage}&limit=${limit}`,
       );
+
       if (res.data?.IsSuccess) {
-        setHistory(res.data.info || []);
+        const newData = res.data.info || [];
+        setHistory((prev) =>
+          currentPage === 1 ? newData : [...prev, ...newData],
+        );
+        setTotalItems(res.data.data?.totalItems || 0);
       }
     } catch (error) {
       console.error(error);
@@ -55,184 +63,134 @@ const ProductHistory: React.FC<ProductHistoryProps> = ({
     }
   };
 
-  const paginatedFeeds = history.slice(0, page * limit);
+  const handleSeeMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchHistory(nextPage);
+  };
+
+  const hasMore = history.length < totalItems;
 
   return (
-    <Box>
-      <Drawer
-        anchor="right"
-        open={open}
-        onClose={onClose}
-        PaperProps={{
-          sx: {
-            width: 500,
-            maxWidth: "100%",
-            "& .MuiDrawer-paper": {
-              width: 500,
-              padding: 2,
-              backgroundColor: "#f9f9f9",
-              display: "flex",
-              flexDirection: "column",
-            },
-          },
-        }}
-      >
-        <Box sx={{ p: 2 }}>
-          {/* Close Button */}
-          <IconButton
-            aria-label="close"
-            onClick={onClose}
-            size="small"
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 8,
-              color: (theme) => theme.palette.grey[900],
-              backgroundColor: "transparent",
-              zIndex: 10,
-              width: 50,
-              height: 50,
-            }}
-          >
-            <IconX size={18} />
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: 500,
+          maxWidth: "100%",
+        },
+      }}
+    >
+      <Box p={2}>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 10,
+            top: 10,
+          }}
+        >
+          <IconX />
+        </IconButton>
+
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={onClose}>
+            <IconArrowLeft />
           </IconButton>
 
-          {/* Activity History List */}
-          <Grid container spacing={2} display="block">
-            <Box
-              display={"flex"}
-              alignContent={"center"}
-              alignItems={"center"}
-              flexWrap={"wrap"}
-            >
-              <IconButton onClick={onClose}>
-                <IconArrowLeft />
-              </IconButton>
-              <Typography variant="h6" fontWeight={700}>
-                Tools Activities
-              </Typography>
-            </Box>
+          <Typography variant="h6" fontWeight={700}>
+            Tools Activities
+          </Typography>
+        </Box>
 
-            {loading && history.length === 0 ? (
-              <Box display="flex" justifyContent="center" my={4}>
-                <CircularProgress />
-              </Box>
-            ) : paginatedFeeds.length > 0 ? (
-              <Box sx={{ flex: 1, overflowY: "auto" }}>
+        {loading && history.length === 0 && (
+          <Box display="flex" justifyContent="center" mt={4}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {/* Data */}
+        {!loading && history.length > 0 && (
+          <Box
+            sx={{
+              mt: 3,
+              maxHeight: "80vh",
+              overflow: "auto",
+            }}
+          >
+            {history.map((addr, index) => {
+              let color = "#0066ff";
+
+              if (
+                addr.module === "product_trades" ||
+                addr.request_type === 129
+              ) {
+                color = "#FF7F00";
+              }
+
+              return (
                 <Box
+                  key={addr.id ?? index}
+                  mt={2}
+                  p={2}
                   sx={{
-                    maxHeight: paginatedFeeds.length > 3 ? "auto" : "auto",
-                    overflow: paginatedFeeds.length > 3 ? "auto" : "visible",
-                    pr: 0,
+                    borderRadius: "25px",
+                    boxShadow: "0px 4px 4px #0002",
+                    bgcolor: "#fff",
+                    position: "relative",
                   }}
                 >
-                  {paginatedFeeds.map((addr, index) => {
-                    let color = "#0066ffff";
-
-                    if (
-                      addr.module === "product_trades" ||
-                      addr.request_type === 129
-                    ) {
-                      color = "#FF7F00";
-                    }
-
-                    const userName = addr.user_name || "System";
-                    const formattedDate = addr.date || "-";
-                    const typeName = addr.type_name || "Activity";
-
-                    return (
-                      <Box
-                        key={addr.id ?? index}
-                        mb={index === paginatedFeeds.length - 1 ? 0 : 2}
-                        pl={2}
-                        pr={2}
-                        mt={2}
-                        position="relative"
-                        display="flex"
-                        alignItems="center"
-                        sx={{
-                          width: "100%",
-                          lineHeight: "20px",
-                          minHeight: "100px",
-                          py: 2,
-                          borderRadius: "25px",
-                          boxShadow: "rgb(33 33 33 / 12%) 0px 4px 4px 0px",
-                          border: "1px solid rgb(240 240 240)",
-                          bgcolor: "#fff",
-                        }}
-                      >
-                        <Box
-                          position="absolute"
-                          top="-10px"
-                          left="15px"
-                          bgcolor={color}
-                          px={1.5}
-                          borderRadius="10px"
-                          zIndex={1}
-                        >
-                          <Typography
-                            variant="caption"
-                            fontWeight={700}
-                            fontSize={"12px !important"}
-                            color="#fff"
-                            textTransform="capitalize"
-                          >
-                            {typeName}
-                          </Typography>
-                        </Box>
-                        <Box display="initial" width="100%" textAlign="start">
-                          <Typography
-                            fontSize="14px"
-                            className="multi-ellipsis"
-                          >
-                            <b>{userName}:</b>{" "}
-                            <Tooltip placement="top" title={addr.message} arrow>
-                              <span>{addr.message}</span>
-                            </Tooltip>
-                          </Typography>
-                          <Typography
-                            style={{
-                              fontSize: "12px",
-                              textAlign: "end",
-                              color: "GrayText",
-                            }}
-                          >
-                            {formattedDate}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-
-                {paginatedFeeds.length < history.length && (
-                  <Box display="flex" justifyContent="center" my={2}>
-                    <Button
-                      variant="outlined"
-                      startIcon={
-                        loading ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : null
-                      }
-                      onClick={() => setPage((prev) => prev + 1)}
-                      disabled={loading}
-                    >
-                      See More
-                    </Button>
+                  <Box
+                    position="absolute"
+                    top="-10px"
+                    left="15px"
+                    bgcolor={color}
+                    px={1.5}
+                    borderRadius="10px"
+                  >
+                    <Typography color="#fff" fontSize={12}>
+                      {addr.type_name || "Activity"}
+                    </Typography>
                   </Box>
-                )}
+
+                  <Typography fontSize={14} mt={1}>
+                    <b>{addr.user_name || "System"}:</b>{" "}
+                    <Tooltip title={addr.message}>
+                      <span>{addr.message}</span>
+                    </Tooltip>
+                  </Typography>
+
+                  <Typography textAlign="end" fontSize={12} color="gray">
+                    {addr.date || "-"}
+                  </Typography>
+                </Box>
+              );
+            })}
+
+            {/* See More */}
+            {hasMore && (
+              <Box display="flex" justifyContent="center" my={2}>
+                <Button
+                  variant="outlined"
+                  disabled={loading}
+                  onClick={handleSeeMore}
+                >
+                  {loading ? <CircularProgress size={18} /> : "See More"}
+                </Button>
               </Box>
-            ) : (
-              <>
-                <Typography mt={2} ml={2} variant="h5">
-                  No activities are found for this product!
-                </Typography>
-              </>
             )}
-          </Grid>
-        </Box>
-      </Drawer>
-    </Box>
+          </Box>
+        )}
+
+        {!loading && history.length === 0 && (
+          <Typography mt={3} textAlign={"center"}>
+            No activities are found for this product!
+          </Typography>
+        )}
+      </Box>
+    </Drawer>
   );
 };
 
