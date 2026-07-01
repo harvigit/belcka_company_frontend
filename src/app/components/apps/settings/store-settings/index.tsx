@@ -300,15 +300,23 @@ export default function StoreSettings() {
         ) : (
           <Box
             sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-              gap: 3,
+              columnCount: { xs: 1, md: 2 },
+              columnGap: "24px",
               pb: 4,
             }}
           >
             {/* Render Assigned Teams */}
             {filteredTeamsData.map((teamSection) => (
-              <Box key={teamSection.team_id}>
+              <Box 
+                key={teamSection.team_id}
+                sx={{
+                  breakInside: "avoid",
+                  pageBreakInside: "avoid",
+                  mb: 3,
+                  display: "inline-block",
+                  width: "100%",
+                }}
+              >
                 {/* Stunning Section Header */}
                 <Box
                   mb={1.5}

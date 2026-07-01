@@ -369,8 +369,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       const productIdsString = selectedProducts.join(",");
 
+      const currentId = projectId ?? projectID;
       const response = await api.post("project/favorite-products", {
-        id: Number(projectID),
+        id: Number(currentId),
         product_ids: productIdsString,
       });
 
@@ -385,11 +386,12 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     }
   };
 
-  const fetchFavoriteProducts = async () => {
-    if (!projectID) return;
+  const fetchFavoriteProducts = async (currentId?: number) => {
+    const idToUse = currentId ?? projectId ?? projectID;
+    if (!idToUse) return;
     try {
       const response = await api.get(
-        `project/get-favorite?company_id=${user.company_id}&project_id=${projectID}`,
+        `project/get-favorite?company_id=${user.company_id}&project_id=${idToUse}`,
       );
 
       if (response.data?.IsSuccess) {
@@ -1894,6 +1896,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <IconButton
                     color="success"
                     onClick={() => {
+                      setProjectId(project.id);
+                      fetchFavoriteProducts(project.id);
                       setDialogOpen(false);
                       setProductDrawer(true);
                     }}

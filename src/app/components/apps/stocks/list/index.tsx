@@ -200,12 +200,15 @@ const StockList = () => {
 
     if (storedStore) {
       const store = JSON.parse(storedStore);
-      setStoreId(store.id);
+      setStoreId((prev) => (prev !== store.id ? store.id : prev));
 
-      setFilters((prev) => ({
-        ...prev,
-        store: store.name,
-      }));
+      setFilters((prev) => {
+        if (prev.store === store.name) return prev;
+        return {
+          ...prev,
+          store: store.name,
+        };
+      });
     }
   }, [user, stores]);
 
@@ -231,7 +234,6 @@ const StockList = () => {
 
     setStoreId(store.id);
     setStoreModalOpen(false);
-    fetchProducts();
   };
 
   const handleStoreChange = (storeId: number) => {
@@ -255,12 +257,6 @@ const StockList = () => {
       ...prev,
       store: selectedStore.name,
     }));
-
-    fetchProducts(
-      selectedStore.id,
-      undefined,
-      productId ? Number(productId) : undefined,
-    );
 
     setStoreAnchorEl(null);
   };
@@ -518,7 +514,7 @@ const StockList = () => {
       if (tableContainerRef.current) {
         setIsScrollable(
           tableContainerRef.current.scrollWidth >
-            tableContainerRef.current.clientWidth,
+          tableContainerRef.current.clientWidth,
         );
       }
     };
@@ -1002,7 +998,12 @@ const StockList = () => {
     columns,
     fetchData: () => {
       if (storeId) {
-        fetchProducts(storeId);
+        const productId = searchParams?.get("product_id");
+        fetchProducts(
+          storeId,
+          undefined,
+          productId ? Number(productId) : undefined
+        );
       }
     },
     debounceDependencies: [searchTerm, filters, storeId],
@@ -1137,14 +1138,14 @@ const StockList = () => {
                           : col.columnDef.meta?.label
                             ? col.columnDef.meta.label
                             : typeof col.columnDef.header === "string" &&
-                                col.columnDef.header.trim() !== ""
+                              col.columnDef.header.trim() !== ""
                               ? col.columnDef.header
                               : col.id
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (str: string) =>
-                                    str.toUpperCase(),
-                                  )
-                                  .trim()
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (str: string) =>
+                                  str.toUpperCase(),
+                                )
+                                .trim()
                       }
                     />
                   ))}
@@ -1353,7 +1354,7 @@ const StockList = () => {
                             paddingBottom: "10px",
                             width:
                               header.column.id === "actions" ||
-                              header.column.id === "barcode"
+                                header.column.id === "barcode"
                                 ? 80
                                 : header.column.id === "Qty"
                                   ? 120
@@ -1362,7 +1363,7 @@ const StockList = () => {
                                     : header.column.id === "QrCode"
                                       ? 120
                                       : header.column.id === "supplierCode" ||
-                                          header.column.id === "stockStatus"
+                                        header.column.id === "stockStatus"
                                         ? 140
                                         : header.column.id === "QrCode"
                                           ? 120

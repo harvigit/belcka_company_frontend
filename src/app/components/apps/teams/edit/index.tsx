@@ -77,11 +77,25 @@ const EditTeam: React.FC<Props> = ({
     const id = session.data?.user as User & { company_id?: number | null };
 
     const getUniqueUsersById = (users: any[]) => {
-        const map = new Map();
+        const idMap = new Map();
+        const nameMap = new Map();
+        const uniqueUsers: any[] = [];
+
         users.forEach((user) => {
-            if (user?.id) map.set(user.id, user);
+            if (!user) return;
+            const hasId = user.id !== undefined && user.id !== null;
+            const idKey = hasId ? Number(user.id) : null;
+            const nameKey = user.name ? String(user.name).trim().toLowerCase() : null;
+
+            if (idKey !== null && idMap.has(idKey)) return;
+            if (nameKey !== null && nameMap.has(nameKey)) return;
+
+            if (idKey !== null) idMap.set(idKey, true);
+            if (nameKey !== null) nameMap.set(nameKey, true);
+            
+            uniqueUsers.push(user);
         });
-        return Array.from(map.values());
+        return uniqueUsers;
     };
 
     const fetchUniqueUsers = async () => {

@@ -76,7 +76,27 @@ const CreateTeam: React.FC<Props> = ({ open, onClose, onWorkUpdated }) => {
         setLoading(true);
         try {
             const res = await api.get(`team/user-list?company_id=${user.company_id}`);
-            if (res.data) setUsers(res.data.info);
+            if (res.data && Array.isArray(res.data.info)) {
+                const idMap = new Map();
+                const nameMap = new Map();
+                const uniqueUsers: any[] = [];
+        
+                res.data.info.forEach((user: any) => {
+                    if (!user) return;
+                    const hasId = user.id !== undefined && user.id !== null;
+                    const idKey = hasId ? Number(user.id) : null;
+                    const nameKey = user.name ? String(user.name).trim().toLowerCase() : null;
+        
+                    if (idKey !== null && idMap.has(idKey)) return;
+                    if (nameKey !== null && nameMap.has(nameKey)) return;
+        
+                    if (idKey !== null) idMap.set(idKey, true);
+                    if (nameKey !== null) nameMap.set(nameKey, true);
+                    
+                    uniqueUsers.push(user);
+                });
+                setUsers(uniqueUsers);
+            }
         } catch (err) {
             console.error("Failed to fetch trades", err);
         }
