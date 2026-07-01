@@ -210,6 +210,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
   const [mapOpen, setMapOpen] = useState<boolean>(false);
   const [projectId, setProjectId] = useState<number | null>(null);
+  const [favoriteProjectId, setFavoriteProjectId] = useState<number | null>(null);
   const [processedIds, setProcessedIds] = useState<number[]>([]);
   const [shouldRefresh, setShouldRefresh] = useState(false);
   const openMenu = Boolean(anchorEl);
@@ -369,7 +370,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       const productIdsString = selectedProducts.join(",");
 
-      const currentId = projectId ?? projectID;
+      const currentId = favoriteProjectId ?? projectId ?? projectID;
       const response = await api.post("project/favorite-products", {
         id: Number(currentId),
         product_ids: productIdsString,
@@ -407,6 +408,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   const handleCloseProductDrawer = () => {
+    setFavoriteProjectId(null);
     fetchFavoriteProducts();
     setSearchProduct("");
     setFilters({ status: "", sortOrder: "", supplier: "", category: "" });
@@ -1896,7 +1898,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   <IconButton
                     color="success"
                     onClick={() => {
-                      setProjectId(project.id);
+                      setFavoriteProjectId(project.id);
                       fetchFavoriteProducts(project.id);
                       setDialogOpen(false);
                       setProductDrawer(true);

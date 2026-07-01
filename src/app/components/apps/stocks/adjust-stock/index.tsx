@@ -79,13 +79,21 @@ const AdjustStock: React.FC<Props> = ({
   const store = storedStore ? JSON.parse(storedStore) : null;
 
   const filterOptions = createFilterOptions({
-    stringify: (option: any) =>
-      `
-    ${option.name || ""}
-    ${option.short_name || ""}
-    ${option.supplier_code || ""}
-    ${option.uuid || ""}
-  `,
+    stringify: (option: any) => {
+      return [
+        option.name,
+        option.short_name,
+        option.supplier_name,
+        option.supplier?.name,
+        option.supplier_code,
+        option.uuid,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+    },
+
+    matchFrom: "any",
   });
 
   const toggleMode = () => {
@@ -373,8 +381,15 @@ const AdjustStock: React.FC<Props> = ({
                 products.find((t: any) => t.id === Number(productId)) ?? null
               }
               onChange={(e, val) => setProductId(val?.id || "")}
-              getOptionLabel={(option) => option.short_name ?? option.name}
+              getOptionLabel={(option) =>
+                option.short_name || option.name || ""
+              }
               isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.short_name || option.name}
+                </li>
+              )}
               renderInput={(params) => (
                 <CustomTextField {...params} placeholder="Select Product" />
               )}
@@ -465,9 +480,14 @@ const AdjustStock: React.FC<Props> = ({
             fullWidth
             size="small"
             options={projects}
-            value={projects.find((t: any) => t.id === formData.project_id) ?? null}
+            value={
+              projects.find((t: any) => t.id === formData.project_id) ?? null
+            }
             onChange={(e, val) =>
-              setFormData((prev: any) => ({ ...prev, project_id: val?.id || null }))
+              setFormData((prev: any) => ({
+                ...prev,
+                project_id: val?.id || null,
+              }))
             }
             getOptionLabel={(option) => option.name || ""}
             renderInput={(params) => (
@@ -483,9 +503,16 @@ const AdjustStock: React.FC<Props> = ({
             fullWidth
             size="small"
             options={filteredAddresses}
-            value={filteredAddresses.find((t: any) => t.id === formData.address_id) ?? null}
+            value={
+              filteredAddresses.find(
+                (t: any) => t.id === formData.address_id,
+              ) ?? null
+            }
             onChange={(e, val) =>
-              setFormData((prev: any) => ({ ...prev, address_id: val?.id || null }))
+              setFormData((prev: any) => ({
+                ...prev,
+                address_id: val?.id || null,
+              }))
             }
             getOptionLabel={(option) => option.name || ""}
             renderInput={(params) => (
