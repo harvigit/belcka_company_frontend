@@ -741,11 +741,8 @@ const TimeClock = ({ queryParams }: Props) => {
     };
 
     const filteredData = useMemo(() => {
-        return data.filter((item) => {
-            const matchesSearch = item.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.user_code?.toLowerCase().includes(searchTerm.toLowerCase()) || item.trade_name?.toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesSearch;
-        });
-    }, [data, searchTerm]);
+        return data;
+    }, [data]);
 
     const formatHour = (val: string | number | null | undefined): string => {
         if (val === null || val === undefined) return '-';
