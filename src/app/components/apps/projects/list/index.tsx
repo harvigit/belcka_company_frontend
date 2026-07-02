@@ -2200,16 +2200,16 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                       setSelectAll(isChecked);
                       if (isChecked) {
                         const newSelected = [...selectedProducts];
-                        filteredData.forEach((p) => {
+                        paginatedProduct.forEach((p) => {
                           if (!newSelected.includes(p.id))
                             newSelected.push(p.id);
                         });
                         setSelectedProducts(newSelected);
                       } else {
-                        const filteredIds = filteredData.map((p) => p.id);
+                        const visibleIds = paginatedProduct.map((p) => p.id);
                         setSelectedProducts(
                           selectedProducts.filter(
-                            (id) => !filteredIds.includes(id),
+                            (id) => !visibleIds.includes(id),
                           ),
                         );
                       }
