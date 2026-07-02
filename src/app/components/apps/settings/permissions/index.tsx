@@ -9,6 +9,11 @@ import {
     Paper,
     Typography,
     Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
 } from '@mui/material';
 import { Box } from '@mui/system';
 import api from '@/utils/axios';
@@ -16,6 +21,7 @@ import toast from 'react-hot-toast';
 import IOSSwitch from '@/app/components/common/IOSSwitch';
 import Image from 'next/image';
 import SkeletonLoader from "@/app/components/SkeletonLoader"; 
+import { IconAlertTriangle } from '@tabler/icons-react';
 
 const statusToFlags = (status: number) => ({
     is_web_enabled: status === 1 || status === 2,
@@ -46,6 +52,7 @@ export default function PermissionSettings() {
     const [loading, setLoading] = useState<boolean>(true);
     const [fetchPermission, setFetchPermission] = useState<boolean>(true);
     const [hasChanges, setHasChanges] = useState<boolean>(false);
+    const [openDialog, setOpenDialog] = useState<boolean>(false);
 
     const columnVisibility = useMemo(() => {
         const hasWebSupport = originalPermissions.some(p => p.is_web);
@@ -161,7 +168,7 @@ export default function PermissionSettings() {
                 <Typography fontWeight={500} ml={2}>Permission Settings</Typography>
                 {permissions.length > 0 && (
                     <Button
-                        onClick={savePermissions}
+                        onClick={() => setOpenDialog(true)}
                         disabled={fetchPermission || !hasChanges}
                         variant="contained"
                     >
@@ -282,6 +289,33 @@ export default function PermissionSettings() {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            <Dialog
+                open={openDialog}
+                onClose={() => setOpenDialog(false)}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle id="alert-dialog-title" sx={{ color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconAlertTriangle size={24} /> {"Caution"}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description" sx={{ mt: 1 }}>
+                        Company-level permission changes will affect all members of this company. Are you sure you want to continue?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setOpenDialog(false)} color="inherit">Cancel</Button>
+                    <Button onClick={() => {
+                        setOpenDialog(false);
+                        savePermissions();
+                    }} autoFocus color="error" variant="contained">
+                        Continue
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

@@ -263,10 +263,8 @@ const PurchaseOrderList = () => {
       );
       if (res.data) {
         setData(res.data.info);
-        setTotalRows(res.data.totalCount || 0);
-        setPageCount(
-          Math.ceil((res.data.totalCount || 0) / pagination.pageSize),
-        );
+        setTotalRows(res.data?.data?.totalItems);
+        setPageCount(res.data?.data?.totalPages || 1);
         setEmail(res.data.info?.[0]?.supplier_email || "");
       }
     } catch (err) {
@@ -289,7 +287,7 @@ const PurchaseOrderList = () => {
     setColumnFilters,
   } = useServerTable({
     data,
-    columns: [], // We will set columns below using table.setOptions if needed, but we must define columns before or pass it here. Actually, we can define columns before useServerTable, but wait, useServerTable is called here.
+    columns: [],
     fetchData: fetchOrders,
     debounceDependencies: [searchTerm, filters],
   });
