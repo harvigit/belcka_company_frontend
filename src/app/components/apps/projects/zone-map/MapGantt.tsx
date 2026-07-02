@@ -703,6 +703,11 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
         [userLocations],
     );
 
+    const workingUserCount = useMemo(
+        () => userLocations.filter((u) => u.is_working ?? false).length,
+        [userLocations],
+    );
+
     return (
         <Box p={{xs: 1, sm: 2}}>
             <Box
@@ -802,7 +807,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             whiteSpace: 'nowrap',
                         }}
                     >
-                        {usersWithLocation.length} / {userLocations.length} Users
+                        {workingUserCount} / {userLocations.length} Users
                     </Button>
 
                     <IconButton onClick={onClose}>

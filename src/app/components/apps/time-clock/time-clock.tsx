@@ -249,6 +249,13 @@ type TimeClockResponse = {
     IsSuccess: boolean;
     info: TimeClock[];
     currency: string;
+    data?: {
+        totalItems: number;
+        itemCount: number;
+        itemsPerPage: number;
+        totalPages: number;
+        currentPage: number;
+    };
 };
 
 type TimeClockStatus = {
@@ -418,17 +425,9 @@ const TimeClock = ({ queryParams }: Props) => {
 
                 // Fetch conflicts separately
                 await fetchConflictsData(start, end);
-                const pagMeta = (response.data as any).data || response.data.info;
-                if (pagMeta && pagMeta.totalItems !== undefined) {
-                    setTotalRows(pagMeta.totalItems);
-                    setPageCount(pagMeta.totalPages);
-                } else if ((response.data as any).totalItems !== undefined) {
-                    setTotalRows((response.data as any).totalItems);
-                    setPageCount((response.data as any).totalPages);
-                } else {
-                    setTotalRows(response.data.info.length);
-                    setPageCount(1);
-                }
+                const pagMeta = response.data.data;
+                setTotalRows(pagMeta?.totalItems ?? response.data.info.length);
+                setPageCount(pagMeta?.totalPages ?? 1);
                 return response.data.info;
             }
         } catch (error) {
@@ -1317,7 +1316,14 @@ const TimeClock = ({ queryParams }: Props) => {
 
     useEffect(() => {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-    }, [searchTerm, startDate, endDate]);
+    }, [
+        searchTerm,
+        startDate,
+        endDate,
+        queryParams?.user_id,
+        queryParams?.is_removed_user,
+        queryParams?.is_archived_user,
+    ]);
 
     useEffect(() => {
         if (queryParams?.open && queryParams.type == null) {
