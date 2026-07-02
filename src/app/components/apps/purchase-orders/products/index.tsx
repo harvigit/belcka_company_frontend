@@ -34,13 +34,7 @@ import {
 } from "@mui/material";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
   createColumnHelper,
-  SortingState,
 } from "@tanstack/react-table";
 import {
   IconChevronRight,
@@ -70,6 +64,7 @@ import Link from "next/link";
 import { FileDownload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
 import { format } from "date-fns";
+import { useServerTable } from "@/hooks/useServerTable";
 
 dayjs.extend(customParseFormat);
 interface Props {
@@ -97,11 +92,9 @@ const PurchaseProductList: React.FC<Props> = ({
   onDraftSaved,
 }) => {
   const [data, setData] = useState<any[]>([]);
-  const [columnFilters, setColumnFilters] = useState<any>([]);
   const [fetchStore, setFetchStore] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
-  const [sorting, setSorting] = useState<SortingState>([]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -247,18 +240,55 @@ const PurchaseProductList: React.FC<Props> = ({
   };
 
   // Fetch data
-  const fetchOrders = async (showAll?: boolean) => {
+  const fetchOrders = async () => {
     setFetchStore(true);
 
     try {
-      let url = `purchase-orders/orders?company_id=${user.company_id}&is_all_product=true`;
+      const params: any = {
+        company_id: user.company_id,
+        page: String(pagination.pageIndex + 1),
+        limit: String(pagination.pageSize),
+        is_all_product: true,
+      };
 
-      const res = await api.get(url);
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      if (filters.supplier && filters.supplier !== "All") {
+        const supplierObj = suppliers.find((s) => s.name === filters.supplier);
+        if (supplierObj) {
+          params.suppliers = supplierObj.id;
+        }
+      }
+      if (filters.address && filters.address !== "All") {
+        const addressObj = addresses.find((s) => s.name === filters.address);
+        if (addressObj) {
+          params.address = addressObj.id;
+        }
+      }
+      if (filters.project && filters.project !== "All") {
+        const projectObj = projects.find((s) => s.name === filters.project);
+        if (projectObj) {
+          params.project = projectObj.id;
+        }
+      }
+      const response = await api.get("purchase-orders/orders", { params });
 
-      if (res.data) {
-        setData(res.data.info);
-        setOriginalData(res.data.info);
+      if (response.data) {
+        setData(response.data.info);
+        setOriginalData(response.data.info);
         setSelectedRowIds(new Set());
+        const pagMeta = (response.data as any).data || response.data.info;
+        if (pagMeta && pagMeta.totalItems !== undefined) {
+          setTotalRows(pagMeta.totalItems);
+          setPageCount(pagMeta.totalPages);
+        } else if ((response.data as any).totalItems !== undefined) {
+          setTotalRows((response.data as any).totalItems);
+          setPageCount((response.data as any).totalPages);
+        } else {
+          setTotalRows(response.data.info.length);
+          setPageCount(1);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch supplier", err);
@@ -280,9 +310,11 @@ const PurchaseProductList: React.FC<Props> = ({
   }, [open, originalData]);
 
   useEffect(() => {
-    fetchOrders();
-    fetchResources();
-  }, [api]);
+    if (open == true) {
+      fetchOrders();
+      fetchResources();
+    }
+  }, [api, open]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -327,41 +359,8 @@ const PurchaseProductList: React.FC<Props> = ({
   };
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const search = searchTerm.toLowerCase();
-
-      if (
-        filters.supplier == "All" ||
-        filters.project == "All" ||
-        filters.address == "All"
-      )
-        return data;
-      const matchSupplier = filters.supplier
-        ? item.supplier_name === filters.supplier
-        : true;
-
-      const matchProject = filters.project
-        ? item.project_name === filters.project
-        : true;
-      const matchAddress = filters.address
-        ? item.address_name === filters.address
-        : true;
-
-      const matchesSearch =
-        item.name?.toLowerCase().includes(search) ||
-        item.uuid?.toLowerCase().includes(search) ||
-        item.short_name?.toLowerCase().includes(search) ||
-        item.price?.toString().toLowerCase().includes(search) ||
-        item.address_name?.toString().toLowerCase().includes(search) ||
-        item.qty?.toString().toLowerCase().includes(search) ||
-        item.supplier_code?.toLowerCase().includes(search) ||
-        item.supplier_name?.toLowerCase().includes(search) ||
-        item.project_name?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search);
-
-      return matchesSearch && matchSupplier && matchProject && matchAddress;
-    });
-  }, [data, searchTerm, filters]);
+    return data;
+  }, [data]);
 
   const finalFilteredData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
@@ -967,23 +966,24 @@ const PurchaseProductList: React.FC<Props> = ({
     setAnchorEl2(event.currentTarget);
   };
   const handlePopoverClose = () => setAnchorEl2(null);
-  const table = useReactTable({
-    data: finalFilteredData,
+  const {
+    table,
+    pagination,
+    setPagination,
+    pageCount,
+    setPageCount,
+    totalRows,
+    setTotalRows,
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+  } = useServerTable({
+    data: filteredData,
     columns,
-    state: { columnFilters, sorting },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    fetchData: fetchOrders,
+    debounceDependencies: [searchTerm,filters,user.company_id],
   });
-
   // Reset to first page when search term changes
   useEffect(() => {
     table.setPageIndex(0);
