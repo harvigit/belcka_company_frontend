@@ -162,6 +162,44 @@ const HistoryList = () => {
     setFetchHistory(false);
   };
 
+  const HISTORY_TYPES = [
+    { value: "All", label: "All" },
+    { value: "101", label: "Timesheet" },
+    { value: "102", label: "Worklog" },
+    { value: "103", label: "Billing Info" },
+    { value: "104", label: "User" },
+    { value: "105", label: "User Company" },
+    { value: "106", label: "Project" },
+    { value: "107", label: "Address" },
+    { value: "108", label: "Company" },
+    { value: "109", label: "Team" },
+    { value: "110", label: "Leave" },
+    { value: "111", label: "Expense" },
+    { value: "112", label: "Zone" },
+    { value: "113", label: "Shift" },
+    { value: "114", label: "Supplier" },
+    { value: "115", label: "Store" },
+    { value: "117", label: "Product" },
+    { value: "119", label: "Purchase Order" },
+    { value: "120", label: "Stock" },
+    { value: "121", label: "Pricework" },
+    { value: "122", label: "Bookkeeper Invoice" },
+    { value: "123", label: "Payslip" },
+    { value: "124", label: "Penalty Appeal" },
+    { value: "125", label: "Order" },
+    { value: "126", label: "Adjustment" },
+    { value: "127", label: "Zone Group" },
+    { value: "128", label: "Near Miss Report" },
+    { value: "129", label: "Product Trades" },
+    { value: "130", label: "Trade Limits" },
+    { value: "131", label: "Hired Product" },
+    { value: "132", label: "Certificates" },
+    { value: "136", label: "Form" },
+    { value: "137", label: "System Permission" },
+    { value: "138", label: "Company Permission" },
+    { value: "139", label: "Permission" },
+  ];
+
   const fetchUsers = async () => {
     try {
       const res = await api.get("user/get-user-lists");
@@ -475,25 +513,11 @@ const HistoryList = () => {
                   setTempFilters({ ...tempFilters, type: e.target.value })
                 }
               >
-                <MenuItem value="All">All</MenuItem>
-                <MenuItem value="101">Timesheet</MenuItem>
-                <MenuItem value="102">Worklog</MenuItem>
-                <MenuItem value="103">Billing Info</MenuItem>
-                <MenuItem value="104">User</MenuItem>
-                <MenuItem value="105">User Company</MenuItem>
-                <MenuItem value="106">Project</MenuItem>
-                <MenuItem value="107">Address</MenuItem>
-                <MenuItem value="108">Company</MenuItem>
-                <MenuItem value="109">Team</MenuItem>
-                <MenuItem value="110">Leave</MenuItem>
-                <MenuItem value="111">Expense</MenuItem>
-                <MenuItem value="112">Zone</MenuItem>
-                <MenuItem value="113">Shift</MenuItem>
-                <MenuItem value="114">Supplier</MenuItem>
-                <MenuItem value="115">Store</MenuItem>
-                <MenuItem value="117">Product</MenuItem>
-                <MenuItem value="119">Purchase Order</MenuItem>
-                <MenuItem value="120">Stock</MenuItem>
+                {HISTORY_TYPES.map((type) => (
+                  <MenuItem key={type.value} value={type.value}>
+                    {type.label}
+                  </MenuItem>
+                ))}
               </TextField>
 
               {uniqueUsers.length > 0 ? (

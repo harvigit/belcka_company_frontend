@@ -79,6 +79,8 @@ import { IconEye } from '@tabler/icons-react';
 import Settings from '../timesheet/setting/settings';
 import BookkeeperHistory from './history';
 import RecoverWorklogs from './recover-worklogs';
+import { useServerTable } from '@/hooks/useServerTable';
+import TablePaginationFooter from '../../common/TablePaginationFooter';
 
 const columnHelper = createColumnHelper<TimeClock>();
 
@@ -381,7 +383,13 @@ const TimeClock = ({ queryParams }: Props) => {
             const params: Record<string, string> = {
                 start_date: format(start, 'dd/MM/yyyy'),
                 end_date: format(end, 'dd/MM/yyyy'),
+                page: String(pagination.pageIndex + 1),
+                limit: String(pagination.pageSize),
             };
+
+            if (searchTerm) {
+                params.search = searchTerm;
+            }
 
             const currentParams = queryParamsRef.current;
 
@@ -410,7 +418,17 @@ const TimeClock = ({ queryParams }: Props) => {
 
                 // Fetch conflicts separately
                 await fetchConflictsData(start, end);
-
+                const pagMeta = (response.data as any).data || response.data.info;
+                if (pagMeta && pagMeta.totalItems !== undefined) {
+                    setTotalRows(pagMeta.totalItems);
+                    setPageCount(pagMeta.totalPages);
+                } else if ((response.data as any).totalItems !== undefined) {
+                    setTotalRows((response.data as any).totalItems);
+                    setPageCount((response.data as any).totalPages);
+                } else {
+                    setTotalRows(response.data.info.length);
+                    setPageCount(1);
+                }
                 return response.data.info;
             }
         } catch (error) {
@@ -1269,28 +1287,40 @@ const TimeClock = ({ queryParams }: Props) => {
         }),
     ];
 
-    const table = useReactTable({
+    const handleFetchData = () => {
+        const start = startDate || defaultStart;
+        const end = endDate || defaultEnd;
+        fetchData(start, end);
+    };
+
+    const {
+        table,
+        pagination,
+        setPagination,
+        pageCount,
+        setPageCount,
+        totalRows,
+        setTotalRows,
+        sorting,
+        setSorting,
+        columnFilters,
+        setColumnFilters,
+    } = useServerTable({
         data: filteredData,
         columns,
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: {
-            pagination: {
-                pageSize: 50,
-            },
-        },
-
-        state: {
-            columnVisibility,
-        },
-        onColumnVisibilityChange: (updater) => {
-            setColumnVisibility((prev) =>
-                typeof updater === 'function' ? updater(prev) : updater
-            );
-        },
+        fetchData: handleFetchData,
+        debounceDependencies: [searchTerm, queryParamsRef.current?.user_id, startDate, endDate, cycleReady],
+        state: { columnVisibility },
     });
+
+    // Handle internal visibility changes from useReactTable not supported natively via useServerTable
+    useEffect(() => {
+        table.setColumnVisibility(columnVisibility);
+    }, [columnVisibility, table]);
+
+    useEffect(() => {
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    }, [searchTerm, startDate, endDate]);
 
     useEffect(() => {
         if (queryParams?.open && queryParams.type == null) {
@@ -2114,78 +2144,7 @@ const TimeClock = ({ queryParams }: Props) => {
                 {data.length ? <Divider/> : <></>}
             </Box>
 
-            <Stack
-                gap={1}
-                pr={3}
-                pt={1}
-                pl={3}
-                alignItems="center"
-                direction={{xs: 'column', sm: 'row'}}
-                justifyContent="space-between"
-            >
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Typography color="textSecondary" className="f-14">
-                        {table.getPrePaginationRowModel().rows.length} Rows
-                    </Typography>
-                </Box>
-                <Box
-                    sx={{
-                        display: {
-                            xs: 'block',
-                            sm: 'flex',
-                        },
-                    }}
-                    alignItems="center"
-                >
-                    <Stack direction="row" alignItems="center">
-                        <Typography color="textSecondary" className="f-14">Page</Typography>
-                        <Typography color="textSecondary" className="f-14" fontWeight={600} ml={1}>
-                            {table.getState().pagination.pageIndex + 1} of{' '}
-                            {table.getPageCount()}
-                        </Typography>
-                        <Typography color="textSecondary" ml={'3px'} className="f-14">
-                            {' '}
-                            | Entries :{' '}
-                        </Typography>
-                    </Stack>
-                    <Stack
-                        ml={'5px'}
-                        direction="row"
-                        alignItems="center"
-                        color="textSecondary"
-                    >
-                        <CustomSelect
-                            className="custom-select"
-                            value={table.getState().pagination.pageSize}
-                            onChange={(e: { target: { value: any } }) => {
-                                table.setPageSize(Number(e.target.value));
-                            }}
-                        >
-                            {[50, 100, 250, 500].map((pageSize) => (
-                                <MenuItem key={pageSize} value={pageSize}>
-                                    {pageSize}
-                                </MenuItem>
-                            ))}
-                        </CustomSelect>
-                        <IconButton
-                            size="small"
-                            sx={{width: '30px'}}
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <IconChevronLeft/>
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            sx={{width: '30px'}}
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <IconChevronRight/>
-                        </IconButton>
-                    </Stack>
-                </Box>
-            </Stack>
+            <TablePaginationFooter table={table} totalRows={totalRows} />
 
             <Drawer
                 anchor="bottom"
