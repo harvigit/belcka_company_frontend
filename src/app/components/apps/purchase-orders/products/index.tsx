@@ -131,6 +131,7 @@ const PurchaseProductList: React.FC<Props> = ({
     new Set(),
   );
   const [originalData, setOriginalData] = useState<any[]>([]);
+  const [latestFetchedIds, setLatestFetchedIds] = useState<Set<number>>(new Set());
 
   const handleModelOpen = () => {
     setPreview(null);
@@ -287,6 +288,7 @@ const PurchaseProductList: React.FC<Props> = ({
           return [...selectedItems, ...newItems];
         });
         const fetchedItems = response.data.info;
+        setLatestFetchedIds(new Set(fetchedItems.map((item: any) => item.id)));
         const autoSelectedIds = fetchedItems.filter((p: any) => p.total_qty > 0).map((p: any) => p.id);
         if (autoSelectedIds.length > 0) {
            setSelectedRowIds(prev => {
@@ -372,13 +374,19 @@ const PurchaseProductList: React.FC<Props> = ({
 
   const finalFilteredData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
+      const aSearched = searchTerm && latestFetchedIds.has(a.id);
+      const bSearched = searchTerm && latestFetchedIds.has(b.id);
+      
+      if (aSearched && !bSearched) return -1;
+      if (!aSearched && bSearched) return 1;
+
       const aSelected = selectedRowIds.has(a.id) || Number(a.total_qty) > 0;
       const bSelected = selectedRowIds.has(b.id) || Number(b.total_qty) > 0;
       if (aSelected && !bSelected) return -1;
       if (!aSelected && bSelected) return 1;
       return 0;
     });
-  }, [filteredData, selectedRowIds]);
+  }, [filteredData, selectedRowIds, searchTerm, latestFetchedIds]);
 
   const useSelectedProducts = (data: any[], selectedRowIds: Set<number>) => {
     const selectedProductsWithQty = useMemo(() => {
