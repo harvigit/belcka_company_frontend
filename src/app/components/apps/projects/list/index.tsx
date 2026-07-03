@@ -195,6 +195,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [project, setProject] = useState<ProjectList[]>([]);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [productDrawer, setProductDrawer] = useState(false);
+  const [isFetchingFavorites, setIsFetchingFavorites] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
@@ -389,6 +390,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const fetchFavoriteProducts = async (currentId?: number) => {
     const idToUse = currentId ?? projectId ?? projectID;
     if (!idToUse) return;
+    setIsFetchingFavorites(true);
     try {
       const response = await api.get(
         `project/get-favorite?company_id=${user.company_id}&project_id=${idToUse}`,
@@ -403,6 +405,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
       }
     } catch (error) {
       console.error("Failed to fetch favorite products:", error);
+    } finally {
+      setIsFetchingFavorites(false);
     }
   };
 
@@ -2244,7 +2248,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
           <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
             {/* Product List */}
             <Grid container spacing={2} display="block" mt={1}>
-              {filteredData.length > 0 ? (
+              {isFetchingFavorites ? (
+                <Box display="flex" justifyContent="center" alignItems="center" my={5}>
+                  <CircularProgress />
+                </Box>
+              ) : filteredData.length > 0 ? (
                 <Box>
                   {paginatedProduct.map((product) => (
                     <Box
