@@ -873,9 +873,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       let matchesCategory = true;
       if (filters.category && filters.category !== "All") {
-        matchesCategory =
-          item.category === filters.category ||
-          item.category_name === filters.category;
+        matchesCategory = item.product_categories === filters.category;
       }
 
       return matchesSearch && matchesSupplier && matchesCategory;
@@ -2138,7 +2136,21 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                 <IconArrowLeft />
               </IconButton>
               <Typography variant="h6" fontWeight={700}>
-                Favorite products
+                Favorite products{" "}
+                {searchProduct ||
+                (filters.supplier && filters.supplier !== "All") ||
+                (filters.category && filters.category !== "All")
+                  ? (() => {
+                      const selectedInFilterCount = filteredData.filter((p) =>
+                        selectedProducts.includes(p.id),
+                      ).length;
+                      return selectedInFilterCount > 0
+                        ? `(${selectedInFilterCount})`
+                        : "";
+                    })()
+                  : selectedProducts.length > 0
+                    ? `(${selectedProducts.length})`
+                    : ""}
               </Typography>
             </Box>
             {/* Close Button */}
@@ -2314,7 +2326,9 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                   )}
                 </Box>
               ) : (
-                <Typography mt={2}>No products found</Typography>
+                <Typography mt={2} textAlign={"center"}>
+                  No products found
+                </Typography>
               )}
             </Grid>
           </Box>
