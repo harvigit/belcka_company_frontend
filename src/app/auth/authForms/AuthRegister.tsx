@@ -597,7 +597,7 @@ const AuthRegister = ({ title, subtitle, subtext }: loginType) => {
               centered
             >
               <Tab label="Join Company" />
-              <Tab label="Create Company" />
+              {/* <Tab label="Create Company" /> */}
             </Tabs>
 
             <Button onClick={userLogout} color="primary" sx={{ height: "10%" }}>
