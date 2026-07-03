@@ -22,6 +22,7 @@ import {
 } from '@tabler/icons-react';
 import { AxiosResponse } from 'axios';
 import api from '@/utils/axios';
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from '@/utils/googleMaps';
 
 export interface LocationPoint {
     label: string;
@@ -44,7 +45,6 @@ export interface LocationMapDrawerProps {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const GOOGLE_MAP_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
 const DEFAULT_ZOOM = 16;
 
@@ -230,8 +230,8 @@ const LocationMapDrawer: React.FC<LocationMapDrawerProps> = ({
     const mapRef = useRef<google.maps.Map | null>(null);
 
     const { isLoaded } = useJsApiLoader({
+        ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
-        libraries: GOOGLE_MAP_LIBRARIES,
     });
 
     const fetchWorklogLocations = async (id: number) => {

@@ -22,17 +22,11 @@ import {
   Polyline,
   Marker,
 } from "@react-google-maps/api";
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
 
 interface GeneralSettingProps {
   onSaveSuccess: () => void;
 }
-
-const GOOGLE_MAP_LIBRARIES: (
-  | "places"
-  | "drawing"
-  | "geometry"
-  | "visualization"
-)[] = ["places", "drawing"];
 
 const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
   const [selectedOption, setSelectedOption] = useState("checking-checkout");
@@ -56,8 +50,8 @@ const Geofence: React.FC<GeneralSettingProps> = ({ onSaveSuccess }) => {
 
   // Load Google Maps
   const { isLoaded } = useJsApiLoader({
+    ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
-    libraries: GOOGLE_MAP_LIBRARIES,
   });
 
   // Fetch workzones

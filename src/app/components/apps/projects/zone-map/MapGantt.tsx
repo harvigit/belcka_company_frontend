@@ -53,6 +53,7 @@ import {User} from 'next-auth';
 import {useSession} from 'next-auth/react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
+import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 
 import AddZone from './AddZone';
 import EditZone from './EditZone';
@@ -359,7 +360,6 @@ type Props = {
     companyId: number | null;
 };
 
-const GOOGLE_MAP_LIBRARIES = ['places', 'drawing'];
 const LONDON_CENTER = {lat: 51.5074, lng: -0.1278};
 const DEFAULT_ZOOM = 18;
 
@@ -500,8 +500,8 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
     const [zonePageSize, setZonePageSize] = useState(50);
 
     const {isLoaded} = useJsApiLoader({
+        ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
-        libraries: GOOGLE_MAP_LIBRARIES as any,
     });
 
     const fetchResources = async () => {

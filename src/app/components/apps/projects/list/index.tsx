@@ -87,6 +87,7 @@ import { IconDatabase } from "@tabler/icons-react";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
 import { Chip } from "@mui/material";
 import Setting from "@/app/components/apps/projects/setting";
+import { GOOGLE_MAPS_SHARED_LOADER_OPTIONS } from "@/utils/googleMaps";
 
 dayjs.extend(customParseFormat);
 
@@ -119,13 +120,6 @@ export interface TradeList {
   id: number;
   name: string;
 }
-
-const GOOGLE_MAP_LIBRARIES: (
-  | "places"
-  | "drawing"
-  | "geometry"
-  | "visualization"
-)[] = ["places", "drawing"];
 
 interface Boundary {
   lat: number;
@@ -712,8 +706,8 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   };
 
   const { isLoaded } = useJsApiLoader({
+    ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!,
-    libraries: GOOGLE_MAP_LIBRARIES,
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

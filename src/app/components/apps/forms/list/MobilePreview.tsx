@@ -39,6 +39,7 @@ import {
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import CustomTextField from '../../../forms/theme-elements/CustomTextField';
+import {GOOGLE_MAPS_SHARED_LOADER_OPTIONS} from '@/utils/googleMaps';
 import {
     calculateFormulaValue,
     fieldConditionMatches,
@@ -599,6 +600,7 @@ const LocationMapPreview = ({location, onRefresh}: {
     const hasValidCoordinates = Number.isFinite(numericLatitude) && Number.isFinite(numericLongitude);
     const position = hasValidCoordinates ? {lat: numericLatitude, lng: numericLongitude} : null;
     const {isLoaded: isMapLoaded, loadError: mapLoadError} = useJsApiLoader({
+        ...GOOGLE_MAPS_SHARED_LOADER_OPTIONS,
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '',
     });
 
