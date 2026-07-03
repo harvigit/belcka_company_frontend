@@ -199,6 +199,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [page, setPage] = useState(1);
+  const [productPage, setProductPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
   const limit = 20;
@@ -351,7 +352,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
   const fetchResources = async () => {
     try {
       const res = await api.get(
-        `get-inventory-resources?company_id=${user.company_id}`,
+        `get-inventory-resources?company_id=${user.company_id}&is_web=true`,
       );
       if (res.data) {
         setProducts(res.data.products);
@@ -412,6 +413,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     setFilters({ status: "", sortOrder: "", supplier: "", category: "" });
     setTempFilters({ status: "", sortOrder: "", supplier: "", category: "" });
     setSelectAll(false);
+    setProductPage(1);
     setProductDrawer(false);
   };
 
@@ -873,7 +875,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
 
       let matchesCategory = true;
       if (filters.category && filters.category !== "All") {
-        matchesCategory = item.product_categories === filters.category;
+        matchesCategory = item.product_categories?.includes(filters.category);
       }
 
       return matchesSearch && matchesSupplier && matchesCategory;
@@ -896,7 +898,11 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
     selectedProducts,
   ]);
 
-  const paginatedProduct = filteredData?.slice(0, page * productLimit) || [];
+  useEffect(() => {
+    setProductPage(1);
+  }, [searchProduct, filters.supplier, filters.category]);
+
+  const paginatedProduct = filteredData?.slice(0, productPage * productLimit) || [];
 
   const handleSeeMore = () => {
     const nextPage = page + 1;
@@ -2317,7 +2323,7 @@ const TablePagination: React.FC<ProjectListingProps> = ({}) => {
                             <CircularProgress size={16} color="inherit" />
                           ) : null
                         }
-                        onClick={() => setPage((prev) => prev + 1)}
+                        onClick={() => setProductPage((prev) => prev + 1)}
                         disabled={loading}
                       >
                         See More
