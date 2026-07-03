@@ -115,7 +115,7 @@ const ProductHistory: React.FC<ProductHistoryProps> = ({
         {!loading && history.length > 0 && (
           <Box
             sx={{
-              mt: 3,
+              mt: 1,
               maxHeight: "80vh",
               overflow: "auto",
             }}

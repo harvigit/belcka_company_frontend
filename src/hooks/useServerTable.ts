@@ -14,6 +14,7 @@ interface UseServerTableOptions<TData> {
   debounceTimeMs?: number;
   onSortingChange?: (updater: any) => void;
   state?: any;
+  getRowId?: (originalRow: TData, index: number, parent?: any) => string;
 }
 
 export function useServerTable<TData>({
@@ -24,6 +25,7 @@ export function useServerTable<TData>({
   debounceTimeMs = 300,
   onSortingChange: controlledOnSortingChange,
   state: controlledState,
+  getRowId,
 }: UseServerTableOptions<TData>) {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
   const [pageCount, setPageCount] = useState(0);
@@ -75,6 +77,7 @@ export function useServerTable<TData>({
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getRowId,
   });
 
   return {

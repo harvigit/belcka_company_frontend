@@ -95,6 +95,10 @@ const PurchaseProductList: React.FC<Props> = ({
   const [fetchStore, setFetchStore] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
+  const selectedRowIdsRef = useRef<Set<number>>(selectedRowIds);
+  useEffect(() => {
+    selectedRowIdsRef.current = selectedRowIds;
+  }, [selectedRowIds]);
   const session = useSession();
   const user = session.data?.user as User & { company_id?: number | null };
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -275,9 +279,22 @@ const PurchaseProductList: React.FC<Props> = ({
       const response = await api.get("purchase-orders/orders", { params });
 
       if (response.data) {
-        setData(response.data.info);
-        setOriginalData(response.data.info);
-        setSelectedRowIds(new Set());
+        setData((prevData) => {
+          const currentSelected = selectedRowIdsRef.current;
+          const selectedItems = prevData.filter(item => currentSelected.has(item.id) || Number(item.total_qty) > 0);
+          const selectedItemIds = new Set(selectedItems.map(item => item.id));
+          const newItems = response.data.info.filter((item: any) => !selectedItemIds.has(item.id));
+          return [...selectedItems, ...newItems];
+        });
+        const fetchedItems = response.data.info;
+        const autoSelectedIds = fetchedItems.filter((p: any) => p.total_qty > 0).map((p: any) => p.id);
+        if (autoSelectedIds.length > 0) {
+           setSelectedRowIds(prev => {
+              const next = new Set(prev);
+              autoSelectedIds.forEach((id: number) => next.add(id));
+              return next;
+           });
+        }
         const pagMeta = (response.data as any).data || response.data.info;
         if (pagMeta && pagMeta.totalItems !== undefined) {
           setTotalRows(pagMeta.totalItems);
@@ -298,23 +315,14 @@ const PurchaseProductList: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    if (open) {
-      setData(originalData);
-      const autoSelected = new Set(
-        originalData.filter((p) => p.total_qty > 0).map((p) => p.id),
-      );
-
-      setSelectedRowIds(autoSelected);
-      setManuallyDeselected(new Set());
-    }
-  }, [open, originalData]);
-
-  useEffect(() => {
     if (open == true) {
+      setData([]);
+      setSelectedRowIds(new Set());
+      setManuallyDeselected(new Set());
       fetchOrders();
       fetchResources();
     }
-  }, [api, open]);
+  }, [open]);
 
   const handleOpenCreateDrawer = () => {
     setFormData({
@@ -600,16 +608,17 @@ const PurchaseProductList: React.FC<Props> = ({
       cell: ({ row }) => {
         const item = row.original;
 
-        const updateQty = (newQty: number) => {
+        const updateQty = (newQty: number | string) => {
+          const numValue = Number(newQty);
           setData((prev) =>
             prev.map((p) =>
               p.id === item.id
-                ? { ...p, total_qty: newQty > 0 ? newQty : null }
+                ? { ...p, total_qty: newQty === "" ? "" : numValue > 0 ? numValue : null }
                 : p,
             ),
           );
 
-          if (newQty > 0) {
+          if (numValue > 0) {
             setManuallyDeselected((prev) => {
               const updated = new Set(prev);
               updated.delete(item.id);
@@ -620,18 +629,18 @@ const PurchaseProductList: React.FC<Props> = ({
           setSelectedRowIds((prev) => {
             const updated = new Set(prev);
 
-            if (newQty > 0) {
+            if (numValue > 0) {
               updated.add(item.id);
             }
 
-            if (newQty === 0) {
+            if (numValue === 0 && newQty !== "") {
               updated.delete(item.id);
             }
 
             return updated;
           });
         };
-        if (!item.total_qty) {
+        if (!item.total_qty && item.total_qty !== "") {
           return (
             <Fab size="small" onClick={() => updateQty(1)}>
               <IconPlus size={16} />
@@ -661,8 +670,12 @@ const PurchaseProductList: React.FC<Props> = ({
                 onChange={(e) => {
                   const value = e.target.value;
                   if (!/^\d*$/.test(value)) return;
-                  const num = Number(value);
-                  updateQty(num >= 0 ? num : 0);
+                  if (value === "") {
+                    updateQty("");
+                  } else {
+                    const num = Number(value);
+                    updateQty(num >= 0 ? num : 0);
+                  }
                 }}
               />
 
@@ -979,10 +992,11 @@ const PurchaseProductList: React.FC<Props> = ({
     columnFilters,
     setColumnFilters,
   } = useServerTable({
-    data: filteredData,
+    data: finalFilteredData,
     columns,
     fetchData: fetchOrders,
     debounceDependencies: [searchTerm,filters,user.company_id],
+    getRowId: (row: any) => row.id.toString(),
   });
   // Reset to first page when search term changes
   useEffect(() => {
