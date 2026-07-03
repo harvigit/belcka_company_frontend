@@ -70,6 +70,7 @@ export type AdjustmentActivity = {
     previous_amount: number;
     updated_amount: number;
     occurred_at: string | Date;
+    note?: string | null;
 };
 
 export interface TimeClockDetailsProps {

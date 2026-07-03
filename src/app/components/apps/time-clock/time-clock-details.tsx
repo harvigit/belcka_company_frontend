@@ -959,6 +959,12 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
             return [];
         }
 
+        const mapWeeklyAdjustmentActivities = (activities: any[] = []): AdjustmentActivity[] =>
+            activities.map((activity: any) => ({
+                ...activity,
+                note: activity.note ?? null,
+            }));
+
         return data.flatMap((week: any) => {
             const weekRows: DailyBreakdown[] = [{
                 isMoreThanWork: false,
@@ -974,7 +980,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                 weekLabel: week.week_range,
                 weeklyTotalHours: formatHour(week.weekly_total_hours),
                 weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
-                weekly_adjustment_activities: week.weekly_adjustment_activities || [],
+                weekly_adjustment_activities: mapWeeklyAdjustmentActivities(week.weekly_adjustment_activities),
                 timesheet_ids: '',
                 export_timesheet_ids: null,
                 cis_amount: 0,
@@ -1042,7 +1048,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                         weeklyTotalHours: formatHour(week.weekly_total_hours),
                         weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
                         weekly_adjustment_amount: Number(week.weekly_adjustment_amount || 0),
-                        weekly_adjustment_activities: week.weekly_adjustment_activities || [],
+                        weekly_adjustment_activities: mapWeeklyAdjustmentActivities(week.weekly_adjustment_activities),
                         parsedDate: parseDate(day.date),
                         address: '--',
                         check_out: '--',
@@ -1085,7 +1091,7 @@ const TimeClockDetails: React.FC<ExtendedTimeClockDetailsProps> = ({
                     weeklyTotalHours: formatHour(week.weekly_total_hours),
                     weeklyPayableAmount: `${currency}${week.weekly_payable_amount || 0}`,
                     weekly_adjustment_amount: Number(week.weekly_adjustment_amount || 0),
-                    weekly_adjustment_activities: week.weekly_adjustment_activities || [],
+                    weekly_adjustment_activities: mapWeeklyAdjustmentActivities(week.weekly_adjustment_activities),
                     parsedDate: '--',
                     address: '--',
                     check_in: '--',

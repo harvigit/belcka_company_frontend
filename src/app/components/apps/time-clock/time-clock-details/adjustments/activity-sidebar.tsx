@@ -68,6 +68,7 @@ const AdjustmentActivitySidebar: React.FC<AdjustmentActivitySidebarProps> = ({
                             const { date, time } = formatActivityDateTime(activity.occurred_at);
                             const deltaColor = activity.delta_amount < 0 ? '#d32f2f' : '#2e7d32';
                             const totalColor = activity.updated_amount < 0 ? '#d32f2f' : '#2e7d32';
+                            const activityNote = activity.note;
 
                             return (
                                 <Box
@@ -90,6 +91,19 @@ const AdjustmentActivitySidebar: React.FC<AdjustmentActivitySidebarProps> = ({
                                         <Typography variant="caption" sx={{ display: 'block', mt: 0.25, color: 'text.secondary' }}>
                                             {time}
                                         </Typography>
+                                        {activityNote && (
+                                            <Box sx={{ mt: 1.25 }}>
+                                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 700 }}>
+                                                    Note
+                                                </Typography>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ mt: 0.25, color: '#203040', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                                                >
+                                                    {activityNote}
+                                                </Typography>
+                                            </Box>
+                                        )}
                                     </Box>
 
                                     <Box sx={{ textAlign: 'right', flexShrink: 0 }}>

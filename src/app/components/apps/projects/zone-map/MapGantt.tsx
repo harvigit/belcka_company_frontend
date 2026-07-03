@@ -492,6 +492,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
     const [usersSearch, setUsersSearch] = useState('');
     const [userLocations, setUserLocations] = useState<any[]>([]);
     const [userLocationsLoading, setUserLocationsLoading] = useState(false);
+    const [totalUsers, setTotalUsers] = useState(0);
     const [usersOnMapVisible] = useState(true);
     const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
 
@@ -575,6 +576,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
             if (res.data?.IsSuccess) {
                 const data: any[] = res.data.info ?? [];
                 setUserLocations(data);
+                setTotalUsers(Number(res.data.total_users ?? 0));
                 
                 const teams = groupByTeam(data);
                 const initial: Record<string, boolean> = {};
@@ -807,7 +809,7 @@ export default function MapGantt({open, onClose, onUpdate, projectId, companyId}
                             whiteSpace: 'nowrap',
                         }}
                     >
-                        {workingUserCount} / {userLocations.length} Users
+                        {workingUserCount} / {totalUsers} Users
                     </Button>
 
                     <IconButton onClick={onClose}>

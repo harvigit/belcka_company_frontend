@@ -49,6 +49,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
         return defaultWeek;
     });
     const [amount, setAmount] = useState('');
+    const [note, setNote] = useState('');
     const [isNegative, setIsNegative] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -135,6 +136,7 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                 start_date: format(range.from!, 'dd/MM/yyyy'),
                 end_date: format(range.to!, 'dd/MM/yyyy'),
                 adjustment_amount: parsedAmount,
+                note: note.trim(),
             });
 
             if (response.data?.IsSuccess) {
@@ -243,6 +245,19 @@ const AddAdjustment: React.FC<AddAdjustmentProps> = ({
                                 </InputAdornment>
                             ),
                         }}
+                    />
+                </FormControl>
+
+                <FormControl fullWidth>
+                    <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+                        Note
+                    </Typography>
+                    <CustomTextField
+                        value={note}
+                        placeholder="Enter note"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNote(e.target.value)}
+                        multiline
+                        minRows={3}
                     />
                 </FormControl>
             </Box>
