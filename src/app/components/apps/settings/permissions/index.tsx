@@ -133,7 +133,13 @@ export default function PermissionSettings() {
         try {
             const payload = {
                 permissions: permissions
-                    .filter(perm => perm.is_web || perm.is_app)
+                    .filter(perm => {
+                        if (!(perm.is_web || perm.is_app)) return false;
+                        const original = originalPermissions.find(o => o.id === perm.id);
+                        if (!original) return false;
+                        return perm.is_web_enabled !== original.is_web_enabled || 
+                               perm.is_app_enabled !== original.is_app_enabled;
+                    })
                     .map((perm) => ({
                         permission_id: perm.permission_id,
                         status: flagsToStatus(perm.is_web_enabled, perm.is_app_enabled),
