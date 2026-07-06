@@ -249,7 +249,7 @@ const PurchaseOrder: React.FC<Props> = ({
 
   const fetchResources = async (isEdit = false) => {
     const res = await api.get(
-      `get-inventory-resources?company_id=${companyId}`,
+      `get-inventory-resources?company_id=${companyId}&is_web=true`,
     );
 
     setAllProducts(res.data.products || []);
@@ -608,7 +608,7 @@ const PurchaseOrder: React.FC<Props> = ({
                   multiline
                   disabled={isDisable}
                   inputProps={{ maxLength: 50 }}
-                  value={formData.note ?? null}
+                  value={formData.note ?? ""}
                   onChange={(e: any) =>
                     setFormData((p: any) => ({
                       ...p,
