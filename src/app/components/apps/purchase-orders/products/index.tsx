@@ -282,7 +282,7 @@ const PurchaseProductList: React.FC<Props> = ({
       if (response.data) {
         setData((prevData) => {
           const currentSelected = selectedRowIdsRef.current;
-          const selectedItems = prevData.filter(item => currentSelected.has(item.id) || Number(item.total_qty) > 0);
+          const selectedItems = prevData.filter(item => currentSelected.has(item.id));
           const selectedItemIds = new Set(selectedItems.map(item => item.id));
           const newItems = response.data.info.filter((item: any) => !selectedItemIds.has(item.id));
           return [...selectedItems, ...newItems];
@@ -321,6 +321,8 @@ const PurchaseProductList: React.FC<Props> = ({
       setData([]);
       setSelectedRowIds(new Set());
       setManuallyDeselected(new Set());
+      setDrawerOpen(false);
+      setEditDrawerOpen(false);
       fetchOrders();
       fetchResources();
     }
