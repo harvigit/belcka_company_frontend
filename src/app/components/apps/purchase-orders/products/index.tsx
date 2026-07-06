@@ -282,7 +282,7 @@ const PurchaseProductList: React.FC<Props> = ({
       if (response.data) {
         setData((prevData) => {
           const currentSelected = selectedRowIdsRef.current;
-          const selectedItems = prevData.filter(item => currentSelected.has(item.id));
+          const selectedItems = prevData.filter(item => currentSelected.has(item.id) || Number(item.total_qty) > 0);
           const selectedItemIds = new Set(selectedItems.map(item => item.id));
           const newItems = response.data.info.filter((item: any) => !selectedItemIds.has(item.id));
           return [...selectedItems, ...newItems];
@@ -395,12 +395,10 @@ const PurchaseProductList: React.FC<Props> = ({
       if (!data?.length || selectedRowIds.size === 0) return [];
 
       return data
-        .filter(
-          (item) => selectedRowIds.has(item.id) && Number(item.total_qty) > 0,
-        )
+        .filter((item) => selectedRowIds.has(item.id))
         .map((item) => ({
           id: item.id,
-          qty: Number(item.total_qty),
+          qty: Number(item.total_qty) || 0,
           supplier_id: Number(item.supplier_id),
           supplier_name: item.supplier_name,
         }));
