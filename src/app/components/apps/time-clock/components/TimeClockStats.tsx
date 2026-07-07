@@ -125,6 +125,10 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                     checked={col.getIsVisible()}
                                                     onChange={col.getToggleVisibilityHandler()}
                                                     disabled={col.id === 'conflicts'}
+                                                    sx={{
+                                                        p: 0.5,
+                                                        mr: 1,
+                                                    }}
                                                 />
                                             }
                                             label={
@@ -140,8 +144,9 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                 m: 0,
                                                 px: 0.75,
                                                 py: 0.375,
+                                                width: '100%',
                                                 borderRadius: 1.5,
-                                                alignItems: 'flex-start',
+                                                alignItems: 'center',
                                                 textTransform: 'none',
                                                 '&:hover': {
                                                     backgroundColor: '#f8fafc',
@@ -149,6 +154,7 @@ const TimeClockStats: React.FC<TimeClockStatsProps> = ({
                                                 '& .MuiFormControlLabel-label': {
                                                     fontSize: '14px',
                                                     lineHeight: 1.35,
+                                                    whiteSpace: 'nowrap',
                                                 },
                                             }}
                                         />
