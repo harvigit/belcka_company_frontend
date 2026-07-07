@@ -134,7 +134,16 @@ interface ShiftApiResponse {
     week_days: WeekDay[] | null;
 }
 
-type ProjectOption = { id: number; name: string };
+type ProjectResourceShift = Partial<ShiftApiResponse> & {
+    id: number;
+    name: string;
+};
+
+type ProjectOption = {
+    id: number;
+    name: string;
+    shifts: ProjectResourceShift[];
+};
 
 type ApiResponse<T = unknown> = {
     IsSuccess: boolean;
@@ -724,12 +733,11 @@ interface StartWorkDialogProps {
     onClose: () => void;
     onConfirm: (shiftId: number, projectId: number | null, coords: LocationCoords) => void;
     loading: boolean;
-    companyId?: number;
     lastKnownLocation?: LocationCoords | null;
     setLastKnownLocation?: (loc: LocationCoords | null) => void;
 }
 
-const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfirm, loading, companyId, lastKnownLocation, setLastKnownLocation}) => {
+const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfirm, loading, lastKnownLocation, setLastKnownLocation}) => {
     const { getLocation } = useGeolocation(lastKnownLocation ?? null, setLastKnownLocation ?? (() => {}));
 
     const [shifts, setShifts] = useState<ShiftOption[]>([]);
@@ -756,54 +764,58 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
         }
     }, []);
 
-    // Fetch projects when dialog opens
+    // Fetch projects and their assigned shifts when dialog opens
     useEffect(() => {
         if (!open) return;
         setSelectedShift('');
         setSelectedProject('');
+        setProjects([]);
         setShifts([]);
         setShiftDayError(null);
         setLocationError(null);
         setLoadingProjects(true);
+        setLoadingShifts(false);
 
-        const params: Record<string, unknown> = {};
-        if (companyId) params.company_id = companyId;
-
-        api.get('/project/get', { params })
+        api.get('/user-worklog/get-resources')
             .then((res) => {
-                const mapped = (res.data?.info ?? []).map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }));
+                const mapped: ProjectOption[] = (res.data?.info ?? []).map((p: {
+                    id: number;
+                    name: string;
+                    shifts?: ProjectResourceShift[];
+                }) => ({
+                    id: p.id,
+                    name: p.name,
+                    shifts: Array.isArray(p.shifts) ? p.shifts : [],
+                }));
                 setProjects(mapped);
                 if (mapped.length === 1) setSelectedProject(mapped[0].id);
             })
             .catch(() => setProjects([]))
             .finally(() => setLoadingProjects(false));
-    }, [open, companyId]);
+    }, [open]);
 
-    // Fetch shifts when project changes
+    // Load shifts from selected project's resources
     useEffect(() => {
         if (!open) return;
         setSelectedShift('');
         setShiftDayError(null);
         setShifts([]);
-        setLoadingShifts(true);
 
-        const params: Record<string, unknown> = {};
-        if (selectedProject) params.project_id = selectedProject;
-        if (companyId) params.company_id = companyId;
+        if (!selectedProject) return;
 
-        api.get('/shift/list', { params })
-            .then((res) => {
-                const mapped: ShiftOption[] = (res.data?.info ?? []).map((s: ShiftApiResponse) => ({
-                    id: s.id, name: s.name,
-                    start_time: s.start_time ?? '', end_time: s.end_time ?? '',
-                    is_pricework: s.is_pricework, week_days: s.week_days ?? [],
-                }));
-                setShifts(mapped);
-                if (mapped.length === 1) handleShiftChange(mapped[0].id, mapped);
-            })
-            .catch(() => setShifts([]))
-            .finally(() => setLoadingShifts(false));
-    }, [open, selectedProject, companyId, handleShiftChange]);
+        const selectedProjectData = projects.find((p) => p.id === Number(selectedProject));
+        const mapped: ShiftOption[] = (selectedProjectData?.shifts ?? []).map((s) => ({
+            id: s.id,
+            name: s.name,
+            start_time: s.start_time ?? '',
+            end_time: s.end_time ?? '',
+            is_pricework: s.is_pricework ?? false,
+            week_days: s.week_days ?? [],
+        }));
+
+        setShifts(mapped);
+        if (mapped.length === 1) handleShiftChange(mapped[0].id, mapped);
+    }, [open, selectedProject, projects, handleShiftChange]);
 
     const requestLocationAndConfirm = useCallback(async () => {
         setLocationLoading(true);
@@ -827,6 +839,7 @@ const StartWorkDialog: React.FC<StartWorkDialogProps> = ({open, onClose, onConfi
     };
 
     const isShiftUnavailable = (shift: ShiftOption) => {
+        if (!shift.week_days.length) return false;
         const todayName = getTodayDayName();
         return !shift.week_days.find((d) => d.name.toLowerCase() === todayName)?.status;
     };
@@ -1900,7 +1913,6 @@ const TimeTracking: React.FC<Props> = () => {
                     onClose={() => setStartDialogOpen(false)}
                     onConfirm={handleStartWork}
                     loading={clockLoading}
-                    companyId={user?.company_id}
                     lastKnownLocation={lastKnownLocation}
                     setLastKnownLocation={setLastKnownLocation}
                 />
