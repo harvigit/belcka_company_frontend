@@ -26,7 +26,7 @@ import { NavGroup } from "@/app/(DashboardLayout)/types/layout/sidebar";
 import { IconTicket } from "@tabler/icons-react";
 import { IconSettings } from "@tabler/icons-react";
 import { IconBox } from "@tabler/icons-react";
-import { IconPoint } from "@tabler/icons-react";
+import { IconPoint, IconLocation } from "@tabler/icons-react";
 
 const MenuItems: NavGroup[] = [
   {
@@ -80,7 +80,14 @@ const MenuItems: NavGroup[] = [
     title: "Projects",
     slug: "projects",
     icon: IconFiles,
-    href: "/apps/projects/index",
+    href: "/apps/projects/list",
+  },
+  {
+    id: uniqueId(),
+    title: "Addresses",
+    slug: "addresses",
+    icon: IconLocation, // Adding IconLocation assuming it's available or we can use another one
+    href: "/apps/addresses/list",
   },
   {
     id: uniqueId(),

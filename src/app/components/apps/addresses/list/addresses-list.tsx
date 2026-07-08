@@ -28,49 +28,45 @@ import {
   Badge,
   Button,
   TextField,
-  Slider,
   List,
   ListItem,
   ListItemButton,
   Tooltip,
+  Autocomplete,
 } from "@mui/material";
-import {
-  flexRender,
-  getCoreRowModel,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import { useServerTable } from "@/hooks/useServerTable";
 import {
   IconArrowLeft,
-  IconChevronLeft,
-  IconChevronRight,
   IconDotsVertical,
   IconEdit,
+  IconNote,
   IconPointFilled,
   IconProgress,
 } from "@tabler/icons-react";
 import api from "@/utils/axios";
-import CustomSelect from "@/app/components/forms/theme-elements/CustomSelect";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import CustomCheckbox from "@/app/components/forms/theme-elements/CustomCheckbox";
-import { ProjectList } from "./index";
+// import { ProjectList } from "./index";
 import TablePaginationFooter from "@/app/components/common/TablePaginationFooter";
-
-import { WorksTab } from "./address-sidebar-tab/works-tab";
-import { DocumentsTab } from "./address-sidebar-tab/documents-tab";
-import { TradesTab } from "./address-sidebar-tab/trades-tab";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
-import CreateProjectTask from "../tasks";
+import CreateProjectTask from "../../projects/tasks";
 import toast from "react-hot-toast";
 import { IconDownload } from "@tabler/icons-react";
 import { Circle, GoogleMap, Marker } from "@react-google-maps/api";
 import CustomRangeSlider from "@/app/components/forms/theme-elements/CustomRangeSlider";
 import SkeletonLoader from "@/app/components/SkeletonLoader";
 import Image from "next/image";
+import ArchiveAddress from "./archive-address-list";
+import { WorksTab } from "./address-sidebar-tab/works-tab";
+import { DocumentsTab } from "./address-sidebar-tab/documents-tab";
+import { TradesTab } from "./address-sidebar-tab/trades-tab";
+import { ProjectList } from "../../projects/list";
+import { IconX } from "@tabler/icons-react";
 
 dayjs.extend(customParseFormat);
 
@@ -87,6 +83,9 @@ interface AddressesListProps {
   // onParentActionPerformed?: (fetchAddresses: Function) => void;
   shouldRefresh: boolean;
   onTableReady: any;
+  projects?: any[];
+  parentAddressId?: number | null;
+  onClose: any;
 }
 
 export interface TradeList {
@@ -131,8 +130,11 @@ const AddressesList = ({
   onTableReady,
   processedIds,
   shouldRefresh,
+  projects,
+  parentAddressId,
+  onClose,
 }: AddressesListProps) => {
-  const [data, setData] = useState<ProjectList[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchAddress, setFetchAddress] = useState<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<number>>(new Set());
@@ -143,6 +145,9 @@ const AddressesList = ({
   const [showAllCheckboxes, setShowAllCheckboxes] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [addressEdit, setAddressEdit] = useState(false);
+  const [parentAddresses, setParentAddresses] = useState<any[]>([]);
+  const [addCaseDrawerOpen, setAddCaseDrawerOpen] = useState(false);
+  const [archiveList, setArchiveList] = useState(false);
   const [address, setAddress] = useState<any>(null);
   const [radius, setRadius] = useState(0);
   const fetched = useRef(false);
@@ -176,6 +181,25 @@ const AddressesList = ({
   const user = session.data?.user as User & { company_id?: number | null } & {
     user_role_id: number;
   };
+
+  useEffect(() => {
+    const fetchParentAddresses = async () => {
+      try {
+        const res = await api.get(
+          `get-modules?company_id=${user.company_id}&is_web=true`,
+        );
+        if (res.data) {
+          setParentAddresses(res.data.parent_addresses);
+        }
+      } catch (err) {
+        console.error("Failed to fetch parent addresses", err);
+      }
+    };
+    if (user?.company_id) {
+      fetchParentAddresses();
+    }
+  }, [user?.company_id]);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [progressDrawerOpen, setProgressDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -227,35 +251,40 @@ const AddressesList = ({
     setFetchAddress(true);
     try {
       let url = `address/get?project_id=${projectId}&company_id=${user.company_id}&page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`;
+      if (parentAddressId) {
+        url += `&parent_address_id=${parentAddressId}`;
+      }
       const res = await api.get(url);
       if (res.data) {
-        const responseData = res.data.info?.data || res.data.info || res.data.data || [];
+        const responseData =
+          res.data.info?.data || res.data.info || res.data.data || [];
         setData(responseData);
         const pagMeta =
-            res.data.data?.totalPages !== undefined || res.data.data?.totalItems !== undefined
-                ? res.data.data
-                : res.data.info && res.data.info.totalPages !== undefined
-                ? res.data.info
-                : res.data.data || {};
+          res.data.data?.totalPages !== undefined ||
+          res.data.data?.totalItems !== undefined
+            ? res.data.data
+            : res.data.info && res.data.info.totalPages !== undefined
+              ? res.data.info
+              : res.data.data || {};
 
         if (pagMeta.totalItems !== undefined) {
-            setTotalRows(pagMeta.totalItems);
+          setTotalRows(pagMeta.totalItems);
         } else if (pagMeta.total !== undefined) {
-            setTotalRows(pagMeta.total);
+          setTotalRows(pagMeta.total);
         } else {
-            setTotalRows(responseData.length);
+          setTotalRows(responseData.length);
         }
 
         if (pagMeta.totalPages !== undefined) {
-            setPageCount(pagMeta.totalPages);
+          setPageCount(pagMeta.totalPages);
         } else if (pagMeta.last_page !== undefined) {
-            setPageCount(pagMeta.last_page);
+          setPageCount(pagMeta.last_page);
         }
 
         if (restorePage !== undefined) {
-            setTimeout(() => {
-                setPagination((prev: any) => ({ ...prev, pageIndex: restorePage }));
-            }, 0);
+          setTimeout(() => {
+            setPagination((prev: any) => ({ ...prev, pageIndex: restorePage }));
+          }, 0);
         }
       }
     } catch (err) {
@@ -269,7 +298,7 @@ const AddressesList = ({
     if (projectId) {
       fetchAddresses();
     }
-  }, [projectId, processedIds, shouldRefresh]);
+  }, [projectId, processedIds, shouldRefresh, parentAddressId]);
 
   useEffect(() => {
     if (sidebarData !== null) {
@@ -349,10 +378,11 @@ const AddressesList = ({
   useEffect(() => {
     // remove processed IDs from selectedRowIds
     setSelectedRowIds((prev) => {
-      const updated = new Set(
-        [...prev].filter((id) => !processedIds.includes(id)),
-      );
-      return updated;
+      const filtered = [...prev].filter((id) => !processedIds.includes(id));
+      if (filtered.length === prev.size) {
+        return prev;
+      }
+      return new Set(filtered);
     });
   }, [processedIds]);
 
@@ -428,8 +458,18 @@ const AddressesList = ({
     setAddressEdit(false);
     setTypedAddress(false);
   };
-  const handleEdit = useCallback((task: any) => {
+  const handleEdit = useCallback(async (task: any) => {
     setSelectedTask(task);
+
+    let projectIds = [task.project_id];
+    try {
+      const res = await api.get(`address/address-detail?address_id=${task.id}`);
+      if (res.data?.info && res.data.info.project_ids) {
+        projectIds = res.data.info.project_ids;
+      }
+    } catch (err) {
+      console.error("Failed to fetch address details for project IDs");
+    }
 
     setFormData({
       id: task.id,
@@ -440,6 +480,8 @@ const AddressesList = ({
       boundary: task.boundary,
       type: task.type,
       color: task.color,
+      project_ids: projectIds,
+      parent_address_id: task.parent_address_id,
     });
 
     setSelectedLocation({
@@ -450,6 +492,48 @@ const AddressesList = ({
     setAddressEdit(true);
   }, []);
 
+  const handleAddCaseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      let payload = {
+        ...formData,
+        type: "circle",
+      };
+      if (!payload.boundary && selectedLocation) {
+        payload.boundary = JSON.stringify({
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          radius: formData.radius ?? 50,
+        });
+      }
+
+      const result = await api.post("address/create", payload);
+      if (result.data.IsSuccess === true) {
+        toast.success(result.data.message);
+        setAddCaseDrawerOpen(false);
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+        }, 100);
+        setFormData({
+          project_id: Number(projectId),
+          company_id: user.company_id,
+          name: "",
+          radius: 0,
+        });
+        fetchAddresses();
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error creating address:", error);
+      setLoading(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleAddressEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -457,7 +541,6 @@ const AddressesList = ({
       let payload = {
         id: selectedTask.id,
         ...formData,
-        project_id: projectId,
         type: "circle",
       };
 
@@ -853,7 +936,7 @@ const AddressesList = ({
         header: () => (
           <Stack direction="row" alignItems="center" spacing={4}>
             <Typography variant="subtitle2" fontWeight="inherit">
-              Address
+              Title
             </Typography>
           </Stack>
         ),
@@ -972,7 +1055,15 @@ const AddressesList = ({
     [data, selectedRowIds, hoveredRow, showAllCheckboxes, processedIds],
   );
 
-  const { table, pagination, setPagination, totalRows, setTotalRows, pageCount, setPageCount } = useServerTable({
+  const {
+    table,
+    pagination,
+    setPagination,
+    totalRows,
+    setTotalRows,
+    pageCount,
+    setPageCount,
+  } = useServerTable({
     data: currentFilteredData,
     columns,
     fetchData: fetchAddresses,
@@ -1003,6 +1094,58 @@ const AddressesList = ({
           overflow: "auto",
         }}
       >
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems={"center"}
+        >
+          <Typography variant="h5">Cases</Typography>
+          <Box>
+            <IconButton onClick={handleClick} size="small">
+              <IconDotsVertical width={18} />
+            </IconButton>
+            <IconButton onClick={() => onClose}>
+              <IconX />
+            </IconButton>
+          </Box>
+        </Stack>
+        <Box display="flex" justifyContent="flex-end" mb={1} pr={2}>
+          <Menu
+            id="basic-menu-cases"
+            anchorEl={anchorEl}
+            open={openMenu}
+            onClose={handleClose}
+          >
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                setFormData({
+                  project_ids: [Number(projectId)],
+                  company_id: user.company_id,
+                  name: "",
+                  radius: 50,
+                });
+                setAddCaseDrawerOpen(true);
+              }}
+            >
+              <ListItemIcon>
+                <IconPlus width={18} />
+              </ListItemIcon>
+              Add Case
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                setArchiveList(true);
+              }}
+            >
+              <ListItemIcon>
+                <IconNote width={18} />
+              </ListItemIcon>
+              Archive Cases
+            </MenuItem>
+          </Menu>
+        </Box>
         <TableContainer>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
@@ -1171,7 +1314,7 @@ const AddressesList = ({
                       },
                     }}
                   >
-                    <MenuItem onClick={handleClose}>
+                    {/* <MenuItem onClick={handleClose}>
                       <Link
                         color="body1"
                         href="#"
@@ -1193,7 +1336,7 @@ const AddressesList = ({
                         </ListItemIcon>
                         Add Task
                       </Link>
-                    </MenuItem>
+                    </MenuItem> */}
                     {user.user_role_id == 1 && (
                       <MenuItem onClick={handleClose}>
                         <Link
@@ -1455,7 +1598,63 @@ const AddressesList = ({
                     </Typography>
                   </Box>
 
-                  <Typography variant="h5" mt={3}></Typography>
+                  <Box mt={3} mb={2}>
+                    <Autocomplete
+                      fullWidth
+                      options={parentAddresses || []}
+                      value={
+                        (parentAddresses || []).find(
+                          (p: any) => p.id === formData.parent_address_id,
+                        ) || null
+                      }
+                      onChange={(e, newVal) =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          parent_address_id: newVal ? newVal.id : null,
+                        }))
+                      }
+                      getOptionLabel={(option: any) => option.name}
+                      isOptionEqualToValue={(option: any, value: any) =>
+                        option.id === value.id
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Parent Address"
+                          placeholder="Parent Address"
+                        />
+                      )}
+                    />
+                  </Box>
+
+                  <Box mb={2}>
+                    <Autocomplete
+                      multiple
+                      fullWidth
+                      options={projects || []}
+                      value={(projects || []).filter((p: any) =>
+                        formData.project_ids?.includes(p.id),
+                      )}
+                      onChange={(e, newVal) =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          project_ids: newVal.map((p: any) => p.id),
+                        }))
+                      }
+                      getOptionLabel={(option: any) => option.name}
+                      isOptionEqualToValue={(option: any, value: any) =>
+                        option.id === value.id
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Projects"
+                          placeholder="Projects"
+                        />
+                      )}
+                    />
+                  </Box>
+
                   <Box
                     display={"flex"}
                     justifyContent={"space-between"}
@@ -1514,10 +1713,10 @@ const AddressesList = ({
                       className="slider_wrapper"
                     >
                       <Typography variant="h6">
-                        Area size [{formData.radius} Meter]
+                        Area size [{formData?.radius} Meter]
                       </Typography>
                       <CustomRangeSlider
-                        value={formData.radius}
+                        value={formData?.radius || 0}
                         onChange={handleRadiusChange}
                         min={0}
                         max={100}
@@ -1684,6 +1883,331 @@ const AddressesList = ({
           </Box>
         </Box>
       </Drawer>
+      <Drawer
+        anchor="right"
+        open={addCaseDrawerOpen}
+        onClose={() => setAddCaseDrawerOpen(false)}
+        sx={{
+          width: 500,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: 500,
+            padding: 2,
+            backgroundColor: "#f9f9f9",
+          },
+        }}
+      >
+        <Box display="flex" flexDirection="column" height="100%">
+          <Box height={"100%"}>
+            <form onSubmit={handleAddCaseSubmit} className="address-form">
+              <Grid container>
+                <Grid size={{ xs: 12 }}>
+                  <Box
+                    display={"flex"}
+                    alignContent={"center"}
+                    alignItems={"center"}
+                    flexWrap={"wrap"}
+                  >
+                    <IconButton onClick={() => setAddCaseDrawerOpen(false)}>
+                      <IconArrowLeft />
+                    </IconButton>
+                    <Typography variant="h6" color="inherit" fontWeight={700}>
+                      Add Case
+                    </Typography>
+                  </Box>
+
+                  <Box mt={3} mb={2}>
+                    <Autocomplete
+                      fullWidth
+                      options={parentAddresses || []}
+                      value={
+                        (parentAddresses || []).find(
+                          (p: any) => p.id === formData.parent_address_id,
+                        ) || null
+                      }
+                      onChange={(e, newVal) =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          parent_address_id: newVal ? newVal.id : null,
+                        }))
+                      }
+                      getOptionLabel={(option: any) => option.name}
+                      isOptionEqualToValue={(option: any, value: any) =>
+                        option.id === value.id
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Parent Address"
+                          placeholder="Parent Address"
+                        />
+                      )}
+                    />
+                  </Box>
+
+                  <Box mb={2}>
+                    <Autocomplete
+                      multiple
+                      fullWidth
+                      options={projects || []}
+                      value={(projects || []).filter((p: any) =>
+                        formData.project_ids?.includes(p.id),
+                      )}
+                      onChange={(e, newVal) =>
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          project_ids: newVal.map((p: any) => p.id),
+                        }))
+                      }
+                      getOptionLabel={(option: any) => option.name}
+                      isOptionEqualToValue={(option: any, value: any) =>
+                        option.id === value.id
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Projects"
+                          placeholder="Projects"
+                        />
+                      )}
+                    />
+                  </Box>
+
+                  <Box
+                    display={"flex"}
+                    justifyContent={"space-between"}
+                    gap={3}
+                  >
+                    <TextField
+                      label="Enter address"
+                      id="name"
+                      name="name"
+                      placeholder="Search for address.."
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      variant="outlined"
+                      fullWidth
+                    />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleSearchClick}
+                    >
+                      Search
+                    </Button>
+                  </Box>
+
+                  {typedAddress && predictions.length > 0 && (
+                    <List
+                      sx={{
+                        border: "1px solid #ccc",
+                        maxHeight: 200,
+                        overflow: "auto",
+                        mt: 1,
+                      }}
+                    >
+                      {predictions.map((item, index) => (
+                        <ListItem key={index} disablePadding>
+                          <ListItemButton
+                            onClick={() =>
+                              item.source === "google"
+                                ? selectGooglePrediction(item)
+                                : selectPostcoderPrediction(item)
+                            }
+                          >
+                            {item.source === "google"
+                              ? item.description
+                              : item.summaryline}
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+
+                  {selectedLocation && (
+                    <Box
+                      sx={{ marginTop: 3 }}
+                      width={"98%"}
+                      className="slider_wrapper"
+                    >
+                      <Typography variant="h6">
+                        Area size [{formData?.radius} Meter]
+                      </Typography>
+                      <CustomRangeSlider
+                        value={formData?.radius || 0}
+                        onChange={handleRadiusChange}
+                        min={0}
+                        max={100}
+                        step={1}
+                        sx={{ height: "1px" }}
+                      />
+
+                      <GoogleMap
+                        zoom={17}
+                        center={selectedLocation}
+                        mapContainerStyle={{
+                          width: "100%",
+                          height: "400px",
+                          marginTop: "20px",
+                        }}
+                      >
+                        <Marker
+                          position={selectedLocation}
+                          draggable
+                          onDragEnd={(e) => {
+                            const lat = e.latLng?.lat();
+                            const lng = e.latLng?.lng();
+                            if (!lat || !lng) return;
+
+                            setSelectedLocation({ lat, lng });
+
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              lat,
+                              lng,
+                              boundary: JSON.stringify({
+                                lat,
+                                lng,
+                                radius: prev.radius,
+                              }),
+                            }));
+                          }}
+                        />
+
+                        <Circle
+                          center={selectedLocation}
+                          radius={formData.radius}
+                          options={{
+                            draggable: true,
+                            editable: true,
+                            fillColor: formData.color ?? "#FF0000",
+                            fillOpacity: 0.3,
+                            strokeColor: formData.color ?? "#FF0000",
+                            strokeOpacity: 1,
+                            strokeWeight: 1,
+                          }}
+                          onLoad={(circle) => {
+                            circleRef.current = circle;
+                          }}
+                          onCenterChanged={() => {
+                            if (!circleRef.current) return;
+
+                            const center = circleRef.current.getCenter();
+                            if (!center) return;
+
+                            const lat = center.lat();
+                            const lng = center.lng();
+
+                            if (
+                              lastCenterRef.current &&
+                              lastCenterRef.current.lat === lat &&
+                              lastCenterRef.current.lng === lng
+                            ) {
+                              return;
+                            }
+
+                            lastCenterRef.current = { lat, lng };
+
+                            setSelectedLocation({ lat, lng });
+
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              lat,
+                              lng,
+                              boundary: JSON.stringify({
+                                lat,
+                                lng,
+                                radius: prev.radius,
+                              }),
+                            }));
+                          }}
+                          onRadiusChanged={() => {
+                            if (!circleRef.current) return;
+
+                            const newRadius = Math.round(
+                              circleRef.current.getRadius(),
+                            );
+
+                            if (lastRadiusRef.current === newRadius) return;
+
+                            lastRadiusRef.current = newRadius;
+
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              radius: newRadius,
+                              boundary: JSON.stringify({
+                                lat: selectedLocation.lat,
+                                lng: selectedLocation.lng,
+                                radius: newRadius,
+                              }),
+                            }));
+                          }}
+                        />
+                      </GoogleMap>
+                      <Box mt={2}>
+                        <Typography>Zone Color</Typography>
+                        <input
+                          type="color"
+                          value={formData.color || "#000000"}
+                          onChange={(e) =>
+                            setFormData({ ...formData, color: e.target.value })
+                          }
+                          style={{
+                            width: "100%",
+                            height: "40px",
+                            border: "none",
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  )}
+                </Grid>
+              </Grid>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "start",
+                  gap: 2,
+                  marginTop: 3,
+                }}
+              >
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="large"
+                  type="submit"
+                  sx={{ borderRadius: 3 }}
+                  className="drawer_buttons"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => setAddCaseDrawerOpen(false)}
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    backgroundColor: "transparent",
+                    borderRadius: 3,
+                    color: "GrayText",
+                  }}
+                >
+                  Close
+                </Button>
+              </Box>
+            </form>
+          </Box>
+        </Box>
+      </Drawer>
+
+      <ArchiveAddress
+        open={archiveList}
+        projectId={projectId}
+        onClose={() => setArchiveList(false)}
+        onWorkUpdated={fetchAddresses}
+      />
     </Box>
   );
 };

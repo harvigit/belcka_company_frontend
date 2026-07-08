@@ -32,10 +32,7 @@ import {
   LinearProgress,
   CircularProgress,
 } from "@mui/material";
-import {
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { flexRender, createColumnHelper } from "@tanstack/react-table";
 import {
   IconChevronRight,
   IconEye,
@@ -131,7 +128,11 @@ const PurchaseProductList: React.FC<Props> = ({
     new Set(),
   );
   const [originalData, setOriginalData] = useState<any[]>([]);
-  const [latestFetchedIds, setLatestFetchedIds] = useState<Set<number>>(new Set());
+  const [latestFetchedIds, setLatestFetchedIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [draftOrderIdDialogOpen, setDraftOrderIdDialogOpen] = useState(false);
+  const [manualOrderId, setManualOrderId] = useState("");
 
   const handleModelOpen = () => {
     setPreview(null);
@@ -164,7 +165,7 @@ const PurchaseProductList: React.FC<Props> = ({
 
   const downloadSampleFile = () => {
     const link = document.createElement("a");
-    link.href = "/files/purchase_order_export.xlsx";
+    link.href = "/files/purchase_order_import.xlsx";
     link.download = "purchase-order-sample-file.xlsx";
     link.click();
   };
@@ -282,20 +283,27 @@ const PurchaseProductList: React.FC<Props> = ({
       if (response.data) {
         setData((prevData) => {
           const currentSelected = selectedRowIdsRef.current;
-          const selectedItems = prevData.filter(item => currentSelected.has(item.id) || Number(item.total_qty) > 0);
-          const selectedItemIds = new Set(selectedItems.map(item => item.id));
-          const newItems = response.data.info.filter((item: any) => !selectedItemIds.has(item.id));
+          const selectedItems = prevData.filter(
+            (item) =>
+              currentSelected.has(item.id) || Number(item.total_qty) > 0,
+          );
+          const selectedItemIds = new Set(selectedItems.map((item) => item.id));
+          const newItems = response.data.info.filter(
+            (item: any) => !selectedItemIds.has(item.id),
+          );
           return [...selectedItems, ...newItems];
         });
         const fetchedItems = response.data.info;
         setLatestFetchedIds(new Set(fetchedItems.map((item: any) => item.id)));
-        const autoSelectedIds = fetchedItems.filter((p: any) => p.total_qty > 0).map((p: any) => p.id);
+        const autoSelectedIds = fetchedItems
+          .filter((p: any) => p.total_qty > 0)
+          .map((p: any) => p.id);
         if (autoSelectedIds.length > 0) {
-           setSelectedRowIds(prev => {
-              const next = new Set(prev);
-              autoSelectedIds.forEach((id: number) => next.add(id));
-              return next;
-           });
+          setSelectedRowIds((prev) => {
+            const next = new Set(prev);
+            autoSelectedIds.forEach((id: number) => next.add(id));
+            return next;
+          });
         }
         const pagMeta = (response.data as any).data || response.data.info;
         if (pagMeta && pagMeta.totalItems !== undefined) {
@@ -378,7 +386,7 @@ const PurchaseProductList: React.FC<Props> = ({
     return [...filteredData].sort((a, b) => {
       const aSearched = searchTerm && latestFetchedIds.has(a.id);
       const bSearched = searchTerm && latestFetchedIds.has(b.id);
-      
+
       if (aSearched && !bSearched) return -1;
       if (!aSearched && bSearched) return 1;
 
@@ -461,7 +469,7 @@ const PurchaseProductList: React.FC<Props> = ({
         price: product?.price || 0,
       };
     });
-    const order_id = generateOrderId();
+    const order_id = manualOrderId || generateOrderId();
     const submissionData = {
       company_id: user?.company_id,
       store_id: store_id,
@@ -621,7 +629,11 @@ const PurchaseProductList: React.FC<Props> = ({
           setData((prev) =>
             prev.map((p) =>
               p.id === item.id
-                ? { ...p, total_qty: newQty === "" ? "" : numValue > 0 ? numValue : null }
+                ? {
+                    ...p,
+                    total_qty:
+                      newQty === "" ? "" : numValue > 0 ? numValue : null,
+                  }
                 : p,
             ),
           );
@@ -1003,7 +1015,7 @@ const PurchaseProductList: React.FC<Props> = ({
     data: finalFilteredData,
     columns,
     fetchData: fetchOrders,
-    debounceDependencies: [searchTerm,filters,user.company_id],
+    debounceDependencies: [searchTerm, filters, user.company_id],
     getRowId: (row: any) => row.id.toString(),
   });
   // Reset to first page when search term changes
@@ -1714,7 +1726,23 @@ const PurchaseProductList: React.FC<Props> = ({
               color="error"
               sx={{ borderRadius: 3 }}
               disabled={selectedRowIds.size === 0 || !isSameSupplierSelected}
-              onClick={handleDirectSaveAsDraft}
+              onClick={() => {
+                if (hasMultipleSuppliers) {
+                  toast.error(
+                    "All selected products must belong to the same supplier!",
+                  );
+                  return;
+                }
+
+                if (selectedProductsWithQty.length === 0) {
+                  toast.error(
+                    "Please select at least one product with quantity.",
+                  );
+                  return;
+                }
+                setManualOrderId("");
+                setDraftOrderIdDialogOpen(true);
+              }}
             >
               Save as Draft
             </Button>
@@ -1786,6 +1814,40 @@ const PurchaseProductList: React.FC<Props> = ({
             }}
           >
             Save Draft
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={draftOrderIdDialogOpen}
+        onClose={() => setDraftOrderIdDialogOpen(false)}
+      >
+        <DialogTitle pb={0}>Enter Order ID</DialogTitle>
+        <DialogContent sx={{ minWidth: 300 }}>
+          <TextField
+            fullWidth
+            size="small"
+            value={manualOrderId}
+            onChange={(e) => setManualOrderId(e.target.value)}
+            label="Order Id"
+            sx={{ mt: 1}}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDraftOrderIdDialogOpen(false)} color="error">
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (!manualOrderId) {
+                toast.error("Please enter an Order ID");
+                return;
+              }
+              setDraftOrderIdDialogOpen(false);
+              handleDirectSaveAsDraft();
+            }}
+          >
+            Save
           </Button>
         </DialogActions>
       </Dialog>

@@ -17,9 +17,10 @@ import { IconEdit } from "@tabler/icons-react";
 interface ProductSetsProps {
   companyId: number | null;
   productId?: number | null;
+  canEdit?: boolean;
 }
 
-const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId }) => {
+const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId, canEdit }) => {
   const [sets, setSets] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -86,16 +87,18 @@ const ProductSets: React.FC<ProductSetsProps> = ({ companyId, productId }) => {
               {set.name}
             </Typography>
 
-            <IconButton
-              color="primary"
-              onClick={(e) => {
-                e.preventDefault();
-                setDrawerOpen(true);
-                setSelectedTaskId(set.id);
-              }}
-            >
-              <IconEdit width={18} />
-            </IconButton>
+            {canEdit !== false && (
+              <IconButton
+                color="primary"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDrawerOpen(true);
+                  setSelectedTaskId(set.id);
+                }}
+              >
+                <IconEdit width={18} />
+              </IconButton>
+            )}
           </Box>
           <Grid container spacing={2}>
             {set.products?.map((p: any) => (

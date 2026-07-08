@@ -392,7 +392,7 @@ const ToolsList = () => {
 
   const downloadSampleFile = () => {
     const link = document.createElement("a");
-    link.href = "/files/tools_export.xlsx";
+    link.href = "/files/tools_import.xlsx";
     link.download = "sample-file.xlsx";
     link.click();
   };

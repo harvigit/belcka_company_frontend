@@ -89,6 +89,7 @@ interface ProductViewProps {
   isEdit?: boolean;
   productId?: number | null;
   isCategory?: boolean;
+  canEdit?: boolean;
 }
 
 const ProductView: React.FC<ProductViewProps> = ({
@@ -100,6 +101,7 @@ const ProductView: React.FC<ProductViewProps> = ({
   companyId,
   productId,
   isCategory,
+  canEdit,
 }) => {
   const [product, setProduct] = useState<any>([]);
   const [attachments, setAttachments] = useState<any>([]);
@@ -226,7 +228,7 @@ const ProductView: React.FC<ProductViewProps> = ({
           >
             <BlankCard>
               <TabPanel value={value} index={0}>
-                <ProductInformation
+                <ProductInformation canEdit={canEdit}
                   shouldRefresh={triggerRefresh}
                   companyId={companyId}
                   productId={productId}
@@ -237,7 +239,7 @@ const ProductView: React.FC<ProductViewProps> = ({
                 />
               </TabPanel>
               <TabPanel value={value} index={1}>
-                <ProductTechnicalInformation
+                <ProductTechnicalInformation canEdit={canEdit}
                   companyId={companyId}
                   productId={productId}
                   attachments={attachments}
@@ -245,10 +247,10 @@ const ProductView: React.FC<ProductViewProps> = ({
                 />
               </TabPanel>
               <TabPanel value={value} index={2}>
-                <ProductSets companyId={companyId} productId={productId} />
+                <ProductSets canEdit={canEdit} companyId={companyId} productId={productId} />
               </TabPanel>
               <TabPanel value={value} index={3}>
-                <ProductTrades companyId={companyId} productId={productId} />
+                <ProductTrades canEdit={canEdit} companyId={companyId} productId={productId} />
               </TabPanel>
             </BlankCard>
           </Grid>
