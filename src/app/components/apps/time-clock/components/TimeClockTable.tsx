@@ -469,6 +469,45 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
             </Tooltip>
         );
     };
+
+    const renderTimeWithLocation = (
+        timeContent: React.ReactNode,
+        locationPin: React.ReactNode
+    ) => (
+        <Box
+            sx={{
+                display: 'grid',
+                gridTemplateColumns: '48px 18px',
+                columnGap: 0.5,
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '70px',
+                mx: 'auto',
+            }}
+        >
+            <Box
+                sx={{
+                    minWidth: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                {timeContent}
+            </Box>
+            <Box
+                sx={{
+                    width: '18px',
+                    height: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                {locationPin}
+            </Box>
+        </Box>
+    );
     
     return (
         <Box sx={{
@@ -972,19 +1011,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {visibleColumnConfigs.start?.visible && (
                                                     <TableCell align="center" sx={{
                                                         py: 0.5,
+                                                        px: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
                                                         {log.is_leave || log.is_pricework || log.is_expense ? (
-                                                            <Box sx={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                opacity: 1,
-                                                            }}>
-                                                                {sanitizeDateTime(log.start)}
-                                                            </Box>
+                                                            renderTimeWithLocation(
+                                                                sanitizeDateTime(log.start),
+                                                                log.is_pricework ? renderLocationPin(log, true) : null
+                                                            )
                                                         ) : (
                                                             <Box sx={{
                                                                 display: 'flex',
@@ -1032,19 +1068,16 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                 {visibleColumnConfigs.end?.visible && (
                                                     <TableCell align="center" sx={{
                                                         py: 0.5,
+                                                        px: 0.5,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
                                                         verticalAlign: 'middle'
                                                     }}>
                                                         {log.is_leave || log.is_pricework || log.is_expense ? (
-                                                            <Box sx={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                opacity: 1,
-                                                            }}>
-                                                                {sanitizeDateTime(log.end)}
-                                                            </Box>
+                                                            renderTimeWithLocation(
+                                                                sanitizeDateTime(log.end),
+                                                                log.is_pricework ? renderLocationPin(log, false) : null
+                                                            )
                                                         ) : (
                                                             <Box sx={{
                                                                 display: 'flex',
@@ -1850,6 +1883,7 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                     key={cell.id}
                                                     sx={{
                                                         py: 0.5,
+                                                        px: column.id === 'start' || column.id === 'end' ? 0.5 : undefined,
                                                         fontSize: '0.875rem',
                                                         height: '45px',
                                                         verticalAlign: 'middle',
@@ -1873,6 +1907,11 @@ const TimeClockTable: React.FC<TimeClockTableProps> = ({
                                                             </Button>
                                                         ) : (
                                                             <Box sx={{ width: '30px', height: '30px' }} />
+                                                        )
+                                                    ) : column.id === 'start' || column.id === 'end' ? (
+                                                        renderTimeWithLocation(
+                                                            sanitizeDateTime(rowData[column.id]),
+                                                            renderLocationPin(rowData, column.id === 'start')
                                                         )
                                                     ) : (
                                                         flexRender(column.columnDef.cell, cell.getContext())

@@ -175,7 +175,7 @@ const EditableTimeCell: React.FC<EditableTimeCellProps> = ({
                 justifyContent: 'center',
                 opacity: isLocked ? 0.6 : 1,
                 borderRadius: '4px',
-                px: '8px',
+                px: '4px',
                 position: 'relative',
                 color: (log.is_added || log.is_edited || isConflictResolved || requestStatus === 5) && !isLocked ? '#d32f2f' : 'inherit',
                 '&:hover': !isLocked ? {
