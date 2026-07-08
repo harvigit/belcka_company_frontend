@@ -6,24 +6,13 @@ import {
     Box,
     Typography,
     CircularProgress,
-    LinearProgress,
     IconButton,
     Drawer,
-    Tooltip,
-    Collapse,
-    Button,
+    Divider,
 } from '@mui/material';
 import Image from 'next/image';
-import {
-    IconArrowLeft,
-    IconChevronDown,
-    IconChevronUp,
-} from '@tabler/icons-react';
+import {IconArrowLeft} from '@tabler/icons-react';
 import {Stack} from '@mui/system';
-import toast from 'react-hot-toast';
-import {useSession} from 'next-auth/react';
-import {User} from 'next-auth';
-import {IconNotes} from '@tabler/icons-react';
 
 interface ChecklogDetailPageProps {
     checklogId: number | null;
@@ -38,18 +27,17 @@ interface Attachment {
 
 interface ChecklogTask {
     id?: number;
-    name?: string;
-    company_task_name?: string | null;
-    work_type?: string | null;
-    trade_name?: string;
-    status_text?: string;
-    status_color?: string;
-    progress?: number;
+    comment?: string | null;
+    note?: string | null;
+    work_done?: string | number | null;
+    work_complete?: string | number | null;
+    unit_name?: string | null;
+    currency?: string | null;
+    total_pricework_amount?: string | number | null;
+    pricework_total_amount?: string | number | null;
+    pricework_amount?: string | number | null;
     before_attachments?: Attachment[];
     after_attachments?: Attachment[];
-    checklog_summary?: any[];
-    total_payable_seconds?: number;
-    total_work_seconds?: number;
 }
 
 export default function ChecklogDetailPage({checklogId, open, onClose}: ChecklogDetailPageProps) {
@@ -57,19 +45,6 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
     const [checklogTasks, setChecklogTasks] = useState<ChecklogTask[]>([]);
     const [data, setData] = useState<any>([]);
     const [hoveredImage, setHoveredImage] = useState<string | null>(null);
-    const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
-    
-    const [editableProgress, setEditableProgress] = useState<
-        Record<number, number>
-    >({});
-    const [originalProgress, setOriginalProgress] = useState<
-        Record<number, number>
-    >({});
-    
-    const session = useSession();
-    const user = session.data?.user as User & { company_id?: number | null } & {
-        user_role_id: number;
-    };
 
     const fetchChecklogDetail = useCallback(async () => {
         if (!checklogId) return;
@@ -81,11 +56,8 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
             );
             const detail = res.data?.info;
             if (res.data?.IsSuccess && detail) {
-                const taskList = Array.isArray(detail.task_list)
-                    ? detail.task_list
-                    : [];
                 setData(detail);
-                setChecklogTasks(taskList.length > 0 ? taskList : [detail]);
+                setChecklogTasks([detail]);
             } else {
                 setData([]);
                 setChecklogTasks([]);
@@ -105,116 +77,102 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
         }
     }, [checklogId, fetchChecklogDetail, open]);
 
-    const hasProgressChanged = (taskId: number) =>
-        editableProgress[taskId] !== originalProgress[taskId];
-
-    useEffect(() => {
-        if (checklogTasks.length > 0) {
-            const initial: Record<number, number> = {};
-            const original: Record<number, number> = {};
-
-            checklogTasks.forEach((task: any, index) => {
-                const taskId = task.id ?? index;
-                const progress = Number(task.progress ?? data.progress ?? 0);
-                initial[taskId] = progress;
-                original[taskId] = progress;
-            });
-
-            setEditableProgress(initial);
-            setOriginalProgress(original);
-        }
-    }, [checklogTasks, data.progress]);
-
     const getTaskId = (checklog: ChecklogTask, index: number) =>
         checklog.id ?? index;
 
-    const getTaskName = (checklog: ChecklogTask) =>
-        checklog.name || checklog.company_task_name || checklog.work_type || 'Untitled Task';
+    const getComment = (checklog: ChecklogTask) =>
+        checklog.comment || checklog.note || data?.comment || data?.note || '-';
 
-    const getChecklogSummary = (checklog: ChecklogTask) =>
-        Array.isArray(checklog.checklog_summary)
-            ? checklog.checklog_summary
-            : Array.isArray(data?.checklog_summary)
-                ? data.checklog_summary
-                : [];
+    const getWorkDone = (checklog: ChecklogTask) => {
+        const workDone =
+            checklog.work_done ??
+            checklog.work_complete ??
+            data?.work_done ??
+            data?.work_complete;
+        const unitName = checklog.unit_name ?? data?.unit_name;
 
-    const getPayableSeconds = (checklog: ChecklogTask) =>
-        Number(
-            checklog.total_payable_seconds ??
-            checklog.total_work_seconds ??
-            data?.total_payable_seconds ??
-            data?.total_work_seconds ??
-            0,
-        );
-
-    const handleUpdateProgress = async (taskId: number) => {
-        const progress = editableProgress[taskId] ?? 0;
-
-        try {
-            const res = await api.put('user-checklog/update', {
-                id: checklogId,
-                progress: String(progress),
-                company_id: user.company_id,
-            });
-
-            if (res.data?.IsSuccess) {
-                toast.success(res.data.message);
-                await fetchChecklogDetail();
-                onClose?.();
-            }
-
-            setOriginalProgress((prev) => ({
-                ...prev,
-                [taskId]: progress,
-            }));
-        } catch (err) {
-            console.error(err);
+        if (workDone === null || workDone === undefined || workDone === '') {
+            return '-';
         }
+
+        return unitName ? `${workDone} ${unitName}` : String(workDone);
     };
 
-    const toggleExpand = (index: number) => {
-        setExpandedTasks((prev) => {
-            const newSet = new Set(prev);
-            if (newSet.has(index)) {
-                newSet.delete(index);
-            } else {
-                newSet.add(index);
-            }
-            return newSet;
-        });
+    const getPriceworkAmount = (checklog: ChecklogTask) => {
+        const amount =
+            checklog.total_pricework_amount ??
+            checklog.pricework_total_amount ??
+            checklog.pricework_amount ??
+            data?.total_pricework_amount ??
+            data?.pricework_total_amount ??
+            data?.pricework_amount ??
+            0;
+        const currency = checklog.currency ?? data?.currency ?? '';
+        const numericAmount = Number(amount);
+
+        if (Number.isNaN(numericAmount)) {
+            return `${currency}${amount}`;
+        }
+
+        return `${currency}${numericAmount.toFixed(2)}`;
     };
 
-    const getProgressColor = (progress: number) => {
-        if (progress < 25) return '#FF0000';
-        if (progress < 50) return '#FF7A00';
-        if (progress < 75) return '#FFD700';
-        return '#32A852';
-    };
+    const renderAttachmentGrid = (
+        attachments: Attachment[],
+        label: string,
+    ) => {
+        if (attachments.length === 0) return null;
 
-    const truncateText = (text: string, maxLength: number = 12) => {
-        if (!text) return '';
-        return text.length > maxLength
-            ? `${text.substring(0, maxLength)}...`
-            : text;
-    };
-
-    const hasAttachments = (checklog: ChecklogTask) => {
         return (
-            (checklog.before_attachments && checklog.before_attachments.length > 0) ||
-            (checklog.after_attachments && checklog.after_attachments.length > 0)
+            <Box>
+                <Typography variant="body2" fontWeight={600} mb={1}>
+                    {label}
+                </Typography>
+                <Stack
+                    direction="row"
+                    spacing={1.5}
+                    flexWrap="wrap"
+                    useFlexGap
+                >
+                    {attachments.map((img: Attachment, idx: number) => (
+                        <Box
+                            key={`${label}-${img.image_url}-${idx}`}
+                            sx={{
+                                width: 'calc(50% - 6px)',
+                                cursor: 'pointer',
+                            }}
+                            onMouseEnter={() => setHoveredImage(img.image_url)}
+                            onMouseLeave={() => setHoveredImage(null)}
+                        >
+                            <Image
+                                width={220}
+                                height={160}
+                                src={img.thumb_url || img.image_url}
+                                alt={`${label} ${idx + 1}`}
+                                style={{
+                                    borderRadius: 8,
+                                    objectFit: 'cover',
+                                    width: '100%',
+                                    height: 130,
+                                }}
+                            />
+                        </Box>
+                    ))}
+                </Stack>
+            </Box>
         );
     };
 
-    const formatSeconds = (seconds: number) => {
-        const totalMinutes = Math.floor(seconds / 60);
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-
-        const formattedHours = String(hours).padStart(2, '0');
-        const formattedMinutes = String(minutes).padStart(2, '0');
-
-        return `${formattedHours}:${formattedMinutes} h`;
-    };
+    const DetailRow = ({label, value}: { label: string; value: React.ReactNode }) => (
+        <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                {label}
+            </Typography>
+            <Typography variant="body1" mt={0.5} sx={{wordBreak: 'break-word'}}>
+                {value}
+            </Typography>
+        </Box>
+    );
 
     return (
         <Drawer
@@ -237,7 +195,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                         <IconArrowLeft/>
                     </IconButton>
                     <Typography variant="h6" fontWeight={700}>
-                        Checklog Task Details
+                        Checklog Details
                     </Typography>
                 </Box>
 
@@ -264,350 +222,59 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                 ) : (
                     checklogTasks.map((checklog: any, index) => {
                         const taskId = getTaskId(checklog, index);
-                        const summary = getChecklogSummary(checklog);
+                        const beforeAttachments = checklog.before_attachments ?? [];
+                        const afterAttachments = checklog.after_attachments ?? [];
+                        const hasAnyAttachment =
+                            beforeAttachments.length > 0 || afterAttachments.length > 0;
 
                         return (
                             <Box key={taskId} mb={3}>
                                 <Box
                                     sx={{
-                                        position: 'relative',
                                         border: '1px solid #ccc',
                                         borderRadius: 2,
                                         p: 2,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        flexWrap: 'wrap',
+                                        backgroundColor: '#fff',
                                         '&:hover': {
                                             boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
                                         },
                                     }}
                                 >
-                                    {/* Labels */}
-                                    <Box
-                                        sx={{
-                                            position: 'absolute',
-                                            top: -10,
-                                            left: 16,
-                                            right: 16,
-                                            display: 'flex',
-                                            gap: 1,
-                                            flexWrap: 'wrap',
-                                            zIndex: 1,
-                                        }}
-                                    >
-                                        {checklog.trade_name && (
-                                            <Tooltip title={checklog.trade_name} arrow>
-                                                <Box
-                                                    sx={{
-                                                        backgroundColor: '#FF7A00',
-                                                        border: '1px solid #FF7A00',
-                                                        color: '#fff',
-                                                        fontSize: '11px',
-                                                        fontWeight: 500,
-                                                        px: 1,
-                                                        py: 0.2,
-                                                        borderRadius: '999px',
-                                                        maxWidth: '80px',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                >
-                                                    {truncateText(checklog.trade_name)}
-                                                </Box>
-                                            </Tooltip>
-                                        )}
+                                    <Stack spacing={2}>
+                                        <DetailRow label="Comment" value={getComment(checklog)}/>
+                                        <Divider/>
+                                        <DetailRow label="Work Done" value={getWorkDone(checklog)}/>
+                                        <Divider/>
+                                        <DetailRow
+                                            label="Total Pricework Amount"
+                                            value={getPriceworkAmount(checklog)}
+                                        />
+                                        <Divider/>
 
-                                        {checklog.status_text && (
-                                            <Box
-                                                sx={{
-                                                    backgroundColor: checklog.status_color || '#777',
-                                                    border: `1px solid ${checklog.status_color || '#777'}`,
-                                                    color: '#fff',
-                                                    fontSize: '11px',
-                                                    fontWeight: 500,
-                                                    px: 1,
-                                                    py: 0.2,
-                                                    borderRadius: '999px',
-                                                }}
-                                            >
-                                                {checklog.status_text}
-                                            </Box>
-                                        )}
-                                    </Box>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                Attachment
+                                            </Typography>
 
-                                    {/* Work row */}
-                                    <Stack spacing={2} sx={{width: '100%', mt: 1}}>
-                                        <Typography variant="body1" mb={1}>
-                                            {getTaskName(checklog)}
-                                        </Typography>
-
-                                        {/* Progress bar with expand button */}
-                                        {checklog.progress !== undefined && (
-                                            <Box sx={{position: 'relative'}}>
-                                                <Stack
-                                                    direction="row"
-                                                    alignItems="center"
-                                                    justifyContent="space-between"
-                                                    mb={0.5}
-                                                >
-                                                    <Typography variant="body1">
-                                                        Progress: {editableProgress[taskId] ?? 0}%
-                                                    </Typography>
-                                                    {hasAttachments(checklog) && (
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => toggleExpand(index)}
-                                                            sx={{
-                                                                padding: 0.5,
-                                                            }}
-                                                        >
-                                                            {expandedTasks.has(index) ? (
-                                                                <IconChevronUp size={20}/>
-                                                            ) : (
-                                                                <IconChevronDown size={20}/>
-                                                            )}
-                                                        </IconButton>
+                                            {hasAnyAttachment ? (
+                                                <Stack spacing={2} mt={1}>
+                                                    {renderAttachmentGrid(
+                                                        beforeAttachments,
+                                                        'Before Attachments',
+                                                    )}
+                                                    {renderAttachmentGrid(
+                                                        afterAttachments,
+                                                        'After Attachments',
                                                     )}
                                                 </Stack>
-                                                {data.status !== 4 ? (
-                                                    <>
-                                                        <input
-                                                            type="range"
-                                                            min={0}
-                                                            max={100}
-                                                            value={editableProgress[taskId] ?? 0}
-                                                            onChange={(e) =>
-                                                                setEditableProgress((prev) => ({
-                                                                    ...prev,
-                                                                    [taskId]: Number(e.target.value),
-                                                                }))
-                                                            }
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '10px',
-                                                                appearance: 'none',
-                                                                background: `linear-gradient(
-      to right,
-      ${getProgressColor(editableProgress[taskId] ?? 0)}
-      ${editableProgress[taskId] ?? 0}%,
-      #eee ${editableProgress[taskId] ?? 0}%
-    )`,
-                                                                borderRadius: '5px',
-                                                                outline: 'none',
-                                                                cursor: 'pointer',
-                                                            }}
-                                                        />
-                                                    </>
-                                                ) : (
-                                                    <LinearProgress
-                                                        variant="determinate"
-                                                        value={data.progress}
-                                                        sx={{
-                                                            height: 10,
-                                                            borderRadius: 5,
-                                                            '& .MuiLinearProgress-bar': {
-                                                                backgroundColor: getProgressColor(data.progress),
-                                                            },
-                                                            backgroundColor: '#eee',
-                                                        }}
-                                                    />
-                                                )}
-                                            </Box>
-                                        )}
-
-                                        <Box
-                                            key={index}
-                                            sx={{
-                                                mt: 1,
-                                                mb: 2,
-                                                borderRadius: 2,
-                                                gap: 1,
-                                            }}
-                                        >
-                                            <Typography variant="body1" mb={1} fontWeight={600}>
-                                                Checking summary :{' '}
-                                                {formatSeconds(getPayableSeconds(checklog))}
-                                            </Typography>
-                                            {summary.map(
-                                                (item: any, index: any) => (
-                                                    <Box key={index}>
-                                                        <Typography
-                                                            variant="h6"
-                                                            className="f-14"
-                                                            fontWeight={600}
-                                                            display="flex"
-                                                            alignItems="center"
-                                                            gap={1}
-                                                        >
-                                                            ({item.checkin_date}) {item.start_time}
-                                                            {item.checkin_note && (
-                                                                <Tooltip
-                                                                    title={item.checkin_note}
-                                                                    placement="top"
-                                                                >
-                                                                    <IconNotes size={18}/>
-                                                                </Tooltip>
-                                                            )}
-                                                            {item.end_time && (
-                                                                <>
-                                                                    <span>- {item.end_time}</span>
-
-                                                                    {item.checkout_note && (
-                                                                        <Tooltip
-                                                                            title={item.checkout_note}
-                                                                            placement="top"
-                                                                        >
-                                                                            <IconNotes size={18}/>
-                                                                        </Tooltip>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                            <span>= {formatSeconds(item.payable_seconds)}</span>
-                                                        </Typography>
-                                                    </Box>
-                                                ),
+                                            ) : (
+                                                <Typography variant="body1" mt={0.5}>
+                                                    -
+                                                </Typography>
                                             )}
                                         </Box>
                                     </Stack>
                                 </Box>
-
-                                {/* Collapsible Attachments Section */}
-                                <Collapse
-                                    in={expandedTasks.has(index)}
-                                    timeout="auto"
-                                    unmountOnExit
-                                >
-                                    <Box mt={2}>
-                                        {/* Photos Before */}
-                                        {checklog.before_attachments &&
-                                            checklog.before_attachments.length > 0 && (
-                                                <Box
-                                                    mb={2}
-                                                    p={2}
-                                                    sx={{backgroundColor: '#fff', borderRadius: 2}}
-                                                >
-                                                    <Typography
-                                                        mb={2}
-                                                        fontWeight="bold"
-                                                        variant="subtitle1"
-                                                    >
-                                                        Photos Before
-                                                    </Typography>
-                                                    <Stack
-                                                        direction="row"
-                                                        spacing={2}
-                                                        flexWrap="wrap"
-                                                        useFlexGap
-                                                    >
-                                                        {checklog.before_attachments.map(
-                                                            (img: any, idx: any) => (
-                                                                <Box
-                                                                    key={idx}
-                                                                    sx={{
-                                                                        transition: 'transform .2s',
-                                                                        cursor: 'pointer',
-                                                                        width: 'calc(50% - 8px)',
-                                                                        '&:hover': {
-                                                                            transform: 'scale(1.05)',
-                                                                        },
-                                                                    }}
-                                                                    onMouseEnter={() =>
-                                                                        setHoveredImage(img.image_url)
-                                                                    }
-                                                                    onMouseLeave={() => setHoveredImage(null)}
-                                                                >
-                                                                    <Image
-                                                                        width={200}
-                                                                        height={200}
-                                                                        src={img.image_url}
-                                                                        alt={`Before image ${idx + 1}`}
-                                                                        style={{
-                                                                            borderRadius: 8,
-                                                                            objectFit: 'cover',
-                                                                            width: '100%',
-                                                                            height: 'auto',
-                                                                        }}
-                                                                    />
-                                                                </Box>
-                                                            ),
-                                                        )}
-                                                    </Stack>
-                                                </Box>
-                                            )}
-
-                                        {/* Photos After */}
-                                        {checklog.after_attachments &&
-                                            checklog.after_attachments.length > 0 && (
-                                                <Box
-                                                    mb={2}
-                                                    p={2}
-                                                    sx={{backgroundColor: '#fff', borderRadius: 2}}
-                                                >
-                                                    <Typography
-                                                        mb={2}
-                                                        fontWeight="bold"
-                                                        variant="subtitle1"
-                                                    >
-                                                        Photos After
-                                                    </Typography>
-                                                    <Stack
-                                                        direction="row"
-                                                        spacing={2}
-                                                        flexWrap="wrap"
-                                                        useFlexGap
-                                                    >
-                                                        {checklog.after_attachments.map(
-                                                            (img: any, idx: any) => (
-                                                                <Box
-                                                                    key={idx}
-                                                                    sx={{
-                                                                        transition: 'transform .2s',
-                                                                        cursor: 'pointer',
-                                                                        width: 'calc(50% - 8px)',
-                                                                        '&:hover': {
-                                                                            transform: 'scale(1.05)',
-                                                                        },
-                                                                    }}
-                                                                    onMouseEnter={() =>
-                                                                        setHoveredImage(img.image_url)
-                                                                    }
-                                                                    onMouseLeave={() => setHoveredImage(null)}
-                                                                >
-                                                                    <Image
-                                                                        width={200}
-                                                                        height={200}
-                                                                        src={img.image_url}
-                                                                        alt={`After image ${idx + 1}`}
-                                                                        style={{
-                                                                            borderRadius: 8,
-                                                                            objectFit: 'cover',
-                                                                            width: '100%',
-                                                                            height: 'auto',
-                                                                        }}
-                                                                    />
-                                                                </Box>
-                                                            ),
-                                                        )}
-                                                    </Stack>
-                                                </Box>
-                                            )}
-                                    </Box>
-                                </Collapse>
-
-                                {hasProgressChanged(taskId) && (
-                                    <Button
-                                        color="primary"
-                                        variant="contained"
-                                        size="large"
-                                        onClick={() => handleUpdateProgress(taskId)}
-                                        sx={{mt: 2, borderRadius: 3, width: '50%'}}
-                                    >
-                                        Update Progress
-                                    </Button>
-                                )}
                             </Box>
                         );
                     })
