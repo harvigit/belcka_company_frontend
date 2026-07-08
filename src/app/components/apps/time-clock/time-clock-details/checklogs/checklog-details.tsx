@@ -9,9 +9,13 @@ import {
     IconButton,
     Drawer,
     Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
 } from '@mui/material';
-import Image from 'next/image';
-import {IconArrowLeft} from '@tabler/icons-react';
+import {IconArrowLeft, IconDownload, IconX} from '@tabler/icons-react';
 import {Stack} from '@mui/system';
 
 interface ChecklogDetailPageProps {
@@ -21,12 +25,19 @@ interface ChecklogDetailPageProps {
 }
 
 interface Attachment {
-    image_url: string;
-    thumb_url: string;
+    image_url?: string | null;
+    thumb_url?: string | null;
+    image_thumb_url?: string | null;
+    url?: string | null;
+    file?: string | null;
+    file_url?: string | null;
+    preview?: string | null;
 }
 
 interface ChecklogTask {
     id?: number;
+    address_name?: string | null;
+    address?: string | null;
     comment?: string | null;
     note?: string | null;
     work_done?: string | number | null;
@@ -44,7 +55,7 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
     const [loading, setLoading] = useState<boolean>(false);
     const [checklogTasks, setChecklogTasks] = useState<ChecklogTask[]>([]);
     const [data, setData] = useState<any>([]);
-    const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     const fetchChecklogDetail = useCallback(async () => {
         if (!checklogId) return;
@@ -83,6 +94,9 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
     const getComment = (checklog: ChecklogTask) =>
         checklog.comment || checklog.note || data?.comment || data?.note || '-';
 
+    const getAddress = (checklog: ChecklogTask) =>
+        checklog.address_name || checklog.address || data?.address_name || data?.address || '-';
+
     const getWorkDone = (checklog: ChecklogTask) => {
         const workDone =
             checklog.work_done ??
@@ -117,11 +131,76 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
         return `${currency}${numericAmount.toFixed(2)}`;
     };
 
+    const getAttachmentUrl = (attachment: Attachment, isPreview = false) => {
+        if (isPreview) {
+            return (
+                attachment.image_url ||
+                attachment.url ||
+                attachment.file_url ||
+                attachment.file ||
+                attachment.preview ||
+                attachment.thumb_url ||
+                attachment.image_thumb_url ||
+                ''
+            );
+        }
+
+        return (
+            attachment.image_url ||
+            attachment.url ||
+            attachment.file_url ||
+            attachment.file ||
+            attachment.preview ||
+            attachment.thumb_url ||
+            attachment.image_thumb_url ||
+            ''
+        );
+    };
+
+    const hasDisplayableAttachments = (attachments: Attachment[]) =>
+        attachments.some((attachment) => Boolean(getAttachmentUrl(attachment)));
+
+    const handleDownloadImage = async () => {
+        if (!selectedImage) return;
+
+        const imageName =
+            selectedImage
+                .split('?')[0]
+                .split('/')
+                .pop() || 'checklog-attachment.jpg';
+
+        try {
+            const response = await fetch(selectedImage);
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = imageName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+        } catch {
+            const link = document.createElement('a');
+            link.href = selectedImage;
+            link.download = imageName;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+    };
+
     const renderAttachmentGrid = (
         attachments: Attachment[],
         label: string,
     ) => {
-        if (attachments.length === 0) return null;
+        const visibleAttachments = attachments.filter((attachment) =>
+            getAttachmentUrl(attachment),
+        );
+
+        if (visibleAttachments.length === 0) return null;
 
         return (
             <Box>
@@ -134,30 +213,40 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                     flexWrap="wrap"
                     useFlexGap
                 >
-                    {attachments.map((img: Attachment, idx: number) => (
-                        <Box
-                            key={`${label}-${img.image_url}-${idx}`}
-                            sx={{
-                                width: 'calc(50% - 6px)',
-                                cursor: 'pointer',
-                            }}
-                            onMouseEnter={() => setHoveredImage(img.image_url)}
-                            onMouseLeave={() => setHoveredImage(null)}
-                        >
-                            <Image
-                                width={220}
-                                height={160}
-                                src={img.thumb_url || img.image_url}
-                                alt={`${label} ${idx + 1}`}
-                                style={{
-                                    borderRadius: 8,
-                                    objectFit: 'cover',
-                                    width: '100%',
-                                    height: 130,
+                    {visibleAttachments.map((img: Attachment, idx: number) => {
+                        const previewUrl = getAttachmentUrl(img, true);
+                        const imageUrl = getAttachmentUrl(img);
+
+                        return (
+                            <Box
+                                key={`${label}-${imageUrl}-${idx}`}
+                                sx={{
+                                    width: 'calc(50% - 6px)',
+                                    cursor: 'pointer',
                                 }}
-                            />
-                        </Box>
-                    ))}
+                                onClick={() => setSelectedImage(previewUrl)}
+                            >
+                                <Box
+                                    component="img"
+                                    src={imageUrl}
+                                    alt={`${label} ${idx + 1}`}
+                                    sx={{
+                                        borderRadius: 1,
+                                        objectFit: 'cover',
+                                        width: '100%',
+                                        height: 130,
+                                        display: 'block',
+                                        border: '1px solid #e0e0e0',
+                                        transition: 'transform .2s, box-shadow .2s',
+                                        '&:hover': {
+                                            transform: 'scale(1.02)',
+                                            boxShadow: 2,
+                                        },
+                                    }}
+                                />
+                            </Box>
+                        );
+                    })}
                 </Stack>
             </Box>
         );
@@ -225,7 +314,8 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                         const beforeAttachments = checklog.before_attachments ?? [];
                         const afterAttachments = checklog.after_attachments ?? [];
                         const hasAnyAttachment =
-                            beforeAttachments.length > 0 || afterAttachments.length > 0;
+                            hasDisplayableAttachments(beforeAttachments) ||
+                            hasDisplayableAttachments(afterAttachments);
 
                         return (
                             <Box key={taskId} mb={3}>
@@ -241,6 +331,8 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                                     }}
                                 >
                                     <Stack spacing={2}>
+                                        <DetailRow label="Address" value={getAddress(checklog)}/>
+                                        <Divider/>
                                         <DetailRow label="Comment" value={getComment(checklog)}/>
                                         <Divider/>
                                         <DetailRow label="Work Done" value={getWorkDone(checklog)}/>
@@ -258,14 +350,8 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
 
                                             {hasAnyAttachment ? (
                                                 <Stack spacing={2} mt={1}>
-                                                    {renderAttachmentGrid(
-                                                        beforeAttachments,
-                                                        'Before Attachments',
-                                                    )}
-                                                    {renderAttachmentGrid(
-                                                        afterAttachments,
-                                                        'After Attachments',
-                                                    )}
+                                                    {renderAttachmentGrid(beforeAttachments, 'Before Attachments',)}
+                                                    {renderAttachmentGrid(afterAttachments, 'After Attachments',)}
                                                 </Stack>
                                             ) : (
                                                 <Typography variant="body1" mt={0.5}>
@@ -280,31 +366,50 @@ export default function ChecklogDetailPage({checklogId, open, onClose}: Checklog
                     })
                 )}
 
-                {/* Hover Preview */}
-                {hoveredImage && (
-                    <Box
+                <Dialog
+                    open={Boolean(selectedImage)}
+                    onClose={() => setSelectedImage(null)}
+                    maxWidth="md"
+                    fullWidth
+                >
+                    <DialogTitle
                         sx={{
-                            position: 'fixed',
-                            top: '30%',
-                            left: '35%',
-                            width: '25%',
-                            maxHeight: '80vh',
-                            zIndex: 2000,
-                            border: '1px solid #ccc',
-                            borderRadius: 2,
-                            overflow: 'hidden',
-                            backgroundColor: '#fff',
-                            boxShadow: 3,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 2,
                         }}
                     >
+                        Attachment Preview
+                        <IconButton onClick={() => setSelectedImage(null)} size="small">
+                            <IconX size={20}/>
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent>
                         <Box
                             component="img"
-                            src={hoveredImage}
-                            alt="Preview"
-                            sx={{width: '100%', height: '100%', objectFit: 'contain'}}
+                            src={selectedImage || ''}
+                            alt="Attachment preview"
+                            sx={{
+                                width: '100%',
+                                maxHeight: '70vh',
+                                objectFit: 'contain',
+                                display: 'block',
+                                backgroundColor: '#f5f5f5',
+                                borderRadius: 1,
+                            }}
                         />
-                    </Box>
-                )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            variant="contained"
+                            startIcon={<IconDownload size={18}/>}
+                            onClick={handleDownloadImage}
+                        >
+                            Download
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         </Drawer>
     );
